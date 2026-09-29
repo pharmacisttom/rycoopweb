@@ -37,7 +37,7 @@ export default function LoginPage() {
         } else if (result.user?.role === 'staff') {
           navigate('/staff/dashboard');
         } else {
-          navigate('/member/dashboard');
+          setError('บัญชีนี้ไม่ได้รับอนุญาตให้ใช้งานระบบเจ้าหน้าที่');
         }
       } else {
         setError(result.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
@@ -100,7 +100,7 @@ export default function LoginPage() {
               />
             </div>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-900)', marginBottom: '0.25rem' }}>
-              เข้าสู่ระบบสมาชิกและเจ้าหน้าที่
+              เข้าสู่ระบบสำหรับเจ้าหน้าที่
             </h2>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
               {COOP_INFO.nameTh}
@@ -133,7 +133,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit}>
             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
               <label className="form-label" htmlFor="login-username" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                ชื่อผู้ใช้งาน / เลขทะเบียนสมาชิก / อีเมล
+                ชื่อผู้ใช้งาน หรืออีเมลเจ้าหน้าที่
               </label>
               <div style={{ position: 'relative' }}>
                 <User

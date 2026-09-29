@@ -1,4 +1,8 @@
 # Security Policy & Hardening Guidelines
+
+Production member access is deny-by-default. Both React routes and PHP member
+API groups enforce feature flags; hiding frontend controls is not treated as
+an authorization boundary.
 ### RayongCoop Digital Portal — สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด
 
 เอกสารนโยบายความมั่นคงปลอดภัยสารสนเทศ การรักษาความมั่นคงปลอดภัยไซเบอร์ (Cybersecurity) และมาตรการคุ้มครองข้อมูลส่วนบุคคล (PDPA Compliance) ตามมาตรฐานสถาบันการเงินและคำแนะนำของ OWASP สำหรับระบบ **RayongCoop Digital Portal**

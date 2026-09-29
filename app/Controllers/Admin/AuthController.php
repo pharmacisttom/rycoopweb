@@ -17,7 +17,13 @@ class AuthController extends Controller
     public function showLogin(): void
     {
         if (Auth::check()) {
-            $roleSlug = Auth::user()['role_slug'] ?? 'member';
+            $roleSlug = (string) (Auth::user()['role_slug'] ?? '');
+            if ($roleSlug === '' || ($roleSlug === 'member' && !config('features.member_login', false))) {
+                Auth::logout();
+                Session::flash('error', 'บัญชีนี้ไม่ได้รับอนุญาตให้เข้าสู่ระบบเจ้าหน้าที่');
+                $this->redirect(url('admin/login'));
+                return;
+            }
             if ($roleSlug === 'member') {
                 $this->redirect(url('member/dashboard'));
             } elseif ($roleSlug === 'staff') {
@@ -111,6 +117,25 @@ class AuthController extends Controller
             return;
         }
 
+        $roleSlug = (string) ($user['role_slug'] ?? '');
+        if ($roleSlug === '' || ($roleSlug === 'member' && !config('features.member_login', false))) {
+            $reason = $roleSlug === '' ? 'Account has no assigned role' : 'Member portal disabled';
+            try {
+                Database::execute("INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', ?, ?, ?, NOW())", [$user['id'], $inputUsername, $reason, $ip, $ua]);
+            } catch (\Throwable $e) {}
+
+            $message = $roleSlug === ''
+                ? 'บัญชีนี้ยังไม่ได้รับการกำหนดสิทธิ์ใช้งาน'
+                : 'ระบบสมาชิกออนไลน์ยังไม่เปิดให้บริการ';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'message' => $message, 'errors' => []], 403);
+                return;
+            }
+            Session::flash('error', $message);
+            $this->redirect(url($roleSlug === 'member' ? 'service-unavailable' : 'admin/login'));
+            return;
+        }
+
         // Check if 2FA is enabled.
         if ((int)($user['two_factor_enabled'] ?? 0) === 1 && !empty($user['two_factor_secret'])) {
             Auth::login($user, false);
@@ -133,7 +158,6 @@ class AuthController extends Controller
 
         Session::flash('success', 'เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ' . ($user['name'] ?? 'ผู้ใช้งาน'));
 
-        $roleSlug = $user['role_slug'] ?? 'member';
         $targetUrl = match($roleSlug) {
             'member' => url('member/dashboard'),
             'staff' => url('staff/dashboard'),
@@ -187,7 +211,15 @@ class AuthController extends Controller
 
         $code = trim((string)$this->request->input('code'));
         $userId = Auth::id();
-        $user = Database::first("SELECT * FROM users WHERE id = ? LIMIT 1", [$userId]);
+        $user = Database::first(
+            "SELECT u.*, r.slug AS role_slug, r.name AS role_name
+             FROM users u
+             LEFT JOIN user_roles ur ON u.id = ur.user_id
+             LEFT JOIN roles r ON ur.role_id = r.id
+             WHERE u.id = ? AND u.deleted_at IS NULL AND u.status = 'active'
+             LIMIT 1",
+            [$userId]
+        );
 
         if (!$user || !TwoFactorService::verifyCode($user['two_factor_secret'], $code)) {
             try {
@@ -208,7 +240,15 @@ class AuthController extends Controller
 
         Session::flash('success', 'ยืนยันตัวตนสำเร็จ');
 
-        $roleSlug = $user['role_slug'] ?? 'member';
+        $roleSlug = (string) ($user['role_slug'] ?? '');
+        if ($roleSlug === '' || ($roleSlug === 'member' && !config('features.member_login', false))) {
+            Auth::logout();
+            Session::flash('error', $roleSlug === ''
+                ? 'บัญชีนี้ยังไม่ได้รับการกำหนดสิทธิ์ใช้งาน'
+                : 'ระบบสมาชิกออนไลน์ยังไม่เปิดให้บริการ');
+            $this->redirect(url($roleSlug === 'member' ? 'service-unavailable' : 'admin/login'));
+            return;
+        }
         $targetUrl = match($roleSlug) {
             'member' => url('member/dashboard'),
             'staff' => url('staff/dashboard'),
@@ -320,6 +360,7 @@ class AuthController extends Controller
             $this->response->json(['success' => true, 'message' => 'ออกจากระบบเรียบร้อยแล้ว']);
             return;
         }
+
         Session::flash('info', 'ออกจากระบบเรียบร้อยแล้ว');
         $this->redirect(url('login'));
     }

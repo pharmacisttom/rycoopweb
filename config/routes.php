@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 use App\Middlewares\AuthMiddleware;
 use App\Middlewares\CsrfMiddleware;
+use App\Middlewares\FeatureFlagMiddleware;
 use App\Middlewares\RateLimitMiddleware;
 use App\Middlewares\RoleMiddleware;
 
@@ -104,7 +105,7 @@ $router->get('/api/auth/me', 'Api\\SpaApiController@me');
 | SPA REST API — Member Data (auth + member role required)
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'api/member', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(['member'])]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'api/member', 'middleware' => [new FeatureFlagMiddleware('member_portal'), AuthMiddleware::class, new RoleMiddleware(['member'])]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Api\\SpaApiController@memberDashboard');
     $r->get('/profile', 'Api\\SpaApiController@memberProfile');
     $r->get('/shares', 'Api\\SpaApiController@memberShares');
@@ -164,13 +165,17 @@ $router->group(['prefix' => 'api/admin/led', 'middleware' => [AuthMiddleware::cl
 |--------------------------------------------------------------------------
 */
 $router->get('/login', 'Admin\\AuthController@showLogin');
+$router->get('/admin/login', 'Admin\\AuthController@showLogin');
 $router->post('/login', 'Admin\\AuthController@login', [CsrfMiddleware::class, new RateLimitMiddleware('login', (int) config('security.rate_limiting.login.max_attempts', 5), (int) config('security.rate_limiting.login.decay_seconds', 900))]);
 $router->post('/logout', 'Admin\\AuthController@logout', [CsrfMiddleware::class]);
 $router->post('/api/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
 $router->post('/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
 $router->get('/dashboard', 'Admin\\DashboardController@index', [AuthMiddleware::class, new RoleMiddleware(['super_admin'])]);
 
-$router->get('/portal', 'Member\\MemberPortalController@dashboard', [AuthMiddleware::class]);
+$router->get('/portal', 'Member\\MemberPortalController@dashboard', [new FeatureFlagMiddleware('member_portal'), AuthMiddleware::class]);
+$router->get('/member', function ($request, $response) {
+    $response->redirect(url('member/dashboard'));
+}, [new FeatureFlagMiddleware('member_portal')]);
 
 // Public QR Code Receipt Verification
 $router->get('/verify-receipt/{token}', 'PublicReceiptController@verify');
@@ -180,7 +185,7 @@ $router->get('/verify-receipt/{token}', 'PublicReceiptController@verify');
 | Protected Member Portal Routes
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'member', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(['member'])]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'member', 'middleware' => [new FeatureFlagMiddleware('member_portal'), AuthMiddleware::class, new RoleMiddleware(['member'])]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Member\\MemberPortalController@dashboard');
     $r->get('/profile', 'Member\\MemberPortalController@profile');
     $r->post('/profile/update', 'Member\\MemberPortalController@updateProfile', [CsrfMiddleware::class]);
@@ -230,8 +235,8 @@ $router->group(['prefix' => 'member', 'middleware' => [AuthMiddleware::class, ne
 */
 $router->group(['prefix' => 'staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(['staff'])]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Staff\\StaffController@dashboard');
-    $r->get('/members', 'Staff\\StaffController@members');
-    $r->get('/members/detail', 'Staff\\StaffController@memberDetail');
+    $r->get('/members', 'Staff\\StaffController@members', [new FeatureFlagMiddleware('member_portal')]);
+    $r->get('/members/detail', 'Staff\\StaffController@memberDetail', [new FeatureFlagMiddleware('member_portal')]);
     $r->get('/loans', 'Staff\\StaffController@loans');
     $r->get('/loans/document', 'Staff\\StaffController@viewLoanDocument');
     $r->post('/loans/review', 'Staff\\StaffController@reviewLoan', [CsrfMiddleware::class]);

@@ -123,8 +123,8 @@ class DatabaseSeeder
                 'พร้อมเคียงข้างบุคลากรสาธารณสุขจังหวัดระยอง ด้วยบริการทางการเงินครบวงจรและอัตราผลตอบแทนที่คุ้มค่า',
                 '/assets/img/hero_bg_coop.jpg',
                 '/assets/img/hero_bg_coop.jpg',
-                'เข้าสู่ระบบ E-Service',
-                '/eservice',
+                'ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ',
+                '/service-unavailable',
                 '_self',
                 'left',
                 'left',
@@ -182,8 +182,8 @@ class DatabaseSeeder
             'image_text',
             'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด ขอแจ้งกำหนดการจ่ายเงินปันผลและเงินเฉลี่ยคืนประจำปี สมาชิกสามารถตรวจสอบยอดเงินปันผลผ่านระบบ E-Service ได้ตั้งแต่วันนี้เป็นต้นไป',
             '/assets/img/popup_dividend.jpg',
-            'ตรวจสอบเงินปันผลออนไลน์',
-            '/eservice',
+            'ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ',
+            '/service-unavailable',
         ]);
         $popupId = (int) $pdo->lastInsertId();
         if ($popupId === 0) {
@@ -526,6 +526,9 @@ class DatabaseSeeder
             ['กองทุนสวัสดิการ กสธท.', 'ตรวจสอบสิทธิประโยชน์กองทุนสวัสดิการสมาชิกสาธารณสุข', 'https://www.gsdt.or.th/', 'bi-heart-pulse', 'external', 0, 1, 1, 0, 5],
         ];
         foreach ($eservices as $es) {
+            if ($es[4] === 'member' && !config('features.member_eservice', false)) {
+                continue;
+            }
             if (Database::value("SELECT id FROM eservice_links WHERE name = ? AND url = ? LIMIT 1", [$es[0], $es[2]])) {
                 continue;
             }

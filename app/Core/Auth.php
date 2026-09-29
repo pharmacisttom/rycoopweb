@@ -55,7 +55,8 @@ class Auth
         Session::set('user_id', (int) $user['id']);
         Session::set('user_email', $user['email']);
         Session::set('user_name', $user['name']);
-        Session::set('role_slug', $user['role_slug'] ?? 'super_admin');
+        // Missing authorization data must never grant a privileged role.
+        Session::set('role_slug', (string) ($user['role_slug'] ?? ''));
         Session::set('2fa_verified', $verified2FA);
         self::$user = null;
 

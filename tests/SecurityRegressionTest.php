@@ -6,6 +6,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Router;
 use App\Middlewares\RoleMiddleware;
+use App\Middlewares\FeatureFlagMiddleware;
 
 final class SecurityRegressionTest
 {
@@ -19,6 +20,7 @@ final class SecurityRegressionTest
         self::assertRateLimitUsesSharedStorage();
         self::assertLoginKeepsCsrfProtection();
         self::assertAdminDashboardImportsLoanProducts();
+        self::assertMemberPortalIsDenyByDefault();
 
         if (self::$failures === 0) {
             echo "Security regression tests passed.\n";
@@ -80,6 +82,35 @@ final class SecurityRegressionTest
             $source !== false && preg_match('/import\s*\{[^}]*\bLOAN_PRODUCTS\b[^}]*\}\s*from\s*[\'\"]\.\.\/data\/mockData[\'\"]/', $source) === 1,
             'admin dashboard imports LOAN_PRODUCTS before using it'
         );
+    }
+
+    private static function assertMemberPortalIsDenyByDefault(): void
+    {
+        self::assert(config('features.member_portal', true) === false, 'member portal defaults to disabled');
+        self::assert(config('features.member_login', true) === false, 'member login defaults to disabled');
+
+        $router = new Router();
+        require __DIR__ . '/../config/routes.php';
+        $routes = (new \ReflectionProperty(Router::class, 'routes'))->getValue($router);
+        foreach (['/api/member/dashboard', '/member/dashboard', '/portal'] as $path) {
+            $matched = array_values(array_filter($routes, static fn(array $route): bool => $route['path'] === $path));
+            $guarded = false;
+            foreach ($matched as $route) {
+                foreach ($route['middlewares'] as $middleware) {
+                    if ($middleware instanceof FeatureFlagMiddleware) {
+                        $guarded = true;
+                    }
+                }
+            }
+            self::assert($guarded, "{$path} is protected by a backend feature flag");
+        }
+
+        $auth = file_get_contents(__DIR__ . '/../app/Core/Auth.php');
+        self::assert($auth !== false && !str_contains($auth, "role_slug'] ?? 'super_admin'"), 'missing role never defaults to super_admin');
+
+        $controller = file_get_contents(__DIR__ . '/../app/Controllers/Admin/AuthController.php');
+        self::assert($controller !== false && str_contains($controller, "config('features.member_login', false)"), 'member login is denied by the backend when disabled');
+        self::assert($controller !== false && str_contains($controller, 'Account has no assigned role'), 'login fails closed when no role is assigned');
     }
 
     private static function assertRouteHasRoles(array $routes, string $path, array $expectedRoles): void

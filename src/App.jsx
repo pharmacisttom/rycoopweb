@@ -39,6 +39,9 @@ const StatisticsPage = lazy(() => import('./pages/StatisticsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VerifyReceiptPage = lazy(() => import('./pages/VerifyReceiptPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const ServiceUnavailablePage = lazy(() => import('./pages/ServiceUnavailablePage'));
+
+const memberPortalEnabled = import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
 
 // RYCOOP LED Member Check Pages
 const AdminLedDashboardPage = lazy(() => import('./pages/AdminLedDashboardPage'));
@@ -96,7 +99,7 @@ const memberRoutes = [
   '/dashboard', '/member', '/member/dashboard', '/member/shares',
   '/member/deposits', '/member/loans', '/member/loan-requests',
   '/member/complaints', '/member/receipts', '/e-tracking', '/tracking',
-  '/loan-requests', '/portal', '/staff', '/staff/dashboard',
+  '/loan-requests', '/portal',
 ];
 
 const profileRoutes = ['/member/profile', '/profile', '/settings', '/edit-profile'];
@@ -146,13 +149,22 @@ export default function App() {
         <Suspense fallback={<PageSkeletonLoader />}>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            {publicRoutes.map(([path, Page]) => <Route key={path} path={path} element={<Page />} />)}
+            {publicRoutes.map(([path, Page]) => (
+              <Route
+                key={path}
+                path={path}
+                element={path === '/eservice' && !memberPortalEnabled ? <ServiceUnavailablePage /> : <Page />}
+              />
+            ))}
 
             <Route path="/verify-receipt" element={<VerifyReceiptPage />} />
             <Route path="/verify-receipt/:token" element={<VerifyReceiptPage />} />
 
-            {memberRoutes.map((path) => <Route key={path} path={path} element={<MemberDashboardPage />} />)}
-            {profileRoutes.map((path) => <Route key={path} path={path} element={<ProfilePage />} />)}
+            {memberRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberDashboardPage /> : <ServiceUnavailablePage />} />)}
+            {profileRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <ProfilePage /> : <ServiceUnavailablePage />} />)}
+            <Route path="/service-unavailable" element={<ServiceUnavailablePage />} />
+            <Route path="/staff" element={<AdminDashboardPage />} />
+            <Route path="/staff/dashboard" element={<AdminDashboardPage />} />
             {adminRoutes.map((path) => <Route key={path} path={path} element={<AdminDashboardPage />} />)}
 
             {/* RYCOOP LED Member Check Routes */}
@@ -163,7 +175,8 @@ export default function App() {
             <Route path="/admin/led/batch" element={<AdminLedBatchPage />} />
             <Route path="/admin/led/schema" element={<AdminLedSchemaPage />} />
 
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
@@ -174,7 +187,7 @@ export default function App() {
       <QuickActionDock />
       <AIChatWidget />
       <CookieConsent />
-      <AuthModal />
+      {memberPortalEnabled && <AuthModal />}
       <CampaignModal />
 
       {/* Inactivity Warning Modal */}

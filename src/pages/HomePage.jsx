@@ -234,17 +234,10 @@ export default function HomePage() {
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                {isLoggedIn ? (
-                  <Link to="/member/dashboard" className="btn btn-gold btn-lg">
-                    <span>เข้าสู่พอร์ทัลสมาชิก</span>
-                    <ArrowRight size={18} />
-                  </Link>
-                ) : (
-                  <button onClick={() => setShowAuthModal(true)} className="btn btn-gold btn-lg">
-                    <span>เข้าสู่ระบบสมาชิก</span>
-                    <ArrowRight size={18} />
-                  </button>
-                )}
+                <Link to="/service-unavailable" className="btn btn-gold btn-lg">
+                  <span>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
+                  <ArrowRight size={18} />
+                </Link>
 
                 <Link to="/calculator" className="btn btn-outline btn-lg" style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.08)' }}>
                   <Calculator size={18} />
@@ -521,12 +514,12 @@ export default function HomePage() {
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ทุนการศึกษา & ช่วยเหลือ</p>
             </Link>
 
-            <Link to="/member/shares" className="surface-card" style={quickServiceCardStyle}>
+            <Link to="/service-unavailable" className="surface-card" style={quickServiceCardStyle}>
               <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
                 <Coins size={24} />
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>ตรวจสอบเงินปันผล</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>เงินปันผล & เฉลี่ยคืนสะสม</p>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ยังไม่เปิดให้บริการในระยะนี้</p>
             </Link>
 
           </div>
@@ -628,8 +621,8 @@ export default function HomePage() {
                   <Link to="/calculator" className="btn btn-outline btn-sm" style={{ flex: 1 }}>
                     <span>คำนวณค่างวด</span>
                   </Link>
-                  <Link to="/eservice" className="btn btn-primary btn-sm" style={{ flex: 1 }}>
-                    <span>ยื่นกู้</span>
+                  <Link to="/service-unavailable" className="btn btn-primary btn-sm" style={{ flex: 1 }}>
+                    <span>บริการสมาชิกยังไม่เปิดใช้งาน</span>
                   </Link>
                 </div>
 

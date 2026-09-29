@@ -260,7 +260,7 @@ export default function Navbar() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
 
                     <Link
-                      to={user.role === 'super_admin' ? '/admin/dashboard' : '/member/dashboard'}
+                      to="/admin/dashboard"
                       className="user-dropdown-item"
                       onClick={() => setUserDropdownOpen(false)}
                     >
@@ -269,7 +269,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      to="/member/loans"
+                      to="/admin/dashboard"
                       className="user-dropdown-item"
                       onClick={() => setUserDropdownOpen(false)}
                     >
@@ -278,7 +278,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      to="/member/shares"
+                      to="/admin/dashboard"
                       className="user-dropdown-item"
                       onClick={() => setUserDropdownOpen(false)}
                     >
@@ -287,7 +287,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      to="/profile"
+                      to="/admin/dashboard"
                       className="user-dropdown-item"
                       onClick={() => setUserDropdownOpen(false)}
                     >
@@ -296,7 +296,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      to="/member/receipts"
+                      to="/admin/dashboard"
                       className="user-dropdown-item"
                       onClick={() => setUserDropdownOpen(false)}
                     >
@@ -330,16 +330,7 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-          ) : (
-            /* Logged-Out State: Login CTA */
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="btn btn-primary btn-sm navbar-login-btn"
-            >
-              <LogIn size={15} />
-              <span>เข้าสู่ระบบ</span>
-            </button>
-          )}
+          ) : null}
 
           {/* Mobile Menu Toggle Button */}
           <button
@@ -561,7 +552,7 @@ export default function Navbar() {
                       </div>
                     </Link>
 
-                    <Link to="/member/loans" className="mega-menu-card-item">
+                    <Link to="/loans" className="mega-menu-card-item">
                       <div className="mega-menu-icon-wrap" style={{ background: 'var(--accent-teal-light)', color: 'var(--accent-teal-dark)' }}>
                         <CreditCard size={18} />
                       </div>
@@ -858,7 +849,7 @@ export default function Navbar() {
           overflowY: 'auto'
         }}>
           {/* If NOT Logged In, Show Quick Login CTA Card in Mobile Drawer */}
-          {!isLoggedIn && (
+          {false && !isLoggedIn && (
             <div className="mobile-login-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-100)', color: 'var(--primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -963,7 +954,7 @@ export default function Navbar() {
                 <Link to="/deposits" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• เงินฝากออมทรัพย์ & ประจำ</Link>
                 <Link to="/deposits" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ตารางอัตราดอกเบี้ยเงินฝาก</Link>
                 <Link to="/loans" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ผลิตภัณฑ์สินเชื่อทุกประเภท</Link>
-                <Link to="/member/loans" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ยื่นคำขอกู้เงิน & ติดตามสถานะ</Link>
+                <Link to="/loans" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ข้อมูลผลิตภัณฑ์สินเชื่อ</Link>
                 <Link to="/calculator" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• โปรแกรมคำนวณเงินกู้</Link>
                 <Link to="/loan-checklist" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• เช็คความพร้อมการกู้</Link>
                 <Link to="/dividend-estimator" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ประมาณการเงินปันผล-เฉลี่ยคืน</Link>
@@ -1005,8 +996,7 @@ export default function Navbar() {
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ข่าวประชาสัมพันธ์ & กิจกรรม</Link>
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ประกาศทางการสหกรณ์</Link>
                 <Link to="/documents" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ดาวน์โหลดแบบฟอร์ม & รายงาน</Link>
-                <Link to="/eservice" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ศูนย์บริการออนไลน์ e-Services</Link>
-                <Link to="/verify-receipt" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ตรวจสอบใบเสร็จ e-Receipt</Link>
+                <span style={mobileSubItemStyle}>• ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
               </div>
             )}
           </div>

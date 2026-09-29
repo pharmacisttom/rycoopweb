@@ -1,3 +1,6 @@
+> Current production scope: public website and staff CMS. Member services are
+> retained for future activation but disabled by default.
+
 1.Ask
 2.Plan
 3.Implement
