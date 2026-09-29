@@ -95,22 +95,10 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const getApiUrl = (path) => {
-        const clean = path.startsWith('/') ? path.slice(1) : path;
-        const base = (import.meta.env.BASE_URL || './').replace(/\/$/, '');
-        return base ? `${base}/${clean}` : clean;
-      };
+      const getApiUrl = (path) => path.startsWith('/') ? path : `/${path}`;
 
       const fetchWithFallback = async (path, options = {}) => {
-        const clean = path.startsWith('/') ? path.slice(1) : path;
-        const candidateUrls = [
-          getApiUrl(path),
-          path,
-          clean,
-          `/rayongcoop-react/${clean}`,
-          `http://localhost/rayongcoop-react/${clean}`
-        ];
-        const uniqueUrls = [...new Set(candidateUrls)];
+        const uniqueUrls = [getApiUrl(path)];
         for (const url of uniqueUrls) {
           try {
             const res = await fetch(url, options);
@@ -215,7 +203,23 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      fetch('/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+      const tokenResponse = await fetch('/csrf-token', {
+        headers: { Accept: 'application/json' },
+        credentials: 'include'
+      });
+      const tokenData = tokenResponse.ok ? await tokenResponse.json() : {};
+      const body = new FormData();
+      body.append('_csrf_token', tokenData.token || '');
+      await fetch('/logout', {
+        method: 'POST',
+        body,
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(tokenData.token ? { 'X-CSRF-TOKEN': tokenData.token } : {})
+        },
+        credentials: 'include'
+      });
     } catch (e) {}
     setUser(null);
     setSessionStatus('guest');

@@ -30,3 +30,11 @@ php bin/console backup:run
    mysql -u root -p rayongcoop_db < storage/backups/backup_YYYY_MM_DD_HHMMSS.sql
    ```
 3. ตรวจสอบความถูกต้องของข้อมูลและรีเฟรชแคชของระบบ
+# Production rollback
+
+Before every deployment, record the output of `git rev-parse HEAD` and run
+`php bin/console backup:run`. To roll back application code, check out that
+recorded commit, then run `composer install --no-dev --optimize-autoloader`,
+`npm ci`, and `npm run build`. Run `sudo nginx -t` before reloading Nginx.
+Restore the database backup only when the failed release changed data or
+schema incompatibly; never restore it merely to roll back frontend code.

@@ -5,24 +5,13 @@
  * All data fetching goes through these functions instead of importing mockData.
  */
 
-const getApiUrl = (path) => {
-  const clean = path.startsWith('/') ? path.slice(1) : path;
-  const base = (import.meta.env.BASE_URL || './').replace(/\/$/, '');
-  return base ? `${base}/${clean}` : clean;
-};
+const getApiUrl = (path) => path.startsWith('/') ? path : `/${path}`;
 
 /**
  * Core fetch wrapper with fallback URLs for development/production compatibility.
  */
 const apiFetch = async (path, options = {}) => {
-  const clean = path.startsWith('/') ? path.slice(1) : path;
-  const candidateUrls = [
-    getApiUrl(path),
-    path,
-    clean,
-    `/rayongcoop-react/${clean}`,
-  ];
-  const uniqueUrls = [...new Set(candidateUrls)];
+  const uniqueUrls = [getApiUrl(path)];
 
   const defaultOptions = {
     headers: {
@@ -191,14 +180,7 @@ export const apiPost = async (path, body = {}) => {
   formData.append('_csrf_token', token);
   formData.append('ajax', '1');
 
-  const clean = path.startsWith('/') ? path.slice(1) : path;
-  const candidateUrls = [
-    getApiUrl(path),
-    path,
-    clean,
-    `/rayongcoop-react/${clean}`,
-  ];
-  const uniqueUrls = [...new Set(candidateUrls)];
+  const uniqueUrls = [getApiUrl(path)];
 
   for (const url of uniqueUrls) {
     try {

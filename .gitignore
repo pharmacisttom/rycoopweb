@@ -13,12 +13,14 @@
 !/storage/uploads/.gitkeep
 /storage/cache/*
 !/storage/cache/.gitkeep
+/storage/sessions/
 
 # Public uploads (member PII documents — never track)
 /public/uploads/*
 !/public/uploads/.gitkeep
 /public/uploads/**/*
 !/public/uploads/**/.gitkeep
+/public/storage/uploads/
 
 # Generated React production build (created by the deployment pipeline)
 /public/app/

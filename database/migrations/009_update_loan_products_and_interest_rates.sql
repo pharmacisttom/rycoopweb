@@ -5,8 +5,7 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 1. DELETE EXISTING LOAN PRODUCTS AND INSERT 10 MASTER DATA ITEMS
-DELETE FROM `loan_products` WHERE 1=1;
+-- 1. UPSERT THE 10 MASTER DATA ITEMS WITHOUT REMOVING ADMIN-CREATED RECORDS
 
 INSERT INTO `loan_products` (
     `id`, `category`, `name`, `slug`, `short_description`, `full_description`, 
@@ -23,13 +22,19 @@ INSERT INTO `loan_products` (
 (7, 'special', 'เงินกู้เพื่อจัดซื้อรถยนต์', 'car-purchase-loan', 'สินเชื่อเพื่อซื้อยานพาหนะใหม่หรือมือสอง ดอกเบี้ยประหยัด', 'สินเชื่อจัดซื้อรถยนต์หรือจักรยานยนต์สำหรับบุคลากรสาธารณสุข อัตราดอกเบี้ยต่ำ 4.00% ต่อปี ผ่อนชำระสูงสุด 84 งวด', 4.000, 1500000.00, 84, 'effective', 'เป็นสมาชิกสหกรณ์มาแล้วไม่น้อยกว่า 1 ปี', 'โอนสิทธิทะเบียนรถยนต์ หรือสมาชิกสหกรณ์ค้ำประกัน', 'เล่มทะเบียนรถยนต์', 'คำขอกู้เพื่อจัดซื้อรถยนต์, เอกสารรถยนต์, สลิปเงินเดือน', 0, 1, 7, 'active', NOW(), NOW()),
 (8, 'special', 'เงินกู้พิเศษเพื่อความมั่นคงในชีวิต', 'life-security-special-loan', 'สร้างความมั่นคงในระยะยาวและเตรียมพร้อมสู่วัยเกษียณ', 'สินเชื่อระยะยาวเพื่อสร้างหลักประกันและความมั่นคงในชีวิต อัตราดอกเบี้ย 5.25% ต่อปี ผ่อนชำระสูงสุด 240 งวด', 5.250, 3000000.00, 240, 'effective', 'เป็นสมาชิกสหกรณ์มาแล้วไม่น้อยกว่า 2 ปี', 'อสังหาริมทรัพย์ / สมาชิกค้ำประกัน', 'โฉนดที่ดินหรือหุ้นสหกรณ์', 'คำขอกู้พิเศษ, สลิปเงินเดือน, เอกสารหลักประกัน', 0, 1, 8, 'active', NOW(), NOW()),
 (9, 'special', 'เงินกู้เพื่อปรับปรุงโครงสร้างหนี้', 'debt-restructuring-loan', 'รวมหนี้ภายนอก ลดภาระดอกเบี้ยรายเดือน ผ่อนชำระทางเดียว', 'สินเชื่อรวมหนี้สินสถาบันการเงินภายนอกมาไว้ที่สหกรณ์ เพื่อลดภาระดอกเบี้ยจ่ายและผ่อนชำระทางเดียว ดอกเบี้ย 4.75% ต่อปี สูงสุด 180 งวด', 4.750, 2500000.00, 180, 'effective', 'เป็นสมาชิกสหกรณ์มาแล้วไม่น้อยกว่า 1 ปี', 'สมาชิกสหกรณ์ค้ำประกัน / หุ้นค้ำประกัน', 'ไม่มี', 'คำขอกู้ปรับโครงสร้างหนี้, หนังสือรับรองภาระหนี้ภายนอก', 0, 1, 9, 'active', NOW(), NOW()),
-(10, 'special', 'เงินกู้รับการค้ำประกัน', 'guaranteed-loan', 'กู้เงินโดยใช้เงินฝากหรือสิทธิเรียกร้องเป็นประกัน ดอกเบี้ยต่ำพิเศษสุด', 'สินเชื่อที่ใช้สมุดเงินฝากหรือหลักทรัพย์สิทธิเรียกร้องค้ำประกันเต็มวงเงิน อนุมัติรวดเร็ว อัตราดอกเบี้ยต่ำพิเศษ 2.00% ต่อปี', 2.000, 1000000.00, 60, 'effective', 'เป็นสมาชิกสหกรณ์และมีบัญชีเงินฝากหรือสิทธิเรียกร้องกับสหกรณ์', 'เงินฝากหรือสิทธิเรียกร้องเป็นประกัน', 'สมุดบัญชีเงินฝากสหกรณ์', 'คำขอกู้เงิน, สำเนาสมุดเงินฝากสหกรณ์', 0, 1, 10, 'active', NOW(), NOW());
+(10, 'special', 'เงินกู้รับการค้ำประกัน', 'guaranteed-loan', 'กู้เงินโดยใช้เงินฝากหรือสิทธิเรียกร้องเป็นประกัน ดอกเบี้ยต่ำพิเศษสุด', 'สินเชื่อที่ใช้สมุดเงินฝากหรือหลักทรัพย์สิทธิเรียกร้องค้ำประกันเต็มวงเงิน อนุมัติรวดเร็ว อัตราดอกเบี้ยต่ำพิเศษ 2.00% ต่อปี', 2.000, 1000000.00, 60, 'effective', 'เป็นสมาชิกสหกรณ์และมีบัญชีเงินฝากหรือสิทธิเรียกร้องกับสหกรณ์', 'เงินฝากหรือสิทธิเรียกร้องเป็นประกัน', 'สมุดบัญชีเงินฝากสหกรณ์', 'คำขอกู้เงิน, สำเนาสมุดเงินฝากสหกรณ์', 0, 1, 10, 'active', NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    `name` = VALUES(`name`), `interest_rate` = VALUES(`interest_rate`),
+    `max_loan_limit` = VALUES(`max_loan_limit`), `max_term_months` = VALUES(`max_term_months`),
+    `sort_order` = VALUES(`sort_order`), `status` = VALUES(`status`), `updated_at` = NOW();
 
--- 2. UPDATE LOAN INTEREST RATES (MASTER DATA 10 ITEMS)
-DELETE FROM `interest_rate_history` WHERE `interest_rate_id` IN (SELECT `id` FROM `interest_rates` WHERE `product_type` = 'loan');
-DELETE FROM `interest_rates` WHERE `product_type` = 'loan';
-
-INSERT INTO `interest_rates` (`product_type`, `product_name`, `rate`, `effective_date`, `status`, `sort_order`, `created_by`, `created_at`, `updated_at`) VALUES
+-- 2. MERGE LOAN INTEREST RATES WITHOUT DELETING HISTORY OR CUSTOM RATES
+CREATE TEMPORARY TABLE `_seed_loan_rates` (
+    `product_type` VARCHAR(50), `product_name` VARCHAR(255), `rate` DECIMAL(8,3),
+    `effective_date` DATE, `status` VARCHAR(20), `sort_order` INT,
+    `created_by` BIGINT UNSIGNED, `created_at` DATETIME, `updated_at` DATETIME
+);
+INSERT INTO `_seed_loan_rates` (`product_type`, `product_name`, `rate`, `effective_date`, `status`, `sort_order`, `created_by`, `created_at`, `updated_at`) VALUES
 ('loan', 'เงินกู้สามัญ', 6.150, '2026-01-01', 'active', 1, 1, NOW(), NOW()),
 ('loan', 'เงินกู้ฉุกเฉิน', 4.750, '2026-01-01', 'active', 2, 1, NOW(), NOW()),
 ('loan', 'เงินกู้พิเศษ', 5.250, '2026-01-01', 'active', 3, 1, NOW(), NOW()),
@@ -40,5 +45,26 @@ INSERT INTO `interest_rates` (`product_type`, `product_name`, `rate`, `effective
 ('loan', 'เงินกู้พิเศษเพื่อความมั่นคงในชีวิต', 5.250, '2026-01-01', 'active', 8, 1, NOW(), NOW()),
 ('loan', 'เงินกู้เพื่อปรับปรุงโครงสร้างหนี้', 4.750, '2026-01-01', 'active', 9, 1, NOW(), NOW()),
 ('loan', 'เงินกู้รับการค้ำประกัน', 2.000, '2026-01-01', 'active', 10, 1, NOW(), NOW());
+
+UPDATE `interest_rates` AS target
+JOIN `_seed_loan_rates` AS source
+  ON target.`product_type` = source.`product_type`
+ AND target.`product_name` = source.`product_name`
+ AND target.`effective_date` = source.`effective_date`
+SET target.`rate` = source.`rate`, target.`status` = source.`status`,
+    target.`sort_order` = source.`sort_order`, target.`updated_at` = NOW();
+
+INSERT INTO `interest_rates`
+    (`product_type`, `product_name`, `rate`, `effective_date`, `status`, `sort_order`, `created_by`, `created_at`, `updated_at`)
+SELECT source.`product_type`, source.`product_name`, source.`rate`, source.`effective_date`,
+       source.`status`, source.`sort_order`, source.`created_by`, source.`created_at`, source.`updated_at`
+FROM `_seed_loan_rates` AS source
+WHERE NOT EXISTS (
+    SELECT 1 FROM `interest_rates` AS target
+    WHERE target.`product_type` = source.`product_type`
+      AND target.`product_name` = source.`product_name`
+      AND target.`effective_date` = source.`effective_date`
+);
+DROP TEMPORARY TABLE `_seed_loan_rates`;
 
 SET FOREIGN_KEY_CHECKS = 1;

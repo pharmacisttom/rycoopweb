@@ -7,9 +7,10 @@ return [
         'name' => 'rayongcoop_session',
         'lifetime' => (int) env('SESSION_LIFETIME', 7200), // 2 hours
         'idle_timeout' => 1800, // 30 minutes idle timeout
-        'secure' => (bool) env('SESSION_SECURE', false),
+        'secure' => filter_var(env('SESSION_SECURE', false), FILTER_VALIDATE_BOOL),
         'httponly' => true,
         'samesite' => env('SESSION_SAMESITE', 'Lax'),
+        'save_path' => env('SESSION_SAVE_PATH', ''),
     ],
     'rate_limiting' => [
         'login' => [

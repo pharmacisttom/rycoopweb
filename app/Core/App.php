@@ -62,10 +62,11 @@ class App
                         'message' => 'เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้งในภายหลัง'
                     ], 500);
                 } else {
-                    $html = View::render('public.500', [
-                        'title' => '500 - ระบบขัดข้องชั่วคราว',
-                        'message' => 'เกิดข้อผิดพลาดภายในระบบ ขออภัยในความไม่สะดวก'
-                    ], 'layouts.public');
+                    $html = '<!doctype html><html lang="th"><meta charset="utf-8">'
+                        . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+                        . '<title>500 - ระบบขัดข้องชั่วคราว</title>'
+                        . '<main><h1>ระบบขัดข้องชั่วคราว</h1>'
+                        . '<p>เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่ภายหลัง</p></main></html>';
                     $this->response->setContent($html)->send();
                 }
             }

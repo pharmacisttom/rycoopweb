@@ -1,0 +1,27 @@
+-- Member identity records must exist before member_suggestions (007).
+CREATE TABLE IF NOT EXISTS `members` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `uuid` VARCHAR(36) NOT NULL,
+    `user_id` BIGINT UNSIGNED NULL,
+    `member_no` VARCHAR(20) NOT NULL,
+    `id_card` VARCHAR(20) NOT NULL,
+    `prefix` VARCHAR(20) NULL,
+    `first_name` VARCHAR(100) NOT NULL,
+    `last_name` VARCHAR(100) NOT NULL,
+    `department` VARCHAR(150) NULL,
+    `position` VARCHAR(100) NULL,
+    `phone` VARCHAR(20) NULL,
+    `email` VARCHAR(190) NULL,
+    `address` TEXT NULL,
+    `join_date` DATE NULL,
+    `avatar` VARCHAR(255) NULL,
+    `status` ENUM('active', 'resigned', 'suspended') NOT NULL DEFAULT 'active',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_members_uuid` (`uuid`),
+    UNIQUE KEY `uq_members_member_no` (`member_no`),
+    KEY `idx_members_user` (`user_id`),
+    KEY `idx_members_id_card` (`id_card`),
+    CONSTRAINT `fk_members_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -5,11 +5,11 @@ declare(strict_types=1);
 return [
     'name' => env('APP_NAME', 'RayongCoop Digital Portal'),
     'env' => env('APP_ENV', 'production'),
-    'debug' => (bool) env('APP_DEBUG', false),
-    'url' => rtrim(env('APP_URL', 'http://localhost/rayongcoop/public'), '/'),
+    'debug' => filter_var(env('APP_DEBUG', false), FILTER_VALIDATE_BOOL),
+    'url' => rtrim(env('APP_URL', ''), '/'),
     'timezone' => env('APP_TIMEZONE', 'Asia/Bangkok'),
     'locale' => 'th',
-    'key' => env('APP_KEY', 'change-this-in-production-secret-key-32b'),
+    'key' => env('APP_KEY', ''),
     'version' => '1.0.0',
     'coop' => [
         'full_name_th' => 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',

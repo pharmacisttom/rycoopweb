@@ -83,12 +83,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
         formData.append('_csrf_token', csrfToken);
       }
 
-      const endpoints = [
-        '/api/change-password',
-        '/change-password',
-        '/rayongcoop-react/api/change-password',
-        '/rayongcoop-react/change-password'
-      ];
+      const endpoints = ['/change-password'];
 
       let apiSuccess = false;
       let serverErrorMsg = '';

@@ -42,7 +42,7 @@ class AuthController extends Controller
         if (empty($inputUsername) || empty($password)) {
             $errorMsg = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
             if ($isAjax) {
-                $this->response->json(['success' => false, 'message' => $errorMsg], 200);
+                $this->response->json(['success' => false, 'message' => $errorMsg], 422);
                 return;
             }
             Session::flash('error', $errorMsg);
@@ -86,7 +86,7 @@ class AuthController extends Controller
 
             $errorMsg = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
             if ($isAjax) {
-                $this->response->json(['success' => false, 'message' => $errorMsg], 200);
+                $this->response->json(['success' => false, 'message' => $errorMsg], 401);
                 return;
             }
 
@@ -102,7 +102,7 @@ class AuthController extends Controller
 
             $errorMsg = 'บัญชีผู้ใช้งานนี้ถูกระงับ กรุณาติดต่อผู้ดูแลระบบ';
             if ($isAjax) {
-                $this->response->json(['success' => false, 'message' => $errorMsg], 200);
+                $this->response->json(['success' => false, 'message' => $errorMsg], 403);
                 return;
             }
 
@@ -309,12 +309,17 @@ class AuthController extends Controller
 
     public function logout(): void
     {
+        $isAjax = $this->request->isAjax() || $this->request->header('Accept') === 'application/json' || $this->request->input('ajax') === '1';
         if (Auth::id()) {
             try {
                 AuditService::log('auth', 'logout', (string)Auth::id());
             } catch (\Throwable $e) {}
         }
         Auth::logout();
+        if ($isAjax) {
+            $this->response->json(['success' => true, 'message' => 'ออกจากระบบเรียบร้อยแล้ว']);
+            return;
+        }
         Session::flash('info', 'ออกจากระบบเรียบร้อยแล้ว');
         $this->redirect(url('login'));
     }

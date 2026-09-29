@@ -164,11 +164,10 @@ $router->group(['prefix' => 'api/admin/led', 'middleware' => [AuthMiddleware::cl
 |--------------------------------------------------------------------------
 */
 $router->get('/login', 'Admin\\AuthController@showLogin');
-$router->post('/login', 'Admin\\AuthController@login');
-$router->get('/logout', 'Admin\\AuthController@logout');
-$router->post('/logout', 'Admin\\AuthController@logout');
-$router->post('/api/change-password', 'Admin\\AuthController@changePassword');
-$router->post('/change-password', 'Admin\\AuthController@changePassword');
+$router->post('/login', 'Admin\\AuthController@login', [CsrfMiddleware::class, new RateLimitMiddleware('login', (int) config('security.rate_limiting.login.max_attempts', 5), (int) config('security.rate_limiting.login.decay_seconds', 900))]);
+$router->post('/logout', 'Admin\\AuthController@logout', [CsrfMiddleware::class]);
+$router->post('/api/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
 $router->get('/dashboard', 'Admin\\DashboardController@index', [AuthMiddleware::class, new RoleMiddleware(['super_admin'])]);
 
 $router->get('/portal', 'Member\\MemberPortalController@dashboard', [AuthMiddleware::class]);

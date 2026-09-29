@@ -6,7 +6,7 @@ import path from 'path';
 export default defineConfig({
   // Apache serves the production SPA from this project directory.
   // The explicit base keeps routes and built assets under the same URL prefix.
-  base: process.env.NODE_ENV === 'production' ? '/rayongcoop-react/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/app/' : '/',
   plugins: [react()],
   // Vite must serve `public/` in development so files under public/assets
   // are available at /assets. Production already serves that directory via PHP.
@@ -27,23 +27,23 @@ export default defineConfig({
     open: true,
     proxy: {
       '/login': {
-        target: 'http://localhost/rayongcoop-react',
+        target: 'http://127.0.0.1',
         changeOrigin: true,
       },
       '/logout': {
-        target: 'http://localhost/rayongcoop-react',
+        target: 'http://127.0.0.1',
         changeOrigin: true,
       },
       '/csrf-token': {
-        target: 'http://localhost/rayongcoop-react',
+        target: 'http://127.0.0.1',
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost/rayongcoop-react',
+        target: 'http://127.0.0.1',
         changeOrigin: true,
       },
       '/change-password': {
-        target: 'http://localhost/rayongcoop-react',
+        target: 'http://127.0.0.1',
         changeOrigin: true,
       },
     },

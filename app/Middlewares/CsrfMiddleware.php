@@ -18,11 +18,6 @@ class CsrfMiddleware
             // CSRF token before calling /login, so the initial POST must be
             // allowed through.  All other mutating endpoints (including
             // change-password) MUST present a valid CSRF token.
-            $uri = $request->uri();
-            if ($uri === '/login' || str_ends_with($uri, '/login')) {
-                return true;
-            }
-
             $token = $request->csrfToken();
 
             if (!Csrf::validate($token)) {

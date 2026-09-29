@@ -28,6 +28,11 @@ if (!function_exists('request')) {
 if (!function_exists('env')) {
     function env(string $key, mixed $default = null): mixed
     {
+        $processValue = getenv($key);
+        if ($processValue !== false) {
+            return $processValue;
+        }
+
         static $envVars = null;
         if ($envVars === null) {
             $envVars = [];
@@ -57,7 +62,7 @@ if (!function_exists('env')) {
             }
         }
 
-        return $envVars[$key] ?? getenv($key) ?: $default;
+        return $envVars[$key] ?? $default;
     }
 }
 

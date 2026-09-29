@@ -12,7 +12,7 @@ class SitemapController extends Controller
     public function index(): void
     {
         $db = Database::getInstance();
-        $baseUrl = rtrim(config('app.url', 'http://localhost/rayongcoop/public'), '/');
+        $baseUrl = rtrim(config('app.url', ''), '/');
 
         // Static public pages
         $staticUrls = [

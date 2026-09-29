@@ -12,7 +12,7 @@ import './styles/mobile-responsive.css';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>

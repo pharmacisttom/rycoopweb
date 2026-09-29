@@ -136,7 +136,7 @@ sudo chmod -R 775 /var/www/rayongcoop/storage
 ```ini
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://portal.rayongcoop.com
+APP_URL=https://rayongcoop.tomvisolution.tech
 APP_KEY=<unique-secret>
 SESSION_SECURE=true
 INITIAL_ADMIN_PASSWORD=<unique-password-at-least-16-characters>

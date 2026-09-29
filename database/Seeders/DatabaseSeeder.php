@@ -121,8 +121,8 @@ class DatabaseSeeder
                 'มั่นคง โปร่งใส ทันสมัย เพื่อคุณภาพชีวิตที่ดีของสมาชิก',
                 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
                 'พร้อมเคียงข้างบุคลากรสาธารณสุขจังหวัดระยอง ด้วยบริการทางการเงินครบวงจรและอัตราผลตอบแทนที่คุ้มค่า',
-                'hero_slide_1.jpg',
-                'hero_slide_1_mob.jpg',
+                '/assets/img/hero_bg_coop.jpg',
+                '/assets/img/hero_bg_coop.jpg',
                 'เข้าสู่ระบบ E-Service',
                 '/eservice',
                 '_self',
@@ -137,8 +137,8 @@ class DatabaseSeeder
                 'สินเชื่ออัตราดอกเบี้ยพิเศษ เพื่อความมั่นคงของครอบครัว',
                 'สินเชื่อสามัญและสินเชื่อเพื่อที่อยู่อาศัย',
                 'อนุมัติไว วงเงินกู้สูง ผ่อนชำระสบาย พร้อมคำนวณเงินกู้ออนไลน์ได้ทันที',
-                'hero_slide_2.jpg',
-                'hero_slide_2_mob.jpg',
+                '/assets/img/hero_bg_default.jpg',
+                '/assets/img/hero_bg_default.jpg',
                 'คำนวณเงินกู้ออนไลน์',
                 '/calculator',
                 '_self',
@@ -153,8 +153,8 @@ class DatabaseSeeder
                 'ออมเงินมั่นคง ผลตอบแทนคุ้มค่า ปลอดภาษี',
                 'เงินฝากออมทรัพย์พิเศษและเงินฝากประจำ',
                 'เพิ่มพูนความมั่งคั่งสำหรับสมาชิกสหกรณ์สาธารณสุขระยอง ด้วยอัตราดอกเบี้ยเงินฝากสูง',
-                'hero_slide_3.jpg',
-                'hero_slide_3_mob.jpg',
+                '/assets/img/hero_bg_health.jpg',
+                '/assets/img/hero_bg_health.jpg',
                 'ดูอัตราดอกเบี้ยเงินฝาก',
                 '/deposits',
                 '_self',
@@ -167,23 +167,31 @@ class DatabaseSeeder
             ]
         ];
         foreach ($heroSlides as $hs) {
+            if (Database::value("SELECT id FROM hero_slides WHERE title = ? LIMIT 1", [$hs[0]])) {
+                continue;
+            }
             $stmt = $pdo->prepare("INSERT INTO hero_slides (title, subtitle, description, desktop_image, mobile_image, button_text, button_url, button_target, text_position, text_alignment, overlay_opacity, sort_order, priority, status, start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->execute($hs);
         }
         echo "✓ Seeded Hero Slides\n";
 
         // 9. SEED POPUP
-        $stmt = $pdo->prepare("INSERT INTO popups (title, type, content, desktop_image, button_text, button_url, display_mode, delay_seconds, frequency, priority, status, start_at) VALUES (?, ?, ?, ?, ?, ?, 'load', 1, 'session', 'normal', 'active', NOW())");
+        $stmt = $pdo->prepare("INSERT INTO popups (title, type, content, desktop_image, button_text, button_url, display_mode, delay_seconds, frequency, priority, status, start_at) SELECT ?, ?, ?, ?, ?, ?, 'load', 1, 'session', 'normal', 'active', NOW() FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM popups WHERE desktop_image = '/assets/img/popup_dividend.jpg')");
         $stmt->execute([
             'ประกาศจ่ายเงินปันผลและเงินเฉลี่ยคืน ประจำปีบัญชี 2568',
             'image_text',
             'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด ขอแจ้งกำหนดการจ่ายเงินปันผลและเงินเฉลี่ยคืนประจำปี สมาชิกสามารถตรวจสอบยอดเงินปันผลผ่านระบบ E-Service ได้ตั้งแต่วันนี้เป็นต้นไป',
-            'popup_dividend.jpg',
+            '/assets/img/popup_dividend.jpg',
             'ตรวจสอบเงินปันผลออนไลน์',
             '/eservice',
         ]);
-        $popupId = $pdo->lastInsertId();
-        $pdo->prepare("INSERT INTO popup_pages (popup_id, page_path, device_target) VALUES (?, '*', 'all')")->execute([$popupId]);
+        $popupId = (int) $pdo->lastInsertId();
+        if ($popupId === 0) {
+            $popupId = (int) Database::value("SELECT id FROM popups WHERE desktop_image = '/assets/img/popup_dividend.jpg' LIMIT 1");
+        }
+        if (!Database::value("SELECT id FROM popup_pages WHERE popup_id = ? AND page_path = '*' AND device_target = 'all' LIMIT 1", [$popupId])) {
+            $pdo->prepare("INSERT INTO popup_pages (popup_id, page_path, device_target) VALUES (?, '*', 'all')")->execute([$popupId]);
+        }
         echo "✓ Seeded Popup Campaign\n";
 
         // 10. SEED DEPOSIT PRODUCTS
@@ -232,7 +240,7 @@ class DatabaseSeeder
             ]
         ];
         foreach ($depositProducts as $dp) {
-            $stmt = $pdo->prepare("INSERT INTO deposit_products (name, slug, short_description, full_description, interest_rate, min_deposit, max_deposit, withdrawal_condition, eligibility, required_documents, is_featured, sort_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')");
+            $stmt = $pdo->prepare("INSERT INTO deposit_products (name, slug, short_description, full_description, interest_rate, min_deposit, max_deposit, withdrawal_condition, eligibility, required_documents, is_featured, sort_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active') ON DUPLICATE KEY UPDATE name=VALUES(name), interest_rate=VALUES(interest_rate), status='active'");
             $stmt->execute($dp);
         }
         echo "✓ Seeded Deposit Products\n";
@@ -421,7 +429,7 @@ class DatabaseSeeder
             ]
         ];
         foreach ($loanProducts as $lp) {
-            $stmt = $pdo->prepare("INSERT INTO loan_products (category, name, slug, short_description, full_description, interest_rate, max_loan_limit, max_term_months, calculation_type, eligibility, guarantor_requirement, collateral, documents, is_featured, is_calculator_enabled, sort_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')");
+            $stmt = $pdo->prepare("INSERT INTO loan_products (category, name, slug, short_description, full_description, interest_rate, max_loan_limit, max_term_months, calculation_type, eligibility, guarantor_requirement, collateral, documents, is_featured, is_calculator_enabled, sort_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active') ON DUPLICATE KEY UPDATE name=VALUES(name), interest_rate=VALUES(interest_rate), max_loan_limit=VALUES(max_loan_limit), max_term_months=VALUES(max_term_months), status='active'");
             $stmt->execute($lp);
         }
         echo "✓ Seeded Loan Products\n";
@@ -443,13 +451,21 @@ class DatabaseSeeder
             ['loan', 'เงินกู้รับการค้ำประกัน', 2.000, '2026-01-01', 10],
         ];
         foreach ($rates as $r) {
-            $stmt = $pdo->prepare("INSERT INTO interest_rates (product_type, product_name, rate, effective_date, status, sort_order, created_by) VALUES (?, ?, ?, ?, 'active', ?, ?)");
-            $stmt->execute([$r[0], $r[1], $r[2], $r[3], $r[4], $adminId]);
-            $rateId = (int) $pdo->lastInsertId();
+            $rateId = (int) Database::value("SELECT id FROM interest_rates WHERE product_type = ? AND product_name = ? AND effective_date = ? LIMIT 1", [$r[0], $r[1], $r[3]]);
+            if ($rateId === 0) {
+                $stmt = $pdo->prepare("INSERT INTO interest_rates (product_type, product_name, rate, effective_date, status, sort_order, created_by) VALUES (?, ?, ?, ?, 'active', ?, ?)");
+                $stmt->execute([$r[0], $r[1], $r[2], $r[3], $r[4], $adminId]);
+                $rateId = (int) $pdo->lastInsertId();
+            } else {
+                $pdo->prepare("UPDATE interest_rates SET rate = ?, status = 'active', sort_order = ? WHERE id = ?")
+                    ->execute([$r[2], $r[4], $rateId]);
+            }
 
             // Insert initial history
-            $stmtHist = $pdo->prepare("INSERT INTO interest_rate_history (interest_rate_id, product_name, old_rate, new_rate, effective_date, changed_by, approved_by, note) VALUES (?, ?, ?, ?, ?, ?, ?, 'ประกาศอัตราดอกเบี้ยเริ่มต้นประจำปี')");
-            $stmtHist->execute([$rateId, $r[1], $r[2], $r[2], $r[3], $adminId, $adminId]);
+            if (!Database::value("SELECT id FROM interest_rate_history WHERE interest_rate_id = ? AND effective_date = ? LIMIT 1", [$rateId, $r[3]])) {
+                $stmtHist = $pdo->prepare("INSERT INTO interest_rate_history (interest_rate_id, product_name, old_rate, new_rate, effective_date, changed_by, approved_by, note) VALUES (?, ?, ?, ?, ?, ?, ?, 'ประกาศอัตราดอกเบี้ยเริ่มต้นประจำปี')");
+                $stmtHist->execute([$rateId, $r[1], $r[2], $r[2], $r[3], $adminId, $adminId]);
+            }
         }
         echo "✓ Seeded Interest Rates & History\n";
 
@@ -496,7 +512,7 @@ class DatabaseSeeder
             ]
         ];
         foreach ($welfarePrograms as $wp) {
-            $stmt = $pdo->prepare("INSERT INTO welfare (category, title, slug, short_description, full_description, benefit_amount, eligibility, required_documents, application_process, contact_info, sort_order, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)");
+            $stmt = $pdo->prepare("INSERT INTO welfare (category, title, slug, short_description, full_description, benefit_amount, eligibility, required_documents, application_process, contact_info, sort_order, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?) ON DUPLICATE KEY UPDATE title=VALUES(title), status='active'");
             $stmt->execute([$wp[0], $wp[1], $wp[2], $wp[3], $wp[4], $wp[5], $wp[6], $wp[7], $wp[8], $wp[9], $wp[10], $adminId]);
         }
         echo "✓ Seeded Member Welfare Programs\n";
@@ -510,6 +526,9 @@ class DatabaseSeeder
             ['กองทุนสวัสดิการ กสธท.', 'ตรวจสอบสิทธิประโยชน์กองทุนสวัสดิการสมาชิกสาธารณสุข', 'https://www.gsdt.or.th/', 'bi-heart-pulse', 'external', 0, 1, 1, 0, 5],
         ];
         foreach ($eservices as $es) {
+            if (Database::value("SELECT id FROM eservice_links WHERE name = ? AND url = ? LIMIT 1", [$es[0], $es[2]])) {
+                continue;
+            }
             $stmt = $pdo->prepare("INSERT INTO eservice_links (name, description, url, icon, category, is_internal, open_new_tab, confirm_before_redirect, is_maintenance, sort_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')");
             $stmt->execute($es);
         }
@@ -558,7 +577,7 @@ class DatabaseSeeder
                 'annual-general-meeting-2569',
                 'ขอเชิญสมาชิกสหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด เข้าร่วมการประชุมใหญ่สามัญประจำปี 2569 ในวันเสาร์ที่ 24 ตุลาคม 2569 ณ ห้องประชุมใหญ่สาธารณสุขจังหวัดระยอง',
                 '<p>สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด ขอเรียนเชิญสมาชิกทุกท่านเข้าร่วมการประชุมใหญ่สามัญประจำปี 2569 เพื่อพิจารณาอนุมัติงบการเงิน แผนการดำเนินงานประจำปี และเลือกตั้งคณะกรรมการดำเนินการชุดใหม่</p><p>สมาชิกที่เข้าร่วมประชุมจะได้รับของที่ระลึกและมีสิทธิ์ลุ้นรับรางวัลพิเศษมากมาย</p>',
-                'news_meeting_2569.jpg',
+                '/assets/news/sample_news_1.jpg',
                 'ประชุมใหญ่, ประกาศ, สมาชิก',
                 1,
                 1,
@@ -570,7 +589,7 @@ class DatabaseSeeder
                 'dividend-announcement-2568',
                 'มติที่ประชุมใหญ่มีมติอนุมัติจัดสรรกำไรสุทธิ ประจำปี 2568 จ่ายเงินปันผลตามหุ้นในอัตราร้อยละ 6.10 และเงินเฉลี่ยคืนร้อยละ 15.00 โอนเข้าบัญชีสมาชิกทันที',
                 '<p>สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด มีผลการดำเนินงานที่เติบโตอย่างมั่นคงต่อเนื่อง โดยในปี 2568 มีกำไรสุทธิรวม 138 ล้านบาท คณะกรรมการดำเนินการจึงมีมติเสนอจัดสรรเงินปันผลตามหุ้นในอัตราร้อยละ 6.10 ต่อปี และเงินเฉลี่ยคืนแก่สมาชิกผู้กู้ในอัตราร้อยละ 15.00</p>',
-                'news_dividend_2568.jpg',
+                '/assets/news/sample_news_2.jpg',
                 'เงินปันผล, เงินเฉลี่ยคืน, ผลการดำเนินงาน',
                 1,
                 1,
@@ -578,13 +597,13 @@ class DatabaseSeeder
             ]
         ];
         foreach ($newsList as $nl) {
-            $stmt = $pdo->prepare("INSERT INTO news (category_id, title, slug, summary, content, cover_image, tags, is_pinned, is_featured, workflow_status, author_id, publish_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt = $pdo->prepare("INSERT INTO news (category_id, title, slug, summary, content, cover_image, tags, is_pinned, is_featured, workflow_status, author_id, publish_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE title=VALUES(title), cover_image=VALUES(cover_image)");
             $stmt->execute(array_merge($nl, [$adminId]));
         }
         echo "✓ Seeded News Articles\n";
 
         // 18. SEED TOP ANNOUNCEMENT BAR
-        $stmt = $pdo->prepare("INSERT INTO announcements (title, message, link_url, link_text, priority, display_type, start_at, is_active, created_by) VALUES (?, ?, ?, ?, 'important', 'top_bar', NOW(), 1, ?)");
+        $stmt = $pdo->prepare("INSERT INTO announcements (title, message, link_url, link_text, priority, display_type, start_at, is_active, created_by) SELECT ?, ?, ?, ?, 'important', 'top_bar', NOW(), 1, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM announcements WHERE link_url = '/eservice' AND display_type = 'top_bar')");
         $stmt->execute([
             'แจ้งสมาชิกตรวจสอบเงินปันผล',
             'สหกรณ์ฯ ได้โอนเงินปันผลและเงินเฉลี่ยคืน ประจำปี 2568 เข้าบัญชีเงินฝากของท่านเรียบร้อยแล้ว ตรวจสอบยอดผ่านระบบ E-Service',
@@ -602,6 +621,9 @@ class DatabaseSeeder
             ['welfare', 'เงินสวัสดิการสมาชิกถึงแก่กรรม ทายาทต้องยื่นเรื่องภายในกี่วัน?', 'ทายาทผู้มีสิทธิต้องยื่นคำร้องพร้อมหลักฐานใบมรณบัตรและสำเนาทะเบียนบ้านภายใน 120 วันนับแต่วันที่สมาชิกถึงแก่กรรม', 4],
         ];
         foreach ($faqs as $faq) {
+            if (Database::value("SELECT id FROM faqs WHERE question = ? LIMIT 1", [$faq[1]])) {
+                continue;
+            }
             $stmt = $pdo->prepare("INSERT INTO faqs (category, question, answer, sort_order, status) VALUES (?, ?, ?, ?, 'active')");
             $stmt->execute($faq);
         }
@@ -609,13 +631,16 @@ class DatabaseSeeder
 
         // 20. SEED BOARDS & STAFF
         $boards = [
-            ['นายแพทย์สาธารณสุขจังหวัดระยอง', 'ประธานกรรมการดำเนินการ', 'director', '2568 - 2569', 1, 'board_president.jpg', 1],
-            ['ทันตแพทย์ชำนาญการพิเศษ', 'รองประธานกรรมการ คนที่ 1', 'director', '2568 - 2569', 1, 'board_vp1.jpg', 2],
-            ['เภสัชกรเชี่ยวชาญ', 'รองประธานกรรมการ คนที่ 2', 'director', '2568 - 2569', 1, 'board_vp2.jpg', 3],
-            ['นักวิชาการสาธารณสุขเชี่ยวชาญ', 'เหรัญญิก', 'director', '2568 - 2569', 1, 'board_treasurer.jpg', 4],
-            ['นักจัดการงานทั่วไปชำนาญการ', 'เลขานุการ', 'director', '2568 - 2569', 1, 'board_secretary.jpg', 5],
+            ['นายแพทย์สาธารณสุขจังหวัดระยอง', 'ประธานกรรมการดำเนินการ', 'director', '2568 - 2569', 1, '/assets/img/committee/committee-01-president.webp', 1],
+            ['ทันตแพทย์ชำนาญการพิเศษ', 'รองประธานกรรมการ คนที่ 1', 'director', '2568 - 2569', 1, '/assets/img/committee/committee-02-vice-president.webp', 2],
+            ['เภสัชกรเชี่ยวชาญ', 'รองประธานกรรมการ คนที่ 2', 'director', '2568 - 2569', 1, '/assets/img/committee/committee-03-pochawan.webp', 3],
+            ['นักวิชาการสาธารณสุขเชี่ยวชาญ', 'เหรัญญิก', 'director', '2568 - 2569', 1, '/assets/img/committee/committee-04-jatupol.webp', 4],
+            ['นักจัดการงานทั่วไปชำนาญการ', 'เลขานุการ', 'director', '2568 - 2569', 1, '/assets/img/committee/committee-05-sunetra.webp', 5],
         ];
         foreach ($boards as $b) {
+            if (Database::value("SELECT id FROM boards WHERE name = ? AND term_years = ? LIMIT 1", [$b[0], $b[3]])) {
+                continue;
+            }
             $stmt = $pdo->prepare("INSERT INTO boards (name, position, role_type, term_years, term_number, photo, sort_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')");
             $stmt->execute($b);
         }
