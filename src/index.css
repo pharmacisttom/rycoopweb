@@ -912,6 +912,91 @@ input, select, textarea {
 }
 
 /* Animations */
+.coop-page-loader {
+  min-height: 68vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: var(--primary-900);
+  background: radial-gradient(circle at center, rgba(16, 185, 129, 0.08), transparent 36%);
+}
+
+.coop-logo-spinner {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 12px 20px rgba(6, 95, 70, 0.16));
+}
+
+.coop-logo-spinner__ring,
+.coop-logo-spinner__halo {
+  position: absolute;
+  border-radius: 50%;
+  inset: 0;
+}
+
+.coop-logo-spinner__ring {
+  border: 4px solid rgba(5, 150, 105, 0.16);
+  border-top-color: var(--primary-700);
+  border-right-color: #d4af37;
+  animation: coopLogoSpin 1.05s linear infinite;
+}
+
+.coop-logo-spinner__halo {
+  inset: 9px;
+  border: 1px solid rgba(5, 150, 105, 0.22);
+  animation: coopLogoPulse 1.5s ease-in-out infinite;
+}
+
+.coop-logo-spinner__logo {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+  padding: 5px;
+}
+
+.coop-page-loader__text {
+  margin: 1.25rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.coop-page-loader__dots {
+  height: 1rem;
+  color: var(--primary-600);
+  letter-spacing: 0.25rem;
+  animation: coopLoadingDots 1.2s ease-in-out infinite;
+}
+
+@keyframes coopLogoSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes coopLogoPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes coopLoadingDots {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coop-logo-spinner__ring,
+  .coop-logo-spinner__halo,
+  .coop-page-loader__dots {
+    animation: none;
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }

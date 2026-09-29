@@ -57,7 +57,7 @@ final class SecurityRegressionTest
 
         $routes = (new \ReflectionProperty(Router::class, 'routes'))->getValue($router);
         self::assertRouteHasRoles($routes, '/member/dashboard', ['member']);
-        self::assertRouteHasRoles($routes, '/staff/dashboard', ['staff']);
+        self::assertRouteHasRoles($routes, '/staff/dashboard', ['staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer', 'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin']);
         self::assertRouteHasRoles($routes, '/admin/dashboard', ['super_admin']);
         self::assertRouteHasRoles($routes, '/dashboard', ['super_admin']);
     }

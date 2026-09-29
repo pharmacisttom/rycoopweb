@@ -10,6 +10,9 @@ use App\Middlewares\FeatureFlagMiddleware;
 use App\Middlewares\RateLimitMiddleware;
 use App\Middlewares\RoleMiddleware;
 
+$staffRoles = ['staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer', 'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin'];
+$backofficeRoles = ['super_admin', ...$staffRoles];
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -138,7 +141,7 @@ $router->group(['prefix' => 'api/admin', 'middleware' => [AuthMiddleware::class,
 | SPA REST API — LED Member Check Module (CKAN Open Data Integration)
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'api/admin/led', 'middleware' => [AuthMiddleware::class]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'api/admin/led', 'middleware' => [AuthMiddleware::class, new RoleMiddleware($backofficeRoles)]], function (\App\Core\Router $r) {
     // Dashboard & Schema Discovery
     $r->get('/dashboard', 'Api\\LedApiController@dashboard');
     $r->get('/schema', 'Api\\LedApiController@schema');
@@ -167,6 +170,8 @@ $router->group(['prefix' => 'api/admin/led', 'middleware' => [AuthMiddleware::cl
 $router->get('/login', 'Admin\\AuthController@showLogin');
 $router->get('/admin/login', 'Admin\\AuthController@showLogin');
 $router->post('/login', 'Admin\\AuthController@login', [CsrfMiddleware::class, new RateLimitMiddleware('login', (int) config('security.rate_limiting.login.max_attempts', 5), (int) config('security.rate_limiting.login.decay_seconds', 900))]);
+$router->get('/admin/2fa', 'Admin\\AuthController@showTwoFactor');
+$router->post('/admin/2fa', 'Admin\\AuthController@verifyTwoFactor', [CsrfMiddleware::class]);
 $router->post('/logout', 'Admin\\AuthController@logout', [CsrfMiddleware::class]);
 $router->post('/api/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
 $router->post('/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
@@ -233,7 +238,7 @@ $router->group(['prefix' => 'member', 'middleware' => [new FeatureFlagMiddleware
 | Protected Staff Operations Routes
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(['staff'])]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware($staffRoles)]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Staff\\StaffController@dashboard');
     $r->get('/members', 'Staff\\StaffController@members', [new FeatureFlagMiddleware('member_portal')]);
     $r->get('/members/detail', 'Staff\\StaffController@memberDetail', [new FeatureFlagMiddleware('member_portal')]);
@@ -397,7 +402,7 @@ $router->group(['prefix' => 'admin', 'middleware' => [AuthMiddleware::class, new
 | Role Staff has full decision and view rights like admin in this section
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'staff'])]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class, new RoleMiddleware($backofficeRoles)]], function (\App\Core\Router $r) {
     $r->get('', 'Admin\\LedController@index');
     $r->get('/dashboard', 'Admin\\LedController@dashboard');
     $r->get('/search', 'Admin\\LedController@search');

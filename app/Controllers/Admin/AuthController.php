@@ -26,10 +26,10 @@ class AuthController extends Controller
             }
             if ($roleSlug === 'member') {
                 $this->redirect(url('member/dashboard'));
-            } elseif ($roleSlug === 'staff') {
-                $this->redirect(url('staff/dashboard'));
-            } else {
+            } elseif ($roleSlug === 'super_admin') {
                 $this->redirect(url('admin/dashboard'));
+            } else {
+                $this->redirect(url('staff/dashboard'));
             }
             return;
         }
@@ -160,8 +160,8 @@ class AuthController extends Controller
 
         $targetUrl = match($roleSlug) {
             'member' => url('member/dashboard'),
-            'staff' => url('staff/dashboard'),
-            default => url('admin/dashboard')
+            'super_admin' => url('admin/dashboard'),
+            default => url('staff/dashboard')
         };
 
         if ($isAjax) {
@@ -180,7 +180,7 @@ class AuthController extends Controller
                         'super_admin' => 'ผู้ดูแลระบบสูงสุด',
                         'staff' => 'เจ้าหน้าที่สินเชื่อ/การเงิน',
                         'auditor' => 'ผู้ตรวจสอบกิจการ / ผู้จัดการ',
-                        default => 'สมาชิกสหกรณ์'
+                        default => 'เจ้าหน้าที่สหกรณ์'
                     },
                 ]
             ]);
@@ -251,8 +251,8 @@ class AuthController extends Controller
         }
         $targetUrl = match($roleSlug) {
             'member' => url('member/dashboard'),
-            'staff' => url('staff/dashboard'),
-            default => url('admin/dashboard')
+            'super_admin' => url('admin/dashboard'),
+            default => url('staff/dashboard')
         };
 
         $this->redirect($targetUrl);

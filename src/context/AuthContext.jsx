@@ -85,7 +85,8 @@ export function AuthProvider({ children }) {
   /** Real authentication against the same-origin PHP backend. */
   const login = async (usernameOrId, password) => {
     const inputUsername = (usernameOrId || '').trim();
-    const inputPassword = (password || '').trim();
+    // A password may legitimately contain leading or trailing whitespace.
+    const inputPassword = password || '';
 
     if (!inputUsername || !inputPassword) {
       return {
@@ -102,7 +103,7 @@ export function AuthProvider({ children }) {
         for (const url of uniqueUrls) {
           try {
             const res = await fetch(url, options);
-            if (res.ok || res.status === 419 || res.status === 401 || res.status === 400 || res.status === 422) {
+            if (res.ok || [400, 401, 403, 419, 422, 429].includes(res.status)) {
               return res;
             }
           } catch (e) {}
@@ -137,8 +138,11 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const data = await response.json();
+        if (data.success && data.redirect && !data.user) {
+          return { success: true, requiresTwoFactor: true, redirect: data.redirect, user: null };
+        }
         if (data.success && data.user) {
-              const roleSlug = data.user.role || data.user.role_slug || 'member';
+              const roleSlug = data.user.role || data.user.role_slug || '';
               const authUser = {
                 id: data.user.id,
                 username: data.user.username || inputUsername,
@@ -167,11 +171,25 @@ export function AuthProvider({ children }) {
               setShowAuthModal(false);
               return {
                 success: true,
-                redirect: data.redirect || (roleSlug === 'super_admin' ? '/admin/dashboard' : roleSlug === 'staff' ? '/staff/dashboard' : '/member/dashboard'),
+                redirect: data.redirect || (roleSlug === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'),
                 user: authUser
               };
         }
         return { success: false, message: data.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง' };
+      }
+
+      if ([400, 401, 403, 422, 429].includes(response.status)) {
+        try {
+          const errorData = await response.json();
+          return {
+            success: false,
+            message: errorData.message || (response.status === 429
+              ? 'เข้าสู่ระบบไม่สำเร็จหลายครั้ง กรุณารอสักครู่แล้วลองใหม่'
+              : 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง')
+          };
+        } catch (e) {
+          return { success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' };
+        }
       }
 
       if (response.status === 419) {

@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect } from 'react';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { useInactivityTimeout } from './hooks/useInactivityTimeout';
@@ -104,6 +104,23 @@ const memberRoutes = [
 
 const profileRoutes = ['/member/profile', '/profile', '/settings', '/edit-profile'];
 const adminRoutes = ['/admin', '/admin/dashboard'];
+const staffRoles = [
+  'staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer',
+  'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin'
+];
+
+function StaffProtectedRoute({ children, roles }) {
+  const { user, isLoggedIn, sessionStatus } = useAuth();
+
+  if (sessionStatus === 'checking') return <PageSkeletonLoader />;
+  if (!isLoggedIn || sessionStatus !== 'online') {
+    return <Navigate to="/admin/login" replace />;
+  }
+  if (roles && !roles.includes(user?.role)) {
+    return <Navigate to={user?.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'} replace />;
+  }
+  return children;
+}
 
 export default function App() {
   const { isLoggedIn, logout } = useAuth();
@@ -113,7 +130,7 @@ export default function App() {
   // Inactivity Timeout Management (20 minutes inactivity / 2 minutes warning)
   const handleInactivityTimeout = useCallback(() => {
     logout();
-    navigate('/login');
+    navigate('/admin/login');
     toast.warning('เซสชันหมดอายุเนื่องจากไม่มีการใช้งานเป็นเวลา 20 นาที กรุณาเข้าสู่ระบบใหม่อีกครั้ง', 'เซสชันหมดอายุ');
   }, [logout, navigate, toast]);
 
@@ -163,17 +180,17 @@ export default function App() {
             {memberRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberDashboardPage /> : <ServiceUnavailablePage />} />)}
             {profileRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <ProfilePage /> : <ServiceUnavailablePage />} />)}
             <Route path="/service-unavailable" element={<ServiceUnavailablePage />} />
-            <Route path="/staff" element={<AdminDashboardPage />} />
-            <Route path="/staff/dashboard" element={<AdminDashboardPage />} />
-            {adminRoutes.map((path) => <Route key={path} path={path} element={<AdminDashboardPage />} />)}
+            <Route path="/staff" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
+            <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
+            {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute roles={['super_admin']}><AdminDashboardPage /></StaffProtectedRoute>} />)}
 
             {/* RYCOOP LED Member Check Routes */}
-            <Route path="/admin/led" element={<AdminLedDashboardPage />} />
-            <Route path="/admin/led/dashboard" element={<AdminLedDashboardPage />} />
-            <Route path="/admin/led/search" element={<AdminLedSearchPage />} />
-            <Route path="/admin/led/review" element={<AdminLedReviewPage />} />
-            <Route path="/admin/led/batch" element={<AdminLedBatchPage />} />
-            <Route path="/admin/led/schema" element={<AdminLedSchemaPage />} />
+            <Route path="/admin/led" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
+            <Route path="/admin/led/dashboard" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
+            <Route path="/admin/led/search" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedSearchPage /></StaffProtectedRoute>} />
+            <Route path="/admin/led/review" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedReviewPage /></StaffProtectedRoute>} />
+            <Route path="/admin/led/batch" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedBatchPage /></StaffProtectedRoute>} />
+            <Route path="/admin/led/schema" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedSchemaPage /></StaffProtectedRoute>} />
 
             <Route path="/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
             <Route path="/admin/login" element={<LoginPage />} />

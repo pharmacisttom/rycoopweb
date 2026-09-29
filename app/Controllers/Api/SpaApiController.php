@@ -458,7 +458,12 @@ class SpaApiController extends Controller
 
         $user = Auth::user();
         $member = MemberPortalService::getMemberByUserId(Auth::id());
-        $roleSlug = $user['role_slug'] ?? 'member';
+        $roleSlug = (string) ($user['role_slug'] ?? '');
+        if ($roleSlug === '') {
+            Auth::logout();
+            $this->json(['success' => false, 'authenticated' => false], 403);
+            return;
+        }
 
         $userData = [
             'id' => $user['id'] ?? null,
