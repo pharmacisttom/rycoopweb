@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
   });
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState(user ? 'checking' : 'guest');
 
   useEffect(() => {
     if (user) {
@@ -28,19 +29,58 @@ export function AuthProvider({ children }) {
   // localStorage only remembers the UI state. The PHP session remains the source
   // of truth for protected actions such as publishing news.
   useEffect(() => {
-    if (!user) return undefined;
+    if (!user) {
+      setSessionStatus('guest');
+      return undefined;
+    }
 
     let cancelled = false;
-    fetchCurrentUser().then((result) => {
-      if (!cancelled && (!result?.success || !result.authenticated)) {
-        setUser(null);
-      }
-    }).catch(() => {
-      if (!cancelled) setUser(null);
-    });
 
-    return () => { cancelled = true; };
-  }, []);
+    const checkSession = async () => {
+      if (!navigator.onLine) {
+        if (!cancelled) setSessionStatus('offline');
+        return;
+      }
+
+      if (!cancelled) setSessionStatus('checking');
+      try {
+        const result = await fetchCurrentUser();
+        if (cancelled) return;
+
+        if (result?.success && result.authenticated) {
+          setSessionStatus('online');
+        } else if (result?.authenticated === false) {
+          setUser(null);
+          setSessionStatus('expired');
+        } else {
+          // Keep the cached identity when the server is temporarily unreachable.
+          setSessionStatus('offline');
+        }
+      } catch (error) {
+        if (!cancelled) setSessionStatus('offline');
+      }
+    };
+
+    const handleOnline = () => checkSession();
+    const handleOffline = () => setSessionStatus('offline');
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') checkSession();
+    };
+
+    checkSession();
+    const intervalId = window.setInterval(checkSession, 60_000);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [user?.id]);
 
   /** Real authentication against the same-origin PHP backend. */
   const login = async (usernameOrId, password) => {
@@ -135,6 +175,7 @@ export function AuthProvider({ children }) {
               };
 
               setUser(authUser);
+              setSessionStatus('online');
               setShowAuthModal(false);
               return {
                 success: true,
@@ -177,6 +218,7 @@ export function AuthProvider({ children }) {
       fetch('/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     } catch (e) {}
     setUser(null);
+    setSessionStatus('guest');
     localStorage.removeItem('coop_auth_user');
   };
 
@@ -184,6 +226,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       isLoggedIn: !!user,
+      sessionStatus,
       login,
       logout,
       updateProfile,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, LogOut, Edit3, Calendar, Phone, KeyRound } from 'lucide-react';
+import UserStatusBadge from '../common/UserStatusBadge';
 
 /**
  * Reusable Dashboard Header with Profile Info, Role Badge, and Actions
@@ -89,6 +90,7 @@ export default function DashboardHeader({
               <span className={`badge ${roleConfig.badgeClass}`}>
                 {user?.roleBadge || user?.roleName || roleConfig.title}
               </span>
+              <UserStatusBadge />
             </div>
 
             <div className="dashboard-user-dept">

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { COOP_INFO } from '../../data/mockData';
+import UserStatusBadge from '../common/UserStatusBadge';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -228,12 +229,15 @@ export default function Navbar() {
                 className="user-pill-btn user-avatar-only"
                 aria-label="User Account Menu"
               >
-                <div className="user-pill-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {user.avatar ? (
-                    <img src={user.avatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    getAvatarInitial()
-                  )}
+                <div className="user-avatar-status-wrap">
+                  <div className="user-pill-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      getAvatarInitial()
+                    )}
+                  </div>
+                  <UserStatusBadge compact />
                 </div>
               </button>
 
@@ -249,6 +253,7 @@ export default function Navbar() {
                     <div className="user-dropdown-header-role">
                       บทบาท: <strong>{getRoleLabel()}</strong>
                     </div>
+                    <UserStatusBadge />
                   </div>
 
                   {/* Menu Items */}
@@ -894,16 +899,19 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none', color: 'inherit' }}
               >
-                <div className="user-pill-avatar" style={{ width: '36px', height: '36px', fontSize: '0.85rem', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {user.avatar ? (
-                    <img src={user.avatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    getAvatarInitial()
-                  )}
+                <div className="user-avatar-status-wrap">
+                  <div className="user-pill-avatar" style={{ width: '36px', height: '36px', fontSize: '0.85rem', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      getAvatarInitial()
+                    )}
+                  </div>
+                  <UserStatusBadge compact />
                 </div>
                 <div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{user.name}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--primary-600)', fontWeight: 600 }}>✏️ แก้ไขข้อมูลส่วนตัว</div>
+                  <UserStatusBadge />
                 </div>
               </Link>
               <button

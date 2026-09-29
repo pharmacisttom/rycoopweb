@@ -499,6 +499,88 @@ html, body {
   margin-bottom: 0.5rem;
 }
 
+/* Authenticated user presence, shared by desktop, tablet, and mobile layouts. */
+.user-avatar-status-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.user-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.user-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #94a3b8;
+  box-shadow: 0 0 0 2px var(--bg-surface);
+  flex: 0 0 auto;
+}
+
+.user-status-badge.is-online { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+.user-status-badge.is-online .user-status-dot { background: #10b981; }
+.user-status-badge.is-checking { color: #a16207; background: #fffbeb; border-color: #fde68a; }
+.user-status-badge.is-checking .user-status-dot { background: #f59e0b; animation: status-pulse 1.4s infinite; }
+.user-status-badge.is-offline,
+.user-status-badge.is-expired { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+.user-status-badge.is-offline .user-status-dot,
+.user-status-badge.is-expired .user-status-dot { background: #ef4444; }
+
+.user-status-badge.is-compact {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 0.75rem;
+  height: 0.75rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--bg-surface);
+  background: transparent;
+}
+
+.user-status-badge.is-compact .user-status-dot {
+  width: 100%;
+  height: 100%;
+  box-shadow: none;
+}
+
+@keyframes status-pulse {
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+
+[data-theme='dark'] .user-status-badge.is-online { color: #6ee7b7; background: rgba(6, 78, 59, 0.35); border-color: #065f46; }
+[data-theme='dark'] .user-status-badge.is-checking { color: #fcd34d; background: rgba(120, 53, 15, 0.3); border-color: #92400e; }
+[data-theme='dark'] .user-status-badge.is-offline,
+[data-theme='dark'] .user-status-badge.is-expired { color: #fca5a5; background: rgba(127, 29, 29, 0.3); border-color: #991b1b; }
+
 @media (max-width: 1180px) {
   .hide-mobile {
     display: none !important;
@@ -571,6 +653,9 @@ html, body {
   }
   .navbar-brand-title {
     font-size: 0.82rem;
+    max-width: 52vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .navbar-login-btn {
     padding: 0.35rem 0.65rem !important;
