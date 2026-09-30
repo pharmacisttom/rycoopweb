@@ -40,6 +40,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VerifyReceiptPage = lazy(() => import('./pages/VerifyReceiptPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const ServiceUnavailablePage = lazy(() => import('./pages/ServiceUnavailablePage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 
 const memberPortalEnabled = import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
 
@@ -93,6 +94,8 @@ const publicRoutes = [
   ['/contact', ContactPage],
   ['/complaints', ContactPage],
   ['/faqs', ContactPage],
+  ['/privacy/policy', PrivacyPolicyPage],
+  ['/privacy/cookies', PrivacyPolicyPage],
 ];
 
 const memberRoutes = [

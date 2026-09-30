@@ -219,7 +219,7 @@ export default function Footer() {
               <LockKeyhole size={14} /> เข้าสู่ระบบเจ้าหน้าที่
             </Link>
             <Link to="/contact" style={{ color: '#94a3b8' }}>รับเรื่องร้องเรียน</Link>
-            <Link to="/documents" style={{ color: '#94a3b8' }}>นโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)</Link>
+            <Link to="/privacy/policy" style={{ color: '#94a3b8' }}>นโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)</Link>
             <Link to="/documents" style={{ color: '#94a3b8' }}>ข้อกำหนดและเงื่อนไข</Link>
           </div>
         </div>
