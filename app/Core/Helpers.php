@@ -137,7 +137,83 @@ if (!function_exists('asset')) {
 if (!function_exists('storage_url')) {
     function storage_url(string $path = ''): string
     {
-        return url('storage/uploads/' . ltrim($path, '/'));
+        if ($path === '') {
+            return url('storage/uploads');
+        }
+        $resolved = resolve_media_url($path);
+        if ($resolved === null || preg_match('#^https?://#i', $resolved) === 1) {
+            return $resolved ?? url('storage/uploads');
+        }
+        return url(ltrim($resolved, '/'));
+    }
+}
+
+/**
+ * Resolve a database media value to a public URL without prefix duplication.
+ * Absolute HTTP(S) URLs and root-relative public paths are already resolved.
+ */
+if (!function_exists('resolve_media_url')) {
+    function resolve_media_url(mixed $value, ?string $fallback = null): ?string
+    {
+        if ($value === null) {
+            return $fallback;
+        }
+
+        $path = trim((string) $value);
+        if ($path === '') {
+            return $fallback;
+        }
+
+        $path = str_replace('\\', '/', $path);
+        if (preg_match('#^https?://#i', $path) === 1 || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, 'assets/')) {
+            return '/' . $path;
+        }
+        if (str_starts_with($path, 'storage/uploads/')) {
+            return '/' . $path;
+        }
+
+        return '/storage/uploads/' . ltrim($path, '/');
+    }
+}
+
+if (!function_exists('media_url')) {
+    function media_url(?string $path, string $fallback = ''): string
+    {
+        return resolve_media_url($path, $fallback) ?? $fallback;
+    }
+}
+
+/**
+ * Resolve an upload-relative value to the canonical, non-public filesystem.
+ * Throws for traversal, URLs, drive paths, and other values outside uploads.
+ */
+if (!function_exists('storage_upload_path')) {
+    function storage_upload_path(?string $value = ''): string
+    {
+        $path = str_replace('\\', '/', trim((string) $value));
+        if (str_contains($path, "\0") || preg_match('#^[a-z][a-z0-9+.-]*:#i', $path) === 1) {
+            throw new InvalidArgumentException('Unsafe upload path.');
+        }
+
+        $path = ltrim($path, '/');
+        foreach (['storage/uploads/', 'public/storage/uploads/', 'public/uploads/'] as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                $path = substr($path, strlen($prefix));
+                break;
+            }
+        }
+
+        $segments = array_values(array_filter(explode('/', $path), static fn (string $part): bool => $part !== ''));
+        if (in_array('..', $segments, true) || in_array('.', $segments, true)) {
+            throw new InvalidArgumentException('Unsafe upload path.');
+        }
+
+        $base = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads';
+        return $path === '' ? $base : $base . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments);
     }
 }
 

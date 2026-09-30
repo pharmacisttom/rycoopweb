@@ -17,6 +17,12 @@ class HeroSlideController extends Controller
     public function index(): void
     {
         $slides = Database::query("SELECT * FROM hero_slides WHERE deleted_at IS NULL ORDER BY priority DESC, sort_order ASC, id ASC");
+        $slides = array_map(static function (array $slide): array {
+            foreach (['image_url', 'desktop_image', 'mobile_image'] as $field) {
+                if (array_key_exists($field, $slide)) $slide[$field] = resolve_media_url($slide[$field]);
+            }
+            return $slide;
+        }, $slides);
 
         $this->render('admin.hero_slides.index', [
             'title' => 'จัดการ Hero Slideshow แบนเนอร์หน้าแรก',

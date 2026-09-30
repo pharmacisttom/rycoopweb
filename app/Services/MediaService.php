@@ -12,6 +12,10 @@ class MediaService
 {
     public static function upload(array $file, string $folder = 'general', ?string $altText = null): array
     {
+        if (preg_match('/^[a-z0-9][a-z0-9_-]{0,49}$/', $folder) !== 1) {
+            throw new RuntimeException('Invalid media folder.');
+        }
+
         if ($file['error'] !== UPLOAD_ERR_OK) {
             throw new RuntimeException('การอัปโหลดไฟล์ล้มเหลว (Error Code: ' . $file['error'] . ')');
         }
@@ -43,12 +47,28 @@ class MediaService
             throw new RuntimeException('ประเภทไฟล์ไม่ได้รับอนุญาต (MIME: ' . $mime . ')');
         }
 
+
+        $extensionMimes = [
+            'jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'], 'png' => ['image/png'],
+            'webp' => ['image/webp'], 'gif' => ['image/gif'], 'pdf' => ['application/pdf'],
+            'doc' => ['application/msword'],
+            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            'xls' => ['application/vnd.ms-excel'],
+            'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        ];
+        if (!isset($extensionMimes[$ext]) || !in_array($mime, $extensionMimes[$ext], true)) {
+            throw new RuntimeException('File extension does not match its content type.');
+        }
+        if (in_array($mime, $allowedImages, true) && @getimagesize($file['tmp_name']) === false) {
+            throw new RuntimeException('Invalid image content.');
+        }
+
         // Generate safe randomized filename
         $uniqueName = bin2hex(random_bytes(16)) . '.' . $ext;
-        $targetDir = dirname(__DIR__, 2) . '/storage/uploads/' . $folder;
+        $targetDir = storage_upload_path($folder);
 
-        if (!is_dir($targetDir)) {
-            @mkdir($targetDir, 0775, true);
+        if (!is_dir($targetDir) && !mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
+            throw new RuntimeException('Unable to create media directory.');
         }
 
         $targetPath = $targetDir . '/' . $uniqueName;
@@ -62,25 +82,32 @@ class MediaService
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
         $userId = Auth::id();
-        $mediaId = Database::insert($sql, [
-            $uniqueName,
-            $file['name'],
-            $mime,
-            $file['size'],
-            "{$folder}/{$uniqueName}",
-            $folder,
-            $altText ?: pathinfo($file['name'], PATHINFO_FILENAME),
-            $userId
-        ]);
+        try {
+            $mediaId = Database::insert($sql, [
+                $uniqueName,
+                basename((string) $file['name']),
+                $mime,
+                $file['size'],
+                "{$folder}/{$uniqueName}",
+                $folder,
+                $altText ?: pathinfo((string) $file['name'], PATHINFO_FILENAME),
+                $userId
+            ]);
+        } catch (\Throwable $e) {
+            @unlink($targetPath);
+            throw $e;
+        }
 
         return [
             'id' => $mediaId,
             'filename' => $uniqueName,
             'original_name' => $file['name'],
             'path' => "{$folder}/{$uniqueName}",
-            'url' => storage_url("{$folder}/{$uniqueName}"),
+            'url' => resolve_media_url("{$folder}/{$uniqueName}"),
             'mime_type' => $mime,
-            'size' => $file['size']
+            'mime' => $mime,
+            'size' => $file['size'],
+            'created_at' => date('Y-m-d H:i:s'),
         ];
     }
 }

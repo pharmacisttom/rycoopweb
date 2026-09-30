@@ -106,14 +106,19 @@ class StaffController extends Controller
             return;
         }
 
-        $filename = basename($file);
-        
-        $searchPaths = [
+        $filename = basename(str_replace('\\', '/', $file));
+        try {
+            $canonicalPath = storage_upload_path('loans/' . $filename);
+        } catch (\InvalidArgumentException $e) {
+            $canonicalPath = '';
+        }
+
+        // Canonical location first; legacy public paths remain read-only during migration.
+        $searchPaths = array_filter([
+            $canonicalPath,
             dirname(__DIR__, 3) . '/public/uploads/loans/' . $filename,
-            dirname(__DIR__, 3) . '/storage/uploads/loans/' . $filename,
             dirname(__DIR__, 3) . '/public/uploads/' . $filename,
-            dirname(__DIR__, 3) . '/storage/uploads/' . $filename,
-        ];
+        ]);
 
         $targetPath = null;
         foreach ($searchPaths as $path) {

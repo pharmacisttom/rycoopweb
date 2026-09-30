@@ -15,6 +15,12 @@ class HomeController extends Controller
         $heroSlides = [];
         try {
             $heroSlides = Database::query("SELECT * FROM hero_slides WHERE status = 'active' AND (start_at IS NULL OR start_at <= NOW()) AND (end_at IS NULL OR end_at >= NOW()) ORDER BY priority DESC, sort_order ASC");
+            $heroSlides = array_map(static function (array $slide): array {
+                foreach (['image_url', 'desktop_image', 'mobile_image'] as $field) {
+                    if (array_key_exists($field, $slide)) $slide[$field] = resolve_media_url($slide[$field]);
+                }
+                return $slide;
+            }, $heroSlides);
         } catch (\Throwable $e) {}
 
         // 2. Deposit Rates & Loan Rates
@@ -29,6 +35,10 @@ class HomeController extends Controller
         $latestNews = [];
         try {
             $latestNews = Database::query("SELECT n.*, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT 6");
+            $latestNews = array_map(static function (array $news): array {
+                $news['cover_image'] = resolve_media_url($news['cover_image'] ?? null);
+                return $news;
+            }, $latestNews);
         } catch (\Throwable $e) {}
 
         // 4. Featured Deposit & Loan Products & Calculator Loan Products

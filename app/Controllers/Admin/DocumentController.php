@@ -21,6 +21,12 @@ class DocumentController extends Controller
                                      JOIN document_categories c ON d.category_id = c.id 
                                      WHERE d.deleted_at IS NULL 
                                      ORDER BY d.created_at DESC");
+        $documents = array_map(static function (array $document): array {
+            foreach (['thumbnail', 'thumbnail_url', 'image_url'] as $field) {
+                if (array_key_exists($field, $document)) $document[$field] = resolve_media_url($document[$field]);
+            }
+            return $document;
+        }, $documents);
 
         $this->render('admin.documents.index', [
             'title' => 'จัดการศูนย์เอกสารและระเบียบ',

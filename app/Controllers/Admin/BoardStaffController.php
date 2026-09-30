@@ -16,6 +16,8 @@ class BoardStaffController extends Controller
     {
         $boards = Database::query("SELECT * FROM boards WHERE deleted_at IS NULL ORDER BY sort_order ASC");
         $staff = Database::query("SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY sort_order ASC");
+        $boards = array_map(static function (array $item): array { $item['photo'] = resolve_media_url($item['photo'] ?? null); return $item; }, $boards);
+        $staff = array_map(static function (array $item): array { $item['photo'] = resolve_media_url($item['photo'] ?? null); return $item; }, $staff);
 
         $this->render('admin.board_staff.index', [
             'title' => 'จัดการคณะกรรมการและเจ้าหน้าที่',

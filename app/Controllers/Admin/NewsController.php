@@ -20,6 +20,10 @@ class NewsController extends Controller
                                     LEFT JOIN users u ON n.author_id = u.id 
                                     WHERE n.deleted_at IS NULL 
                                     ORDER BY n.created_at DESC");
+        $newsList = array_map(static function (array $news): array {
+            $news['cover_image'] = resolve_media_url($news['cover_image'] ?? null);
+            return $news;
+        }, $newsList);
 
         $this->render('admin.news.index', [
             'title' => 'จัดการข่าวสารและกิจกรรม',

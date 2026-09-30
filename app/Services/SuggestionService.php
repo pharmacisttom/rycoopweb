@@ -103,7 +103,7 @@ class SuggestionService
 
         $attachmentPath = null;
         if ($file && !empty($file['tmp_name']) && $file['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = dirname(__DIR__, 2) . '/public/uploads/suggestions';
+            $uploadDir = storage_upload_path('suggestions');
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
             }
@@ -112,7 +112,7 @@ class SuggestionService
                 $filename = "sug_{$suggestionNo}_" . time() . ".{$ext}";
                 $dest = $uploadDir . '/' . $filename;
                 if (move_uploaded_file($file['tmp_name'], $dest)) {
-                    $attachmentPath = 'uploads/suggestions/' . $filename;
+                    $attachmentPath = 'suggestions/' . $filename;
                 }
             }
         }

@@ -72,13 +72,11 @@ class DocumentController extends Controller
         }
 
         // File download / preview
-        $filePath = dirname(__DIR__, 3) . '/storage/uploads/' . $doc['file_path'];
-        if (!file_exists($filePath)) {
-            // Also check if stored directly under storage/uploads
-            $altPath = dirname(__DIR__, 3) . '/storage/' . $doc['file_path'];
-            if (file_exists($altPath)) {
-                $filePath = $altPath;
-            }
+        try {
+            $filePath = storage_upload_path((string) $doc['file_path']);
+        } catch (\InvalidArgumentException $e) {
+            Logger::error("Unsafe document path: Document ID #{$doc['id']}");
+            $filePath = '';
         }
 
         if (file_exists($filePath) && is_file($filePath)) {

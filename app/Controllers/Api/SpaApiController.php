@@ -42,7 +42,8 @@ class SpaApiController extends Controller
         $upcomingEvents = [];
 
         try {
-            $heroSlides = Database::query("SELECT id, title, subtitle, image_url, cta_text, cta_url, bg_gradient, priority, sort_order FROM hero_slides WHERE status = 'active' AND (start_at IS NULL OR start_at <= NOW()) AND (end_at IS NULL OR end_at >= NOW()) ORDER BY priority DESC, sort_order ASC");
+            $heroSlides = Database::query("SELECT * FROM hero_slides WHERE status = 'active' AND deleted_at IS NULL AND (start_at IS NULL OR start_at <= NOW()) AND (end_at IS NULL OR end_at >= NOW()) ORDER BY priority DESC, sort_order ASC");
+            $heroSlides = array_map(fn(array $slide): array => $this->withResolvedMediaUrls($slide, ['image_url', 'desktop_image', 'mobile_image']), $heroSlides);
         } catch (\Throwable $e) {}
 
         try {
@@ -191,6 +192,7 @@ class SpaApiController extends Controller
         $docs = [];
         try {
             $docs = Database::query("SELECT id, title, category, file_path, file_size, download_count, created_at FROM documents WHERE status = 'published' ORDER BY created_at DESC");
+            $docs = array_map(fn(array $doc): array => $this->withResolvedMediaUrls($doc, ['thumbnail', 'thumbnail_url', 'image_url']), $docs);
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $docs]);
@@ -230,6 +232,7 @@ class SpaApiController extends Controller
         $members = [];
         try {
             $members = Database::query("SELECT id, name, position, image_url, group_name, sort_order FROM board_staff WHERE status = 'active' ORDER BY group_name ASC, sort_order ASC");
+            $members = array_map(fn(array $member): array => $this->withResolvedMediaUrls($member, ['image_url', 'photo']), $members);
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $members]);
@@ -702,7 +705,7 @@ class SpaApiController extends Controller
             throw new \InvalidArgumentException('รองรับเฉพาะรูปภาพ PNG, JPEG และ WEBP');
         }
 
-        $directory = dirname(__DIR__, 3) . '/public/storage/uploads/news';
+        $directory = storage_upload_path('news');
         if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
             throw new \RuntimeException('ไม่สามารถเตรียมพื้นที่จัดเก็บรูปภาพได้');
         }
@@ -721,11 +724,31 @@ class SpaApiController extends Controller
         $key = array_key_exists('image', $item) ? 'image' : 'cover_image';
         $image = $item[$key] ?? null;
 
-        if (is_string($image) && $image !== '' && !preg_match('#^https?://#i', $image)) {
-            $relativePath = preg_replace('#^/?storage/uploads/#', '', $image);
-            $item[$key] = storage_url(ltrim($relativePath, '/'));
+        $item[$key] = resolve_media_url($image);
+
+        if (array_key_exists('gallery_images', $item)) {
+            $gallery = is_string($item['gallery_images'])
+                ? json_decode($item['gallery_images'], true)
+                : $item['gallery_images'];
+            if (is_array($gallery)) {
+                $item['gallery_images'] = array_values(array_filter(array_map(
+                    static fn (mixed $value): ?string => resolve_media_url($value),
+                    $gallery
+                )));
+            }
         }
 
+        return $item;
+    }
+
+    /** Resolve known media fields while leaving non-media values untouched. */
+    private function withResolvedMediaUrls(array $item, array $fields): array
+    {
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $item)) {
+                $item[$field] = resolve_media_url($item[$field]);
+            }
+        }
         return $item;
     }
 
@@ -760,6 +783,9 @@ class SpaApiController extends Controller
         // Remove PII that should not be sent in raw form
         unset($member['id_card']);
         unset($member['password']);
+        if (array_key_exists('avatar', $member)) {
+            $member['avatar'] = resolve_media_url($member['avatar']);
+        }
         return $member;
     }
 }

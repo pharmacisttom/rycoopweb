@@ -15,6 +15,12 @@ class PopupController extends Controller
     public function index(): void
     {
         $popups = Database::query("SELECT * FROM popups WHERE deleted_at IS NULL ORDER BY FIELD(priority, 'critical', 'high', 'normal', 'low'), created_at DESC");
+        $popups = array_map(static function (array $popup): array {
+            foreach (['desktop_image', 'mobile_image'] as $field) {
+                if (array_key_exists($field, $popup)) $popup[$field] = resolve_media_url($popup[$field]);
+            }
+            return $popup;
+        }, $popups);
 
         $this->render('admin.popups.index', [
             'title' => 'จัดการ Popup Campaign ประชาสัมพันธ์',

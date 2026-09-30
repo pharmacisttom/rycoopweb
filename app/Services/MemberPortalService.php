@@ -213,7 +213,7 @@ class MemberPortalService
         $estimatedMonthly = round($monthlyPrincipal + $monthlyInterest, 2);
 
         $docs = [];
-        $uploadDir = dirname(__DIR__, 2) . '/public/uploads/loans';
+        $uploadDir = storage_upload_path('loans');
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
@@ -252,7 +252,7 @@ class MemberPortalService
 
                         $docs[] = [
                             'name' => $docName,
-                            'file' => 'uploads/loans/' . $filename,
+                            'file' => 'loans/' . $filename,
                             'original_name' => $origName,
                             'size' => $formattedSize,
                             'type' => $ext,

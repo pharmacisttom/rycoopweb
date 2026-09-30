@@ -16,6 +16,10 @@ class MediaController extends Controller
     public function index(): void
     {
         $mediaList = Database::query("SELECT m.*, u.name as uploader_name FROM media m LEFT JOIN users u ON m.uploaded_by = u.id WHERE m.deleted_at IS NULL ORDER BY m.created_at DESC");
+        $mediaList = array_map(static function (array $media): array {
+            $media['url'] = resolve_media_url($media['path'] ?? null);
+            return $media;
+        }, $mediaList);
 
         $this->render('admin.media.index', [
             'title' => 'คลังสื่อและรูปภาพ (Media Library)',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building, Landmark } from 'lucide-react';
 import { BOARD_MEMBERS, COOP_INFO } from '../data/mockData';
+import SafeImage from '../components/common/SafeImage';
 
 function PeopleGrid({ members, type }) {
   const isBoard = type === 'board';
@@ -42,14 +43,11 @@ function PeopleGrid({ members, type }) {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <img
+            <SafeImage
               src={member.image}
               alt={`ภาพ ${member.name}`}
               loading="lazy"
               style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
             />
           </div>
 

@@ -111,13 +111,13 @@ const PopupManager = (function() {
 
         let bodyHtml = '';
         if (popup.desktop_image) {
-            let imgSrc = popup.desktop_image;
-            if (!imgSrc.startsWith('http://') && !imgSrc.startsWith('https://') && !imgSrc.startsWith('data:')) {
-                if (imgSrc.startsWith('/')) {
-                    imgSrc = (window.APP_URL || '') + imgSrc;
-                } else {
-                    imgSrc = (window.APP_URL || '') + '/assets/img/' + imgSrc;
-                }
+            const rawImage = String(popup.desktop_image).trim().replaceAll('\\', '/');
+            let imgSrc = rawImage;
+            if (!/^https?:\/\//i.test(rawImage) && !rawImage.startsWith('data:')) {
+                if (rawImage.startsWith('/')) imgSrc = rawImage;
+                else if (rawImage.startsWith('assets/') || rawImage.startsWith('storage/uploads/')) imgSrc = `/${rawImage}`;
+                else imgSrc = `/storage/uploads/${rawImage.replace(/^\/+/, '')}`;
+                imgSrc = (window.APP_URL || '') + imgSrc;
             }
             bodyHtml += `<div class="text-center mb-3"><img src="${imgSrc}" class="img-fluid rounded-3 shadow-sm" alt="${popup.title}" onerror="this.style.display='none'"></div>`;
         }

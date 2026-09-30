@@ -131,8 +131,8 @@ createHeroBg("{$imgDir}/hero_bg_default.jpg");
 createBoardPlaceholder("{$imgDir}/board_placeholder.jpg");
 createPopupDividend("{$imgDir}/popup_dividend.jpg");
 
-// Generate sample news images in storage/uploads/news/ if news items reference them
-$newsUploadDir = dirname(__DIR__) . '/public/storage/uploads/news';
+// Seeded sample images are immutable public assets, not runtime uploads.
+$newsUploadDir = dirname(__DIR__) . '/public/assets/news';
 if (!is_dir($newsUploadDir)) {
     @mkdir($newsUploadDir, 0775, true);
 }

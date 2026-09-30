@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, Eye, ChevronRight, Search, X } from 'lucide-react';
 import { fetchNews } from '../services/api';
 import { normalizeNewsItem } from '../utils/news';
+import SafeImage from '../components/common/SafeImage';
 
 export default function NewsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,11 +56,10 @@ export default function NewsPage() {
           {filteredNews.map((item) => (
             <div key={item.id} className="surface-card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '180px', background: 'var(--primary-100)', position: 'relative' }}>
-                <img 
+                <SafeImage
                   src={item.image} 
                   alt={item.title} 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
                 <span style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(15, 23, 42, 0.8)', color: '#fff', padding: '0.25rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
                   {item.category}

@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from './media';
+
 const DEFAULT_IMAGE = '/assets/img/news_placeholder.jpg';
 
 export const formatNewsDate = (value) => {
@@ -19,6 +21,6 @@ export const normalizeNewsItem = (item) => ({
   category: item.category || item.category_name || 'ข่าวสาร',
   date: formatNewsDate(item.date || item.publish_at),
   excerpt: item.excerpt || item.summary || '',
-  image: item.image || item.cover_image || DEFAULT_IMAGE,
+  image: resolveMediaUrl(item.image || item.cover_image, DEFAULT_IMAGE),
   views: Number(item.views ?? item.views_count ?? 0),
 });

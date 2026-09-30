@@ -11,6 +11,7 @@ import DividendEstimator from '../components/calculators/DividendEstimator';
 import heroPortrait from '../assets/hero-portrait-official.png';
 import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
+import SafeImage from '../components/common/SafeImage';
 
 // Fallback defaults when API is unreachable (development/offline mode)
 const FALLBACK_COOP = {
@@ -380,7 +381,7 @@ export default function HomePage() {
                         const item = newsList[activeNewsSlide];
                         return (
                           <article className="hero-news-slide" key={item.id}>
-                            <img src={item.image} alt="" />
+                            <SafeImage src={item.image} alt={item.title} />
                             <div className="hero-news-slide-overlay">
                               <span className="hero-news-meta">{item.category || 'ข่าวสาร'} · {item.date}</span>
                               <h4>{item.title}</h4>
