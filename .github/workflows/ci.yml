@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - Test
       - 'codex/**'
   workflow_dispatch:
 
@@ -17,17 +18,56 @@ permissions:
 
 jobs:
   php-quality:
-    name: PHP quality and security checks
+    name: PHP, database, media and security checks
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8080
+      APP_TIMEZONE: Asia/Bangkok
+      APP_KEY: ci-only-not-a-production-secret
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: rayongcoop_ci
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_CHARSET: utf8mb4
+      DB_COLLATION: utf8mb4_unicode_ci
+      INITIAL_ADMIN_USERNAME: ci_admin
+      INITIAL_ADMIN_EMAIL: ci_admin@example.invalid
+      INITIAL_ADMIN_PASSWORD: CI-only-password-2026!
+      SESSION_SECURE: "false"
+      FEATURE_MEMBER_PORTAL: "false"
+      FEATURE_MEMBER_LOGIN: "false"
+      FEATURE_MEMBER_ESERVICE: "false"
+      FEATURE_MEMBER_FINANCIAL_DATA: "false"
+      VITE_FEATURE_MEMBER_PORTAL: "false"
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.5'
+          extensions: pdo_mysql, mbstring, xml, curl, gd, zip, bcmath, intl, fileinfo
           tools: composer:v2
 
       - name: Install PHP dependencies
@@ -37,18 +77,74 @@ jobs:
         run: composer validate --no-check-publish
 
       - name: Check PHP syntax
-        run: php bin/test_lint.php
+        run: |
+          if [ -f bin/test_lint.php ]; then
+            php bin/test_lint.php
+          else
+            find app config database tests scripts bin public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          fi
+
+      - name: Run media URL tests
+        run: php tests/MediaUrlTest.php
+
+      - name: Validate seeded static assets
+        run: php scripts/check-seed-assets.php
 
       - name: Run security regression tests
         run: php tests/SecurityRegressionTest.php
 
+      - name: Migrate fresh CI database
+        run: php bin/console db:migrate
+
+      - name: Seed CI database twice
+        run: |
+          php bin/console db:seed
+          php bin/console db:seed
+
+      - name: Start PHP API smoke-test server
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php > /tmp/rayongcoop-php-server.log 2>&1 &
+          echo $! > /tmp/rayongcoop-php-server.pid
+          for i in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8080/api/public/news >/tmp/news.json; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/rayongcoop-php-server.log
+          exit 1
+
+      - name: Check public API media URLs
+        run: |
+          cat /tmp/news.json
+          if grep -q '/storage/uploads/assets/' /tmp/news.json; then
+            echo 'Forbidden duplicated media URL found in news API response.'
+            exit 1
+          fi
+          curl --fail --silent http://127.0.0.1:8080/api/public/home >/tmp/home.json
+          if grep -q '/storage/uploads/assets/' /tmp/home.json; then
+            echo 'Forbidden duplicated media URL found in home API response.'
+            exit 1
+          fi
+
+      - name: Verify Member Portal stays disabled
+        run: |
+          php -r "require 'vendor/autoload.php'; exit(config('features.member_portal', true) === false && config('features.member_login', true) === false ? 0 : 1);"
+
+      - name: Check patch whitespace
+        run: git diff --check HEAD^ HEAD
+
   frontend-build:
     name: React production build
     runs-on: ubuntu-latest
+    env:
+      VITE_FEATURE_MEMBER_PORTAL: "false"
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -61,6 +157,14 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+      - name: Verify production asset base
+        run: |
+          test -f public/app/index.html
+          grep -q '/app/assets/' public/app/index.html
+
+      - name: Check patch whitespace
+        run: git diff --check HEAD^ HEAD
 
       - name: Upload production build artifact
         uses: actions/upload-artifact@v4
