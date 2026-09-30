@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { normalizeSameOriginRedirect } from '../utils/navigation';
 
 const STAFF_ROLES = new Set([
   'super_admin', 'staff', 'manager', 'executive', 'finance', 'loan_officer',
@@ -40,14 +41,15 @@ export default function LoginPage() {
         return;
       }
       if (result.requiresTwoFactor) {
-        window.location.assign(result.redirect);
+        window.location.assign(normalizeSameOriginRedirect(result.redirect, '/admin/2fa'));
         return;
       }
       if (!STAFF_ROLES.has(result.user?.role)) {
         setError('บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบหลังบ้าน');
         return;
       }
-      navigate(result.redirect || (result.user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'), { replace: true });
+      const fallback = result.user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard';
+      navigate(normalizeSameOriginRedirect(result.redirect, fallback), { replace: true });
     } catch {
       setError('ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');
     } finally {

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fetchCurrentUser } from '../services/api';
+import { normalizeSameOriginRedirect } from '../utils/navigation';
 
 const AuthContext = createContext();
 
@@ -139,7 +140,7 @@ export function AuthProvider({ children }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.redirect && !data.user) {
-          return { success: true, requiresTwoFactor: true, redirect: data.redirect, user: null };
+          return { success: true, requiresTwoFactor: true, redirect: normalizeSameOriginRedirect(data.redirect, '/admin/2fa'), user: null };
         }
         if (data.success && data.user) {
               const roleSlug = data.user.role || data.user.role_slug || '';
@@ -171,7 +172,10 @@ export function AuthProvider({ children }) {
               setShowAuthModal(false);
               return {
                 success: true,
-                redirect: data.redirect || (roleSlug === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'),
+                redirect: normalizeSameOriginRedirect(
+                  data.redirect,
+                  roleSlug === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'
+                ),
                 user: authUser
               };
         }

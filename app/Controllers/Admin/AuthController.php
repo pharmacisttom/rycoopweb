@@ -140,7 +140,7 @@ class AuthController extends Controller
         if ((int)($user['two_factor_enabled'] ?? 0) === 1 && !empty($user['two_factor_secret'])) {
             Auth::login($user, false);
             if ($isAjax) {
-                $this->response->json(['success' => true, 'redirect' => url('admin/2fa')]);
+                $this->response->json(['success' => true, 'redirect' => '/admin/2fa']);
                 return;
             }
             $this->redirect(url('admin/2fa'));
@@ -158,17 +158,17 @@ class AuthController extends Controller
 
         Session::flash('success', 'เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ' . ($user['name'] ?? 'ผู้ใช้งาน'));
 
-        $targetUrl = match($roleSlug) {
-            'member' => url('member/dashboard'),
-            'super_admin' => url('admin/dashboard'),
-            default => url('staff/dashboard')
+        $targetPath = match($roleSlug) {
+            'member' => '/member/dashboard',
+            'super_admin' => '/admin/dashboard',
+            default => '/staff/dashboard'
         };
 
         if ($isAjax) {
             $this->response->json([
                 'success' => true,
                 'message' => 'เข้าสู่ระบบสำเร็จ กำลังพาไปยัง Dashboard...',
-                'redirect' => $targetUrl,
+                'redirect' => $targetPath,
                 'user' => [
                     'id' => $user['id'] ?? null,
                     'username' => $user['username'] ?? '',
@@ -187,7 +187,7 @@ class AuthController extends Controller
             return;
         }
 
-        $this->redirect($targetUrl);
+        $this->redirect(url(ltrim($targetPath, '/')));
     }
 
     public function showTwoFactor(): void
@@ -274,7 +274,7 @@ class AuthController extends Controller
                 return;
             }
             Session::flash('error', $msg);
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? url('/'));
+            $this->redirect($this->safeRefererUrl());
             return;
         }
 
@@ -285,7 +285,7 @@ class AuthController extends Controller
                 return;
             }
             Session::flash('error', $msg);
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? url('/'));
+            $this->redirect($this->safeRefererUrl());
             return;
         }
 
@@ -310,7 +310,7 @@ class AuthController extends Controller
                 return;
             }
             Session::flash('error', $msg);
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? url('/'));
+            $this->redirect($this->safeRefererUrl());
             return;
         }
 
@@ -323,7 +323,7 @@ class AuthController extends Controller
                     return;
                 }
                 Session::flash('error', $msg);
-                $this->redirect($_SERVER['HTTP_REFERER'] ?? url('/'));
+                $this->redirect($this->safeRefererUrl());
                 return;
             }
         }
@@ -344,7 +344,7 @@ class AuthController extends Controller
         }
 
         Session::flash('success', $msg);
-        $this->redirect($_SERVER['HTTP_REFERER'] ?? url('/'));
+        $this->redirect($this->safeRefererUrl());
     }
 
     public function logout(): void
@@ -363,5 +363,27 @@ class AuthController extends Controller
 
         Session::flash('info', 'ออกจากระบบเรียบร้อยแล้ว');
         $this->redirect(url('login'));
+    }
+
+    private function safeRefererUrl(): string
+    {
+        $fallback = url('/');
+        $referer = trim((string) ($_SERVER['HTTP_REFERER'] ?? ''));
+        if ($referer === '') {
+            return $fallback;
+        }
+
+        $target = parse_url($referer);
+        $origin = parse_url($fallback);
+        if ($target === false || $origin === false) {
+            return $fallback;
+        }
+
+        $scheme = strtolower((string) ($target['scheme'] ?? ''));
+        $sameOrigin = in_array($scheme, ['http', 'https'], true)
+            && strtolower((string) ($target['host'] ?? '')) === strtolower((string) ($origin['host'] ?? ''))
+            && ($target['port'] ?? null) === ($origin['port'] ?? null);
+
+        return $sameOrigin ? $referer : $fallback;
     }
 }

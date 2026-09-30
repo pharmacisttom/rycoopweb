@@ -84,7 +84,7 @@ class SuggestionController extends Controller
                 'success' => true,
                 'message' => "บันทึกข้อเสนอแนะสำเร็จ เลขที่ {$result['suggestion_no']}",
                 'suggestion_no' => $result['suggestion_no'],
-                'redirect' => url('member/suggestions')
+                'redirect' => '/member/suggestions'
             ]);
             return;
         }

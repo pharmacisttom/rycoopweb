@@ -218,7 +218,7 @@ class MemberPortalController extends Controller
                 'success' => true,
                 'message' => "ยื่นคำขอกู้เงินสำเร็จ เลขที่ {$res['application_no']}",
                 'application_no' => $res['application_no'],
-                'redirect' => url('member/online-services')
+                'redirect' => '/member/online-services'
             ]);
             return;
         }
