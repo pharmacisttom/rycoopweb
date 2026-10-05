@@ -71,7 +71,7 @@ export default function LoginPage() {
               <ShieldCheck size={34} aria-hidden="true" />
             </div>
             <h1 id="staff-login-title" style={{ color: '#fff', fontSize: '1.45rem', margin: 0 }}>เข้าสู่ระบบสมาชิก / เจ้าหน้าที่</h1>
-            <p style={{ color: 'rgba(255,255,255,.78)', margin: '8px 0 0', fontSize: '.9rem' }}>สมาชิกใช้เลขบัตรประชาชน 13 หลัก เพื่อตรวจสอบเงินปันผล</p>
+            <p style={{ color: 'rgba(255,255,255,.78)', margin: '8px 0 0', fontSize: '.9rem' }}>สมาชิกใช้เลขบัตรประชาชน 13 หลัก และรหัสผ่านเริ่มต้นเป็นเลขสมาชิก รวมเลขศูนย์นำหน้า</p>
           </header>
 
           <div style={{ padding: '2rem' }}>

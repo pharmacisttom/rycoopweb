@@ -4,7 +4,7 @@ For local development, keep MySQL running and use `npm run dev`. Vite automatica
 
 Entry: `/member/login`; report: `/member/dividends`. The navbar links to the report. The report API uses the authenticated PHP user and member role, never a supplied member ID. It returns only that member's records and sends no-store headers. National IDs and bank accounts are not returned.
 
-New imported accounts use the national ID as username and `สมาชิกตัวอย่าง` as initial password (stored as a password hash). Members can change their password from the report. Existing accounts and passwords are preserved. Existing suspended members are not reactivated. The shared initial password must be changed by members; it is not strong identity verification for a public financial service.
+New imported accounts use the national ID as username and the exact member number (including leading zeros, e.g. `00025`) as initial password, stored as a password hash. Members can change their password from the report. Annual imports preserve existing passwords. Existing suspended members are not reactivated. The initial member-number password should be changed by members. A one-time bulk reset explicitly authorized by the owner uses `php bin/reset-member-passwords.php --apply`; it excludes staff accounts and does not change dividend data.
 
 ## Setup
 

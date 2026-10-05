@@ -156,7 +156,7 @@ class DividendImportService
                 $uuid = static function () { $h = bin2hex(random_bytes(16)); return substr($h,0,8).'-'.substr($h,8,4).'-4'.substr($h,13,3).'-a'.substr($h,17,3).'-'.substr($h,20,12); };
                 if (!$userId) {
                     if (Database::first('SELECT id FROM users WHERE username = ?', [$record['id_card']])) { throw new RuntimeException('ชื่อผู้ใช้ซ้ำกับบัญชีอื่น'); }
-                    $userId = Database::insert('INSERT INTO users (uuid, name, username, email, password) VALUES (?, ?, ?, ?, ?)', [$uuid(), $record['name'], $record['id_card'], 'member-' . $record['member_no'] . '@members.invalid', password_hash('สมาชิกตัวอย่าง', PASSWORD_DEFAULT)]);
+                    $userId = Database::insert('INSERT INTO users (uuid, name, username, email, password) VALUES (?, ?, ?, ?, ?)', [$uuid(), $record['name'], $record['id_card'], 'member-' . $record['member_no'] . '@members.invalid', password_hash($record['member_no'], PASSWORD_DEFAULT)]);
                     Database::execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [$userId, $role['id']]);
                 } elseif (!Database::first('SELECT id FROM user_roles WHERE user_id = ? AND role_id = ?', [$userId, $role['id']])) { throw new RuntimeException('บัญชีที่ผูกกับสมาชิกไม่มีสิทธิ์สมาชิก'); }
                 if (!$member) {

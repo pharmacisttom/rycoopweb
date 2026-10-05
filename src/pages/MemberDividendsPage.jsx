@@ -38,7 +38,7 @@ export default function MemberDividendsPage() {
     <div className="dividend-actions"><Link to="/">กลับหน้าแรก</Link>{data && <div><button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่าน</button> <button className="btn btn-outline" onClick={async () => { await logout(); window.location.assign('/member/login'); }}>ออกจากระบบ</button></div>}</div>
     <h1>เงินปันผลและเงินเฉลี่ยคืน</h1>
     <p>ตรวจสอบรายการรายรับ รายหัก และยอดสุทธิประจำปีของคุณ</p>
-    {data && <p className="dividend-note">สำหรับบัญชีที่สร้างใหม่ รหัสผ่านเริ่มต้นคือ “สมาชิกตัวอย่าง” กรุณาเปลี่ยนเป็นรหัสผ่านส่วนตัว</p>}
+    {data && <p className="dividend-note">รหัสผ่านเริ่มต้นคือเลขสมาชิก รวมเลขศูนย์นำหน้า เช่น 00025 กรุณาเปลี่ยนเป็นรหัสผ่านส่วนตัว</p>}
     {loading && <p role="status">กำลังโหลดข้อมูลสมาชิก...</p>}
     {error && <div role="alert" className="dividend-error">{error} <Link to="/member/login">เข้าสู่ระบบ</Link> <button onClick={() => setAttempt(a => a + 1)}>ลองใหม่</button></div>}
     {data && <><p><strong>{data.member.name}</strong> · เลขทะเบียนสมาชิก {data.member.member_no}</p>

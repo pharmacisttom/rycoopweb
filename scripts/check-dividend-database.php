@@ -12,5 +12,5 @@ foreach ($records as $record) {
 echo "Verified {$found} source records against database.\n";
 echo json_encode(Database::query('SELECT year, COUNT(*) AS records FROM member_dividends GROUP BY year ORDER BY year')), "\n";
 $member = Database::first('SELECT u.password FROM users u JOIN members m ON m.user_id = u.id WHERE m.id_card = ?', [$records[0]['id_card']]);
-if (!password_verify('สมาชิกตัวอย่าง', $member['password'])) { throw new RuntimeException('Initial password verification failed'); }
+if (!password_verify($records[0]['member_no'], $member['password'])) { throw new RuntimeException('Initial password verification failed'); }
 echo "Initial member password hash verified.\n";
