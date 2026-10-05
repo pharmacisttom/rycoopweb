@@ -1,5 +1,7 @@
 # Member dividend access
 
+For local development, keep MySQL running and use `npm run dev`. Vite automatically starts PHP on `127.0.0.1:8087`, proxies API/auth requests to it and uses writable project-local sessions. This does not change production. Set `PHP_BINARY` if PHP is not on PATH. Set `VITE_PHP_BACKEND` in `.env.local` to use an existing PHP backend instead. Restart Vite after updating this configuration.
+
 Entry: `/member/login`; report: `/member/dividends`. The navbar links to the report. The report API uses the authenticated PHP user and member role, never a supplied member ID. It returns only that member's records and sends no-store headers. National IDs and bank accounts are not returned.
 
 New imported accounts use the national ID as username and `สมาชิกตัวอย่าง` as initial password (stored as a password hash). Members can change their password from the report. Existing accounts and passwords are preserved. Existing suspended members are not reactivated. The shared initial password must be changed by members; it is not strong identity verification for a public financial service.

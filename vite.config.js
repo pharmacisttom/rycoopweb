@@ -1,13 +1,18 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { phpBackendPlugin } from './scripts/vitePhpBackend';
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+const env = loadEnv(mode, process.cwd(), 'VITE_');
+const externalBackend = process.env.VITE_PHP_BACKEND || env.VITE_PHP_BACKEND;
+const backend = externalBackend || 'http://127.0.0.1:8087';
+return {
   // Apache serves the production SPA from this project directory.
   // The explicit base keeps routes and built assets under the same URL prefix.
   base: process.env.NODE_ENV === 'production' ? '/app/' : '/',
-  plugins: [react()],
+  plugins: [react(), phpBackendPlugin(backend, Boolean(externalBackend))],
   // Vite must serve `public/` in development so files under public/assets
   // are available at /assets. Production already serves that directory via PHP.
   publicDir: process.env.NODE_ENV === 'production' ? false : 'public',
@@ -27,25 +32,27 @@ export default defineConfig({
     open: true,
     proxy: {
       '/login': {
-        target: 'http://127.0.0.1',
+        target: backend,
         changeOrigin: true,
+        bypass: (request) => request.method === 'GET' ? '/index.html' : undefined,
       },
       '/logout': {
-        target: 'http://127.0.0.1',
+        target: backend,
         changeOrigin: true,
       },
       '/csrf-token': {
-        target: 'http://127.0.0.1',
+        target: backend,
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://127.0.0.1',
+        target: backend,
         changeOrigin: true,
       },
       '/change-password': {
-        target: 'http://127.0.0.1',
+        target: backend,
         changeOrigin: true,
       },
     },
   },
+};
 });
