@@ -108,6 +108,7 @@ $router->post('/api/admin/dividends/confirm', 'Admin\\DividendImportController@c
 $router->get('/api/admin/members', 'Admin\\MemberManagementController@index', [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin'])]);
 $router->group(['prefix'=>'api/admin/members','middleware'=>[AuthMiddleware::class,new RoleMiddleware(['super_admin', 'member_admin'])]],function(\App\Core\Router $r){
     $r->get('/dashboard','Admin\\MemberManagementController@dashboard');
+    $r->get('/health','Admin\\MemberManagementController@health');
     $r->get('/{id}','Admin\\MemberManagementController@show');
     $r->post('/{id}','Admin\\MemberManagementController@update',[CsrfMiddleware::class]);
     $r->post('/{id}/dividends/{year}','Admin\\MemberManagementController@updateDividend',[CsrfMiddleware::class]);

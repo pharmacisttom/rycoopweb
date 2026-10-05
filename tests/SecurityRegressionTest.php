@@ -61,6 +61,7 @@ final class SecurityRegressionTest
         self::assertRouteHasRoles($routes, '/admin/dashboard', ['super_admin']);
         self::assertRouteHasRoles($routes, '/dashboard', ['super_admin']);
         self::assertRouteHasRoles($routes, '/api/admin/members/dashboard', ['super_admin', 'member_admin']);
+        self::assertRouteHasRoles($routes, '/api/admin/members/health', ['super_admin', 'member_admin']);
         self::assertRouteHasRoles($routes, '/api/admin/members', ['super_admin', 'member_admin']);
         self::assertRouteHasRoles($routes, '/api/admin/members/{id}', ['super_admin', 'member_admin']);
         self::assertRouteHasRoles($routes, '/api/admin/dividends/preview', ['super_admin', 'member_admin']);

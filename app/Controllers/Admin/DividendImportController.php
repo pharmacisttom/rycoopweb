@@ -6,6 +6,7 @@ use App\Core\Session;
 use App\Services\DividendImportService;
 use App\Services\MemberDataException;
 use App\Core\Logger;
+use App\Services\MemberSystemHealth;
 
 class DividendImportController extends Controller
 {
@@ -14,6 +15,7 @@ class DividendImportController extends Controller
         header('Cache-Control: no-store, private');
         Session::remove('dividend_import');
         try {
+            MemberSystemHealth::requireWrites();
             $file = $_FILES['file'] ?? null;
             if (!$file || $file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) { throw new MemberDataException('กรุณาเลือกไฟล์ที่อัปโหลดสำเร็จ'); }
             if ($file['size'] > 5000000) { throw new MemberDataException('ไฟล์ต้องไม่เกิน 5 MB'); }
@@ -45,6 +47,7 @@ class DividendImportController extends Controller
             $this->json(['success' => false, 'message' => 'ผลตรวจสอบหมดอายุ กรุณาอัปโหลดและตรวจสอบอีกครั้ง'], 422); return;
         }
         try {
+            MemberSystemHealth::requireWrites();
             $count = DividendImportService::import($preview['records'],['snapshots'=>$preview['snapshots'],'source_name'=>$preview['source_name'],'update_profiles'=>$preview['update_profiles']]);
             Session::remove('dividend_import');
             $this->json(['success' => true, 'count' => $count, 'message' => 'นำเข้าสำเร็จ โดยคงรหัสผ่านเดิมของบัญชีที่มีอยู่']);

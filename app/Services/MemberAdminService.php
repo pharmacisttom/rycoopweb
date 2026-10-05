@@ -12,9 +12,14 @@ class MemberAdminService
     {
         Database::execute('INSERT INTO member_data_changes (member_id,user_id,action,reason,before_json,after_json) VALUES (?,?,?,?,?,?)', [$memberId, PHP_SAPI==='cli'?null:Auth::id(), $action, $reason, $before === null ? null : json_encode($before, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), json_encode($after, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     }
-    public static function profile(int $id, bool $lock = false): array
+    public static function profile(int $id, bool $lock = false, ?array $columns = null): array
     {
-        $member = Database::first('SELECT id,user_id,member_no,id_card,prefix,first_name,last_name,department,phone,email,address,status FROM members WHERE id=?' . ($lock ? ' FOR UPDATE' : ''), [$id]);
+        $fields=['id','user_id','member_no','id_card','prefix','first_name','last_name','department','phone','email','address','status'];
+        if($columns!==null) {
+            MemberSystemHealth::requireColumns(['members'=>['id','user_id','member_no','id_card','first_name','last_name','status']],$columns);
+            $fields=array_map(static fn($field)=>in_array($field,$columns['members'],true)?$field:'NULL AS '.$field,$fields);
+        }
+        $member = Database::first('SELECT '.implode(',',$fields).' FROM members WHERE id=?' . ($lock ? ' FOR UPDATE' : ''), [$id]);
         if (!$member) { throw new RuntimeException('ไม่พบสมาชิก'); }
         return $member;
     }

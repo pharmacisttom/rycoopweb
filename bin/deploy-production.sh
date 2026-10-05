@@ -6,12 +6,13 @@ cd /var/www/rayongcoop
 previous_commit="$(git rev-parse HEAD)"
 printf 'Previous commit: %s\n' "$previous_commit"
 php bin/console backup:run
-git fetch origin Test
-git pull --ff-only origin Test
+git fetch https://github.com/pharmacisttom/rycoopweb.git Test
+git merge --ff-only FETCH_HEAD
 composer install --no-dev --optimize-autoloader --no-interaction
+php bin/console db:migrate
+php bin/check-member-system.php
 npm ci
 npm run build
-php bin/console db:migrate
 
 sudo chown -R www-data:www-data storage
 sudo find storage -type d -exec chmod 750 {} \;

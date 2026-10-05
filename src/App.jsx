@@ -26,6 +26,7 @@ const MemberDividendsPage = lazy(() => import('./pages/MemberDividendsPage'));
 const AdminDividendImportPage = lazy(() => import('./pages/AdminDividendImportPage'));
 const AdminMembersDashboardPage = lazy(() => import('./pages/AdminMembersDashboardPage'));
 const AdminMembersPage = lazy(() => import('./pages/AdminMembersPage'));
+const AdminMembersHealthPage = lazy(() => import('./pages/AdminMembersHealthPage'));
 const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
@@ -132,6 +133,8 @@ function StaffProtectedRoute({ children, roles }) {
 
 export default function App() {
   const { isLoggedIn, logout } = useAuth();
+  const { pathname } = useLocation();
+  const memberAdminPage = pathname === '/admin/dividends/import' || /^\/admin\/members(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -167,8 +170,7 @@ export default function App() {
   return (
     <div className="app-container">
       <ScrollToTop />
-      <TopBar />
-      <Navbar />
+      {!memberAdminPage && <><TopBar /><Navbar /></>}
 
       <main className="main-content">
         <Suspense fallback={<PageSkeletonLoader />}>
@@ -196,6 +198,7 @@ export default function App() {
             <Route path="/admin/dividends/import" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminDividendImportPage /></StaffProtectedRoute>} />
             <Route path="/admin/members/dashboard" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminMembersDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/members" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminMembersPage /></StaffProtectedRoute>} />
+            <Route path="/admin/members/health" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminMembersHealthPage /></StaffProtectedRoute>} />
             <Route path="/admin/members/:id" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminMemberDetailPage /></StaffProtectedRoute>} />
             <Route path="/admin/led" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/dashboard" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
@@ -214,12 +217,7 @@ export default function App() {
         </Suspense>
       </main>
 
-      <Footer />
-      <QuickActionDock />
-      <AIChatWidget />
-      <CookieConsent />
-      {memberPortalEnabled && <AuthModal />}
-      <CampaignModal />
+      {!memberAdminPage && <><Footer /><QuickActionDock /><AIChatWidget /><CookieConsent />{memberPortalEnabled && <AuthModal />}<CampaignModal /></>}
 
       {/* Inactivity Warning Modal */}
       <SessionTimeoutModal
