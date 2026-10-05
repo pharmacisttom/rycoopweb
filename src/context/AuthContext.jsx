@@ -36,14 +36,23 @@ export function AuthProvider({ children }) {
     }
 
     let cancelled = false;
+    let checking = false;
+    let lastCheckStarted = 0;
 
-    const checkSession = async () => {
+    const checkSession = async ({ initial = false, force = false } = {}) => {
+      if (checking || cancelled) return;
+      if (!initial && document.visibilityState !== 'visible') return;
+      if (!initial && !force && Date.now() - lastCheckStarted < 60_000) return;
       if (!navigator.onLine) {
         if (!cancelled) setSessionStatus('offline');
         return;
       }
 
-      if (!cancelled) setSessionStatus('checking');
+      checking = true;
+      lastCheckStarted = Date.now();
+      // Only the initial identity check blocks protected routes. Background
+      // checks must not unmount an active page and discard its unsaved form.
+      if (initial && !cancelled) setSessionStatus('checking');
       try {
         const result = await fetchCurrentUser();
         if (cancelled) return;
@@ -59,16 +68,18 @@ export function AuthProvider({ children }) {
         }
       } catch (error) {
         if (!cancelled) setSessionStatus('offline');
+      } finally {
+        checking = false;
       }
     };
 
-    const handleOnline = () => checkSession();
+    const handleOnline = () => checkSession({ force: true });
     const handleOffline = () => setSessionStatus('offline');
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') checkSession();
     };
 
-    checkSession();
+    checkSession({ initial: true });
     const intervalId = window.setInterval(checkSession, 60_000);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);

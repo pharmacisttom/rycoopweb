@@ -122,7 +122,9 @@ function StaffProtectedRoute({ children, roles }) {
   const { user, isLoggedIn, sessionStatus } = useAuth();
 
   if (sessionStatus === 'checking') return <PageSkeletonLoader />;
-  if (!isLoggedIn || sessionStatus !== 'online') {
+  // A temporary connection failure must not discard an authenticated user's
+  // open form. Backend endpoints still enforce the session for every action.
+  if (!isLoggedIn || !['online', 'offline'].includes(sessionStatus)) {
     return <Navigate to="/admin/login" replace />;
   }
   if (roles && !roles.includes(user?.role)) {
