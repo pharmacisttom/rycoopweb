@@ -133,8 +133,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation - 5 MAIN CATEGORIES */}
-        <Link to="/member/dividends" className="btn btn-outline" style={{ whiteSpace: 'nowrap' }}>ตรวจสอบปันผล</Link>
-        <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
+        <nav className="hide-mobile navbar-desktop-nav" aria-label="เมนูหลัก">
 
           {/* 1. หน้าแรก */}
           <Link
@@ -218,6 +217,7 @@ export default function Navbar() {
 
         {/* Right Action: User Profile Pill / Login */}
         <div className="navbar-actions">
+          <Link to="/member/dividends" className="btn btn-outline navbar-dividend-link" aria-label="ตรวจสอบปันผล"><Coins size={18} aria-hidden="true" /><span>ตรวจสอบปันผล</span></Link>
 
           {isLoggedIn ? (
             /* Logged-In User Pill with Dropdown matching user screenshot */
