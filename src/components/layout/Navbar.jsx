@@ -1013,7 +1013,7 @@ const navLinkStyle = (active) => ({
   fontSize: '0.9rem',
   fontFamily: 'var(--font-heading)',
   fontWeight: active ? '700' : '600',
-  color: active ? 'var(--primary-600)' : 'var(--text-main)',
+  color: active ? 'var(--primary-600)' : 'var(--primary-700)',
   borderRadius: '8px',
   background: active ? 'var(--primary-50)' : 'transparent',
   transition: 'all 0.2s ease',
@@ -1031,7 +1031,7 @@ const mobileItemStyle = {
   fontSize: '0.98rem',
   fontFamily: 'var(--font-heading)',
   fontWeight: 700,
-  color: 'var(--text-main)',
+  color: 'var(--primary-700)',
   borderBottom: '1px solid var(--border-subtle)',
   textDecoration: 'none'
 };
@@ -1049,7 +1049,7 @@ const mobileSubMenuStyle = {
 
 const mobileSubItemStyle = {
   fontSize: '0.88rem',
-  color: 'var(--text-muted)',
+  color: 'var(--primary-700)',
   padding: '0.3rem 0',
   textDecoration: 'none',
   display: 'block'
