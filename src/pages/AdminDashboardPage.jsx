@@ -387,6 +387,7 @@ export default function AdminDashboardPage() {
         />
 
         {/* 4 Super Admin KPI Overview Cards */}
+        {isSuperAdmin && <p><Link to="/admin/dividends/import" className="btn btn-primary">นำเข้าเงินปันผลรายปี</Link></p>}
         <div className="dashboard-kpi-grid">
           <KpiCard
             title="ผู้ใช้งานทั้งหมดในระบบ"

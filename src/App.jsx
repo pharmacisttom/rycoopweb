@@ -22,6 +22,8 @@ import LoginPage from './pages/LoginPage';
 
 // Lazy-Loaded Route Chunks (Performance & Code Splitting)
 const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
+const MemberDividendsPage = lazy(() => import('./pages/MemberDividendsPage'));
+const AdminDividendImportPage = lazy(() => import('./pages/AdminDividendImportPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const LoansPage = lazy(() => import('./pages/LoansPage'));
@@ -188,6 +190,7 @@ export default function App() {
             {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute roles={['super_admin']}><AdminDashboardPage /></StaffProtectedRoute>} />)}
 
             {/* RYCOOP LED Member Check Routes */}
+            <Route path="/admin/dividends/import" element={<StaffProtectedRoute roles={['super_admin']}><AdminDividendImportPage /></StaffProtectedRoute>} />
             <Route path="/admin/led" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/dashboard" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/search" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedSearchPage /></StaffProtectedRoute>} />
@@ -195,7 +198,9 @@ export default function App() {
             <Route path="/admin/led/batch" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedBatchPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/schema" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedSchemaPage /></StaffProtectedRoute>} />
 
-            <Route path="/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/member/login" element={<LoginPage />} />
+            <Route path="/member/dividends" element={<MemberDividendsPage />} />
             <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFoundPage />} />

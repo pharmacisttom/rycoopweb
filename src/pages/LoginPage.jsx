@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (sessionStatus !== 'online' || !user) return;
-    navigate(user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard', { replace: true });
+    navigate(user.role === 'member' ? '/member/dividends' : user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard', { replace: true });
   }, [navigate, sessionStatus, user]);
 
   const handleSubmit = async (event) => {
@@ -44,11 +44,11 @@ export default function LoginPage() {
         window.location.assign(normalizeSameOriginRedirect(result.redirect, '/admin/2fa'));
         return;
       }
-      if (!STAFF_ROLES.has(result.user?.role)) {
+      if (result.user?.role !== 'member' && !STAFF_ROLES.has(result.user?.role)) {
         setError('บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบหลังบ้าน');
         return;
       }
-      const fallback = result.user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard';
+      const fallback = result.user.role === 'member' ? '/member/dividends' : result.user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard';
       navigate(normalizeSameOriginRedirect(result.redirect, fallback), { replace: true });
     } catch {
       setError('ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');
@@ -69,15 +69,15 @@ export default function LoginPage() {
             <div style={{ width: 62, height: 62, margin: '0 auto 14px', borderRadius: 18, background: 'rgba(255,255,255,.14)', display: 'grid', placeItems: 'center' }}>
               <ShieldCheck size={34} aria-hidden="true" />
             </div>
-            <h1 id="staff-login-title" style={{ color: '#fff', fontSize: '1.45rem', margin: 0 }}>เข้าสู่ระบบหลังบ้าน</h1>
-            <p style={{ color: 'rgba(255,255,255,.78)', margin: '8px 0 0', fontSize: '.9rem' }}>สำหรับผู้ดูแลระบบและเจ้าหน้าที่สหกรณ์</p>
+            <h1 id="staff-login-title" style={{ color: '#fff', fontSize: '1.45rem', margin: 0 }}>เข้าสู่ระบบสมาชิก / เจ้าหน้าที่</h1>
+            <p style={{ color: 'rgba(255,255,255,.78)', margin: '8px 0 0', fontSize: '.9rem' }}>สมาชิกใช้เลขบัตรประชาชน 13 หลัก เพื่อตรวจสอบเงินปันผล</p>
           </header>
 
           <div style={{ padding: '2rem' }}>
             {error && <div role="alert" aria-live="polite" style={{ padding: '12px 14px', marginBottom: 18, borderRadius: 10, color: '#9f1239', background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '.9rem' }}>{error}</div>}
 
             <form onSubmit={handleSubmit} noValidate>
-              <label htmlFor="login-username" className="form-label">ชื่อผู้ใช้งานหรืออีเมล</label>
+              <label htmlFor="login-username" className="form-label">เลขบัตรประชาชน / ชื่อผู้ใช้งาน</label>
               <div style={{ position: 'relative', marginBottom: 18 }}>
                 <User size={18} aria-hidden="true" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input id="login-username" className="form-control" type="text" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck="false" disabled={loading} style={{ paddingLeft: 42 }} placeholder="กรอกชื่อผู้ใช้งานหรืออีเมล" autoFocus />

@@ -25,7 +25,7 @@ class AuthController extends Controller
                 return;
             }
             if ($roleSlug === 'member') {
-                $this->redirect(url('member/dashboard'));
+                $this->redirect(url('member/dividends'));
             } elseif ($roleSlug === 'super_admin') {
                 $this->redirect(url('admin/dashboard'));
             } else {
@@ -159,7 +159,7 @@ class AuthController extends Controller
         Session::flash('success', 'เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ' . ($user['name'] ?? 'ผู้ใช้งาน'));
 
         $targetPath = match($roleSlug) {
-            'member' => '/member/dashboard',
+            'member' => '/member/dividends',
             'super_admin' => '/admin/dashboard',
             default => '/staff/dashboard'
         };

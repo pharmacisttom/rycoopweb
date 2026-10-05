@@ -38,3 +38,4 @@ dist/
 dist-ssr/
 *.local
 .vite/
+/storage/private/

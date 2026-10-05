@@ -133,6 +133,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation - 5 MAIN CATEGORIES */}
+        <Link to="/member/dividends" className="btn btn-outline" style={{ whiteSpace: 'nowrap' }}>ตรวจสอบปันผล</Link>
         <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
 
           {/* 1. หน้าแรก */}

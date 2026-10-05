@@ -3,6 +3,7 @@
 
     # Prevent directory listing
     Options -Indexes
+    RewriteRule ^(storage/private|bin|scripts|database|config|app|vendor)(/|$) - [F,L]
 
     # Route backend API & Auth endpoints to PHP Front Controller
     RewriteRule ^(csrf-token|login|logout|change-password|api)(/.*)?$ public/index.php [L,QSA]

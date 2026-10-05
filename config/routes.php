@@ -102,6 +102,9 @@ $router->get('/api/public/statistics', 'Api\\SpaApiController@statistics');
 |--------------------------------------------------------------------------
 */
 $router->get('/api/auth/me', 'Api\\SpaApiController@me');
+$router->get('/api/member/dividends', 'Member\\DividendController@index', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
+$router->post('/api/admin/dividends/preview', 'Admin\\DividendImportController@preview', [AuthMiddleware::class, new RoleMiddleware(['super_admin']), CsrfMiddleware::class]);
+$router->post('/api/admin/dividends/confirm', 'Admin\\DividendImportController@confirm', [AuthMiddleware::class, new RoleMiddleware(['super_admin']), CsrfMiddleware::class]);
 
 /*
 |--------------------------------------------------------------------------
