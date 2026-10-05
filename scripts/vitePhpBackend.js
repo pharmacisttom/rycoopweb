@@ -11,9 +11,11 @@ export function phpBackendPlugin(target, external) {
       if (external) return;
       const root = server.config.root;
       const sessions = path.join(root, 'storage', 'sessions');
+      const uploads = path.join(root, 'storage', 'tmp');
       await mkdir(sessions, { recursive: true });
+      await mkdir(uploads, { recursive: true });
       const address = new URL(target);
-      const child = spawn(process.env.PHP_BINARY || 'php', ['-S', `${address.hostname}:${address.port}`, 'public/index.php'], {
+      const child = spawn(process.env.PHP_BINARY || 'php', ['-d', `upload_tmp_dir=${uploads}`, '-d', 'display_errors=0', '-S', `${address.hostname}:${address.port}`, 'public/index.php'], {
         cwd: root,
         windowsHide: true,
         stdio: ['ignore', 'ignore', 'pipe'],

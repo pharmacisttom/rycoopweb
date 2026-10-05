@@ -261,15 +261,15 @@ export default function Navbar() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
 
                     <Link
-                      to="/admin/dashboard"
+                      to={user.role === 'member_admin' ? '/admin/members/dashboard' : user.role === 'member' ? '/member/dividends' : '/admin/dashboard'}
                       className="user-dropdown-item"
                       onClick={() => setUserDropdownOpen(false)}
                     >
                       <Gauge size={18} style={{ color: '#3b82f6', flexShrink: 0 }} />
-                      <span>{user.role === 'super_admin' ? 'ไปที่ แผงควบคุมระบบ (Admin)' : 'ไปที่ พอร์ทัลสมาชิก'}</span>
+                      <span>{user.role === 'member_admin' ? 'จัดการระบบสมาชิก' : user.role === 'super_admin' ? 'ไปที่ แผงควบคุมระบบ (Admin)' : 'ไปที่ พอร์ทัลสมาชิก'}</span>
                     </Link>
 
-                    <Link
+                    {user.role !== 'member_admin' && <><Link
                       to="/admin/dashboard"
                       className="user-dropdown-item"
                       onClick={() => setUserDropdownOpen(false)}
@@ -305,6 +305,7 @@ export default function Navbar() {
                       <span>ใบเสร็จรับเงิน (e-Receipt)</span>
                     </Link>
 
+                    </>}
                     {user.role === 'super_admin' && (
                       <Link
                         to="/admin/dashboard"

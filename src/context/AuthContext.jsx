@@ -150,7 +150,7 @@ export function AuthProvider({ children }) {
                 name: data.user.name || inputUsername,
                 role: roleSlug,
                 roleName: data.user.role_name || (roleSlug === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด' : roleSlug === 'staff' ? 'เจ้าหน้าที่สินเชื่อ/การเงิน' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
-                roleBadge: data.user.role_badge || (roleSlug === 'super_admin' ? 'Super Admin' : roleSlug === 'staff' ? 'เจ้าหน้าที่สหกรณ์' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
+                roleBadge: data.user.role_badge || (roleSlug === 'member_admin' ? 'ผู้ดูแลระบบสมาชิก' : roleSlug === 'super_admin' ? 'Super Admin' : roleSlug === 'staff' ? 'เจ้าหน้าที่สหกรณ์' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
                 department: data.user.department || data.user.org_name || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
                 position: data.user.position || '',
                 phone: data.user.phone || '',
@@ -174,7 +174,7 @@ export function AuthProvider({ children }) {
                 success: true,
                 redirect: normalizeSameOriginRedirect(
                   data.redirect,
-                  roleSlug === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'
+                  roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'
                 ),
                 user: authUser
               };

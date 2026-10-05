@@ -387,13 +387,13 @@ export default function AdminDashboardPage() {
         />
 
         {/* 4 Super Admin KPI Overview Cards */}
-        {isSuperAdmin && <p><Link to="/admin/dividends/import" className="btn btn-primary">นำเข้าเงินปันผลรายปี</Link></p>}
+        {isSuperAdmin && <p style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}><Link to="/admin/members/dashboard" className="btn btn-primary">ดูแลระบบสมาชิก</Link><Link to="/admin/dividends/import" className="btn btn-outline">นำเข้าเงินปันผลรายปี</Link></p>}
         <div className="dashboard-kpi-grid">
           <KpiCard
             title="ผู้ใช้งานทั้งหมดในระบบ"
-            value="4,850"
+            value={apiAdminData?.totalUsers == null ? '—' : Number(apiAdminData.totalUsers).toLocaleString('th-TH')}
             unit="คน"
-            subtitle="Admin 3 / Staff 12 / Member 4,835"
+            subtitle="จำนวนบัญชีจากฐานข้อมูลจริง"
             icon={Users}
             variant="rose"
           />

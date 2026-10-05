@@ -6,7 +6,7 @@ import { normalizeSameOriginRedirect } from '../utils/navigation';
 import './LoginPage.css';
 
 const STAFF_ROLES = new Set([
-  'super_admin', 'staff', 'manager', 'executive', 'finance', 'loan_officer',
+  'member_admin', 'super_admin', 'staff', 'manager', 'executive', 'finance', 'loan_officer',
   'welfare_officer', 'pr_officer', 'document_officer', 'complaint_officer',
   'auditor', 'it_admin'
 ]);
@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (sessionStatus !== 'online' || !user) return;
-    navigate(user.role === 'member' ? '/member/dividends' : user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard', { replace: true });
+    navigate(user.role === 'member' ? '/member/dividends' : user.role === 'member_admin' ? '/admin/members/dashboard' : user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard', { replace: true });
   }, [navigate, sessionStatus, user]);
 
   const handleSubmit = async (event) => {
@@ -50,7 +50,7 @@ export default function LoginPage() {
         setError('บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบหลังบ้าน');
         return;
       }
-      const fallback = result.user.role === 'member' ? '/member/dividends' : result.user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard';
+      const fallback = result.user.role === 'member' ? '/member/dividends' : result.user.role === 'member_admin' ? '/admin/members/dashboard' : result.user.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard';
       navigate(normalizeSameOriginRedirect(result.redirect, fallback), { replace: true });
     } catch {
       setError('ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');

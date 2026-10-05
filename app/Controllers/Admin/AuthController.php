@@ -26,6 +26,8 @@ class AuthController extends Controller
             }
             if ($roleSlug === 'member') {
                 $this->redirect(url('member/dividends'));
+            } elseif ($roleSlug === 'member_admin') {
+                $this->redirect(url('admin/members/dashboard'));
             } elseif ($roleSlug === 'super_admin') {
                 $this->redirect(url('admin/dashboard'));
             } else {
@@ -160,6 +162,7 @@ class AuthController extends Controller
 
         $targetPath = match($roleSlug) {
             'member' => '/member/dividends',
+            'member_admin' => '/admin/members/dashboard',
             'super_admin' => '/admin/dashboard',
             default => '/staff/dashboard'
         };
@@ -251,6 +254,7 @@ class AuthController extends Controller
         }
         $targetUrl = match($roleSlug) {
             'member' => url('member/dashboard'),
+            'member_admin' => url('admin/members/dashboard'),
             'super_admin' => url('admin/dashboard'),
             default => url('staff/dashboard')
         };

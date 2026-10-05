@@ -14,6 +14,7 @@
 /storage/cache/*
 !/storage/cache/.gitkeep
 /storage/sessions/
+/storage/tmp/
 
 # Public uploads (member PII documents — never track)
 /public/uploads/*

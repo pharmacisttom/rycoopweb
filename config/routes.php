@@ -103,8 +103,15 @@ $router->get('/api/public/statistics', 'Api\\SpaApiController@statistics');
 */
 $router->get('/api/auth/me', 'Api\\SpaApiController@me');
 $router->get('/api/member/dividends', 'Member\\DividendController@index', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
-$router->post('/api/admin/dividends/preview', 'Admin\\DividendImportController@preview', [AuthMiddleware::class, new RoleMiddleware(['super_admin']), CsrfMiddleware::class]);
-$router->post('/api/admin/dividends/confirm', 'Admin\\DividendImportController@confirm', [AuthMiddleware::class, new RoleMiddleware(['super_admin']), CsrfMiddleware::class]);
+$router->post('/api/admin/dividends/preview', 'Admin\\DividendImportController@preview', [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin']), CsrfMiddleware::class]);
+$router->post('/api/admin/dividends/confirm', 'Admin\\DividendImportController@confirm', [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin']), CsrfMiddleware::class]);
+$router->get('/api/admin/members', 'Admin\\MemberManagementController@index', [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin'])]);
+$router->group(['prefix'=>'api/admin/members','middleware'=>[AuthMiddleware::class,new RoleMiddleware(['super_admin', 'member_admin'])]],function(\App\Core\Router $r){
+    $r->get('/dashboard','Admin\\MemberManagementController@dashboard');
+    $r->get('/{id}','Admin\\MemberManagementController@show');
+    $r->post('/{id}','Admin\\MemberManagementController@update',[CsrfMiddleware::class]);
+    $r->post('/{id}/dividends/{year}','Admin\\MemberManagementController@updateDividend',[CsrfMiddleware::class]);
+});
 
 /*
 |--------------------------------------------------------------------------

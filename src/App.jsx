@@ -24,6 +24,9 @@ import LoginPage from './pages/LoginPage';
 const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
 const MemberDividendsPage = lazy(() => import('./pages/MemberDividendsPage'));
 const AdminDividendImportPage = lazy(() => import('./pages/AdminDividendImportPage'));
+const AdminMembersDashboardPage = lazy(() => import('./pages/AdminMembersDashboardPage'));
+const AdminMembersPage = lazy(() => import('./pages/AdminMembersPage'));
+const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const LoansPage = lazy(() => import('./pages/LoansPage'));
@@ -122,7 +125,7 @@ function StaffProtectedRoute({ children, roles }) {
     return <Navigate to="/admin/login" replace />;
   }
   if (roles && !roles.includes(user?.role)) {
-    return <Navigate to={user?.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'} replace />;
+    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'} replace />;
   }
   return children;
 }
@@ -190,7 +193,10 @@ export default function App() {
             {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute roles={['super_admin']}><AdminDashboardPage /></StaffProtectedRoute>} />)}
 
             {/* RYCOOP LED Member Check Routes */}
-            <Route path="/admin/dividends/import" element={<StaffProtectedRoute roles={['super_admin']}><AdminDividendImportPage /></StaffProtectedRoute>} />
+            <Route path="/admin/dividends/import" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminDividendImportPage /></StaffProtectedRoute>} />
+            <Route path="/admin/members/dashboard" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminMembersDashboardPage /></StaffProtectedRoute>} />
+            <Route path="/admin/members" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminMembersPage /></StaffProtectedRoute>} />
+            <Route path="/admin/members/:id" element={<StaffProtectedRoute roles={['super_admin', 'member_admin']}><AdminMemberDetailPage /></StaffProtectedRoute>} />
             <Route path="/admin/led" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/dashboard" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/search" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedSearchPage /></StaffProtectedRoute>} />
