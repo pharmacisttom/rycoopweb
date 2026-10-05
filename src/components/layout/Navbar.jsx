@@ -217,7 +217,7 @@ export default function Navbar() {
 
         {/* Right Action: User Profile Pill / Login */}
         <div className="navbar-actions">
-          <Link to="/member/dividends" className="btn btn-outline navbar-dividend-link" aria-label="ตรวจสอบปันผล"><Coins size={18} aria-hidden="true" /><span>ตรวจสอบปันผล</span></Link>
+          <Link to={user?.role === 'member' ? '/member/dividends' : '/member/login'} className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก"><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
 
           {isLoggedIn ? (
             /* Logged-In User Pill with Dropdown matching user screenshot */

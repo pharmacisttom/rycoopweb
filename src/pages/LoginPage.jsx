@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
+import './LoginPage.css';
 
 const STAFF_ROLES = new Set([
   'super_admin', 'staff', 'manager', 'executive', 'finance', 'loan_officer',
@@ -58,53 +59,38 @@ export default function LoginPage() {
     }
   };
 
+  const staffLogin = location.pathname === '/admin/login';
   return (
-    <div style={{ minHeight: 'calc(100vh - 150px)', background: 'linear-gradient(145deg, #f4f8f6 0%, #e9f4ef 100%)', display: 'grid', placeItems: 'center', padding: '2rem 1rem' }}>
-      <div style={{ width: '100%', maxWidth: 440 }}>
-        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--text-muted)', textDecoration: 'none', marginBottom: 18 }}>
-          <ArrowLeft size={17} /> กลับสู่เว็บไซต์หลัก
-        </Link>
-
-        <section className="surface-card shadow-lg" aria-labelledby="staff-login-title" style={{ borderRadius: 20, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
-          <header style={{ background: 'linear-gradient(135deg, var(--primary-900), var(--primary-700))', color: '#fff', padding: '2rem', textAlign: 'center' }}>
-            <div style={{ width: 62, height: 62, margin: '0 auto 14px', borderRadius: 18, background: 'rgba(255,255,255,.14)', display: 'grid', placeItems: 'center' }}>
-              <ShieldCheck size={34} aria-hidden="true" />
-            </div>
-            <h1 id="staff-login-title" style={{ color: '#fff', fontSize: '1.45rem', margin: 0 }}>เข้าสู่ระบบสมาชิก / เจ้าหน้าที่</h1>
-            <p style={{ color: 'rgba(255,255,255,.78)', margin: '8px 0 0', fontSize: '.9rem' }}>สมาชิกใช้เลขบัตรประชาชน 13 หลัก และรหัสผ่านเริ่มต้นเป็นเลขสมาชิก รวมเลขศูนย์นำหน้า</p>
-          </header>
-
-          <div style={{ padding: '2rem' }}>
-            {error && <div role="alert" aria-live="polite" style={{ padding: '12px 14px', marginBottom: 18, borderRadius: 10, color: '#9f1239', background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '.9rem' }}>{error}</div>}
-
-            {location.state?.sessionRequired && <p role="status">กรุณาเข้าสู่ระบบเพื่อดูยอดเงินปันผลของคุณ หากเซสชันหมดอายุให้เข้าสู่ระบบอีกครั้ง</p>}
+    <main className="member-entry">
+      <div className="member-entry-shell">
+        <Link to="/" className="member-entry-back"><ArrowLeft size={17} /> กลับสู่เว็บไซต์หลัก</Link>
+        <div className="member-entry-card">
+          <section className="member-entry-welcome" aria-label="ระบบสมาชิกสหกรณ์">
+            <div className="member-entry-brand"><img src="/assets/img/logo.webp" alt="ตราสหกรณ์ออมทรัพย์สาธารณสุขระยอง" /><span>สหกรณ์ออมทรัพย์<br />สาธารณสุขระยอง จำกัด</span></div>
+            <div className="member-entry-intro"><span className="member-entry-eyebrow">บริการออนไลน์สำหรับสมาชิก</span><h1>เรื่องของสมาชิก<br /><em>เข้าถึงได้ใกล้กว่าเดิม</em></h1><p>ตรวจสอบเงินปันผลและเงินเฉลี่ยคืนของคุณ<br />สะดวก ทุกที่ ทุกเวลา</p></div>
+            <div className="member-entry-benefit"><ShieldCheck size={24} /><div><strong>ข้อมูลของคุณ สำหรับคุณ</strong><p>เข้าสู่ระบบเพื่อดูรายการของตนเอง<br />และตรวจสอบข้อมูลย้อนหลังรายปี</p></div></div>
+            <span className="member-entry-caption">Rayong Public Health Savings and Credit Cooperative</span>
+          </section>
+          <section className="member-entry-form" aria-labelledby="member-login-title">
+            <div className="member-entry-icon"><User size={25} /></div>
+            <h2 id="member-login-title">{staffLogin ? 'เข้าสู่ระบบเจ้าหน้าที่' : 'เข้าสู่ระบบสมาชิก'}</h2>
+            <p className="member-entry-subtitle">{staffLogin ? 'ใช้บัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์จากสหกรณ์' : 'ยินดีต้อนรับสู่บริการสมาชิกออนไลน์'}</p>
+            {location.state?.sessionRequired && <p role="status" className="member-entry-notice">กรุณาเข้าสู่ระบบเพื่อดูข้อมูลของคุณ หากเซสชันหมดอายุให้เข้าสู่ระบบอีกครั้ง</p>}
+            {error && <p role="alert" className="member-entry-error">{error}</p>}
             <form onSubmit={handleSubmit} noValidate>
-              <label htmlFor="login-username" className="form-label">เลขบัตรประชาชน / ชื่อผู้ใช้งาน</label>
-              <div style={{ position: 'relative', marginBottom: 18 }}>
-                <User size={18} aria-hidden="true" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input id="login-username" className="form-control" type="text" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck="false" disabled={loading} style={{ paddingLeft: 42 }} placeholder="กรอกชื่อผู้ใช้งานหรืออีเมล" autoFocus />
-              </div>
-
-              <label htmlFor="login-password" className="form-label">รหัสผ่าน</label>
-              <div style={{ position: 'relative', marginBottom: 22 }}>
-                <KeyRound size={18} aria-hidden="true" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input id="login-password" className="form-control" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" disabled={loading} style={{ paddingLeft: 42, paddingRight: 44 }} placeholder="กรอกรหัสผ่าน" />
-                <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} aria-pressed={showPassword} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 0, background: 'transparent', color: 'var(--text-muted)', padding: 7, cursor: 'pointer' }}>
-                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
-                </button>
-              </div>
-
-              <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%', minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, fontWeight: 700 }}>
-                {loading ? <><LoaderCircle size={19} /> กำลังตรวจสอบ...</> : <><LockKeyhole size={19} /> เข้าสู่ระบบ</>}
-              </button>
+              <label htmlFor="login-username">{staffLogin ? 'ชื่อผู้ใช้งาน / อีเมล' : 'เลขบัตรประชาชน'}</label>
+              <div className="member-entry-input"><User size={18} aria-hidden="true" /><input id="login-username" type="text" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck="false" disabled={loading} placeholder={staffLogin ? 'กรอกชื่อผู้ใช้งาน' : 'กรอกเลขบัตรประชาชน 13 หลัก'} autoFocus /></div>
+              <label htmlFor="login-password">รหัสผ่าน</label>
+              <div className="member-entry-input"><KeyRound size={18} aria-hidden="true" /><input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" disabled={loading} placeholder="กรอกรหัสผ่านของคุณ" /><button type="button" className="member-entry-eye" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div>
+              {!staffLogin && <p className="member-entry-hint">รหัสผ่านเริ่มต้นคือเลขสมาชิก รวมเลขศูนย์นำหน้า เช่น <strong>00025</strong><br />หากเปลี่ยนรหัสผ่านแล้ว ให้ใช้รหัสใหม่</p>}
+              <button className="member-entry-submit" type="submit" disabled={loading}>{loading ? <><LoaderCircle className="member-entry-spin" size={19} /> กำลังตรวจสอบ...</> : <><LockKeyhole size={19} /> เข้าสู่ระบบ{staffLogin ? '' : 'สมาชิก'}</>}</button>
             </form>
-
-            <p style={{ margin: '18px 0 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '.8rem', lineHeight: 1.6 }}>
-              ระบบจะจำกัดจำนวนครั้งในการเข้าสู่ระบบเพื่อความปลอดภัย<br />หากลืมรหัสผ่าน กรุณาติดต่อผู้ดูแลระบบ
-            </p>
-          </div>
-        </section>
+            <p className="member-entry-help">มีปัญหาในการเข้าสู่ระบบ? <Link to="/contact">ติดต่อสหกรณ์</Link></p>
+            <div className="member-entry-footer"><ShieldCheck size={15} /><span>กรุณาออกจากระบบทุกครั้ง เมื่อใช้เครื่องร่วมกับผู้อื่น</span></div>
+            {!staffLogin && <Link to="/admin/login" className="member-entry-staff">สำหรับเจ้าหน้าที่สหกรณ์</Link>}
+          </section>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
