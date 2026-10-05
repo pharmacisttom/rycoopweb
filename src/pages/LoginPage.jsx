@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
@@ -13,6 +13,7 @@ const STAFF_ROLES = new Set([
 export default function LoginPage() {
   const { login, user, sessionStatus } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -76,6 +77,7 @@ export default function LoginPage() {
           <div style={{ padding: '2rem' }}>
             {error && <div role="alert" aria-live="polite" style={{ padding: '12px 14px', marginBottom: 18, borderRadius: 10, color: '#9f1239', background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '.9rem' }}>{error}</div>}
 
+            {location.state?.sessionRequired && <p role="status">กรุณาเข้าสู่ระบบเพื่อดูยอดเงินปันผลของคุณ หากเซสชันหมดอายุให้เข้าสู่ระบบอีกครั้ง</p>}
             <form onSubmit={handleSubmit} noValidate>
               <label htmlFor="login-username" className="form-label">เลขบัตรประชาชน / ชื่อผู้ใช้งาน</label>
               <div style={{ position: 'relative', marginBottom: 18 }}>

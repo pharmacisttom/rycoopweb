@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { fetchCurrentUser } from '../services/api';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
 
@@ -223,6 +223,12 @@ export function AuthProvider({ children }) {
     return true;
   };
 
+  const invalidateSession = useCallback(() => {
+    setUser(null);
+    setSessionStatus('expired');
+    try { localStorage.removeItem('coop_auth_user'); } catch {}
+  }, []);
+
   const logout = async () => {
     try {
       const tokenResponse = await fetch('/csrf-token', {
@@ -255,6 +261,7 @@ export function AuthProvider({ children }) {
       sessionStatus,
       login,
       logout,
+      invalidateSession,
       updateProfile,
       showAuthModal,
       setShowAuthModal

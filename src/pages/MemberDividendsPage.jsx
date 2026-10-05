@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ChangePasswordModal from '../components/common/ChangePasswordModal';
 import './MemberDividendsPage.css';
 
 const money = value => Number(value).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export default function MemberDividendsPage() {
-  const { logout } = useAuth();
+  const { logout, invalidateSession } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [year, setYear] = useState('');
   const [error, setError] = useState('');
@@ -18,19 +19,26 @@ export default function MemberDividendsPage() {
     setLoading(true); setError(''); setData(null);
     fetch('/api/member/dividends', { credentials: 'include', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, signal: controller.signal })
       .then(async response => {
+        if (controller.signal.aborted) return;
+        if (response.status === 401) {
+          invalidateSession();
+          navigate('/member/login', { replace: true, state: { sessionRequired: true } });
+          return;
+        }
         const result = await response.json();
+        if (controller.signal.aborted) return;
         if (!response.ok || !result.success) throw new Error(result.message || 'ไม่สามารถโหลดข้อมูลได้');
         setData(result); setYear(String(result.records[0]?.year || ''));
       }).catch(e => { if (e.name !== 'AbortError') setError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [attempt]);
+  }, [attempt, invalidateSession, navigate]);
   const record = data?.records.find(r => String(r.year) === year);
   return <main className="dividend-page container">
-    <div className="dividend-actions"><Link to="/">กลับหน้าแรก</Link><div><button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่าน</button> <button className="btn btn-outline" onClick={async () => { await logout(); window.location.assign('/member/login'); }}>ออกจากระบบ</button></div></div>
+    <div className="dividend-actions"><Link to="/">กลับหน้าแรก</Link>{data && <div><button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่าน</button> <button className="btn btn-outline" onClick={async () => { await logout(); window.location.assign('/member/login'); }}>ออกจากระบบ</button></div>}</div>
     <h1>เงินปันผลและเงินเฉลี่ยคืน</h1>
     <p>ตรวจสอบรายการรายรับ รายหัก และยอดสุทธิประจำปีของคุณ</p>
-    <p className="dividend-note">สำหรับบัญชีที่สร้างใหม่ รหัสผ่านเริ่มต้นคือ “สมาชิกตัวอย่าง” กรุณาเปลี่ยนเป็นรหัสผ่านส่วนตัว</p>
+    {data && <p className="dividend-note">สำหรับบัญชีที่สร้างใหม่ รหัสผ่านเริ่มต้นคือ “สมาชิกตัวอย่าง” กรุณาเปลี่ยนเป็นรหัสผ่านส่วนตัว</p>}
     {loading && <p role="status">กำลังโหลดข้อมูลสมาชิก...</p>}
     {error && <div role="alert" className="dividend-error">{error} <Link to="/member/login">เข้าสู่ระบบ</Link> <button onClick={() => setAttempt(a => a + 1)}>ลองใหม่</button></div>}
     {data && <><p><strong>{data.member.name}</strong> · เลขทะเบียนสมาชิก {data.member.member_no}</p>
