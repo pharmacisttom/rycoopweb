@@ -67,6 +67,10 @@ final class SecurityRegressionTest
         self::assertRouteHasRoles($routes, '/api/admin/dividends/preview', ['super_admin', 'member_admin']);
         self::assertRouteHasRoles($routes, '/api/admin/dividends/confirm', ['super_admin', 'member_admin']);
         self::assertRouteHasRoles($routes, '/api/admin/users', ['super_admin']);
+        self::assertRouteHasRoles($routes, '/api/admin/faqs', ['super_admin']);
+        self::assertRouteHasRoles($routes, '/api/admin/news/{id}/update', ['super_admin']);
+        self::assertRouteHasRoles($routes, '/api/admin/faqs/{id}/update', ['super_admin']);
+        self::assertRouteHasRoles($routes, '/api/admin/faqs/{id}/delete', ['super_admin']);
     }
 
     private static function assertRateLimitUsesSharedStorage(): void

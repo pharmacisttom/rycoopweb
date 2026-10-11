@@ -144,7 +144,11 @@ $router->group(['prefix' => 'api/admin', 'middleware' => [AuthMiddleware::class,
     $r->get('/audit-logs', 'Api\\SpaApiController@adminAuditLogs');
     $r->get('/news', 'Api\\SpaApiController@adminNews');
     $r->post('/news', 'Api\\SpaApiController@createAdminNews', [CsrfMiddleware::class]);
+    $r->post('/news/{id}/update', 'Api\\SpaApiController@updateAdminNews', [CsrfMiddleware::class]);
     $r->post('/news/{id}/delete', 'Api\\SpaApiController@deleteAdminNews', [CsrfMiddleware::class]);
+    $r->post('/faqs', 'Api\\SpaApiController@createAdminFaq', [CsrfMiddleware::class]);
+    $r->post('/faqs/{id}/update', 'Api\\SpaApiController@updateAdminFaq', [CsrfMiddleware::class]);
+    $r->post('/faqs/{id}/delete', 'Api\\SpaApiController@deleteAdminFaq', [CsrfMiddleware::class]);
 });
 
 /*

@@ -32,7 +32,7 @@ class FaqController extends Controller
         Database::execute("INSERT INTO faqs (category, question, answer, status, created_at) VALUES (?, ?, ?, 'active', NOW())", [
             $this->request->input('category', 'general'),
             $data['question'],
-            $data['answer']
+            \App\Services\RichTextService::clean($data['answer'])
         ]);
 
         AuditService::log('faqs', 'create', null, null, ['question' => $data['question']]);

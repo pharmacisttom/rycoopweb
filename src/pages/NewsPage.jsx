@@ -3,6 +3,7 @@ import { Clock, Eye, ChevronRight, Search, X } from 'lucide-react';
 import { fetchNews } from '../services/api';
 import { normalizeNewsItem } from '../utils/news';
 import SafeImage from '../components/common/SafeImage';
+import RichTextContent from '../components/common/RichTextContent';
 
 export default function NewsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -135,10 +136,7 @@ export default function NewsPage() {
               </div>
 
               <div style={{ lineHeight: 1.8, color: 'var(--text-main)', fontSize: '0.95rem' }}>
-                <p style={{ marginBottom: '1rem' }}>{selectedNews.excerpt}</p>
-                <p style={{ marginBottom: '1rem' }}>
-                  สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด มุ่งมั่นที่จะมอบบริการที่ดีที่สุด และสร้างความมั่นคงให้แก่สมาชิกทุกท่านอย่างยั่งยืน หากสมาชิกมีข้อสงสัยหรือต้องการสอบถามข้อมูลเพิ่มเติม สามารถติดต่อได้ที่สำนักงานสหกรณ์ หรือโทรศัพท์ 038-611-199 ในวันและเวลาทำการ
-                </p>
+                <RichTextContent value={selectedNews.content || selectedNews.excerpt} />
               </div>
 
               <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>

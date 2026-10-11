@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchFaqs } from '../services/api';
+import RichTextContent from '../components/common/RichTextContent';
 import {
   MapPin, Phone, Mail, Clock, MessageSquare,
   Send, CheckCircle2, ChevronDown, ChevronUp, Search, ShieldCheck, AlertCircle
@@ -12,6 +14,8 @@ export default function ContactPage() {
   const [trackingId, setTrackingId] = useState('');
   const [trackingResult, setTrackingResult] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
+  const [faqs,setFaqs]=useState([]);
+  useEffect(()=>{let cancelled=false;fetchFaqs().then(result=>{if(!cancelled && result?.success)setFaqs(result.data.map(f=>({...f,q:f.question,a:f.answer})));});return()=>{cancelled=true;};},[]);
 
   const [form, setForm] = useState({
     name: '',
@@ -345,7 +349,7 @@ export default function ContactPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {FAQS.map((faq, idx) => (
+            {faqs.map((faq, idx) => (
               <div key={idx} className="surface-card" style={{ overflow: 'hidden' }}>
                 <button
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
@@ -366,7 +370,7 @@ export default function ContactPage() {
                 </button>
                 {openFaq === idx && (
                   <div style={{ padding: '0 1.5rem 1.25rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
-                    {faq.a}
+                    <RichTextContent value={faq.a} />
                   </div>
                 )}
               </div>

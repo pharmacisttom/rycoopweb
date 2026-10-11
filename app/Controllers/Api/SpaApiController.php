@@ -52,7 +52,7 @@ class SpaApiController extends Controller
         } catch (\Throwable $e) {}
 
         try {
-            $latestNews = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.cover_image, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT 6");
+            $latestNews = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.content, n.cover_image, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT 6");
             $latestNews = array_map($this->withPublicNewsImageUrl(...), $latestNews);
         } catch (\Throwable $e) {}
 
@@ -163,7 +163,7 @@ class SpaApiController extends Controller
         $news = [];
         $total = 0;
         try {
-            $news = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.cover_image, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT {$perPage} OFFSET {$offset}");
+            $news = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.content, n.cover_image, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT {$perPage} OFFSET {$offset}");
             $news = array_map($this->withPublicNewsImageUrl(...), $news);
             $total = (int)Database::value("SELECT COUNT(*) FROM news WHERE deleted_at IS NULL AND workflow_status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())");
         } catch (\Throwable $e) {}
@@ -610,7 +610,7 @@ class SpaApiController extends Controller
     {
         $news = [];
         try {
-            $news = Database::query("SELECT n.id, n.title, n.summary AS excerpt, n.cover_image AS image, n.publish_at AS date, n.views_count AS views, c.name AS category
+            $news = Database::query("SELECT n.id, n.title, n.summary AS excerpt, n.content, n.cover_image AS image, n.publish_at AS date, n.views_count AS views, c.name AS category
                 FROM news n
                 JOIN news_categories c ON n.category_id = c.id
                 WHERE n.deleted_at IS NULL
@@ -625,13 +625,16 @@ class SpaApiController extends Controller
      * POST /api/admin/news
      * Creates a published article for the React administrator dashboard.
      */
-    public function createAdminNews(): void
+    public function updateAdminNews(string $id): void { $this->createAdminNews($id); }
+
+    public function createAdminNews(?string $editingId = null): void
     {
         $title = trim((string) $this->request->input('title', ''));
         $categoryName = trim((string) $this->request->input('category', ''));
         $excerpt = trim((string) $this->request->input('excerpt', ''));
+        $content = \App\Services\RichTextService::clean((string) $this->request->input('content', $excerpt));
 
-        if (mb_strlen($title) < 5 || mb_strlen($title) > 255 || $categoryName === '' || $excerpt === '') {
+        if (mb_strlen($title) < 5 || mb_strlen($title) > 255 || $categoryName === '' || $excerpt === '' || \App\Services\RichTextService::text($content) === '' || strlen($content)>200000) {
             $this->json(['success' => false, 'message' => 'กรุณากรอกหัวข้อ หมวดหมู่ และสรุปข่าวให้ครบถ้วน'], 422);
             return;
         }
@@ -645,12 +648,17 @@ class SpaApiController extends Controller
         try {
             $coverImage = $this->storeNewsCoverImage($this->request->input('image'));
             $authorId = Auth::id();
-            $id = Database::insert(
+            if($editingId!==null){
+                $old=Database::first('SELECT id,title FROM news WHERE id=? AND deleted_at IS NULL',[(int)$editingId]);
+                if(!$old){$this->json(['success'=>false,'message'=>'ไม่พบข่าวสาร'],404);return;}
+                Database::execute('UPDATE news SET category_id=?,title=?,summary=?,content=?,cover_image=?,updated_by=?,updated_at=NOW() WHERE id=?',[(int)$category['id'],$title,$excerpt,$content,$coverImage,$authorId,(int)$editingId]);
+                $id=(int)$editingId;
+            }else{$id = Database::insert(
                 'INSERT INTO news (category_id, title, slug, summary, content, cover_image, workflow_status, author_id, created_by, publish_at, created_at) VALUES (?, ?, ?, ?, ?, ?, \'published\', ?, ?, NOW(), NOW())',
-                [(int) $category['id'], $title, str_slug($title) . '-' . time(), $excerpt, $excerpt, $coverImage, $authorId, $authorId]
-            );
-            AuditService::log('news', 'create', (string) $id, null, ['title' => $title, 'status' => 'published']);
-            $item = Database::first("SELECT n.id, n.title, n.summary AS excerpt, n.cover_image AS image, n.publish_at AS date, n.views_count AS views, c.name AS category
+                [(int) $category['id'], $title, str_slug($title) . '-' . time(), $excerpt, $content, $coverImage, $authorId, $authorId]
+            );}
+            AuditService::log('news', $editingId===null?'create':'update', (string) $id, $old??null, ['title' => $title, 'status' => 'published']);
+            $item = Database::first("SELECT n.id, n.title, n.summary AS excerpt, n.content, n.cover_image AS image, n.publish_at AS date, n.views_count AS views, c.name AS category
                 FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.id = ? LIMIT 1", [(int) $id]);
             $item = $item ? $this->withPublicNewsImageUrl($item) : null;
         } catch (\InvalidArgumentException $e) {
@@ -661,10 +669,39 @@ class SpaApiController extends Controller
             return;
         }
 
-        $this->json(['success' => true, 'data' => $item, 'message' => 'เผยแพร่ข่าวสารเรียบร้อยแล้ว'], 201);
+        $this->json(['success' => true, 'data' => $item, 'message' => 'บันทึกข่าวสารเรียบร้อยแล้ว'], $editingId===null?201:200);
     }
 
     /** POST /api/admin/news/{id}/delete */
+    public function updateAdminFaq(string $id): void { $this->createAdminFaq($id); }
+
+    public function createAdminFaq(?string $editingId = null): void
+    {
+        $question=trim((string)$this->request->input('question',''));
+        $answer=\App\Services\RichTextService::clean((string)$this->request->input('answer',''));
+        if($question==='' || mb_strlen($question)>255 || \App\Services\RichTextService::text($answer)==='' || strlen($answer)>60000){
+            $this->json(['success'=>false,'message'=>'กรุณากรอกคำถามและคำตอบให้ครบถ้วน'],422);return;
+        }
+        try {
+            if($editingId!==null){
+                $old=Database::first("SELECT id,question FROM faqs WHERE id=? AND status='active'",[(int)$editingId]);
+                if(!$old){$this->json(['success'=>false,'message'=>'ไม่พบคำถาม'],404);return;}
+                Database::execute('UPDATE faqs SET question=?,answer=?,updated_at=NOW() WHERE id=?',[$question,$answer,(int)$editingId]);$id=(int)$editingId;
+            }else{$id=Database::insert("INSERT INTO faqs (category,question,answer,status,created_at) VALUES ('general',?,?,'active',NOW())",[$question,$answer]);}
+            AuditService::log('faqs',$editingId===null?'create':'update',(string)$id,$old??null,['question'=>$question]);
+            $this->json(['success'=>true,'data'=>['id'=>$id,'question'=>$question,'answer'=>$answer]],201);
+        } catch(\Throwable $e){$this->json(['success'=>false,'message'=>'บันทึกคำถามไม่สำเร็จ'],500);}
+    }
+
+    public function deleteAdminFaq(string $id): void
+    {
+        $faq=Database::first('SELECT id,question FROM faqs WHERE id=?',[(int)$id]);
+        if(!$faq){$this->json(['success'=>false,'message'=>'ไม่พบคำถาม'],404);return;}
+        Database::execute("UPDATE faqs SET status='inactive' WHERE id=?",[(int)$id]);
+        AuditService::log('faqs','delete',(string)$id,$faq,null);
+        $this->json(['success'=>true]);
+    }
+
     public function deleteAdminNews(string $id): void
     {
         $news = Database::first('SELECT id, title FROM news WHERE id = ? AND deleted_at IS NULL LIMIT 1', [(int) $id]);

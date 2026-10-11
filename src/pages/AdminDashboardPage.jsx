@@ -12,7 +12,11 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { COOP_INFO, KEY_STATS, INTEREST_RATES, ANNOUNCEMENTS, NEWS_LIST, FAQS, MEMBER_COMPLAINTS, LOAN_PRODUCTS } from '../data/mockData';
-import { fetchAdminDashboard } from '../services/api';
+import { fetchAdminDashboard, fetchAdminNews, createAdminNews, deleteAdminNews, fetchFaqs, apiPost } from '../services/api';
+import { normalizeNewsItem } from '../utils/news';
+import { richTextPlain } from '../utils/richText';
+import RichTextEditor from '../components/common/RichTextEditor';
+import RichTextContent from '../components/common/RichTextContent';
 import EditProfileModal from '../components/member/EditProfileModal';
 import ChangePasswordModal from '../components/common/ChangePasswordModal';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
@@ -35,13 +39,15 @@ export default function AdminDashboardPage() {
   const [newAnn, setNewAnn] = useState({ title: '', date: '11 มี.ค. 2567', fileSize: '850 KB', important: true });
 
   // 2. News State
-  const [news, setNews] = useState(NEWS_LIST);
+  const [news, setNews] = useState([]);
+  const [contentBusy, setContentBusy] = useState(false);
   const [newsModal, setNewsModal] = useState(false);
   const [newNews, setNewNews] = useState({
     title: '',
     category: 'ข่าวประชาสัมพันธ์',
     date: '11 มี.ค. 2567',
     excerpt: '',
+    content: '',
     image: '/assets/img/news_placeholder.jpg'
   });
 
@@ -175,7 +181,13 @@ export default function AdminDashboardPage() {
   }, []);
 
   // 6. FAQs State
-  const [faqsList, setFaqsList] = useState(FAQS);
+  const [faqsList, setFaqsList] = useState([]);
+  useEffect(() => {
+    let cancelled=false;
+    fetchAdminNews().then(result=>{if(!cancelled && result?.success)setNews(result.data.map(normalizeNewsItem));});
+    fetchFaqs().then(result=>{if(!cancelled && result?.success)setFaqsList(result.data.map(f=>({...f,q:f.question,a:f.answer})));});
+    return ()=>{cancelled=true;};
+  }, []);
   const [faqModal, setFaqModal] = useState(false);
   const [newFaq, setNewFaq] = useState({ q: '', a: '' });
 
@@ -220,12 +232,14 @@ export default function AdminDashboardPage() {
   // Handlers
   const handleSaveHero = (e) => {
     e.preventDefault();
+    if(!heroSettings.subtitle.trim()){toast.error('กรุณากรอกคำบรรยายหน้าแรก');return;}
     localStorage.setItem('coop_hero_settings', JSON.stringify(heroSettings));
     toast.success('บันทึกการตั้งค่า Hero Section เรียบร้อยแล้ว! (แสดงผลที่หน้าแรกทันที)');
   };
 
   const handleSavePopup = (e) => {
     e.preventDefault();
+    if(!popupCampaign.subtitle.trim()){toast.error('กรุณากรอกคำบรรยายประชาสัมพันธ์');return;}
     localStorage.setItem('coop_popup_campaign', JSON.stringify(popupCampaign));
     sessionStorage.removeItem('coop_campaign_shown'); // reset so it shows on next homepage visit
     toast.success('บันทึกการตั้งค่า Pop-up Campaign เรียบร้อยแล้ว! (เปิดหน้าเว็บเพื่อดูพรีวิวได้ทันที)');
@@ -258,21 +272,18 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAddNews = (e) => {
+  const handleAddNews = async (e) => {
     e.preventDefault();
-    const item = {
-      id: `news-${Date.now()}`,
-      title: newNews.title,
-      category: newNews.category,
-      date: newNews.date,
-      views: 0,
-      excerpt: newNews.excerpt,
-      image: newNews.image || '/assets/img/news_placeholder.jpg'
-    };
-    setNews([item, ...news]);
+    if(contentBusy)return;
+    if(!richTextPlain(newNews.content)){toast.error('กรุณากรอกเนื้อหาข่าว');return;}
+    setContentBusy(true);
+    let result;
+    try { result=await (newNews.id?apiPost(`/api/admin/news/${newNews.id}/update`,newNews):createAdminNews(newNews)); } finally {setContentBusy(false);}
+    if(!result?.success){toast.error(result?.message || 'บันทึกข่าวไม่สำเร็จ');return;}
+    setNews(current=>newNews.id?current.map(item=>item.id===newNews.id?normalizeNewsItem(result.data):item):[normalizeNewsItem(result.data), ...current]);
     setNewsModal(false);
-    setNewNews({ title: '', category: 'ข่าวประชาสัมพันธ์', date: '11 มี.ค. 2567', excerpt: '', image: '/assets/img/news_placeholder.jpg' });
-    toast.success('เพิ่มข่าวประชาสัมพันธ์เรียบร้อยแล้ว');
+    setNewNews({ title: '', category: 'ข่าวประชาสัมพันธ์', date: '', excerpt: '', content: '', image: '/assets/img/news_placeholder.jpg' });
+    toast.success('บันทึกข่าวประชาสัมพันธ์เรียบร้อยแล้ว');
   };
 
   const handleDeleteNews = async (id) => {
@@ -282,14 +293,23 @@ export default function AdminDashboardPage() {
       type: 'danger'
     });
     if (confirmed) {
+      const result=await deleteAdminNews(id);
+      if(!result?.success){toast.error(result?.message || 'ลบข่าวไม่สำเร็จ');return;}
       setNews(news.filter(n => n.id !== id));
       toast.success('ลบข่าวสารเรียบร้อยแล้ว');
     }
   };
 
-  const handleAddFaq = (e) => {
+  const handleAddFaq = async (e) => {
     e.preventDefault();
-    setFaqsList([...faqsList, newFaq]);
+    if(contentBusy)return;
+    if(!richTextPlain(newFaq.a)){toast.error('กรุณากรอกคำตอบ');return;}
+    setContentBusy(true);
+    let result;
+    try {result=await apiPost(newFaq.id?`/api/admin/faqs/${newFaq.id}/update`:'/api/admin/faqs',{question:newFaq.q,answer:newFaq.a});}finally{setContentBusy(false);}
+    if(!result?.success){toast.error(result?.message || 'บันทึกคำตอบไม่สำเร็จ');return;}
+    const savedFaq={...result.data,q:result.data.question,a:result.data.answer};
+    setFaqsList(current=>newFaq.id?current.map(item=>item.id===newFaq.id?savedFaq:item):[...current,savedFaq]);
     setFaqModal(false);
     setNewFaq({ q: '', a: '' });
     toast.success('เพิ่มคำถาม-คำตอบที่พบบ่อยเรียบร้อยแล้ว');
@@ -302,6 +322,8 @@ export default function AdminDashboardPage() {
       type: 'danger'
     });
     if (confirmed) {
+      const result=await apiPost(`/api/admin/faqs/${faqsList[index].id}/delete`);
+      if(!result?.success){toast.error(result?.message || 'ลบคำถามไม่สำเร็จ');return;}
       setFaqsList(faqsList.filter((_, idx) => idx !== index));
       toast.success('ลบคำถามเรียบร้อยแล้ว');
     }
@@ -745,7 +767,7 @@ export default function AdminDashboardPage() {
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>เพิ่ม/แก้ไขข่าวสาร พร้อมภาพประกอบและสรุปย่อ</p>
               </div>
 
-              <button onClick={() => setNewsModal(true)} className="btn btn-primary btn-sm">
+              <button onClick={() => {setNewNews({title:'',category:'ข่าวประชาสัมพันธ์',excerpt:'',content:'',image:'/assets/img/news_placeholder.jpg'});setNewsModal(true);}} className="btn btn-primary btn-sm">
                 <Plus size={15} />
                 <span>เพิ่มข่าวสารใหม่</span>
               </button>
@@ -767,6 +789,7 @@ export default function AdminDashboardPage() {
                       <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1rem' }}>{item.excerpt?.slice(0, 80)}...</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                      <button className="btn btn-outline btn-sm" onClick={()=>{setNewNews({...item,content:item.content || item.excerpt});setNewsModal(true);}}><Edit size={13}/>แก้ไขข่าว</button>
                       <button onClick={() => handleDeleteNews(item.id)} className="btn btn-outline btn-sm" style={{ color: 'var(--accent-rose)', borderColor: 'var(--accent-rose)' }}>
                         <Trash2 size={13} />
                         <span>ลบข่าว</span>
@@ -805,7 +828,7 @@ export default function AdminDashboardPage() {
 
               <div className="form-group">
                 <label className="form-label">คำโปรยและสโลแกน (Subtitle)</label>
-                <textarea className="form-control" rows={3} value={heroSettings.subtitle} onChange={(e) => setHeroSettings({ ...heroSettings, subtitle: e.target.value })} required />
+                <RichTextEditor label="คำบรรยายหน้าแรก" plainText value={heroSettings.subtitle} onChange={subtitle => setHeroSettings({ ...heroSettings, subtitle })} />
               </div>
 
               {/* Background Image Selection & URL */}
@@ -911,7 +934,7 @@ export default function AdminDashboardPage() {
 
               <div className="form-group">
                 <label className="form-label">ข้อความรายละเอียด (Campaign Subtitle)</label>
-                <textarea className="form-control" rows={3} value={popupCampaign.subtitle} onChange={(e) => setPopupCampaign({ ...popupCampaign, subtitle: e.target.value })} required />
+                <RichTextEditor label="คำบรรยายประชาสัมพันธ์" plainText value={popupCampaign.subtitle} onChange={subtitle => setPopupCampaign({ ...popupCampaign, subtitle })} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1241,7 +1264,7 @@ export default function AdminDashboardPage() {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>เพิ่ม ลบ และอัปเดตคำถาม-คำตอบที่แสดงในหน้าติดต่อเรา</p>
               </div>
 
-              <button onClick={() => setFaqModal(true)} className="btn btn-primary btn-sm">
+              <button onClick={() => {setNewFaq({q:'',a:''});setFaqModal(true);}} className="btn btn-primary btn-sm">
                 <Plus size={15} />
                 <span>เพิ่มคำถามใหม่</span>
               </button>
@@ -1254,11 +1277,12 @@ export default function AdminDashboardPage() {
                     <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
                       ถาม: {faq.q}
                     </h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                      ตอบ: {faq.a}
-                    </p>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                      <RichTextContent value={faq.a} />
+                    </div>
                   </div>
 
+                  <button className="btn btn-outline btn-sm" onClick={()=>{setNewFaq({...faq});setFaqModal(true);}}>แก้ไข</button>
                   <button onClick={() => handleDeleteFaq(idx)} className="btn btn-outline btn-sm" style={{ color: 'var(--accent-rose)', borderColor: 'var(--accent-rose)', flexShrink: 0 }}>
                     <Trash2 size={13} />
                     <span>ลบ</span>
@@ -1397,21 +1421,22 @@ export default function AdminDashboardPage() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">วันที่</label>
-                    <input type="text" className="form-control" value={newNews.date} onChange={(e) => setNewNews({ ...newNews, date: e.target.value })} />
+                    <label className="form-label">วันที่เผยแพร่</label>
+                    <p>{newNews.id?newNews.date:'ระบบบันทึกวันที่เมื่อกดโพสต์ข่าวสาร'}</p>
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">เนื้อหาข่าว / สรุปย่อ</label>
+                  <label className="form-label">สรุปย่อสำหรับการ์ดข่าว</label>
                   <textarea className="form-control" rows={3} required value={newNews.excerpt} onChange={(e) => setNewNews({ ...newNews, excerpt: e.target.value })} />
                 </div>
+                <div className="form-group"><RichTextEditor label="เนื้อหาข่าวฉบับเต็ม" disabled={contentBusy} value={newNews.content} onChange={content => setNewNews({...newNews,content})} /></div>
                 <div className="form-group">
                   <label className="form-label">รูปภาพประกอบ (URL)</label>
                   <input type="text" className="form-control" value={newNews.image} onChange={(e) => setNewNews({ ...newNews, image: e.target.value })} placeholder="/assets/img/news_placeholder.jpg" />
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-                  <button type="button" onClick={() => setNewsModal(false)} className="btn btn-subtle" style={{ flex: 1 }}>ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>โพสต์ข่าวสาร</button>
+                  <button type="button" disabled={contentBusy} onClick={() => setNewsModal(false)} className="btn btn-subtle" style={{ flex: 1 }}>ยกเลิก</button>
+                  <button type="submit" disabled={contentBusy} className="btn btn-primary" style={{ flex: 1 }}>{contentBusy?'กำลังบันทึก...':newNews.id?'บันทึกการแก้ไข':'โพสต์ข่าวสาร'}</button>
                 </div>
               </form>
             </div>
@@ -1433,11 +1458,11 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">คำตอบ (Answer)</label>
-                  <textarea className="form-control" rows={4} required value={newFaq.a} onChange={(e) => setNewFaq({ ...newFaq, a: e.target.value })} placeholder="พิมพ์คำตอบอย่างละเอียด..." />
+                  <RichTextEditor label="คำตอบ FAQ" disabled={contentBusy} value={newFaq.a} onChange={a => setNewFaq({...newFaq,a})} />
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
                   <button type="button" onClick={() => setFaqModal(false)} className="btn btn-subtle" style={{ flex: 1 }}>ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>บันทึก FAQ</button>
+                  <button type="submit" disabled={contentBusy} className="btn btn-primary" style={{ flex: 1 }}>{contentBusy?'กำลังบันทึก...':'บันทึก FAQ'}</button>
                 </div>
               </form>
             </div>
@@ -1506,14 +1531,7 @@ export default function AdminDashboardPage() {
                     <CheckCircle2 size={16} style={{ color: 'var(--accent-emerald-dark)' }} />
                     <span>ข้อความตอบกลับจากผู้บริหาร / เจ้าหน้าที่ (Official Reply):</span>
                   </label>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    value={replyInput}
-                    onChange={(e) => setReplyInput(e.target.value)}
-                    placeholder="พิมพ์คำชี้แจง แนวทางแก้ไข หรือผลการตรวจสอบเพื่อแจ้งให้สมาชิกทราบ..."
-                    style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}
-                  />
+                  <RichTextEditor label="ข้อความตอบกลับ" plainText value={replyInput} onChange={setReplyInput} />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                     <button
                       type="button"
