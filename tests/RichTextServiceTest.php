@@ -10,4 +10,5 @@ checkRich(!preg_match('/script|onerror|onclick|javascript:|iframe|<svg|position:
 checkRich(RichTextService::text('<p><br></p>')==='','empty formatted content detected');
 checkRich(RichTextService::text('<p>สวัสดี &amp; ขอบคุณ</p>')==='สวัสดี & ขอบคุณ','Thai text and entities retained');
 checkRich(str_contains(RichTextService::clean("บรรทัดแรก\nบรรทัดสอง"),'<br'),'legacy plain text line breaks preserved');
+checkRich(RichTextService::text('<p>📣 ข่าวประชาสัมพันธ์ ✅ → ฿ ❤️</p>')==='📣 ข่าวประชาสัมพันธ์ ✅ → ฿ ❤️','emoji and symbols survive HTML sanitization');
 echo 'Rich text tests passed.'.PHP_EOL;
