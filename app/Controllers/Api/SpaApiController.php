@@ -475,6 +475,7 @@ class SpaApiController extends Controller
             'email' => $user['email'] ?? '',
             'role' => $roleSlug,
             'role_slug' => $roleSlug,
+            'permissions' => \App\Services\MemberPortalPermissionService::current(),
             'role_name' => $user['role_name'] ?? match($roleSlug) {
                 'super_admin' => 'ผู้ดูแลระบบสูงสุด',
                 'staff' => 'เจ้าหน้าที่สินเชื่อ/การเงิน',
@@ -815,6 +816,55 @@ class SpaApiController extends Controller
     /**
      * Remove sensitive fields from member data before sending to client.
      */
+    public function memberGetRequests(): void
+    {
+        $member = $this->getAuthenticatedMember();
+        if (!$member) return;
+        if (($member['status'] ?? '') !== 'active' || (Auth::user()['role_slug'] ?? '') !== 'member') {
+            $this->json(['success'=>false,'message'=>'ไม่มีสิทธิ์ใช้งาน'],403);
+            return;
+        }
+        header('Cache-Control: no-store, private');
+        try {
+            $this->json(['success'=>true,'data'=>\App\Services\MemberRequestService::getMemberRequests((int)$member['id'])]);
+        } catch (\Throwable $error) {
+            $this->json(['success'=>false,'message'=>'ไม่สามารถโหลดคำร้องได้'],503);
+        }
+    }
+
+    public function memberSubmitProfileRequest(): void
+    {
+        $member = $this->getAuthenticatedMember();
+        if (!$member) return;
+        if (($member['status'] ?? '') !== 'active' || (Auth::user()['role_slug'] ?? '') !== 'member') {
+            $this->json(['success'=>false,'message'=>'ไม่มีสิทธิ์ใช้งาน'],403);
+            return;
+        }
+        header('Cache-Control: no-store, private');
+        $changes=[];
+        foreach (['phone'=>30,'email'=>190,'address'=>500,'note'=>1000] as $field=>$limit) {
+            $value=$this->request->input($field);
+            if ($value===null) continue;
+            if (!is_string($value) || mb_strlen($value)>$limit) {
+                $this->json(['success'=>false,'message'=>'รูปแบบข้อมูลไม่ถูกต้อง'],422);
+                return;
+            }
+            $changes[$field]=trim($value);
+        }
+        if (!empty($changes['email']) && !filter_var($changes['email'],FILTER_VALIDATE_EMAIL)) {
+            $this->json(['success'=>false,'message'=>'อีเมลไม่ถูกต้อง'],422);
+            return;
+        }
+        try {
+            $data=\App\Services\MemberRequestService::createProfileRequest((int)$member['id'],$changes);
+            $this->json(['success'=>true,'data'=>$data]);
+        } catch (\InvalidArgumentException $error) {
+            $this->json(['success'=>false,'message'=>$error->getMessage()],422);
+        } catch (\Throwable $error) {
+            $this->json(['success'=>false,'message'=>'ระบบบันทึกคำร้องยังไม่พร้อมใช้งาน'],503);
+        }
+    }
+
     private function sanitizeMember(array $member): array
     {
         // Remove PII that should not be sent in raw form

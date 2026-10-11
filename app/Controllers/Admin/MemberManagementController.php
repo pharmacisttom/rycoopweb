@@ -161,4 +161,31 @@ class MemberManagementController extends Controller
     {
         $this->respond(function()use($id,$year){MemberSystemHealth::requireWrites();if(!preg_match('/^\d{4}$/D',$year))throw new MemberDataException('ปีไม่ถูกต้อง');MemberAdminService::updateDividend($this->id($id),(int)$year,$this->request->all());return ['message'=>'บันทึกข้อมูลปันผลแล้ว'];});
     }
+    public function requests(): void
+    {
+        $this->respond(function() {
+            $status = (string)$this->request->query('status', '');
+            $page = max(1, (int)$this->request->query('page', 1));
+            $limit = in_array((int)$this->request->query('limit', 25), [25, 50, 100], true) ? (int)$this->request->query('limit', 25) : 25;
+            return \App\Services\MemberRequestService::listAdminRequests($status, $page, $limit);
+        });
+    }
+
+    public function approveRequest(string $id): void
+    {
+        $this->respond(function() use ($id) {
+            $notes = (string)($this->request->input('notes') ?? '');
+            $adminUserId = (int)\App\Core\Auth::id();
+            return \App\Services\MemberRequestService::approveProfileRequest($this->id($id), $adminUserId, $notes ?: null);
+        });
+    }
+
+    public function rejectRequest(string $id): void
+    {
+        $this->respond(function() use ($id) {
+            $reason = trim((string)($this->request->input('reason') ?? ''));
+            $adminUserId = (int)\App\Core\Auth::id();
+            return \App\Services\MemberRequestService::rejectProfileRequest($this->id($id), $adminUserId, $reason);
+        });
+    }
 }

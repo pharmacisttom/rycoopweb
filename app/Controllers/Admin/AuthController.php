@@ -179,6 +179,7 @@ class AuthController extends Controller
                     'email' => $user['email'] ?? '',
                     'role' => $roleSlug,
                     'role_slug' => $roleSlug,
+                    'permissions' => \App\Services\MemberPortalPermissionService::current(),
                     'role_name' => $user['role_name'] ?? match($roleSlug) {
                         'super_admin' => 'ผู้ดูแลระบบสูงสุด',
                         'staff' => 'เจ้าหน้าที่สินเชื่อ/การเงิน',
