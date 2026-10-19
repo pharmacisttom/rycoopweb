@@ -1,3 +1,4 @@
+import { appUrl } from '../../utils/environment';
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
 
@@ -23,7 +24,7 @@ export default class ErrorBoundary extends React.Component {
 
   handleGoHome = () => {
     this.setState({ hasError: false, error: null });
-    window.location.href = '/';
+    window.location.href = appUrl('/');
   };
 
   render() {

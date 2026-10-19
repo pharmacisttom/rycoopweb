@@ -1,3 +1,4 @@
+import { apiRequest } from "../../utils/http.js";
 import React, { useState } from 'react';
 import { X, Lock, KeyRound, Eye, EyeOff, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -65,7 +66,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
     try {
       let csrfToken = '';
       try {
-        const tokenRes = await fetch('/csrf-token', { credentials: 'include' });
+        const tokenRes = await apiRequest('/csrf-token', { credentials: 'include' });
         const tokenData = await tokenRes.json();
         csrfToken = tokenData?.token || '';
       } catch (e) {}
@@ -90,7 +91,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 
       for (const ep of endpoints) {
         try {
-          const res = await fetch(ep, {
+          const res = await apiRequest(ep, {
             method: 'POST',
             body: formData,
             headers: {

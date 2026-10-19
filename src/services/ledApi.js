@@ -1,3 +1,4 @@
+import { apiRequest } from "../utils/http.js";
 /**
  * RYCOOP LED Member Check - API Service
  *
@@ -22,7 +23,7 @@ const apiFetch = async (path, options = {}) => {
 
   for (const url of uniqueUrls) {
     try {
-      const res = await fetch(url, defaultOptions);
+      const res = await apiRequest(url, defaultOptions);
       if (res.ok) {
         return await res.json();
       }
@@ -64,7 +65,7 @@ export const apiPost = async (path, body = {}) => {
 
   for (const url of uniqueUrls) {
     try {
-      const res = await fetch(url, {
+      const res = await apiRequest(url, {
         method: 'POST',
         body: formData,
         headers: {

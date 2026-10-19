@@ -1,3 +1,4 @@
+import { assetUrl, imageFallback } from "../../utils/environment.js";
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -117,10 +118,10 @@ export default function Navbar() {
         {/* Logo & Brand */}
         <Link to="/" className="navbar-brand-link">
           <img
-            src="/assets/img/logo.webp"
+            src={assetUrl("/assets/img/logo.webp")}
             alt="Logo"
             className="navbar-brand-logo"
-            onError={(e) => { e.target.src = '/img/logo.webp'; }}
+            onError={imageFallback}
           />
           <div className="navbar-brand-text">
             <div className="navbar-brand-title">

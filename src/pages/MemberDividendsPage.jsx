@@ -1,3 +1,5 @@
+import { appUrl } from '../utils/environment';
+import { apiRequest } from "../utils/http.js";
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +19,7 @@ export default function MemberDividendsPage() {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(''); setData(null);
-    fetch('/api/member/dividends', { credentials: 'include', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, signal: controller.signal })
+    apiRequest('/api/member/dividends', { credentials: 'include', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, signal: controller.signal })
       .then(async response => {
         if (controller.signal.aborted) return;
         if (response.status === 401) {
@@ -35,7 +37,7 @@ export default function MemberDividendsPage() {
   }, [attempt, invalidateSession, navigate]);
   const record = data?.records.find(r => String(r.year) === year);
   return <main className="dividend-page container">
-    <div className="dividend-actions"><Link to="/">กลับหน้าแรก</Link>{data && <div><button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่าน</button> <button className="btn btn-outline" onClick={async () => { await logout(); window.location.assign('/member/login'); }}>ออกจากระบบ</button></div>}</div>
+    <div className="dividend-actions"><Link to="/">กลับหน้าแรก</Link>{data && <div><button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่าน</button> <button className="btn btn-outline" onClick={async () => { await logout(); window.location.assign(appUrl('/member/login')); }}>ออกจากระบบ</button></div>}</div>
     <h1>เงินปันผลและเงินเฉลี่ยคืน</h1>
     <p>ตรวจสอบรายการรายรับ รายหัก และยอดสุทธิประจำปีของคุณ</p>
     {data && <p className="dividend-note">รหัสผ่านเริ่มต้นคือเลขสมาชิก รวมเลขศูนย์นำหน้า เช่น 00025 กรุณาเปลี่ยนเป็นรหัสผ่านส่วนตัว</p>}

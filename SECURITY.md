@@ -1,5 +1,11 @@
 # Security Policy & Hardening Guidelines
 
+HTTP Preview ใช้ static-only Nginx config แยกจาก PHP และปิด API requests ใน React
+`HttpPreviewPolicy` ปฏิเสธ protected paths ที่ไม่ใช่ HTTPS ก่อน Session/DB ไม่เชื่อ
+X-Forwarded-Proto จาก client ข้อยกเว้น HTTP ใช้เฉพาะ loopback เมื่อ APP_ENV=local/testing
+เท่านั้น DB tests ต้องระบุฐานทดสอบที่อนุญาตก่อน bootstrap รายละเอียดและช่องโหว่ที่ยังค้าง:
+[Security audit 2026-10-19](docs/audit-2026-10-19.md)
+
 Production member access is deny-by-default. Both React routes and PHP member
 API groups enforce feature flags; hiding frontend controls is not treated as
 an authorization boundary.

@@ -12,6 +12,13 @@ class App
 
     public function __construct()
     {
+        if (HttpPreviewPolicy::denied($_SERVER)) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store');
+            echo json_encode(['success'=>false,'code'=>'HTTPS_REQUIRED','message'=>'Protected services require HTTPS'],JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         // Set timezone
         date_default_timezone_set(config('app.timezone', 'Asia/Bangkok'));
 

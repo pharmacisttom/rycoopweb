@@ -1,8 +1,9 @@
+import { assetUrl } from '../utils/environment';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2, 
-  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall, 
+import {
+  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2,
+  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall,
   ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award
 } from 'lucide-react';
 import { fetchHomeData, fetchCoopInfo } from '../services/api';
@@ -145,12 +146,12 @@ export default function HomePage() {
     title: coopInfo.nameTh,
     subtitle: `${coopInfo.slogan || FALLBACK_COOP.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`,
     badgeText: 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล',
-    bgImageUrl: '/assets/img/hero_bg_coop.jpg'
+    bgImageUrl: assetUrl('/assets/img/hero_bg_coop.jpg')
   };
 
   return (
     <div>
-      
+
       {/* =========================================================================
           HERO SECTION (High Impact Modern Banner)
           ========================================================================= */}
@@ -190,7 +191,7 @@ export default function HomePage() {
 
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
           <div className="home-hero-grid">
-            
+
             {/* Left Hero Content */}
             <div className="animate-fade-in">
               <div style={{
@@ -279,7 +280,7 @@ export default function HomePage() {
 
               {/* Rate Items */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.5rem' }}>
-                
+
                 <div style={{ background: 'rgba(255,255,255,0.08)', padding: '0.85rem 1rem', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>เงินฝากออมทรัพย์พิเศษพลัส</div>
@@ -474,7 +475,7 @@ export default function HomePage() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             gap: '1.25rem'
           }}>
-            
+
             <Link to="/calculator" className="surface-card" style={quickServiceCardStyle}>
               <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
                 <Calculator size={24} />
@@ -532,7 +533,7 @@ export default function HomePage() {
           ========================================================================= */}
       <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ฐานะความมั่นคง</span>
             <h2 className="section-title">สถิติและผลการดำเนินงานที่โดดเด่น</h2>
@@ -556,13 +557,13 @@ export default function HomePage() {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.25rem' }}>
                   {stat.unit}
                 </div>
-                <div style={{ 
-                  marginTop: '0.85rem', 
-                  display: 'inline-block', 
-                  fontSize: '0.75rem', 
-                  padding: '0.2rem 0.6rem', 
-                  borderRadius: 'var(--radius-full)', 
-                  background: 'var(--accent-emerald-light)', 
+                <div style={{
+                  marginTop: '0.85rem',
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--accent-emerald-light)',
                   color: 'var(--accent-emerald-dark)',
                   fontWeight: 600
                 }}>
@@ -580,7 +581,7 @@ export default function HomePage() {
           ========================================================================= */}
       <section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
             <h2 className="section-title">สินเชื่อเพื่อบุคลากรสาธารณสุข</h2>
@@ -648,7 +649,7 @@ export default function HomePage() {
           ========================================================================= */}
       <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">สวัสดิการสมาชิก</span>
             <h2 className="section-title">ดูแลสมาชิกและครอบครัวในทุกช่วงชีวิต</h2>

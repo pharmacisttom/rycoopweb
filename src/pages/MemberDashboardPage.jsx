@@ -1,3 +1,4 @@
+import { logicalPath } from '../utils/environment';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -37,7 +38,7 @@ export default function MemberDashboardPage() {
 
   // Sync activeTab based on pathname and search parameters
   useEffect(() => {
-    const path = window.location.pathname.toLowerCase();
+    const path = logicalPath(window.location.pathname).toLowerCase();
     const searchParams = new URLSearchParams(window.location.search);
     const tabParam = searchParams.get('tab');
 

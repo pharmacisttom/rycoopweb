@@ -1,3 +1,4 @@
+import { STATIC_PREVIEW, protectedPreviewPath } from './utils/environment';
 import React, { lazy, Suspense, useCallback, useEffect } from 'react';
 import { Navigate, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
@@ -172,11 +173,12 @@ export default function App() {
   return (
     <div className="app-container">
       <ScrollToTop />
+      {STATIC_PREVIEW && <div role="status" style={{textAlign:"center",padding:8,background:"#eaf4ff",color:"#073b74"}}>เว็บไซต์ประชาสัมพันธ์ตัวอย่าง — ไม่เปิดเข้าสู่ระบบหรือทำรายการสมาชิก</div>}
       {!memberAdminPage && <><TopBar /><Navbar /></>}
 
       <main className="main-content">
         <Suspense fallback={<PageSkeletonLoader />}>
-          <Routes>
+          {STATIC_PREVIEW && protectedPreviewPath(pathname) ? <ServiceUnavailablePage /> : <Routes>
             <Route path="/" element={<HomePage />} />
             {publicRoutes.map(([path, Page]) => (
               <Route
@@ -215,11 +217,11 @@ export default function App() {
             <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          </Routes>}
         </Suspense>
       </main>
 
-      {!memberAdminPage && <><Footer /><QuickActionDock /><AIChatWidget /><CookieConsent />{memberPortalEnabled && <AuthModal />}<CampaignModal /></>}
+      {!memberAdminPage && <><Footer /><QuickActionDock /><AIChatWidget /><CookieConsent />{memberPortalEnabled && !STATIC_PREVIEW && <AuthModal />}<CampaignModal /></>}
 
       {/* Inactivity Warning Modal */}
       <SessionTimeoutModal

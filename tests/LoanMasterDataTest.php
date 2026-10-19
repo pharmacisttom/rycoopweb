@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+require __DIR__.'/require-test-database.php';
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -32,7 +33,7 @@ class LoanMasterDataTest
         // 1. TEST DATABASE: loan_products table
         echo "[1] Testing Database: `loan_products` table...\n";
         $dbProducts = Database::query("SELECT name, interest_rate FROM loan_products WHERE status = 'active' ORDER BY sort_order ASC");
-        
+
         if (count($dbProducts) !== 10) {
             echo "❌ FAILED: Expected 10 loan products in DB, got " . count($dbProducts) . "\n";
             $allPassed = false;
@@ -68,7 +69,7 @@ class LoanMasterDataTest
         // 2. TEST DATABASE: interest_rates table
         echo "[2] Testing Database: `interest_rates` (product_type = 'loan')...\n";
         $dbRates = Database::query("SELECT product_name, rate FROM interest_rates WHERE product_type = 'loan' AND status = 'active' ORDER BY sort_order ASC");
-        
+
         if (count($dbRates) !== 10) {
             echo "❌ FAILED: Expected 10 loan interest rates in DB, got " . count($dbRates) . "\n";
             $allPassed = false;
@@ -95,7 +96,7 @@ class LoanMasterDataTest
         // 3. TEST REACT MOCK DATA
         echo "[3] Testing React: `src/data/mockData.js`...\n";
         $mockDataContent = file_get_contents(__DIR__ . '/../src/data/mockData.js');
-        
+
         foreach (self::$expectedMasterData as $name => $rate) {
             $rateStr = number_format($rate, 2) . '%';
             if (!str_contains($mockDataContent, "'$name'") && !str_contains($mockDataContent, "\"$name\"")) {

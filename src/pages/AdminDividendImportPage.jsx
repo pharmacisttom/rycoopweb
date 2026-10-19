@@ -1,3 +1,5 @@
+import { appUrl } from '../utils/environment';
+import { apiRequest } from "../utils/http.js";
 import React, { useState } from 'react';
 import AdminMemberShell from '../components/member/AdminMemberShell';
 
@@ -13,13 +15,13 @@ export default function AdminDividendImportPage() {
   async function submit(confirm) {
     setBusy(true); setMessage(''); setErrors([]); setErrorCount(0);
     try {
-      const csrf = await fetch('/csrf-token', { credentials: 'include', headers: { Accept: 'application/json' } });
+      const csrf = await apiRequest('/csrf-token', { credentials: 'include', headers: { Accept: 'application/json' } });
       if (!csrf.ok) throw new Error('เริ่มเซสชันไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่');
       const { token } = await csrf.json();
       const body = new FormData(); body.append('_csrf_token', token);
       if (confirm) body.append('token', preview.token);
       else { body.append('file', file); body.append('year', year); body.append('update_profiles', updateProfiles ? '1' : '0'); setPreview(null); }
-      const response = await fetch(`/api/admin/dividends/${confirm ? 'confirm' : 'preview'}`, { method: 'POST', credentials: 'include', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body });
+      const response = await apiRequest(`/api/admin/dividends/${confirm ? 'confirm' : 'preview'}`, { method: 'POST', credentials: 'include', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body });
       const result = await response.json();
       if (!response.ok || !result.success) { setErrors(result.errors || []); setErrorCount(result.error_count || 0); if (confirm) setPreview(null); throw new Error(result.message || 'ดำเนินการไม่สำเร็จ'); }
       if (confirm) { setPreview(null); setMessage(`นำเข้าสำเร็จ ${result.count.toLocaleString('th-TH')} รายการ`); }
@@ -29,7 +31,7 @@ export default function AdminDividendImportPage() {
   }
   return <AdminMemberShell title="นำเข้าเงินปันผลรายปี" description="ตรวจข้อมูลจาก Excel เทียบฐานข้อมูล ก่อนยืนยันบันทึก">
     <p>ใช้ไฟล์มาตรฐาน XLSX หรือ CSV UTF-8 ขนาดไม่เกิน 5 MB ระบบตรวจยอดรวมและข้อมูลสมาชิกก่อนบันทึก</p>
-    <p><a href="/templates/member-dividends-template.xlsx" download>ดาวน์โหลดแม่แบบ Excel</a> · <a href="/templates/member-dividends-template.csv" download>ดาวน์โหลดแม่แบบ CSV</a></p>
+    <p><a href={appUrl("/templates/member-dividends-template.xlsx")} download>ดาวน์โหลดแม่แบบ Excel</a> · <a href={appUrl("/templates/member-dividends-template.csv")} download>ดาวน์โหลดแม่แบบ CSV</a></p>
     <p>เก็บเลขบัตรประชาชนและเลขทะเบียนสมาชิกเป็นข้อความเพื่อรักษาเลขศูนย์นำหน้า แม่แบบมีตัวอย่างสมมติหนึ่งแถว ให้แทนที่ด้วยข้อมูลจริง</p>
     <form onSubmit={e => { e.preventDefault(); submit(false); }}>
       <label htmlFor="dividend-year">ปีบัญชี พ.ศ.</label><input id="dividend-year" className="form-control" type="number" min="2400" max="2800" required value={year} disabled={busy} onChange={e => { setYear(e.target.value); setPreview(null); }} />
