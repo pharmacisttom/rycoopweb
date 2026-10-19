@@ -1,3 +1,4 @@
+import { assetUrl } from '../../utils/environment';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
@@ -52,7 +53,7 @@ export default function CampaignModal() {
       justifyContent: 'center',
       padding: '1rem'
     }}>
-      <div 
+      <div
         className="glass-card animate-fade-in"
         style={{
           width: '100%',
@@ -66,7 +67,7 @@ export default function CampaignModal() {
         }}
       >
         {/* Close Button */}
-        <button 
+        <button
           onClick={() => setIsOpen(false)}
           style={{
             position: 'absolute',
@@ -89,8 +90,8 @@ export default function CampaignModal() {
 
         {/* Campaign Banner Image */}
         <div style={{ height: '220px', background: 'var(--gradient-hero)', position: 'relative', overflow: 'hidden' }}>
-          <img 
-            src={campaign.imageUrl || '/assets/img/popup_dividend.jpg'} 
+          <img
+            src={assetUrl(campaign.imageUrl || '/assets/img/popup_dividend.jpg')}
             alt={campaign.title}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => {
@@ -122,15 +123,15 @@ export default function CampaignModal() {
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button 
-              onClick={() => setIsOpen(false)} 
+            <button
+              onClick={() => setIsOpen(false)}
               className="btn btn-subtle"
               style={{ flex: 1 }}
             >
               ปิดหน้าต่าง
             </button>
-            <Link 
-              to={campaign.linkUrl || '/dividend-estimator'} 
+            <Link
+              to={campaign.linkUrl || '/dividend-estimator'}
               onClick={() => setIsOpen(false)}
               className="btn btn-primary"
               style={{ flex: 1.5 }}

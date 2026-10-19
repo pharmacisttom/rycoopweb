@@ -40,3 +40,10 @@ dist-ssr/
 *.local
 .vite/
 /storage/private/
+
+/dependency-audit*.json
+/composer-audit.json
+/test-results/
+/playwright-report/
+/build-*.log
+/*.log

@@ -1,7 +1,8 @@
+import { assetUrl, imageFallback } from "../../utils/environment.js";
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  MapPin, Phone, Mail, Clock, Shield, Award, 
+import {
+  MapPin, Phone, Mail, Clock, Shield, Award,
   ExternalLink, MessageCircle, FileText, ChevronRight, LockKeyhole
 } from 'lucide-react';
 import { COOP_INFO } from '../../data/mockData';
@@ -18,7 +19,7 @@ export default function Footer() {
       marginTop: 'auto'
     }}>
       <div className="container">
-        
+
         {/* Top Grid */}
         <div style={{
           display: 'grid',
@@ -26,22 +27,22 @@ export default function Footer() {
           gap: '3rem',
           marginBottom: '3.5rem'
         }}>
-          
+
           {/* Col 1: About & Trust */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <img 
-                src="/assets/img/logo.webp" 
-                alt="Logo" 
+              <img
+                src={assetUrl("/assets/img/logo.webp")}
+                alt="Logo"
                 style={{ width: '44px', height: '44px', objectFit: 'contain' }}
-                onError={(e) => { e.target.src = '/img/logo.webp'; }}
+                onError={imageFallback}
               />
               <div>
                 <h4 style={{ color: '#ffffff', fontSize: '1.05rem', lineHeight: 1.3 }}>{COOP_INFO.nameTh}</h4>
                 <p style={{ fontSize: '0.75rem', color: '#64748b' }}>ก่อตั้งเมื่อปี พ.ศ. {COOP_INFO.establishedYear}</p>
               </div>
             </div>
-            
+
             <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               {COOP_INFO.slogan} ยึดมั่นในหลักธรรมาภิบาล มุ่งพัฒนาคุณภาพชีวิตของสมาชิกบุคลากรสาธารณสุขจังหวัดระยองอย่างยั่งยืน
             </p>
@@ -147,10 +148,10 @@ export default function Footer() {
               ติดต่อสำนักงาน
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <a 
-                href={COOP_INFO.mapUrl} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href={COOP_INFO.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', color: '#cbd5e1', textDecoration: 'none', transition: 'color 0.2s' }}
                 title="คลิกเพื่อดูแผนที่ Google Maps"
               >
@@ -172,19 +173,19 @@ export default function Footer() {
 
               {/* Social Channels */}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <a 
-                  href={`https://${COOP_INFO.facebook}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <a
+                  href={`https://${COOP_INFO.facebook}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={socialIconStyle}
                   title="Facebook Fanpage"
                 >
                   Facebook
                 </a>
-                <a 
-                  href="https://line.me" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <a
+                  href="https://line.me"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ ...socialIconStyle, background: 'rgba(6, 199, 85, 0.2)', color: '#4ade80' }}
                   title="LINE Official Account"
                 >

@@ -1,6 +1,10 @@
 > Current production scope: public website and staff CMS. Member services are
 > retained for future activation but disabled by default.
 
+> MAIN `/` และ TEST `/test/` แบบ static preview: ดู
+> [คู่มือ build/deploy/rollback](docs/multi-environment-preview.md) และ
+> [ผล Audit พร้อมข้อจำกัด](docs/audit-2026-10-19.md).
+
 1.Ask
 2.Plan
 3.Implement

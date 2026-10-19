@@ -1,3 +1,4 @@
+import { assetUrl, imageFallback } from "../../utils/environment.js";
 import React from 'react';
 
 export default function PageSkeletonLoader() {
@@ -8,9 +9,9 @@ export default function PageSkeletonLoader() {
         <span className="coop-logo-spinner__halo" />
         <img
           className="coop-logo-spinner__logo"
-          src="/assets/img/logo.webp"
+          src={assetUrl("/assets/img/logo.webp")}
           alt=""
-          onError={(event) => { event.currentTarget.src = '/img/logo.webp'; }}
+          onError={imageFallback}
         />
       </div>
       <p className="coop-page-loader__text">กำลังโหลดข้อมูล</p>

@@ -1,3 +1,4 @@
+import { assetUrl } from '../utils/environment';
 /**
  * Mock Data for Rayong Public Health Savings and Credit Cooperative Limited
  * สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด
@@ -256,91 +257,91 @@ export const BOARD_MEMBERS = [
     id: 1,
     name: 'นางสาวอุษา อิศรางกูร ณ อยุธยา',
     position: 'ประธานกรรมการ',
-    image: './assets/img/committee/committee-01-president.webp',
+    image: assetUrl('./assets/img/committee/committee-01-president.webp'),
   },
   {
     id: 2,
     name: 'นางณาทัศญา ทรัพย์อักษรศิริ',
     position: 'รองประธานกรรมการ',
-    image: './assets/img/committee/committee-02-vice-president.webp',
+    image: assetUrl('./assets/img/committee/committee-02-vice-president.webp'),
   },
   {
     id: 3,
     name: 'นางพจวรรณ ธรรมเจริญ',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-03-pochawan.webp',
+    image: assetUrl('./assets/img/committee/committee-03-pochawan.webp'),
   },
   {
     id: 4,
     name: 'นายจัตุพล กันทะมูล',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-04-jatupol.webp',
+    image: assetUrl('./assets/img/committee/committee-04-jatupol.webp'),
   },
   {
     id: 5,
     name: 'นางสุเนตรา ตระการกูล',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-05-sunetra.webp',
+    image: assetUrl('./assets/img/committee/committee-05-sunetra.webp'),
   },
   {
     id: 6,
     name: 'นางวรรณา ทิพย์ประภาแย้ม',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-06-wanna.webp',
+    image: assetUrl('./assets/img/committee/committee-06-wanna.webp'),
   },
   {
     id: 7,
     name: 'นายเฉลิม ช่างสุวรรณ',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-07-chalerm.webp',
+    image: assetUrl('./assets/img/committee/committee-07-chalerm.webp'),
   },
   {
     id: 8,
     name: 'นางสาวเครือทิพย์ เย็นจิต',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-08-khrueathip.webp',
+    image: assetUrl('./assets/img/committee/committee-08-khrueathip.webp'),
   },
   {
     id: 9,
     name: 'นางรจนา เลาหพจนารถ',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-09-rojana.webp',
+    image: assetUrl('./assets/img/committee/committee-09-rojana.webp'),
   },
   {
     id: 10,
     name: 'นางมริสสา กองสมบัติสุข',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-10-marissa.webp',
+    image: assetUrl('./assets/img/committee/committee-10-marissa.webp'),
   },
   {
     id: 11,
     name: 'นายอนุชิต วิริยาภรณ์',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-11-anuchit.webp',
+    image: assetUrl('./assets/img/committee/committee-11-anuchit.webp'),
   },
   {
     id: 12,
     name: 'นางพิชญาภา บำรงพงษ์',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-12-pichaya.webp',
+    image: assetUrl('./assets/img/committee/committee-12-pichaya.webp'),
   },
   {
     id: 13,
     name: 'นายสุรพงษ์ จำนงค์ภักดิ์',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-13-surapong.webp',
+    image: assetUrl('./assets/img/committee/committee-13-surapong.webp'),
   },
   {
     id: 14,
     name: 'นางสาวนงลักษณ์ บรรเทาทุกข์',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-14-nonglak.webp',
+    image: assetUrl('./assets/img/committee/committee-14-nonglak.webp'),
   },
   {
     id: 15,
     name: 'นายชัชชัย บำรุง',
     position: 'กรรมการ',
-    image: './assets/img/committee/committee-15-chatchai.webp',
+    image: assetUrl('./assets/img/committee/committee-15-chatchai.webp'),
   },
 ];
 
@@ -351,42 +352,42 @@ export const STAFF_MEMBERS = [
     name: 'นริศษา',
     position: 'ผู้จัดการสหกรณ์',
     department: 'ฝ่ายจัดการบริหาร',
-    image: './assets/img/officer/officer-01-manager.jpg',
+    image: assetUrl('./assets/img/officer/officer-01-manager.jpg'),
   },
   {
     id: 2,
     name: 'ศรีนวล',
     position: 'เจ้าหน้าที่การเงิน',
     department: 'ฝ่ายจัดการและเจ้าหน้าที่',
-    image: './assets/img/officer/officer-02-finance.jpg',
+    image: assetUrl('./assets/img/officer/officer-02-finance.jpg'),
   },
   {
     id: 3,
     name: 'นิภาภัทร์',
     position: 'เจ้าหน้าที่ธุรการ',
     department: 'ฝ่ายจัดการและเจ้าหน้าที่',
-    image: './assets/img/officer/officer-03-administration.jpg',
+    image: assetUrl('./assets/img/officer/officer-03-administration.jpg'),
   },
   {
     id: 4,
     name: 'สุจิพัชร',
     position: 'เจ้าหน้าที่บัญชี',
     department: 'ฝ่ายจัดการและเจ้าหน้าที่',
-    image: './assets/img/officer/officer-04-accounting.jpg',
+    image: assetUrl('./assets/img/officer/officer-04-accounting.jpg'),
   },
   {
     id: 5,
     name: 'เนตรนภา',
     position: 'เจ้าหน้าที่ประจำหน่วย',
     department: 'ฝ่ายจัดการและเจ้าหน้าที่',
-    image: './assets/img/officer/officer-05-unit.jpg',
+    image: assetUrl('./assets/img/officer/officer-05-unit.jpg'),
   },
   {
     id: 6,
     name: 'วันวิสาข์',
     position: 'เจ้าหน้าที่สินเชื่อ',
     department: 'ฝ่ายจัดการและเจ้าหน้าที่',
-    image: './assets/img/officer/officer-06-loans.jpg',
+    image: assetUrl('./assets/img/officer/officer-06-loans.jpg'),
   },
 ];
 
@@ -398,7 +399,7 @@ export const NEWS_LIST = [
     category: 'ข่าวประชาสัมพันธ์',
     views: 1420,
     excerpt: 'ที่ประชุมคณะกรรมการดำเนินการมีมติปรับลดอัตราดอกเบี้ยเงินกู้สามัญและพิเศษลง 0.25% มีผลตั้งแต่วันที่ 1 เมษายน เป็นต้นไป',
-    image: '/assets/img/news_placeholder.jpg',
+    image: assetUrl('/assets/img/news_placeholder.jpg'),
   },
   {
     id: 'news-2',
@@ -407,7 +408,7 @@ export const NEWS_LIST = [
     category: 'กิจกรรม',
     views: 890,
     excerpt: 'เปิดรับสมัครสมาชิกที่สนใจเรียนรู้การบริหารภาษี กองทุน และการลงทุนเพื่อความมั่งคั่งอย่างยั่งยืน ไม่มีค่าใช้จ่ายตลอดหลักสูตร',
-    image: '/assets/img/news_placeholder.jpg',
+    image: assetUrl('/assets/img/news_placeholder.jpg'),
   },
   {
     id: 'news-3',
@@ -416,7 +417,7 @@ export const NEWS_LIST = [
     category: 'บริการดิจิทัล',
     views: 2150,
     excerpt: 'สะดวก รวดเร็ว ปลอดภัย สมาชิกสามารถตรวจสอบรายการหักชำระและพิมพ์ใบเสร็จรับเงินที่ลงนามดิจิทัลได้ตลอด 24 ชั่วโมง',
-    image: '/assets/img/news_placeholder.jpg',
+    image: assetUrl('/assets/img/news_placeholder.jpg'),
   },
   {
     id: 'news-4',
@@ -425,7 +426,7 @@ export const NEWS_LIST = [
     category: 'รายงานประจำปี',
     views: 3410,
     excerpt: 'มติที่ประชุมอนุมัติจ่ายเงินปันผลตามหุ้นในอัตรา 5.25% และเงินเฉลี่ยคืนตามส่วนดอกเบี้ยเงินกู้ 12.50% โอนเข้าบัญชีสมาชิกเรียบร้อยแล้ว',
-    image: '/assets/img/news_placeholder.jpg',
+    image: assetUrl('/assets/img/news_placeholder.jpg'),
   },
 ];
 

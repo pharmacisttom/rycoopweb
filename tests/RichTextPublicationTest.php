@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require __DIR__.'/require-test-database.php';
 require __DIR__.'/../vendor/autoload.php';
 use App\Core\Database;
 function publicationCall(string $db,string $method,array $body=[],string $id=''): array {

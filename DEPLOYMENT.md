@@ -1,5 +1,9 @@
 # Production Deployment Guide — RayongCoop Digital Portal
 
+> HTTP Preview ที่ `119.59.116.32` ต้องใช้ [static preview deployment](docs/multi-environment-preview.md)
+> ซึ่งไม่ส่ง Login หรือ Protected API เข้า PHP ห้ามนำตัวอย่าง FastCGI ด้านล่างไปเปิดระบบยืนยันตัวตนผ่าน HTTP
+> Production ต้องใช้ HTTPS และได้รับการอนุมัติแยกเป็นครั้ง ๆ ห้ามเขียนทับ `.env` บน VPS
+
 คู่มือการติดตั้งและปรับใช้บนระบบแม่ข่าย **Ubuntu 24.04 LTS + Nginx + PHP-FPM 8.4 + MySQL 8+**
 
 ---

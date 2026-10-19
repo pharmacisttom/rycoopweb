@@ -149,7 +149,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
 
       - name: Install frontend dependencies
@@ -172,4 +172,37 @@ jobs:
           name: rayongcoop-react-build
           path: public/app/
           if-no-files-found: error
+          retention-days: 7
+
+  preview-quality:
+    name: MAIN and TEST static preview quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+          tools: composer:v2
+      - run: npm ci
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm run build:main && npm run build:test
+      - run: npm run test:preview
+      - run: php tests/HttpPreviewPolicyTest.php
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: static-previews
+          path: dist/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preview-browser-results
+          path: test-results/
           retention-days: 7

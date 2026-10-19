@@ -1,3 +1,4 @@
+import { apiRequest } from "../utils/http.js";
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { fetchCurrentUser } from '../services/api';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
@@ -114,13 +115,13 @@ export function AuthProvider({ children }) {
         const uniqueUrls = [getApiUrl(path)];
         for (const url of uniqueUrls) {
           try {
-            const res = await fetch(url, options);
+            const res = await apiRequest(url, options);
             if (res.ok || [400, 401, 403, 419, 422, 429].includes(res.status)) {
               return res;
             }
           } catch (e) {}
         }
-        return await fetch(getApiUrl(path), options);
+        return await apiRequest(getApiUrl(path), options);
       };
 
       const csrfResponse = await fetchWithFallback('/csrf-token', {
@@ -242,14 +243,14 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      const tokenResponse = await fetch('/csrf-token', {
+      const tokenResponse = await apiRequest('/csrf-token', {
         headers: { Accept: 'application/json' },
         credentials: 'include'
       });
       const tokenData = tokenResponse.ok ? await tokenResponse.json() : {};
       const body = new FormData();
       body.append('_csrf_token', tokenData.token || '');
-      await fetch('/logout', {
+      await apiRequest('/logout', {
         method: 'POST',
         body,
         headers: {

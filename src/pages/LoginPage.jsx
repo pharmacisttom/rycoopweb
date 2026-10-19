@@ -1,3 +1,5 @@
+import { appUrl } from '../utils/environment';
+import { assetUrl, imageFallback } from "../utils/environment.js";
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, ShieldCheck, User } from 'lucide-react';
@@ -43,7 +45,7 @@ export default function LoginPage() {
         return;
       }
       if (result.requiresTwoFactor) {
-        window.location.assign(normalizeSameOriginRedirect(result.redirect, '/admin/2fa'));
+        window.location.assign(appUrl(normalizeSameOriginRedirect(result.redirect, '/admin/2fa')));
         return;
       }
       if (result.user?.role !== 'member' && !STAFF_ROLES.has(result.user?.role)) {
@@ -66,7 +68,7 @@ export default function LoginPage() {
         <Link to="/" className="member-entry-back"><ArrowLeft size={17} /> กลับสู่เว็บไซต์หลัก</Link>
         <div className="member-entry-card">
           <section className="member-entry-welcome" aria-label="ระบบสมาชิกสหกรณ์">
-            <div className="member-entry-brand"><img src="/assets/img/logo.webp" alt="ตราสหกรณ์ออมทรัพย์สาธารณสุขระยอง" /><span>สหกรณ์ออมทรัพย์<br />สาธารณสุขระยอง จำกัด</span></div>
+            <div className="member-entry-brand"><img src={assetUrl("/assets/img/logo.webp")} alt="ตราสหกรณ์ออมทรัพย์สาธารณสุขระยอง" /><span>สหกรณ์ออมทรัพย์<br />สาธารณสุขระยอง จำกัด</span></div>
             <div className="member-entry-intro"><span className="member-entry-eyebrow">บริการออนไลน์สำหรับสมาชิก</span><h1>เรื่องของสมาชิก<br /><em>เข้าถึงได้ใกล้กว่าเดิม</em></h1><p>ตรวจสอบเงินปันผลและเงินเฉลี่ยคืนของคุณ<br />สะดวก ทุกที่ ทุกเวลา</p></div>
             <div className="member-entry-benefit"><ShieldCheck size={24} /><div><strong>ข้อมูลของคุณ สำหรับคุณ</strong><p>เข้าสู่ระบบเพื่อดูรายการของตนเอง<br />และตรวจสอบข้อมูลย้อนหลังรายปี</p></div></div>
             <span className="member-entry-caption">Rayong Public Health Savings and Credit Cooperative</span>
