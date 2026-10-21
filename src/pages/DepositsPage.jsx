@@ -1,36 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Landmark, TrendingUp, ShieldCheck, CheckCircle2, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { INTEREST_RATES } from '../data/mockData';
-import { fetchInterestRates } from '../services/api';
 
 export default function DepositsPage() {
-  const [depositsList, setDepositsList] = useState(INTEREST_RATES.deposits);
-  const [effectiveDate, setEffectiveDate] = useState(INTEREST_RATES.effectiveDate);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchInterestRates().then(res => {
-      if (!cancelled && res?.success && res?.data?.deposit?.length > 0) {
-        const mapped = res.data.deposit.map(item => ({
-          type: item.product_name,
-          rate: `${parseFloat(item.rate).toFixed(2)}%`,
-          minDeposit: item.min_amount != null ? `${Number(item.min_amount).toLocaleString('th-TH')} บาท` : 'ตามประกาศสหกรณ์',
-          payFreq: item.condition_note || 'ตามประกาศสหกรณ์',
-          highlight: parseFloat(item.rate) >= 1.75
-        }));
-        setDepositsList(mapped);
-        if (res.data.deposit[0]?.effective_date) {
-          const d = new Date(res.data.deposit[0].effective_date);
-          if (!isNaN(d.getTime())) {
-            setEffectiveDate(`${d.getDate()} ${['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][d.getMonth()]} ${d.getFullYear() + 543}`);
-          }
-        }
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-
   return (
     <div className="section">
       <div className="container">
@@ -38,7 +11,7 @@ export default function DepositsPage() {
         <div className="section-title-wrap">
           <span className="section-badge">ผลิตภัณฑ์เงินฝาก</span>
           <h1 className="section-title">เงินฝากและอัตราดอกเบี้ย</h1>
-          <p className="section-subtitle">ออมเงินอย่างมั่นคง ดอกเบี้ยสูงกว่าธนาคารพาณิชย์ และไม่ถูกหักภาษี ณ ที่จ่าย</p>
+          <p className="section-subtitle">ประเภทเงินฝากและข้อมูลอ้างอิงจากเว็บไซต์สหกรณ์</p>
           <div className="section-line" />
         </div>
 
@@ -50,7 +23,7 @@ export default function DepositsPage() {
             </div>
             <div>
               <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>ผลตอบแทนคุ้มค่า</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ให้อัตราดอกเบี้ยสูง ดอกเบี้ยเงินฝากออมทรัพย์พิเศษสูงสุดถึง 1.75% ต่อปี</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ตรวจสอบอัตราดอกเบี้ยและวันที่มีผลตามประกาศล่าสุดก่อนฝากเงิน</p>
             </div>
           </div>
 
@@ -59,8 +32,8 @@ export default function DepositsPage() {
               <ShieldCheck size={24} />
             </div>
             <div>
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>ยกเว้นภาษีดอกเบี้ย</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ดอกเบี้ยเงินฝากสหกรณ์ได้รับการยกเว้นภาษีเงินได้บุคคลธรรมดา 100%</p>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>เงื่อนไขบัญชีเงินฝาก</h4>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>สอบถามเงื่อนไขการจ่ายดอกเบี้ยและภาษีที่เกี่ยวข้องกับเจ้าหน้าที่</p>
             </div>
           </div>
 
@@ -70,7 +43,7 @@ export default function DepositsPage() {
             </div>
             <div>
               <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>ใช้เป็นหลักประกันเงินกู้</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>สามารถใช้สมุดบัญชีเงินฝากค้ำประกันเงินกู้ได้สูงสุดถึง 90 - 100%</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>การใช้เงินฝากเป็นหลักประกันขึ้นอยู่กับประเภทเงินกู้และระเบียบที่เกี่ยวข้อง</p>
             </div>
           </div>
         </div>
@@ -79,8 +52,12 @@ export default function DepositsPage() {
         <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '1.3rem', color: 'var(--primary-800)' }}>ตารางประกาศอัตราดอกเบี้ยเงินฝาก</h3>
-            <span className="badge badge-gold">มีผลบังคับใช้ {effectiveDate}</span>
+            <span className="badge badge-gold">ตรวจเทียบหน้าเว็บเดิม {INTEREST_RATES.depositSource.checkedOn}</span>
           </div>
+          <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+            {INTEREST_RATES.depositSource.note}{' '}
+            <a href={INTEREST_RATES.depositSource.url} target="_blank" rel="noopener noreferrer">ดูแหล่งข้อมูล</a>
+          </p>
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
@@ -89,11 +66,11 @@ export default function DepositsPage() {
                   <th style={{ padding: '0.85rem' }}>ประเภทเงินฝาก</th>
                   <th style={{ padding: '0.85rem', textAlign: 'center' }}>อัตราดอกเบี้ย (% ต่อปี)</th>
                   <th style={{ padding: '0.85rem' }}>เปิดบัญชีขั้นต่ำ</th>
-                  <th style={{ padding: '0.85rem' }}>การจ่ายดอกเบี้ย / เงื่อนไข</th>
+                  <th style={{ padding: '0.85rem' }}>การจ่ายดอกเบี้ย</th>
                 </tr>
               </thead>
               <tbody>
-                {depositsList.map((item, idx) => (
+                {INTEREST_RATES.deposits.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)', background: item.highlight ? 'rgba(37, 99, 235, 0.03)' : 'transparent' }}>
                     <td style={{ padding: '0.85rem', fontWeight: 600 }}>{item.type}</td>
                     <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800, color: 'var(--primary-600)', fontSize: '1.1rem', fontFamily: 'var(--font-display)' }}>
@@ -126,14 +103,10 @@ export default function DepositsPage() {
             </li>
           </ul>
 
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <Link to="/documents" className="btn btn-outline btn-sm">
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <Link to="/documents" className="btn btn-outline">
               <Download size={16} />
-              <span>ดาวน์โหลดแบบฟอร์มเปิดบัญชี</span>
-            </Link>
-            <Link to="/contact" className="btn btn-subtle btn-sm">
-              <FileText size={16} />
-              <span>ติดต่อเจ้าหน้าที่การเงิน</span>
+              <span>ดาวน์โหลดคำขอเปิดบัญชีเงินฝาก</span>
             </Link>
           </div>
         </div>

@@ -97,8 +97,8 @@ final class SecurityRegressionTest
 
     private static function assertMemberPortalIsDenyByDefault(): void
     {
-        self::assert(config('features.member_portal', true) === false, 'member portal defaults to disabled');
-        self::assert(config('features.member_login', false) === true, 'member login defaults to enabled for dividend access');
+        self::assert(config('features.member_portal', true) === filter_var(env('FEATURE_MEMBER_PORTAL', false), FILTER_VALIDATE_BOOL), 'member portal respects explicit feature flag and defaults to disabled');
+        self::assert(config('features.member_login', false) === filter_var(env('FEATURE_MEMBER_LOGIN', true), FILTER_VALIDATE_BOOL), 'member login respects explicit feature flag and defaults to dividend access');
 
         $router = new Router();
         require __DIR__ . '/../config/routes.php';

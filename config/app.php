@@ -15,11 +15,11 @@ return [
         'full_name_th' => 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
         'full_name_en' => 'Rayong Public Health Savings and Credit Cooperative Limited',
         'short_name' => 'สอ.สธ.ระยอง',
-        'phone' => '038-611178, 038-617478',
-        'fax' => '038-611179',
-        'email' => 'contact@rayongcoop.com',
-        'address' => 'เลขที่ 444 หมู่ 2 ถนนสุขุมวิท ตำบลเนินพระ อำเภอเมืองระยอง จังหวัดระยอง 21150',
-        'office_hours' => 'จันทร์ - ศุกร์ 08.30 - 16.30 น. (เว้นวันหยุดราชการและวันหยุดนักขัตฤกษ์)',
+        'phone' => '038-967-409, 086-368-1132',
+        'fax' => '038-967-409',
+        'email' => 'coop2530@gmail.com',
+        'address' => '142 หมู่ 2 ตำบลเนินพระ อำเภอเมือง จังหวัดระยอง 21000',
+        'office_hours' => 'กรุณาสอบถามเวลาทำการกับสหกรณ์',
         'legacy_url' => 'https://rayongcoop.com/',
     ]
 ];

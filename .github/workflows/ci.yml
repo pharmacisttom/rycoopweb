@@ -152,8 +152,16 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Set up PHP for public config parity checks
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Check public reference content
+        run: node tests/PublicContentReferenceTest.mjs
 
       - name: Build frontend
         run: npm run build

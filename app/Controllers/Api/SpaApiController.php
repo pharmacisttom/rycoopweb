@@ -47,8 +47,8 @@ class SpaApiController extends Controller
         } catch (\Throwable $e) {}
 
         try {
-            $depositRates = Database::query("SELECT id, product_name, product_type, rate, min_amount, description, icon, sort_order FROM interest_rates WHERE product_type = 'deposit' AND status = 'active' ORDER BY sort_order ASC LIMIT 4");
-            $loanRates = Database::query("SELECT id, product_name, product_type, rate, min_amount, max_amount, description, icon, sort_order FROM interest_rates WHERE product_type = 'loan' AND status = 'active' ORDER BY sort_order ASC");
+            $depositRates = Database::query("SELECT id, product_name, product_type, rate, min_amount, condition_note AS description, NULL AS icon, sort_order FROM interest_rates WHERE product_type = 'deposit' AND status = 'active' ORDER BY sort_order ASC LIMIT 4");
+            $loanRates = Database::query("SELECT id, product_name, product_type, rate, min_amount, max_amount, condition_note AS description, NULL AS icon, sort_order FROM interest_rates WHERE product_type = 'loan' AND status = 'active' ORDER BY sort_order ASC");
         } catch (\Throwable $e) {}
 
         try {
@@ -57,9 +57,9 @@ class SpaApiController extends Controller
         } catch (\Throwable $e) {}
 
         try {
-            $featuredDeposits = Database::query("SELECT id, name, slug, short_description, min_amount, interest_rate, icon, badge FROM deposit_products WHERE is_featured = 1 AND status = 'active' ORDER BY sort_order ASC LIMIT 3");
-            $featuredLoans = Database::query("SELECT id, name, slug, short_description, max_amount, interest_rate, max_term_months, icon, badge FROM loan_products WHERE is_featured = 1 AND status = 'active' ORDER BY sort_order ASC LIMIT 3");
-            $calcLoanProducts = Database::query("SELECT id, name, slug, interest_rate, max_amount, max_term_months FROM loan_products WHERE is_calculator_enabled = 1 AND status = 'active' ORDER BY sort_order ASC");
+            $featuredDeposits = Database::query("SELECT id, name, slug, short_description, min_deposit AS min_amount, interest_rate, NULL AS icon, NULL AS badge FROM deposit_products WHERE is_featured = 1 AND status = 'active' ORDER BY sort_order ASC LIMIT 3");
+            $featuredLoans = Database::query("SELECT id, name, slug, short_description, max_loan_limit AS max_amount, interest_rate, max_term_months, NULL AS icon, NULL AS badge FROM loan_products WHERE is_featured = 1 AND status = 'active' ORDER BY sort_order ASC LIMIT 3");
+            $calcLoanProducts = Database::query("SELECT id, name, slug, interest_rate, max_loan_limit AS max_amount, max_term_months FROM loan_products WHERE is_calculator_enabled = 1 AND status = 'active' ORDER BY sort_order ASC");
         } catch (\Throwable $e) {}
 
         try {
@@ -132,8 +132,8 @@ class SpaApiController extends Controller
         $deposit = [];
         $loan = [];
         try {
-            $deposit = Database::query("SELECT id, product_name, product_type, rate, min_amount, description, icon, sort_order FROM interest_rates WHERE product_type = 'deposit' AND status = 'active' ORDER BY sort_order ASC");
-            $loan = Database::query("SELECT id, product_name, product_type, rate, min_amount, max_amount, description, icon, sort_order FROM interest_rates WHERE product_type = 'loan' AND status = 'active' ORDER BY sort_order ASC");
+            $deposit = Database::query("SELECT id, product_name, product_type, rate, min_amount, condition_note AS description, NULL AS icon, sort_order FROM interest_rates WHERE product_type = 'deposit' AND status = 'active' ORDER BY sort_order ASC");
+            $loan = Database::query("SELECT id, product_name, product_type, rate, min_amount, max_amount, condition_note AS description, NULL AS icon, sort_order FROM interest_rates WHERE product_type = 'loan' AND status = 'active' ORDER BY sort_order ASC");
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => ['deposit' => $deposit, 'loan' => $loan]]);
@@ -146,7 +146,7 @@ class SpaApiController extends Controller
     {
         $products = [];
         try {
-            $products = Database::query("SELECT id, name, slug, short_description, description, interest_rate, max_amount, max_term_months, min_membership_months, required_guarantors, is_featured, is_calculator_enabled, icon, badge, sort_order FROM loan_products WHERE status = 'active' ORDER BY sort_order ASC");
+            $products = Database::query("SELECT id, name, slug, short_description, full_description AS description, interest_rate, max_loan_limit AS max_amount, max_term_months, guarantor_requirement, is_featured, is_calculator_enabled, NULL AS icon, NULL AS badge, sort_order FROM loan_products WHERE status = 'active' ORDER BY sort_order ASC");
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $products]);
@@ -231,7 +231,7 @@ class SpaApiController extends Controller
     {
         $members = [];
         try {
-            $members = Database::query("SELECT id, name, position, image_url, group_name, sort_order FROM board_staff WHERE status = 'active' ORDER BY group_name ASC, sort_order ASC");
+            $members = Database::query("SELECT id, name, position, photo AS image_url, role_type AS group_name, term_number, sort_order FROM boards WHERE status = 'active' AND deleted_at IS NULL ORDER BY role_type ASC, sort_order ASC");
             $members = array_map(fn(array $member): array => $this->withResolvedMediaUrls($member, ['image_url', 'photo']), $members);
         } catch (\Throwable $e) {}
 

@@ -1,29 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Banknote, CheckCircle2, Download, FileCheck, Home, Zap, Shield, Car, BookOpen, ShoppingBag, RefreshCw, Calculator, Percent } from 'lucide-react';
+import React from 'react';
+import { Banknote, CheckCircle2, Download, FileCheck, Home, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { LOAN_PRODUCTS } from '../data/mockData';
-import { fetchInterestRates } from '../services/api';
+import { LOAN_PRODUCTS, INTEREST_RATES } from '../data/mockData';
 
-const CATEGORY_DEFINITIONS = [
+const loanById = (id) => LOAN_PRODUCTS.find((product) => product.id === id);
+
+const LOAN_CATEGORIES = [
   {
-    id: 'emergency', icon: Zap, eyebrow: 'สำหรับความจำเป็นเร่งด่วน', title: 'เงินกู้ฉุกเฉิน',
+    id: 'emergency', icon: Zap, eyebrow: 'สำหรับความจำเป็นเร่งด่วน', title: 'เงินกู้เพื่อเหตุฉุกเฉิน',
     description: 'ทางเลือกสำหรับเหตุจำเป็นเฉพาะหน้า ด้วยวงเงินและระยะเวลาผ่อนชำระที่เหมาะกับการแก้ปัญหาเร่งด่วน',
-    productIds: ['emergency'], color: 'var(--accent-rose)', background: 'var(--accent-rose-light)',
+    products: [loanById('emergency')], color: 'var(--accent-rose)', background: 'var(--accent-rose-light)',
   },
   {
-    id: 'ordinary', icon: Banknote, eyebrow: 'เพื่อการครองชีพและการศึกษา', title: 'เงินกู้สามัญ & เพื่อการศึกษา',
-    description: 'รองรับแผนการเงินระยะกลางถึงระยะยาว ทั้งการเสริมสภาพคล่อง การศึกษาของสมาชิกหรือบุตร และการรวมหนี้',
-    productIds: ['ordinary', 'education', 'debt_restructure'], color: 'var(--accent-gold-dark)', background: 'var(--accent-gold-light)',
+    id: 'ordinary', icon: Banknote, eyebrow: 'เพื่อสวัสดิการและการศึกษา', title: 'เงินกู้สามัญ & สามัญศึกษา',
+    description: 'รองรับแผนการเงินระยะกลางถึงระยะยาว ทั้งการพัฒนาคุณภาพชีวิตของสมาชิกและการศึกษาของสมาชิกหรือบุตร',
+    products: [loanById('ordinary'), loanById('education')], color: 'var(--accent-gold-dark)', background: 'var(--accent-gold-light)',
   },
   {
-    id: 'housing', icon: Home, eyebrow: 'เพื่อที่อยู่อาศัยและความมั่นคง', title: 'เงินกู้พิเศษ & ความมั่นคงในชีวิต',
-    description: 'สำหรับซื้อที่ดิน สร้างบ้าน รีไฟแนนซ์ หรือเสริมความมั่นคงในชีวิตระยะยาว โดยใช้หลักทรัพย์เป็นประกัน',
-    productIds: ['special', 'life_security'], color: 'var(--accent-teal-dark)', background: 'var(--accent-teal-light)',
+    id: 'housing', icon: Home, eyebrow: 'เพื่อที่อยู่อาศัยของสมาชิก', title: 'เงินกู้พิเศษเพื่อเคหะ',
+    description: 'สำหรับซื้อที่ดิน สร้างบ้าน รีไฟแนนซ์ หรือดำเนินการเกี่ยวกับอสังหาริมทรัพย์ โดยใช้หลักทรัพย์เป็นประกัน',
+    products: [loanById('special'), loanById('life_security')], color: 'var(--accent-teal-dark)', background: 'var(--accent-teal-light)',
   },
   {
-    id: 'welfare', icon: ShoppingBag, eyebrow: 'เพื่อสวัสดิการและยานพาหนะ', title: 'สวัสดิการ & พัฒนาคุณภาพชีวิต',
-    description: 'สินเชื่อจัดหาสินค้าจำเป็น ยานพาหนะ พัฒนาความเป็นอยู่ครอบครัว และกู้โดยใช้เงินฝากค้ำประกันดอกเบี้ยต่ำ',
-    productIds: ['life_development', 'goods_installment', 'car_purchase', 'guaranteed_loan'], color: 'var(--primary-700)', background: 'var(--primary-100)',
+    id: 'other', icon: Banknote, eyebrow: 'สินเชื่อประเภทอื่น', title: 'สินค้า คุณภาพชีวิต และรถยนต์',
+    description: 'ข้อมูลตามประเภทเงินกู้ในเว็บไซต์เดิมของสหกรณ์',
+    products: [loanById('goods_installment'), loanById('life_development'), loanById('car_purchase')],
+    color: 'var(--primary-700)', background: 'var(--primary-100)',
   },
 ];
 
@@ -44,7 +46,7 @@ function LoanProductCard({ product }) {
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>หลักประกัน: {product.guarantee}</div>
         </div>
         <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.87rem' }}>
-          {product.features?.map((feature) => (
+          {product.features.map((feature) => (
             <li key={feature} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
               <CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" />
               <span>{feature}</span>
@@ -61,125 +63,37 @@ function LoanProductCard({ product }) {
 }
 
 export default function LoansPage() {
-  const [products, setProducts] = useState(LOAN_PRODUCTS);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchInterestRates().then(res => {
-      if (!cancelled && res?.success && res?.data?.loan?.length > 0) {
-        setProducts(current => current.map(p => {
-          const match = res.data.loan.find(r => r.product_name === p.title);
-          if (match) {
-            const val = parseFloat(match.rate);
-            return {
-              ...p,
-              rateValue: val,
-              interestRate: `${val.toFixed(2)}% ต่อปี`,
-              maxLimit: match.max_amount != null ? parseFloat(match.max_amount) : p.maxLimit
-            };
-          }
-          return p;
-        }));
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-
-  const getProduct = (id) => products.find(p => p.id === id);
-
   return (
     <div className="section">
       <div className="container">
         <div className="section-title-wrap">
           <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
           <h1 className="section-title">สินเชื่อและอัตราดอกเบี้ยเงินกู้</h1>
-          <p className="section-subtitle">เลือกประเภทสินเชื่อให้เหมาะกับวัตถุประสงค์และแผนการชำระเงินของคุณ (คิดดอกเบี้ยแบบลดต้นลดดอก)</p>
+          <p className="section-subtitle">เลือกประเภทสินเชื่อให้เหมาะกับวัตถุประสงค์และแผนการชำระเงินของคุณ</p>
           <div className="section-line" />
+          <p className="section-subtitle">{INTEREST_RATES.loanSource.note}{' '}<a href={INTEREST_RATES.loanSource.url}>ดูข้อมูลอ้างอิง</a></p>
         </div>
 
-        {/* 10-Product Master Rate Summary Card */}
-        <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '3rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--primary-800)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Percent size={20} className="text-primary" />
-                <span>ตารางสรุปอัตราดอกเบี้ยเงินกู้ 10 ประเภท (ตามประกาศสหกรณ์)</span>
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
-                คิดดอกเบี้ยแบบลดต้นลดดอก (Effective Rate) มีผลบังคับใช้ตามประกาศล่าสุด
-              </p>
-            </div>
-            <Link to="/calculator" className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Calculator size={15} />
-              <span>เปิดโปรแกรมคำนวณเงินกู้</span>
-            </Link>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-subtle)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.85rem', width: '45px' }}>#</th>
-                  <th style={{ padding: '0.85rem' }}>ประเภทเงินกู้</th>
-                  <th style={{ padding: '0.85rem', textAlign: 'center' }}>อัตราดอกเบี้ย</th>
-                  <th style={{ padding: '0.85rem' }}>วงเงินกู้สูงสุด</th>
-                  <th style={{ padding: '0.85rem' }}>ผ่อนชำระสูงสุด</th>
-                  <th style={{ padding: '0.85rem', textAlign: 'center' }}>คำนวณ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p, idx) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                    <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1}</td>
-                    <td style={{ padding: '0.85rem', fontWeight: 700, color: 'var(--primary-900)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>{p.title}</span>
-                        <span className={`badge badge-${p.badgeColor}`} style={{ fontSize: '0.7rem' }}>{p.badge}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800, color: 'var(--accent-gold-dark)', fontSize: '1.15rem', fontFamily: 'var(--font-display)' }}>
-                      {p.rateValue.toFixed(2)}%
-                    </td>
-                    <td style={{ padding: '0.85rem', fontWeight: 600, color: 'var(--primary-700)' }}>{p.maxAmount}</td>
-                    <td style={{ padding: '0.85rem' }}>{p.period}</td>
-                    <td style={{ padding: '0.85rem', textAlign: 'center' }}>
-                      <Link to={`/calculator?loan=${p.id}`} className="btn btn-subtle btn-sm" style={{ padding: '0.25rem 0.6rem', fontSize: '0.78rem' }}>
-                        คำนวณ
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Category Navigation */}
         <nav aria-label="ประเภทเงินกู้" style={{ display: 'flex', justifyContent: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
-          {CATEGORY_DEFINITIONS.map((category) => (
-            <a key={category.id} href={`#${category.id}`} className="btn btn-subtle btn-sm">{category.title}</a>
-          ))}
+          {LOAN_CATEGORIES.map((category) => <a key={category.id} href={`#${category.id}`} className="btn btn-subtle btn-sm">{category.title}</a>)}
         </nav>
 
-        {/* Categories with Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '3rem' }}>
-          {CATEGORY_DEFINITIONS.map((category) => {
+          {LOAN_CATEGORIES.map((category) => {
             const Icon = category.icon;
-            const categoryProducts = category.productIds.map(getProduct).filter(Boolean);
+            const products = category.products.filter(Boolean);
             return (
               <section key={category.id} id={category.id} aria-labelledby={`${category.id}-heading`} className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', scrollMarginTop: '8rem' }}>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-                  <div style={{ width: '46px', height: '46px', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: category.background, color: category.color }}>
-                    <Icon size={24} aria-hidden="true" />
-                  </div>
+                  <div style={{ width: '46px', height: '46px', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: category.background, color: category.color }}><Icon size={24} aria-hidden="true" /></div>
                   <div>
                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: category.color }}>{category.eyebrow}</span>
                     <h2 id={`${category.id}-heading`} style={{ fontSize: '1.5rem', color: 'var(--primary-800)', marginTop: '0.15rem', marginBottom: '0.35rem' }}>{category.title}</h2>
                     <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{category.description}</p>
                   </div>
                 </div>
-                <div className={categoryProducts.length > 1 ? 'grid-2' : undefined} style={categoryProducts.length === 1 ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
-                  {categoryProducts.map((product) => <LoanProductCard key={product.id} product={product} />)}
+                <div className={products.length > 1 ? 'grid-2' : undefined} style={products.length === 1 ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
+                  {products.map((product) => <LoanProductCard key={product.id} product={product} />)}
                 </div>
               </section>
             );

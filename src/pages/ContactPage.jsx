@@ -147,7 +147,7 @@ export default function ContactPage() {
                 border: '1px solid var(--border-subtle)',
                 background: 'var(--bg-subtle)'
               }}>
-                <iframe
+                {COOP_INFO.mapEmbedUrl ? <iframe
                   title="Rayong Coop Location Map"
                   src={COOP_INFO.mapEmbedUrl}
                   width="100%"
@@ -156,12 +156,12 @@ export default function ContactPage() {
                   allowFullScreen=""
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
-                />
+                /> : <p style={{ padding: '1rem' }}>สอบถามตำแหน่งสำนักงานกับสหกรณ์ก่อนเดินทาง</p>}
                 <div style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    📍 142 ม.2 ถ.สุขุมวิท ต.เนินพระ อ.เมืองระยอง
+                    📍 {COOP_INFO.address}
                   </div>
-                  <a
+                  {COOP_INFO.mapUrl && <a
                     href={COOP_INFO.mapUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -170,7 +170,7 @@ export default function ContactPage() {
                   >
                     <MapPin size={14} />
                     <span>นำทางด้วย Google Maps</span>
-                  </a>
+                  </a>}
                 </div>
               </div>
 

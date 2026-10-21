@@ -2,6 +2,7 @@ import React from 'react';
 import { Building, Landmark } from 'lucide-react';
 import { BOARD_MEMBERS, COOP_INFO } from '../data/mockData';
 import SafeImage from '../components/common/SafeImage';
+import legacyReference from '../data/legacyReference.json';
 
 function PeopleGrid({ members, type }) {
   const isBoard = type === 'board';
@@ -11,7 +12,7 @@ function PeopleGrid({ members, type }) {
       {members.map((member) => {
         const isFeaturedLeader =
           (isBoard && member.position === 'ประธานกรรมการ') ||
-          (!isBoard && member.position === 'ผู้จัดการสหกรณ์');
+          (!isBoard && ['ผู้จัดการ', 'ผู้จัดการสหกรณ์'].includes(member.position));
 
         return (
           <article
@@ -78,7 +79,7 @@ function PeopleGrid({ members, type }) {
   );
 }
 
-export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, members, type }) {
+export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, members, type, children }) {
   return (
     <div className="section">
       <div className="container">
@@ -96,6 +97,7 @@ export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, mem
           </div>
           <PeopleGrid members={members} type={type} />
         </section>
+        {children}
       </div>
     </div>
   );
@@ -105,12 +107,32 @@ export default function BoardPage() {
   return (
     <PeopleDirectoryPage
       badge="คณะผู้บริหาร"
-      title="คณะกรรมการดำเนินการ"
+      title="คณะกรรมการดำเนินงาน ชุดที่ 38"
       subtitle={`ทำเนียบคณะกรรมการดำเนินการ ${COOP_INFO.nameTh}`}
-      heading="คณะกรรมการดำเนินการ"
+      heading="คณะกรรมการดำเนินงาน ชุดที่ 38"
       Icon={Landmark}
       members={BOARD_MEMBERS}
       type="board"
-    />
+    >
+      <p style={{ margin: '1.5rem 0', color: 'var(--text-muted)' }}>
+        อ้างอิงรายชื่อจาก{' '}
+        <a href={legacyReference.sources.board.url} target="_blank" rel="noopener noreferrer">เว็บไซต์เดิมของสหกรณ์</a>
+        {' '}ตรวจเทียบ {legacyReference.sources.board.checkedOn}
+      </p>
+      {legacyReference.boardGroups.map(group => (
+        <section key={group.title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
+          <h2>{group.title}</h2>
+          <ul>{group.members.map(([id, position]) => (
+            <li key={id}>{BOARD_MEMBERS.find(member => member.id === id).name} — {position}</li>
+          ))}</ul>
+        </section>
+      ))}
+      {[["ที่ปรึกษาสหกรณ์", legacyReference.advisors], ["คณะผู้ตรวจสอบกิจการสหกรณ์", legacyReference.auditors]].map(([title, people]) => (
+        <section key={title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
+          <h2>{title}</h2>
+          <ul>{people.map(([name, position]) => <li key={name}>{name} — {position}</li>)}</ul>
+        </section>
+      ))}
+    </PeopleDirectoryPage>
   );
 }

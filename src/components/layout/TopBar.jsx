@@ -1,35 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Phone, Clock, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { COOP_INFO, INTEREST_RATES } from '../../data/mockData';
-import { fetchInterestRates } from '../../services/api';
+import { COOP_INFO } from '../../data/mockData';
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
-  const [ratesTicker, setRatesTicker] = useState({
-    depositRate: '1.75%',
-    emergencyLoanRate: '4.75%'
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchInterestRates().then(res => {
-      if (!cancelled && res?.success && res?.data) {
-        let maxDep = '1.75%';
-        if (Array.isArray(res.data.deposit) && res.data.deposit.length > 0) {
-          const maxVal = Math.max(...res.data.deposit.map(d => parseFloat(d.rate) || 0));
-          if (maxVal > 0) maxDep = `${maxVal.toFixed(2)}%`;
-        }
-        let emerg = '4.75%';
-        if (Array.isArray(res.data.loan)) {
-          const found = res.data.loan.find(l => l.product_name === 'เงินกู้ฉุกเฉิน');
-          if (found) emerg = `${parseFloat(found.rate).toFixed(2)}%`;
-        }
-        setRatesTicker({ depositRate: maxDep, emergencyLoanRate: emerg });
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
 
   return (
     <div style={{
@@ -49,7 +24,7 @@ export default function TopBar() {
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} className="hide-mobile">
             <Clock size={14} style={{ color: 'var(--accent-teal)' }} />
-            <span>เวลาทำการ: 08:30 - 16:30 น.</span>
+            <span>{COOP_INFO.workHours}</span>
           </span>
           <span style={{ 
             background: 'rgba(245, 158, 11, 0.15)', 
@@ -59,7 +34,7 @@ export default function TopBar() {
             fontSize: '0.75rem',
             fontWeight: '600'
           }} className="hide-mobile">
-            ✨ ดอกเบี้ยเงินฝากสูงสุด {ratesTicker.depositRate} | กู้ฉุกเฉิน {ratesTicker.emergencyLoanRate}
+            ตรวจสอบอัตราดอกเบี้ยและเงื่อนไขล่าสุดกับสหกรณ์
           </span>
         </div>
 
@@ -83,7 +58,7 @@ export default function TopBar() {
             title={theme === 'light' ? 'สลับเป็นโหมดกลางคืน' : 'สลับเป็นโหมดกลางวัน'}
           >
             {theme === 'light' ? <Moon size={14} style={{ color: '#fbbf24' }} /> : <Sun size={14} style={{ color: '#f59e0b' }} />}
-            <span style={{ fontSize: '0.75rem' }}>{theme === 'light' ? 'โหมดมืด' : 'โหมดสว่าง'}</span>
+            <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
           </button>
 
         </div>
