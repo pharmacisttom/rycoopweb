@@ -31,7 +31,7 @@ class AuthController extends Controller
             } elseif ($roleSlug === 'super_admin') {
                 $this->redirect(url('admin/dashboard'));
             } else {
-                $this->redirect(url('staff/dashboard'));
+                $this->redirect(url('admin/workspace'));
             }
             return;
         }
@@ -164,7 +164,7 @@ class AuthController extends Controller
             'member' => '/member/dividends',
             'member_admin' => '/admin/members/dashboard',
             'super_admin' => '/admin/dashboard',
-            default => '/staff/dashboard'
+            default => '/admin/workspace'
         };
 
         if ($isAjax) {
@@ -179,7 +179,7 @@ class AuthController extends Controller
                     'email' => $user['email'] ?? '',
                     'role' => $roleSlug,
                     'role_slug' => $roleSlug,
-                    'permissions' => \App\Services\MemberPortalPermissionService::current(),
+                    'permissions' => \App\Services\AccessService::permissions((int)$user['id']),
                     'role_name' => $user['role_name'] ?? match($roleSlug) {
                         'super_admin' => 'ผู้ดูแลระบบสูงสุด',
                         'staff' => 'เจ้าหน้าที่สินเชื่อ/การเงิน',
@@ -257,7 +257,7 @@ class AuthController extends Controller
             'member' => url('member/dashboard'),
             'member_admin' => url('admin/members/dashboard'),
             'super_admin' => url('admin/dashboard'),
-            default => url('staff/dashboard')
+            default => url('admin/workspace')
         };
 
         $this->redirect($targetUrl);

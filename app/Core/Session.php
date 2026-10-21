@@ -29,7 +29,7 @@ class Session
         session_set_cookie_params([
             'lifetime' => $lifetime,
             'path' => '/',
-            'domain' => '',
+            'domain' => (string) ($sessionConfig['domain'] ?? ''),
             'secure' => (bool) ($sessionConfig['secure'] ?? false),
             'httponly' => true,
             'samesite' => $sessionConfig['samesite'] ?? 'Lax',

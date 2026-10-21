@@ -21,7 +21,7 @@ class MemberManagementController extends Controller
         $reference=bin2hex(random_bytes(6));
         Logger::error('Member management failure '.$reference.': '.$error->getMessage());
         $schema=$error instanceof \PDOException && in_array((int)($error->errorInfo[1]??0),[1054,1146],true);
-        return ['code'=>$schema?'MEMBER_SCHEMA_NOT_READY':'MEMBER_DATABASE_ERROR','reference'=>$reference,'message'=>$schema?'ฐานข้อมูลระบบสมาชิกยังอัปเดตไม่ครบ กรุณาให้ผู้ดูแลเซิร์ฟเวอร์ตรวจการอัปเดตฐานข้อมูล':'อ่านหรือบันทึกข้อมูลไม่สำเร็จ กรุณาแจ้งผู้ดูแลพร้อมรหัสอ้างอิง '.$reference];
+        return ['code'=>$schema?'MEMBER_SCHEMA_NOT_READY':'MEMBER_DATABASE_ERROR','reference'=>$reference,'message'=>$schema?'เธเธฒเธเธเนเธญเธกเธนเธฅเธฃเธฐเธเธเธชเธกเธฒเธเธดเธเธขเธฑเธเธญเธฑเธเน€เธ”เธ•เนเธกเนเธเธฃเธ เธเธฃเธธเธ“เธฒเนเธซเนเธเธนเนเธ”เธนเนเธฅเน€เธเธดเธฃเนเธเน€เธงเธญเธฃเนเธ•เธฃเธงเธเธเธฒเธฃเธญเธฑเธเน€เธ”เธ•เธเธฒเธเธเนเธญเธกเธนเธฅ':'เธญเนเธฒเธเธซเธฃเธทเธญเธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเนเธกเนเธชเธณเน€เธฃเนเธ เธเธฃเธธเธ“เธฒเนเธเนเธเธเธนเนเธ”เธนเนเธฅเธเธฃเนเธญเธกเธฃเธซเธฑเธชเธญเนเธฒเธเธญเธดเธ '.$reference];
     }
 
     private function respond(callable $work): void
@@ -42,7 +42,7 @@ class MemberManagementController extends Controller
 
     private function id(string $id): int
     {
-        if(!ctype_digit($id)||(int)$id<1) throw new MemberDataException('เลขรายการไม่ถูกต้อง');
+        if(!ctype_digit($id)||(int)$id<1) throw new MemberDataException('เน€เธฅเธเธฃเธฒเธขเธเธฒเธฃเนเธกเนเธ–เธนเธเธ•เนเธญเธ');
         return (int)$id;
     }
 
@@ -92,7 +92,7 @@ class MemberManagementController extends Controller
             $limit=in_array($requestedLimit,[25,50,100],true)?$requestedLimit:25;
             $q=trim((string)$this->request->query('q',''));
             $length=function_exists('mb_strlen')?mb_strlen($q):preg_match_all('/./us',$q);
-            if($length>100) throw new MemberDataException('คำค้นยาวเกินกำหนด');
+            if($length>100) throw new MemberDataException('เธเธณเธเนเธเธขเธฒเธงเน€เธเธดเธเธเธณเธซเธเธ”');
             $name=$this->nameSql($columns);
             $department=in_array('department',$columns['members'],true)?'m.department':"NULL";
             $where=['1=1'];$params=[];
@@ -102,14 +102,14 @@ class MemberManagementController extends Controller
             }
             $status=(string)$this->request->query('status','');
             if($status!=='') {
-                if(!in_array($status,['active','resigned','suspended'],true)) throw new MemberDataException('สถานะไม่ถูกต้อง');
+                if(!in_array($status,['active','resigned','suspended'],true)) throw new MemberDataException('เธชเธ–เธฒเธเธฐเนเธกเนเธ–เธนเธเธ•เนเธญเธ');
                 $where[]='m.status=?';$params[]=$status;
             }
             $year=(string)$this->request->query('year','');
             $hasReports=isset($columns['member_dividends']);
             if($year!=='' || $hasReports) MemberSystemHealth::requireColumns(['member_dividends'=>['member_id','year','details_json','imported_at']],$columns);
             if($year!=='') {
-                if(!preg_match('/^\d{4}$/D',$year)||(int)$year<2400||(int)$year>2800) throw new MemberDataException('ปีต้องเป็น พ.ศ. 2400–2800');
+                if(!preg_match('/^\d{4}$/D',$year)||(int)$year<2400||(int)$year>2800) throw new MemberDataException('เธเธตเธ•เนเธญเธเน€เธเนเธ เธ.เธจ. 2400โ€“2800');
                 $where[]='EXISTS(SELECT 1 FROM member_dividends d WHERE d.member_id=m.id AND d.year=?)';$params[]=$year;
             }
             $sql=implode(' AND ',$where);
@@ -125,8 +125,8 @@ class MemberManagementController extends Controller
             }
             $items=Database::query("SELECT m.id,m.member_no,{$name} AS name,{$department} AS department,m.status,m.user_id IS NOT NULL AS has_account,CONCAT('*********',RIGHT(m.id_card,4)) AS id_card_masked,{$reportCount} AS record_count{$finance} FROM members m{$join} WHERE {$sql} ORDER BY m.member_no,m.id LIMIT {$limit} OFFSET {$offset}",$queryParams);
             $missing=array_values(array_diff(['prefix','department'],$columns['members']));
-            if($missing)$warnings[]=['section'=>'members','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'ข้อมูลบางช่องยังไม่พร้อม กรุณาตรวจการอัปเดตฐานข้อมูล','missing'=>array_map(fn($f)=>'members.'.$f,$missing)];
-            if(!$hasReports)$warnings[]=['section'=>'years','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'ยังไม่มีตารางปันผล กรุณาอัปเดตฐานข้อมูลก่อนนำเข้า'];
+            if($missing)$warnings[]=['section'=>'members','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'เธเนเธญเธกเธนเธฅเธเธฒเธเธเนเธญเธเธขเธฑเธเนเธกเนเธเธฃเนเธญเธก เธเธฃเธธเธ“เธฒเธ•เธฃเธงเธเธเธฒเธฃเธญเธฑเธเน€เธ”เธ•เธเธฒเธเธเนเธญเธกเธนเธฅ','missing'=>array_map(fn($f)=>'members.'.$f,$missing)];
+            if(!$hasReports)$warnings[]=['section'=>'years','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'เธขเธฑเธเนเธกเนเธกเธตเธ•เธฒเธฃเธฒเธเธเธฑเธเธเธฅ เธเธฃเธธเธ“เธฒเธญเธฑเธเน€เธ”เธ•เธเธฒเธเธเนเธญเธกเธนเธฅเธเนเธญเธเธเธณเน€เธเนเธฒ'];
             $availableYears=$hasReports?Database::query('SELECT DISTINCT year FROM member_dividends ORDER BY year DESC'):[];
             return ['items'=>$items,'total'=>$total,'page'=>$page,'limit'=>$limit,'year'=>$year,'available_years'=>array_column($availableYears,'year'),'warnings'=>$warnings];
         });
@@ -154,13 +154,14 @@ class MemberManagementController extends Controller
 
     public function update(string $id): void
     {
-        $this->respond(function()use($id){MemberSystemHealth::requireWrites();MemberAdminService::updateProfile($this->id($id),$this->request->all());return ['message'=>'บันทึกข้อมูลสมาชิกแล้ว'];});
+        $this->respond(function()use($id){MemberSystemHealth::requireWrites();MemberAdminService::updateProfile($this->id($id),$this->request->all());return ['message'=>'เธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธชเธกเธฒเธเธดเธเนเธฅเนเธง'];});
     }
 
     public function updateDividend(string $id,string $year): void
     {
-        $this->respond(function()use($id,$year){MemberSystemHealth::requireWrites();if(!preg_match('/^\d{4}$/D',$year))throw new MemberDataException('ปีไม่ถูกต้อง');MemberAdminService::updateDividend($this->id($id),(int)$year,$this->request->all());return ['message'=>'บันทึกข้อมูลปันผลแล้ว'];});
+        $this->respond(function()use($id,$year){MemberSystemHealth::requireWrites();if(!preg_match('/^\d{4}$/D',$year))throw new MemberDataException('เธเธตเนเธกเนเธ–เธนเธเธ•เนเธญเธ');MemberAdminService::updateDividend($this->id($id),(int)$year,$this->request->all());return ['message'=>'เธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธเธฑเธเธเธฅเนเธฅเนเธง'];});
     }
+
     public function requests(): void
     {
         $this->respond(function() {
