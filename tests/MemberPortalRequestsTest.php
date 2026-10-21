@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require __DIR__ . '/RequireTestDatabase.php';
 require __DIR__.'/../vendor/autoload.php';
 use App\Core\Database;
 function portalAssert(bool $ok,string $label): void {if(!$ok)throw new RuntimeException($label);echo 'PASS: '.$label.PHP_EOL;}

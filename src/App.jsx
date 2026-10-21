@@ -120,7 +120,7 @@ const staffRoles = [
   'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin'
 ];
 
-function StaffProtectedRoute({ children, roles, permission }) {
+function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
   const { user, isLoggedIn, sessionStatus, can } = useAuth();
 
   if (sessionStatus === 'checking') return <PageSkeletonLoader />;
@@ -130,8 +130,9 @@ function StaffProtectedRoute({ children, roles, permission }) {
     return <Navigate to="/admin/login" replace />;
   }
   if (roles && !roles.includes(user?.role)) {
-    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'} replace />;
+    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'} replace />;
   }
+  if (anyPermissions && !anyPermissions.some(can)) return <Navigate to="/admin/workspace" replace />;
   if(permission && !can(permission))return <div className="container section"><p>คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p><a href="/admin/workspace">กลับพื้นที่ทำงาน</a></div>;
   return children;
 }
@@ -200,6 +201,7 @@ export default function App() {
             {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute roles={['super_admin']}><AdminDashboardPage /></StaffProtectedRoute>} />)}
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
+            <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view', 'faqs.view']}><AdminDashboardPage /></StaffProtectedRoute>} />
 
             {/* RYCOOP LED Member Check Routes */}
             <Route path="/admin/dividends/import" element={<StaffProtectedRoute permission="dividends.import"><AdminDividendImportPage /></StaffProtectedRoute>} />

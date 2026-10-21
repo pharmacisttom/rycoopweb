@@ -112,10 +112,10 @@ $router->get('/api/admin/members', 'Admin\\MemberManagementController@index', [A
 $router->group(['prefix'=>'api/admin/members','middleware'=>[AuthMiddleware::class,new PermissionMiddleware('members','view')]],function(\App\Core\Router $r){
     $r->get('/dashboard','Admin\\MemberManagementController@dashboard');
     $r->get('/health','Admin\\MemberManagementController@health');
+    $r->get('/requests','Admin\\MemberManagementController@requests');
     $r->get('/{id}','Admin\\MemberManagementController@show');
     $r->post('/{id}','Admin\\MemberManagementController@update',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
     $r->post('/{id}/dividends/{year}','Admin\\MemberManagementController@updateDividend',[new PermissionMiddleware('dividends','update'),CsrfMiddleware::class]);
-    $r->get('/requests','Admin\\MemberManagementController@requests');
     $r->post('/requests/{id}/approve','Admin\\MemberManagementController@approveRequest',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
     $r->post('/requests/{id}/reject','Admin\\MemberManagementController@rejectRequest',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
 });

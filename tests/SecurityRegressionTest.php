@@ -7,6 +7,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use App\Core\Router;
 use App\Middlewares\RoleMiddleware;
 use App\Middlewares\FeatureFlagMiddleware;
+use App\Middlewares\PermissionMiddleware;
 
 final class SecurityRegressionTest
 {
@@ -60,17 +61,17 @@ final class SecurityRegressionTest
         self::assertRouteHasRoles($routes, '/staff/dashboard', ['staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer', 'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin']);
         self::assertRouteHasRoles($routes, '/admin/dashboard', ['super_admin']);
         self::assertRouteHasRoles($routes, '/dashboard', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members/dashboard', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members/health', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members/{id}', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/dividends/preview', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/dividends/confirm', ['super_admin', 'member_admin']);
+        self::assertRouteHasPermission($routes, '/api/admin/members/dashboard', 'members', 'view');
+        self::assertRouteHasPermission($routes, '/api/admin/members/health', 'members', 'view');
+        self::assertRouteHasPermission($routes, '/api/admin/members', 'members', 'view');
+        self::assertRouteHasPermission($routes, '/api/admin/members/{id}', 'members', 'view');
+        self::assertRouteHasPermission($routes, '/api/admin/dividends/preview', 'dividends', 'import');
+        self::assertRouteHasPermission($routes, '/api/admin/dividends/confirm', 'dividends', 'import');
         self::assertRouteHasRoles($routes, '/api/admin/users', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/faqs', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/news/{id}/update', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/faqs/{id}/update', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/faqs/{id}/delete', ['super_admin']);
+        self::assertRouteHasPermission($routes, '/api/admin/faqs', 'faqs', 'create');
+        self::assertRouteHasPermission($routes, '/api/admin/news/{id}/update', 'news', 'update');
+        self::assertRouteHasPermission($routes, '/api/admin/faqs/{id}/update', 'faqs', 'update');
+        self::assertRouteHasPermission($routes, '/api/admin/faqs/{id}/delete', 'faqs', 'delete');
     }
 
     private static function assertRateLimitUsesSharedStorage(): void
@@ -97,8 +98,8 @@ final class SecurityRegressionTest
 
     private static function assertMemberPortalIsDenyByDefault(): void
     {
-        self::assert(config('features.member_portal', true) === false, 'member portal defaults to disabled');
-        self::assert(config('features.member_login', false) === true, 'member login defaults to enabled for dividend access');
+        self::assert(config('features.member_portal', true) === filter_var(env('FEATURE_MEMBER_PORTAL', false), FILTER_VALIDATE_BOOL), 'member portal respects explicit feature flag and defaults to disabled');
+        self::assert(config('features.member_login', false) === filter_var(env('FEATURE_MEMBER_LOGIN', true), FILTER_VALIDATE_BOOL), 'member login respects explicit feature flag and defaults to dividend access');
 
         $router = new Router();
         require __DIR__ . '/../config/routes.php';
@@ -122,6 +123,25 @@ final class SecurityRegressionTest
         $controller = file_get_contents(__DIR__ . '/../app/Controllers/Admin/AuthController.php');
         self::assert($controller !== false && str_contains($controller, "config('features.member_login', false)"), 'member login is denied by the backend when disabled');
         self::assert($controller !== false && str_contains($controller, 'Account has no assigned role'), 'login fails closed when no role is assigned');
+    }
+
+    private static function assertRouteHasPermission(array $routes, string $path, string $module, string $action): void
+    {
+        $matches = array_values(array_filter($routes, static fn(array $r): bool => $r['path'] === $path));
+        self::assert(count($matches) > 0, "$path is registered");
+        foreach ($matches as $route) {
+            $auth = in_array(\App\Middlewares\AuthMiddleware::class, $route['middlewares'], true);
+            $permission = false;
+            foreach ($route['middlewares'] as $guard) {
+                if ($guard instanceof PermissionMiddleware) {
+                    $m = (new \ReflectionProperty(PermissionMiddleware::class, 'module'))->getValue($guard);
+                    $a = (new \ReflectionProperty(PermissionMiddleware::class, 'action'))->getValue($guard);
+                    if ($m === $module && $a === $action) $permission = true;
+                }
+            }
+            self::assert($auth && $permission, "$path requires authentication and $module.$action");
+            if ($route['method'] !== 'GET') self::assert(in_array(\App\Middlewares\CsrfMiddleware::class, $route['middlewares'], true), "$path requires CSRF");
+        }
     }
 
     private static function assertRouteHasRoles(array $routes, string $path, array $expectedRoles): void

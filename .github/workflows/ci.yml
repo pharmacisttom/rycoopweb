@@ -66,8 +66,8 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5'
-          extensions: pdo_mysql, mbstring, xml, curl, gd, zip, bcmath, intl, fileinfo
+          php-version: '8.3'
+          extensions: pdo_mysql, pdo_sqlite, mbstring, xml, curl, gd, zip, bcmath, intl, fileinfo
           tools: composer:v2
 
       - name: Install PHP dependencies
@@ -92,6 +92,14 @@ jobs:
 
       - name: Run security regression tests
         run: php tests/SecurityRegressionTest.php
+
+      - name: Run isolated permission behavior tests
+        run: php tests/PermissionBehaviorTest.php
+
+      - name: Run dividend and authentication regression tests
+        run: |
+          php tests/DividendImportTest.php
+          php tests/AuthRedirectRegressionTest.php
 
       - name: Migrate fresh CI database
         run: php bin/console db:migrate
@@ -154,6 +162,12 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Check recovered page rendering
+        run: node tests/BaselinePagesTest.mjs
+
+      - name: Check navigation redirects
+        run: node tests/NavigationRedirectTest.mjs
 
       - name: Build frontend
         run: npm run build
