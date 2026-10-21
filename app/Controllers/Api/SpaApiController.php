@@ -12,16 +12,16 @@ use App\Services\MemberPortalService;
 use App\Services\AuditService;
 
 /**
- * REST API Controller — serves JSON data for the React SPA frontend.
+ * REST API Controller โ€” serves JSON data for the React SPA frontend.
  *
  * All public endpoints require no authentication.
  * Member/Admin endpoints require a valid PHP session (AuthMiddleware).
  */
 class SpaApiController extends Controller
 {
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
     // PUBLIC DATA ENDPOINTS (no auth required)
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     /**
      * GET /api/public/home
@@ -251,9 +251,9 @@ class SpaApiController extends Controller
         $this->json(['success' => true, 'data' => $stats]);
     }
 
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
     // MEMBER DATA ENDPOINTS (auth required)
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     /**
      * GET /api/member/dashboard
@@ -448,6 +448,7 @@ class SpaApiController extends Controller
         ]);
     }
 
+
     /**
      * GET /api/auth/me
      * Returns the current authenticated user info (used by React to check session).
@@ -471,15 +472,16 @@ class SpaApiController extends Controller
         $userData = [
             'id' => $user['id'] ?? null,
             'username' => $user['username'] ?? '',
-            'name' => $user['name'] ?? 'ผู้ใช้งาน',
+            'name' => $user['name'] ?? 'เธเธนเนเนเธเนเธเธฒเธ',
             'email' => $user['email'] ?? '',
             'role' => $roleSlug,
             'role_slug' => $roleSlug,
+            'permissions' => \App\Services\AccessService::permissions((int)$user['id']),
             'role_name' => $user['role_name'] ?? match($roleSlug) {
-                'super_admin' => 'ผู้ดูแลระบบสูงสุด',
-                'staff' => 'เจ้าหน้าที่สินเชื่อ/การเงิน',
-                'auditor' => 'ผู้ตรวจสอบกิจการ / ผู้จัดการ',
-                default => 'สมาชิกสหกรณ์'
+                'super_admin' => 'เธเธนเนเธ”เธนเนเธฅเธฃเธฐเธเธเธชเธนเธเธชเธธเธ”',
+                'staff' => 'เน€เธเนเธฒเธซเธเนเธฒเธ—เธตเนเธชเธดเธเน€เธเธทเนเธญ/เธเธฒเธฃเน€เธเธดเธ',
+                'auditor' => 'เธเธนเนเธ•เธฃเธงเธเธชเธญเธเธเธดเธเธเธฒเธฃ / เธเธนเนเธเธฑเธ”เธเธฒเธฃ',
+                default => 'เธชเธกเธฒเธเธดเธเธชเธซเธเธฃเธ“เน'
             },
         ];
 
@@ -497,9 +499,9 @@ class SpaApiController extends Controller
         ]);
     }
 
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
     // ADMIN DATA ENDPOINTS (auth + super_admin required)
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     /**
      * GET /api/admin/dashboard
@@ -507,7 +509,7 @@ class SpaApiController extends Controller
     public function adminDashboard(): void
     {
         if (!Auth::check()) {
-            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            $this->json(['success' => false, 'message' => 'เธเธฃเธธเธ“เธฒเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเธเนเธญเธ'], 401);
             return;
         }
 
@@ -546,7 +548,7 @@ class SpaApiController extends Controller
     public function adminUsers(): void
     {
         if (!Auth::check()) {
-            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            $this->json(['success' => false, 'message' => 'เธเธฃเธธเธ“เธฒเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเธเนเธญเธ'], 401);
             return;
         }
 
@@ -572,7 +574,7 @@ class SpaApiController extends Controller
     public function adminComplaints(): void
     {
         if (!Auth::check()) {
-            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            $this->json(['success' => false, 'message' => 'เธเธฃเธธเธ“เธฒเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเธเนเธญเธ'], 401);
             return;
         }
 
@@ -590,7 +592,7 @@ class SpaApiController extends Controller
     public function adminAuditLogs(): void
     {
         if (!Auth::check()) {
-            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            $this->json(['success' => false, 'message' => 'เธเธฃเธธเธ“เธฒเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเธเนเธญเธ'], 401);
             return;
         }
 
@@ -635,13 +637,13 @@ class SpaApiController extends Controller
         $content = \App\Services\RichTextService::clean((string) $this->request->input('content', $excerpt));
 
         if (mb_strlen($title) < 5 || mb_strlen($title) > 255 || $categoryName === '' || $excerpt === '' || \App\Services\RichTextService::text($content) === '' || strlen($content)>200000) {
-            $this->json(['success' => false, 'message' => 'กรุณากรอกหัวข้อ หมวดหมู่ และสรุปข่าวให้ครบถ้วน'], 422);
+            $this->json(['success' => false, 'message' => 'เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธซเธฑเธงเธเนเธญ เธซเธกเธงเธ”เธซเธกเธนเน เนเธฅเธฐเธชเธฃเธธเธเธเนเธฒเธงเนเธซเนเธเธฃเธเธ–เนเธงเธ'], 422);
             return;
         }
 
         $category = Database::first('SELECT id FROM news_categories WHERE name = ? AND status = \'active\' LIMIT 1', [$categoryName]);
         if (!$category) {
-            $this->json(['success' => false, 'message' => 'ไม่พบหมวดหมู่ข่าวที่เลือก'], 422);
+            $this->json(['success' => false, 'message' => 'เนเธกเนเธเธเธซเธกเธงเธ”เธซเธกเธนเนเธเนเธฒเธงเธ—เธตเนเน€เธฅเธทเธญเธ'], 422);
             return;
         }
 
@@ -650,7 +652,7 @@ class SpaApiController extends Controller
             $authorId = Auth::id();
             if($editingId!==null){
                 $old=Database::first('SELECT id,title FROM news WHERE id=? AND deleted_at IS NULL',[(int)$editingId]);
-                if(!$old){$this->json(['success'=>false,'message'=>'ไม่พบข่าวสาร'],404);return;}
+                if(!$old){$this->json(['success'=>false,'message'=>'เนเธกเนเธเธเธเนเธฒเธงเธชเธฒเธฃ'],404);return;}
                 Database::execute('UPDATE news SET category_id=?,title=?,summary=?,content=?,cover_image=?,updated_by=?,updated_at=NOW() WHERE id=?',[(int)$category['id'],$title,$excerpt,$content,$coverImage,$authorId,(int)$editingId]);
                 $id=(int)$editingId;
             }else{$id = Database::insert(
@@ -665,11 +667,11 @@ class SpaApiController extends Controller
             $this->json(['success' => false, 'message' => $e->getMessage()], 422);
             return;
         } catch (\Throwable $e) {
-            $this->json(['success' => false, 'message' => 'ไม่สามารถบันทึกข่าวสารได้'], 500);
+            $this->json(['success' => false, 'message' => 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธเธฑเธเธ—เธถเธเธเนเธฒเธงเธชเธฒเธฃเนเธ”เน'], 500);
             return;
         }
 
-        $this->json(['success' => true, 'data' => $item, 'message' => 'บันทึกข่าวสารเรียบร้อยแล้ว'], $editingId===null?201:200);
+        $this->json(['success' => true, 'data' => $item, 'message' => 'เธเธฑเธเธ—เธถเธเธเนเธฒเธงเธชเธฒเธฃเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง'], $editingId===null?201:200);
     }
 
     /** POST /api/admin/news/{id}/delete */
@@ -680,23 +682,23 @@ class SpaApiController extends Controller
         $question=trim((string)$this->request->input('question',''));
         $answer=\App\Services\RichTextService::clean((string)$this->request->input('answer',''));
         if($question==='' || mb_strlen($question)>255 || \App\Services\RichTextService::text($answer)==='' || strlen($answer)>60000){
-            $this->json(['success'=>false,'message'=>'กรุณากรอกคำถามและคำตอบให้ครบถ้วน'],422);return;
+            $this->json(['success'=>false,'message'=>'เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธเธณเธ–เธฒเธกเนเธฅเธฐเธเธณเธ•เธญเธเนเธซเนเธเธฃเธเธ–เนเธงเธ'],422);return;
         }
         try {
             if($editingId!==null){
                 $old=Database::first("SELECT id,question FROM faqs WHERE id=? AND status='active'",[(int)$editingId]);
-                if(!$old){$this->json(['success'=>false,'message'=>'ไม่พบคำถาม'],404);return;}
+                if(!$old){$this->json(['success'=>false,'message'=>'เนเธกเนเธเธเธเธณเธ–เธฒเธก'],404);return;}
                 Database::execute('UPDATE faqs SET question=?,answer=?,updated_at=NOW() WHERE id=?',[$question,$answer,(int)$editingId]);$id=(int)$editingId;
             }else{$id=Database::insert("INSERT INTO faqs (category,question,answer,status,created_at) VALUES ('general',?,?,'active',NOW())",[$question,$answer]);}
             AuditService::log('faqs',$editingId===null?'create':'update',(string)$id,$old??null,['question'=>$question]);
             $this->json(['success'=>true,'data'=>['id'=>$id,'question'=>$question,'answer'=>$answer]],201);
-        } catch(\Throwable $e){$this->json(['success'=>false,'message'=>'บันทึกคำถามไม่สำเร็จ'],500);}
+        } catch(\Throwable $e){$this->json(['success'=>false,'message'=>'เธเธฑเธเธ—เธถเธเธเธณเธ–เธฒเธกเนเธกเนเธชเธณเน€เธฃเนเธ'],500);}
     }
 
     public function deleteAdminFaq(string $id): void
     {
         $faq=Database::first('SELECT id,question FROM faqs WHERE id=?',[(int)$id]);
-        if(!$faq){$this->json(['success'=>false,'message'=>'ไม่พบคำถาม'],404);return;}
+        if(!$faq){$this->json(['success'=>false,'message'=>'เนเธกเนเธเธเธเธณเธ–เธฒเธก'],404);return;}
         Database::execute("UPDATE faqs SET status='inactive' WHERE id=?",[(int)$id]);
         AuditService::log('faqs','delete',(string)$id,$faq,null);
         $this->json(['success'=>true]);
@@ -706,7 +708,7 @@ class SpaApiController extends Controller
     {
         $news = Database::first('SELECT id, title FROM news WHERE id = ? AND deleted_at IS NULL LIMIT 1', [(int) $id]);
         if (!$news) {
-            $this->json(['success' => false, 'message' => 'ไม่พบข่าวสารที่ต้องการลบ'], 404);
+            $this->json(['success' => false, 'message' => 'เนเธกเนเธเธเธเนเธฒเธงเธชเธฒเธฃเธ—เธตเนเธ•เนเธญเธเธเธฒเธฃเธฅเธ'], 404);
             return;
         }
 
@@ -714,11 +716,11 @@ class SpaApiController extends Controller
             Database::execute('UPDATE news SET deleted_at = NOW(), updated_by = ? WHERE id = ?', [Auth::id(), (int) $id]);
             AuditService::log('news', 'delete', (string) $id, $news, ['deleted_at' => date('Y-m-d H:i:s')]);
         } catch (\Throwable $e) {
-            $this->json(['success' => false, 'message' => 'ไม่สามารถลบข่าวสารได้'], 500);
+            $this->json(['success' => false, 'message' => 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธฅเธเธเนเธฒเธงเธชเธฒเธฃเนเธ”เน'], 500);
             return;
         }
 
-        $this->json(['success' => true, 'message' => 'ลบข่าวสารเรียบร้อยแล้ว']);
+        $this->json(['success' => true, 'message' => 'เธฅเธเธเนเธฒเธงเธชเธฒเธฃเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง']);
     }
 
     private function storeNewsCoverImage(mixed $image): ?string
@@ -728,28 +730,28 @@ class SpaApiController extends Controller
         }
 
         if (!preg_match('/^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+\/=\s]+)$/i', $image, $matches)) {
-            throw new \InvalidArgumentException('รูปภาพต้องเป็นไฟล์ PNG, JPEG หรือ WEBP ที่ถูกต้อง');
+            throw new \InvalidArgumentException('เธฃเธนเธเธ เธฒเธเธ•เนเธญเธเน€เธเนเธเนเธเธฅเน PNG, JPEG เธซเธฃเธทเธญ WEBP เธ—เธตเนเธ–เธนเธเธ•เนเธญเธ');
         }
 
         $binary = base64_decode($matches[2], true);
         if ($binary === false || strlen($binary) > 5 * 1024 * 1024) {
-            throw new \InvalidArgumentException('รูปภาพต้องมีขนาดไม่เกิน 5 MB');
+            throw new \InvalidArgumentException('เธฃเธนเธเธ เธฒเธเธ•เนเธญเธเธกเธตเธเธเธฒเธ”เนเธกเนเน€เธเธดเธ 5 MB');
         }
 
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary);
         $extensions = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
         if (!isset($extensions[$mime])) {
-            throw new \InvalidArgumentException('รองรับเฉพาะรูปภาพ PNG, JPEG และ WEBP');
+            throw new \InvalidArgumentException('เธฃเธญเธเธฃเธฑเธเน€เธเธเธฒเธฐเธฃเธนเธเธ เธฒเธ PNG, JPEG เนเธฅเธฐ WEBP');
         }
 
         $directory = storage_upload_path('news');
         if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-            throw new \RuntimeException('ไม่สามารถเตรียมพื้นที่จัดเก็บรูปภาพได้');
+            throw new \RuntimeException('เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เน€เธ•เธฃเธตเธขเธกเธเธทเนเธเธ—เธตเนเธเธฑเธ”เน€เธเนเธเธฃเธนเธเธ เธฒเธเนเธ”เน');
         }
 
         $filename = 'news-' . bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
         if (file_put_contents($directory . '/' . $filename, $binary) === false) {
-            throw new \RuntimeException('ไม่สามารถบันทึกรูปภาพได้');
+            throw new \RuntimeException('เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธเธฑเธเธ—เธถเธเธฃเธนเธเธ เธฒเธเนเธ”เน');
         }
 
         return '/storage/uploads/news/' . $filename;
@@ -789,9 +791,9 @@ class SpaApiController extends Controller
         return $item;
     }
 
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
     // HELPERS
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     /**
      * Get the authenticated member or send 401.
@@ -799,13 +801,13 @@ class SpaApiController extends Controller
     private function getAuthenticatedMember(): ?array
     {
         if (!Auth::check()) {
-            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            $this->json(['success' => false, 'message' => 'เธเธฃเธธเธ“เธฒเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเธเนเธญเธ'], 401);
             return null;
         }
 
         $member = MemberPortalService::getMemberByUserId(Auth::id());
         if (!$member) {
-            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก'], 404);
+            $this->json(['success' => false, 'message' => 'เนเธกเนเธเธเธเนเธญเธกเธนเธฅเธชเธกเธฒเธเธดเธ'], 404);
             return null;
         }
 
@@ -815,6 +817,55 @@ class SpaApiController extends Controller
     /**
      * Remove sensitive fields from member data before sending to client.
      */
+    public function memberGetRequests(): void
+    {
+        $member = $this->getAuthenticatedMember();
+        if (!$member) return;
+        if (($member['status'] ?? '') !== 'active' || (Auth::user()['role_slug'] ?? '') !== 'member') {
+            $this->json(['success'=>false,'message'=>'ไม่มีสิทธิ์ใช้งาน'],403);
+            return;
+        }
+        header('Cache-Control: no-store, private');
+        try {
+            $this->json(['success'=>true,'data'=>\App\Services\MemberRequestService::getMemberRequests((int)$member['id'])]);
+        } catch (\Throwable $error) {
+            $this->json(['success'=>false,'message'=>'ไม่สามารถโหลดคำร้องได้'],503);
+        }
+    }
+
+    public function memberSubmitProfileRequest(): void
+    {
+        $member = $this->getAuthenticatedMember();
+        if (!$member) return;
+        if (($member['status'] ?? '') !== 'active' || (Auth::user()['role_slug'] ?? '') !== 'member') {
+            $this->json(['success'=>false,'message'=>'ไม่มีสิทธิ์ใช้งาน'],403);
+            return;
+        }
+        header('Cache-Control: no-store, private');
+        $changes=[];
+        foreach (['phone'=>30,'email'=>190,'address'=>500,'note'=>1000] as $field=>$limit) {
+            $value=$this->request->input($field);
+            if ($value===null) continue;
+            if (!is_string($value) || mb_strlen($value)>$limit) {
+                $this->json(['success'=>false,'message'=>'รูปแบบข้อมูลไม่ถูกต้อง'],422);
+                return;
+            }
+            $changes[$field]=trim($value);
+        }
+        if (!empty($changes['email']) && !filter_var($changes['email'],FILTER_VALIDATE_EMAIL)) {
+            $this->json(['success'=>false,'message'=>'อีเมลไม่ถูกต้อง'],422);
+            return;
+        }
+        try {
+            $data=\App\Services\MemberRequestService::createProfileRequest((int)$member['id'],$changes);
+            $this->json(['success'=>true,'data'=>$data]);
+        } catch (\InvalidArgumentException $error) {
+            $this->json(['success'=>false,'message'=>$error->getMessage()],422);
+        } catch (\Throwable $error) {
+            $this->json(['success'=>false,'message'=>'ระบบบันทึกคำร้องยังไม่พร้อมใช้งาน'],503);
+        }
+    }
+
     private function sanitizeMember(array $member): array
     {
         // Remove PII that should not be sent in raw form

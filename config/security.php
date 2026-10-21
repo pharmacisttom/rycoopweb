@@ -10,6 +10,7 @@ return [
         'secure' => filter_var(env('SESSION_SECURE', false), FILTER_VALIDATE_BOOL),
         'httponly' => true,
         'samesite' => env('SESSION_SAMESITE', 'Lax'),
+        'domain' => env('SESSION_DOMAIN', ''),
         'save_path' => env('SESSION_SAVE_PATH', ''),
     ],
     'rate_limiting' => [

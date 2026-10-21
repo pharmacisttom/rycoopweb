@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+require __DIR__ . '/RequireTestDatabase.php';
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 

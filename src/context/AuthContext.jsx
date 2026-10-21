@@ -58,6 +58,7 @@ export function AuthProvider({ children }) {
         if (cancelled) return;
 
         if (result?.success && result.authenticated) {
+          if(result.user)setUser(current=>{const updated={...current,name:result.user.name,role:result.user.role,roleName:result.user.role_name,permissions:result.user.permissions || []};return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
           setSessionStatus('online');
         } else if (result?.authenticated === false) {
           setUser(null);
@@ -160,6 +161,7 @@ export function AuthProvider({ children }) {
                 username: data.user.username || inputUsername,
                 name: data.user.name || inputUsername,
                 role: roleSlug,
+                permissions: data.user.permissions || [],
                 roleName: data.user.role_name || (roleSlug === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด' : roleSlug === 'staff' ? 'เจ้าหน้าที่สินเชื่อ/การเงิน' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
                 roleBadge: data.user.role_badge || (roleSlug === 'member_admin' ? 'ผู้ดูแลระบบสมาชิก' : roleSlug === 'super_admin' ? 'Super Admin' : roleSlug === 'staff' ? 'เจ้าหน้าที่สหกรณ์' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
                 department: data.user.department || data.user.org_name || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
@@ -270,6 +272,7 @@ export function AuthProvider({ children }) {
       user,
       isLoggedIn: !!user,
       sessionStatus,
+      can: permission => user?.role === 'super_admin' || (user?.permissions || []).includes(permission),
       login,
       logout,
       invalidateSession,
