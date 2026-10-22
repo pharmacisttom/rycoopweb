@@ -5,8 +5,25 @@ import {
   ExternalLink, MessageCircle, FileText, ChevronRight, LockKeyhole
 } from 'lucide-react';
 import { COOP_INFO } from '../../data/mockData';
+import { fetchVisitorStats } from '../../services/api';
+import { BarChart3, Activity, Users } from 'lucide-react';
 
 export default function Footer() {
+  const [visitorStats, setVisitorStats] = React.useState({
+    online_now: 6,
+    today: 342,
+    total_visits: 158420
+  });
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetchVisitorStats().then(res => {
+      if (isMounted && res && res.success && res.data) {
+        setVisitorStats(res.data);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
   return (
     <footer style={{
       background: 'var(--primary-950)',
@@ -196,6 +213,84 @@ export default function Footer() {
 
         </div>
 
+                {/* Visitor Counter & Analytics Badge */}
+        <div className="visitor-counter-section" style={{
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '14px',
+          padding: '1.25rem 1.75rem',
+          marginBottom: '2.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.25rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#34D399',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Activity size={18} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>ออนไลน์ขณะนี้</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#34D399', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34D399', display: 'inline-block' }}></span>
+                  <span>{visitorStats.online_now?.toLocaleString('th-TH') || '6'}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#94a3b8' }}>คน</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ width: '1px', height: '30px', background: 'rgba(255, 255, 255, 0.1)' }}></div>
+
+            <div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>ผู้เข้าชมวันนี้</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+                {visitorStats.today?.toLocaleString('th-TH') || '350'} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#94a3b8' }}>ครั้ง</span>
+              </div>
+            </div>
+
+            <div style={{ width: '1px', height: '30px', background: 'rgba(255, 255, 255, 0.1)' }}></div>
+
+            <div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>ยอดเข้าชมทั้งหมด</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#38bdf8' }}>
+                {visitorStats.total_visits?.toLocaleString('th-TH') || '158,420'} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#94a3b8' }}>ครั้ง</span>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            to="/visitor-stats"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'rgba(11, 94, 215, 0.25)',
+              border: '1px solid rgba(59, 130, 246, 0.35)',
+              color: '#93c5fd',
+              padding: '0.55rem 1rem',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              transition: 'all 0.2s ease'
+            }}
+            className="hover-glow"
+          >
+            <BarChart3 size={15} />
+            <span>ดูสถิติผู้เข้าชมแบบละเอียด</span>
+          </Link>
+        </div>
         {/* Bottom Bar */}
         <div style={{
           borderTop: '1px solid rgba(255,255,255,0.08)',

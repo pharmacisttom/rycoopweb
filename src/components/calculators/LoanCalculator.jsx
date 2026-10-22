@@ -1,22 +1,53 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { fetchInterestRates } from '../../services/api';
 import { Calculator, DollarSign, Calendar, Percent, FileText, CheckCircle, RefreshCw, Printer, Sparkles } from 'lucide-react';
 import { LOAN_PRODUCTS } from '../../data/mockData';
 
 export default function LoanCalculator() {
+  const [products, setProducts] = useState(LOAN_PRODUCTS);
   const [selectedProductId, setSelectedProductId] = useState('ordinary');
   const [principal, setPrincipal] = useState(300000);
   const [rate, setRate] = useState(6.15);
   const [months, setMonths] = useState(60);
   const [showAmortization, setShowAmortization] = useState(false);
 
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchInterestRates().then(res => {
+      if (!cancelled && res?.success && res?.data?.loan?.length > 0) {
+        setProducts(current => current.map(p => {
+          const match = res.data.loan.find(r => r.product_name === p.title);
+          if (match) {
+            const val = parseFloat(match.rate);
+            return {
+              ...p,
+              rateValue: val,
+              interestRate: `${val.toFixed(2)}% ต่อปี`,
+              maxLimit: match.max_amount != null ? parseFloat(match.max_amount) : p.maxLimit
+            };
+          }
+          return p;
+        }));
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const currentProd = products.find(p => p.id === selectedProductId);
+    if (currentProd && currentProd.rateValue !== rate) {
+      setRate(currentProd.rateValue);
+    }
+  }, [products, selectedProductId]);
   // Active product details
   const activeProduct = useMemo(() => {
-    return LOAN_PRODUCTS.find(p => p.id === selectedProductId) || LOAN_PRODUCTS[0];
-  }, [selectedProductId]);
+    return products.find(p => p.id === selectedProductId) || products[0];
+  }, [products, selectedProductId]);
 
   // Handle loan type selection - strictly sets matching Master Data rate
   const handleTypeChange = (productId) => {
-    const prod = LOAN_PRODUCTS.find(p => p.id === productId);
+    const prod = products.find(p => p.id === productId);
     if (!prod) return;
 
     setSelectedProductId(prod.id);
@@ -108,7 +139,7 @@ export default function LoanCalculator() {
           เลือกประเภทสินเชื่อ (10 ประเภทตามประกาศสหกรณ์):
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.5rem' }}>
-          {LOAN_PRODUCTS.map((p) => {
+          {products.map((p) => {
             const isSelected = selectedProductId === p.id;
             return (
               <button

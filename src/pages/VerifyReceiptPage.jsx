@@ -1,3 +1,4 @@
+import { maskName } from '../utils/pdpa';
 import React, { useState } from 'react';
 import { ShieldCheck, QrCode, Search, CheckCircle2, FileText, Printer } from 'lucide-react';
 import { COOP_INFO } from '../data/mockData';
@@ -115,7 +116,7 @@ export default function VerifyReceiptPage() {
                 <span style={{ color: 'var(--text-muted)' }}>วันที่ออกใบเสร็จ:</span> <strong>{sampleReceipt.issueDate}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--text-muted)' }}>สมาชิก:</span> <strong>{sampleReceipt.memberName}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>สมาชิก:</span> <strong>{maskName(sampleReceipt.memberName)}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)' }}>เลขทะเบียน:</span> <strong>{sampleReceipt.memberId}</strong> ({sampleReceipt.department})

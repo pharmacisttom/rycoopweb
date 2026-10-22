@@ -40,3 +40,12 @@ dist-ssr/
 *.local
 .vite/
 /storage/private/
+
+# Temporary / review outputs & worktrees
+/outputs/
+
+# Raw dividend & spreadsheet data imports (PII safety)
+/*.xlsx
+/*.xls
+/*.csv
+

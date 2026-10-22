@@ -251,6 +251,43 @@ class SpaApiController extends Controller
         $this->json(['success' => true, 'data' => $stats]);
     }
 
+    /**
+     * POST /api/visits/record
+     * Logs page visit with PDPA masked IP and increments counters.
+     */
+    public function recordVisit(): void
+    {
+        $payload = $this->request->all();
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $rawIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        if (strpos($rawIp, ',') !== false) {
+            $rawIp = trim(explode(',', $rawIp)[0]);
+        }
+
+        $res = \App\Services\VisitorCounterService::recordVisit($payload, $userAgent, $rawIp);
+        $this->json($res);
+    }
+
+    /**
+     * GET /api/visits/stats
+     * Returns public summary counter metrics for header/footer/badges.
+     */
+    public function visitorStats(): void
+    {
+        $stats = \App\Services\VisitorCounterService::getPublicStats();
+        $this->json(['success' => true, 'data' => $stats]);
+    }
+
+    /**
+     * GET /api/visits/analytics
+     * Returns detailed analytics (30-day timeline, device breakdown, top pages, recent visits).
+     */
+    public function visitorAnalytics(): void
+    {
+        $analytics = \App\Services\VisitorCounterService::getDetailedAnalytics();
+        $this->json(['success' => true, 'data' => $analytics]);
+    }
+
     // ──────────────────────────────────────────────
     // MEMBER DATA ENDPOINTS (auth required)
     // ──────────────────────────────────────────────
@@ -604,6 +641,185 @@ class SpaApiController extends Controller
     }
 
     /**
+     * GET /api/admin/rates
+     * Returns all interest rates (deposits, loans), loan products, and audit history.
+     */
+    public function adminRates(): void
+    {
+        if (!Auth::check()) {
+            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            return;
+        }
+
+        $depositRates = [];
+        $loanRates = [];
+        $loanProducts = [];
+        $history = [];
+
+        try {
+            $depositRates = Database::query("SELECT id, product_type, product_name, rate, min_amount, max_amount, condition_note, effective_date, status, sort_order, updated_at FROM interest_rates WHERE product_type = 'deposit' AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
+            $loanRates = Database::query("SELECT id, product_type, product_name, rate, min_amount, max_amount, condition_note, effective_date, status, sort_order, updated_at FROM interest_rates WHERE product_type = 'loan' AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
+            $loanProducts = Database::query("SELECT id, name, slug, short_description, interest_rate, max_loan_limit, max_term_months, calculation_type, guarantor_requirement, is_calculator_enabled, status, sort_order FROM loan_products WHERE deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
+            $history = Database::query("SELECT h.id, h.interest_rate_id, h.product_name, h.old_rate, h.new_rate, h.effective_date, h.note, h.created_at, u.name as changed_by_name FROM interest_rate_history h LEFT JOIN users u ON h.changed_by = u.id ORDER BY h.created_at DESC LIMIT 30");
+        } catch (\Throwable $e) {}
+
+        $this->json([
+            'success' => true,
+            'data' => [
+                'deposit' => $depositRates,
+                'loan' => $loanRates,
+                'loanProducts' => $loanProducts,
+                'history' => $history,
+            ]
+        ]);
+    }
+
+    /**
+     * POST /api/admin/rates/{id}
+     * Updates an interest rate, records history, and synchronizes product tables.
+     */
+    public function updateAdminRate(string $id): void
+    {
+        if (!Auth::check()) {
+            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            return;
+        }
+
+        $rateId = (int) $id;
+        $existing = Database::first("SELECT * FROM interest_rates WHERE id = ? LIMIT 1", [$rateId]);
+        if (!$existing) {
+            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลอัตราดอกเบี้ยที่ระบุ'], 404);
+            return;
+        }
+
+        $newRateInput = $this->request->input('rate');
+        if ($newRateInput === null || !is_numeric($newRateInput)) {
+            $this->json(['success' => false, 'message' => 'กรุณาระบุอัตราดอกเบี้ยให้ถูกต้อง'], 422);
+            return;
+        }
+        $newRate = (float) $newRateInput;
+        if ($newRate < 0 || $newRate > 50) {
+            $this->json(['success' => false, 'message' => 'อัตราดอกเบี้ยต้องอยู่ระหว่าง 0% ถึง 50%'], 422);
+            return;
+        }
+
+        $effectiveDate = trim((string) ($this->request->input('effective_date') ?? $existing['effective_date'] ?? date('Y-m-d')));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $effectiveDate)) {
+            $effectiveDate = date('Y-m-d');
+        }
+
+        $conditionNote = trim((string) ($this->request->input('condition_note') ?? $existing['condition_note'] ?? ''));
+        $note = trim((string) ($this->request->input('note') ?? 'ปรับปรุงอัตราดอกเบี้ย'));
+        $minAmount = $this->request->input('min_amount') !== null ? (float) $this->request->input('min_amount') : $existing['min_amount'];
+        $maxAmount = $this->request->input('max_amount') !== null ? (float) $this->request->input('max_amount') : $existing['max_amount'];
+
+        $oldRate = (float) $existing['rate'];
+        $userId = Auth::id() ?? 1;
+
+        try {
+            // Record audit in interest_rate_history
+            Database::execute(
+                "INSERT INTO interest_rate_history (interest_rate_id, product_name, old_rate, new_rate, effective_date, changed_by, approved_by, note, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+                [$rateId, $existing['product_name'], $oldRate, $newRate, $effectiveDate, $userId, $userId, $note]
+            );
+
+            // Update interest_rates table
+            Database::execute(
+                "UPDATE interest_rates 
+                 SET rate = ?, effective_date = ?, condition_note = ?, min_amount = ?, max_amount = ?, updated_by = ?, updated_at = NOW()
+                 WHERE id = ?",
+                [$newRate, $effectiveDate, $conditionNote, $minAmount, $maxAmount, $userId, $rateId]
+            );
+
+            // Synchronize with loan_products if this is a loan product
+            if ($existing['product_type'] === 'loan') {
+                Database::execute(
+                    "UPDATE loan_products SET interest_rate = ?, updated_at = NOW() WHERE name = ?",
+                    [$newRate, $existing['product_name']]
+                );
+            } elseif ($existing['product_type'] === 'deposit') {
+                Database::execute(
+                    "UPDATE deposit_products SET interest_rate = ?, updated_at = NOW() WHERE name LIKE ?",
+                    [$newRate, '%' . $existing['product_name'] . '%']
+                );
+            }
+
+            AuditService::log('rates', 'update', (string) $rateId, [
+                'rate' => $oldRate,
+                'effective_date' => $existing['effective_date'],
+            ], [
+                'rate' => $newRate,
+                'effective_date' => $effectiveDate,
+                'note' => $note,
+            ]);
+
+            $updated = Database::first("SELECT * FROM interest_rates WHERE id = ?", [$rateId]);
+            $this->json([
+                'success' => true,
+                'message' => "บันทึกอัตราดอกเบี้ย {$existing['product_name']} เป็น " . number_format($newRate, 2) . "% เรียบร้อยแล้ว",
+                'data' => $updated
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/loan-products/{id}
+     * Updates loan product limits and conditions.
+     */
+    public function updateAdminLoanProduct(string $id): void
+    {
+        if (!Auth::check()) {
+            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
+            return;
+        }
+
+        $productId = (int) $id;
+        $existing = Database::first("SELECT * FROM loan_products WHERE id = ? LIMIT 1", [$productId]);
+        if (!$existing) {
+            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลผลิตภัณฑ์สินเชื่อที่ระบุ'], 404);
+            return;
+        }
+
+        $maxLimit = $this->request->input('max_loan_limit') !== null ? (float) $this->request->input('max_loan_limit') : $existing['max_loan_limit'];
+        $maxMonths = $this->request->input('max_term_months') !== null ? (int) $this->request->input('max_term_months') : $existing['max_term_months'];
+        $shortDesc = trim((string) ($this->request->input('short_description') ?? $existing['short_description']));
+        $guarantor = trim((string) ($this->request->input('guarantor_requirement') ?? $existing['guarantor_requirement']));
+        $calcType = trim((string) ($this->request->input('calculation_type') ?? $existing['calculation_type']));
+        if (!in_array($calcType, ['effective', 'flat'], true)) {
+            $calcType = 'effective';
+        }
+
+        try {
+            Database::execute(
+                "UPDATE loan_products 
+                 SET max_loan_limit = ?, max_term_months = ?, short_description = ?, guarantor_requirement = ?, calculation_type = ?, updated_at = NOW()
+                 WHERE id = ?",
+                [$maxLimit, $maxMonths, $shortDesc, $guarantor, $calcType, $productId]
+            );
+
+            AuditService::log('loan_products', 'update', (string) $productId, [
+                'max_loan_limit' => $existing['max_loan_limit'],
+                'max_term_months' => $existing['max_term_months'],
+            ], [
+                'max_loan_limit' => $maxLimit,
+                'max_term_months' => $maxMonths,
+            ]);
+
+            $updated = Database::first("SELECT * FROM loan_products WHERE id = ?", [$productId]);
+            $this->json([
+                'success' => true,
+                'message' => "บันทึกข้อมูลผลิตภัณฑ์ {$existing['name']} เรียบร้อยแล้ว",
+                'data' => $updated
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * GET /api/admin/news
      * Returns the same database-backed news records that the public website reads.
      */
@@ -867,6 +1083,16 @@ class SpaApiController extends Controller
 
     private function sanitizeMember(array $member): array
     {
+        // Provide PDPA compliant masked identity before unsetting
+        $rawIdCard = $member['id_card'] ?? '';
+        $rawName = trim(($member['prefix'] ?? '') . ' ' . ($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? ''));
+        if ($rawName === '') {
+            $rawName = $member['name'] ?? '';
+        }
+
+        $member['id_card_pdpa'] = \App\Services\PdpaService::maskIdCard($rawIdCard);
+        $member['name_pdpa'] = \App\Services\PdpaService::maskName($rawName);
+
         // Remove PII that should not be sent in raw form
         unset($member['id_card']);
         unset($member['password']);

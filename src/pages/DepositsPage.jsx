@@ -1,9 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Landmark, TrendingUp, ShieldCheck, CheckCircle2, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { INTEREST_RATES } from '../data/mockData';
+import { fetchInterestRates } from '../services/api';
 
 export default function DepositsPage() {
+  const [depositsList, setDepositsList] = useState(INTEREST_RATES.deposits);
+  const [effectiveDate, setEffectiveDate] = useState(INTEREST_RATES.effectiveDate);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchInterestRates().then(res => {
+      if (!cancelled && res?.success && res?.data?.deposit?.length > 0) {
+        const mapped = res.data.deposit.map(item => ({
+          type: item.product_name,
+          rate: `${parseFloat(item.rate).toFixed(2)}%`,
+          minDeposit: item.min_amount != null ? `${Number(item.min_amount).toLocaleString('th-TH')} บาท` : 'ตามประกาศสหกรณ์',
+          payFreq: item.condition_note || 'ตามประกาศสหกรณ์',
+          highlight: parseFloat(item.rate) >= 1.75
+        }));
+        setDepositsList(mapped);
+        if (res.data.deposit[0]?.effective_date) {
+          const d = new Date(res.data.deposit[0].effective_date);
+          if (!isNaN(d.getTime())) {
+            setEffectiveDate(`${d.getDate()} ${['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][d.getMonth()]} ${d.getFullYear() + 543}`);
+          }
+        }
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="section">
       <div className="container">
@@ -23,7 +50,7 @@ export default function DepositsPage() {
             </div>
             <div>
               <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>ผลตอบแทนคุ้มค่า</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ให้อัตราดอกเบี้ยสูงกว่าธนาคารทั่วไป ดอกเบี้ยเงินฝากสูงสุดถึง 3.10% ต่อปี</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ให้อัตราดอกเบี้ยสูง ดอกเบี้ยเงินฝากออมทรัพย์พิเศษสูงสุดถึง 1.75% ต่อปี</p>
             </div>
           </div>
 
@@ -52,7 +79,7 @@ export default function DepositsPage() {
         <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '1.3rem', color: 'var(--primary-800)' }}>ตารางประกาศอัตราดอกเบี้ยเงินฝาก</h3>
-            <span className="badge badge-gold">มีผลบังคับใช้ {INTEREST_RATES.effectiveDate}</span>
+            <span className="badge badge-gold">มีผลบังคับใช้ {effectiveDate}</span>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -62,11 +89,11 @@ export default function DepositsPage() {
                   <th style={{ padding: '0.85rem' }}>ประเภทเงินฝาก</th>
                   <th style={{ padding: '0.85rem', textAlign: 'center' }}>อัตราดอกเบี้ย (% ต่อปี)</th>
                   <th style={{ padding: '0.85rem' }}>เปิดบัญชีขั้นต่ำ</th>
-                  <th style={{ padding: '0.85rem' }}>การจ่ายดอกเบี้ย</th>
+                  <th style={{ padding: '0.85rem' }}>การจ่ายดอกเบี้ย / เงื่อนไข</th>
                 </tr>
               </thead>
               <tbody>
-                {INTEREST_RATES.deposits.map((item, idx) => (
+                {depositsList.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)', background: item.highlight ? 'rgba(37, 99, 235, 0.03)' : 'transparent' }}>
                     <td style={{ padding: '0.85rem', fontWeight: 600 }}>{item.type}</td>
                     <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800, color: 'var(--primary-600)', fontSize: '1.1rem', fontFamily: 'var(--font-display)' }}>
@@ -99,10 +126,14 @@ export default function DepositsPage() {
             </li>
           </ul>
 
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <Link to="/documents" className="btn btn-outline">
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <Link to="/documents" className="btn btn-outline btn-sm">
               <Download size={16} />
-              <span>ดาวน์โหลดคำขอเปิดบัญชีเงินฝาก</span>
+              <span>ดาวน์โหลดแบบฟอร์มเปิดบัญชี</span>
+            </Link>
+            <Link to="/contact" className="btn btn-subtle btn-sm">
+              <FileText size={16} />
+              <span>ติดต่อเจ้าหน้าที่การเงิน</span>
             </Link>
           </div>
         </div>

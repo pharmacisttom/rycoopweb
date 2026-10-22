@@ -1,3 +1,4 @@
+import { maskName, maskPhone } from '../../utils/pdpa';
 import React, { useState } from 'react';
 import { 
   X, CheckCircle2, AlertTriangle, FileText, User, 
@@ -91,7 +92,7 @@ export default function StaffReviewModal({ isOpen, onClose, request, onApprove, 
         }}>
           <div>
             <span style={{ color: 'var(--text-muted)' }}>ชื่อสมาชิก:</span>{' '}
-            <strong style={{ color: 'var(--text-main)' }}>{request.memberName}</strong>
+            <strong style={{ color: 'var(--text-main)' }}>{maskName(request.memberName)}</strong>
           </div>
           <div>
             <span style={{ color: 'var(--text-muted)' }}>รหัสสมาชิก:</span>{' '}
@@ -103,7 +104,7 @@ export default function StaffReviewModal({ isOpen, onClose, request, onApprove, 
           </div>
           <div>
             <span style={{ color: 'var(--text-muted)' }}>เบอร์โทรศัพท์:</span>{' '}
-            <strong>{request.phone || '081-234-5678'}</strong>
+            <strong>{maskPhone(request.phone || '081-234-5678')}</strong>
           </div>
           <div>
             <span style={{ color: 'var(--text-muted)' }}>วงเงินที่ขอทำรายการ:</span>{' '}

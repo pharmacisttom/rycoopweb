@@ -1,3 +1,4 @@
+import { maskIdCard, maskName } from '../../utils/pdpa';
 import React, { useState, useEffect } from 'react';
 import {
   X, CheckCircle2, AlertTriangle, ShieldAlert,
@@ -162,7 +163,7 @@ export default function LedReviewModal({ resultId, isOpen, onClose, onSuccess })
                       </div>
                       <div>
                         <span className="text-slate-500 text-xs">เลขบัตร ปชช. (Masked):</span>
-                        <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{member.id_card_masked || '-'}</p>
+                        <p className="font-mono font-semibold text-slate-800 dark:text-slate-200">{member.id_card_pdpa || maskIdCard(member.id_card_masked || member.id_card) || '-'}</p>
                       </div>
                     </div>
 
