@@ -6,9 +6,9 @@ use App\Core\Auth;
 
 class AccessService
 {
-    public const MODULES=['news'=>'ข่าวประชาสัมพันธ์','faqs'=>'คำถามที่พบบ่อย','members'=>'ข้อมูลสมาชิก','dividends'=>'เงินปันผล'];
-    public const ACTIONS=['view'=>'ดูข้อมูล','create'=>'เพิ่ม','update'=>'แก้ไข','delete'=>'ลบ','import'=>'นำเข้า (สร้าง/อัปเดต)'];
-    public const CATALOG=['news'=>['view','create','update','delete'],'faqs'=>['view','create','update','delete'],'members'=>['view','update'],'dividends'=>['update','import']];
+    public const MODULES=['coop_info'=>'ข้อมูลสหกรณ์','people'=>'กรรมการและเจ้าหน้าที่','rates'=>'อัตราดอกเบี้ย','products'=>'ผลิตภัณฑ์','news'=>'ข่าวประชาสัมพันธ์','faqs'=>'คำถามที่พบบ่อย','members'=>'ข้อมูลสมาชิก','dividends'=>'เงินปันผล'];
+    public const ACTIONS=['publish'=>'อนุมัติเผยแพร่','view'=>'ดูข้อมูล','create'=>'เพิ่ม','update'=>'แก้ไข','delete'=>'ลบ','import'=>'นำเข้า (สร้าง/อัปเดต)'];
+    public const CATALOG=['coop_info'=>['view','update','publish'],'people'=>['view','update','publish'],'rates'=>['view','update','publish'],'products'=>['view','update','publish'],'news'=>['view','create','update','delete','publish'],'faqs'=>['view','create','update','delete'],'members'=>['view','update'],'dividends'=>['update','import']];
     public static function keys(): array { $keys=[];foreach(self::CATALOG as $m=>$actions)foreach($actions as $a)$keys[]="$m.$a";return $keys; }
     public static function permissions(int $id): array {
         $user=Database::first("SELECT u.id,r.slug FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE u.id=? AND u.status='active' AND u.deleted_at IS NULL",[$id]);
@@ -29,7 +29,7 @@ class AccessService
         $name=trim((string)($data['name']??''));$slug=trim((string)($data['slug']??''));$description=trim((string)($data['description']??''));
         if($name==='' || mb_strlen($name)>50 || strlen($slug)>50 || !preg_match('/^[a-z][a-z0-9_]*$/D',$slug) || mb_strlen($description)>255)throw new \InvalidArgumentException('กรอกชื่อ Role และรหัสภาษาอังกฤษให้ถูกต้อง');
         $permissions=$data['permissions']??[];if(!is_array($permissions) || array_diff($permissions,self::keys()))throw new \InvalidArgumentException('สิทธิ์ที่เลือกไม่ถูกต้อง');
-        foreach(['news','faqs'] as $m)if(array_intersect(["$m.create","$m.update","$m.delete"],$permissions) && !in_array("$m.view",$permissions,true))throw new \InvalidArgumentException('สิทธิ์เพิ่ม/แก้ไข/ลบต้องเลือกสิทธิ์ดูข้อมูลด้วย');
+        foreach(['news','faqs','coop_info','people','rates','products'] as $m)if(array_intersect(["$m.create","$m.update","$m.delete","$m.publish"],$permissions) && !in_array("$m.view",$permissions,true))throw new \InvalidArgumentException('สิทธิ์เพิ่ม/แก้ไข/ลบต้องเลือกสิทธิ์ดูข้อมูลด้วย');
         if(array_intersect(['members.update','dividends.update','dividends.import'],$permissions) && !in_array('members.view',$permissions,true))throw new \InvalidArgumentException('การดูแลสมาชิก/ปันผลต้องมีสิทธิ์ดูสมาชิก');
         return self::transaction(function()use($data,$id,$name,$slug,$description,$permissions){
             if($id){Database::first('SELECT id FROM roles WHERE id=? FOR UPDATE',[$id]);$old=self::role($id);self::assertVersion($old,$data);if($old['protected'])throw new \InvalidArgumentException('Role หลักนี้สงวนไว้สำหรับระบบ');if($slug!==$old['slug'])throw new \InvalidArgumentException('ไม่สามารถเปลี่ยนรหัส Role ที่มีอยู่แล้ว');Database::execute('UPDATE roles SET name=?,description=?,updated_at=NOW() WHERE id=?',[$name,$description,$id]);}

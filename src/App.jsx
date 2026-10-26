@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect } from 'react';
-import { Navigate, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { useInactivityTimeout } from './hooks/useInactivityTimeout';
@@ -31,6 +31,9 @@ const AdminMembersHealthPage = lazy(() => import('./pages/AdminMembersHealthPage
 const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const AdminAccessPage = lazy(() => import('./pages/AdminAccessPage'));
+const MfaPage = lazy(() => import('./pages/MfaPage'));
+const PublicContentAdminPage = lazy(() => import('./pages/PublicContentAdminPage'));
+const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'));
 const AdminWorkspacePage = lazy(() => import('./pages/AdminWorkspacePage'));
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const LoansPage = lazy(() => import('./pages/LoansPage'));
@@ -124,19 +127,22 @@ const staffRoles = [
   'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin'
 ];
 
-function StaffProtectedRoute({ children, roles, permission }) {
+function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
   const { user, isLoggedIn, sessionStatus, can } = useAuth();
 
   if (sessionStatus === 'checking') return <PageSkeletonLoader />;
+  if (sessionStatus === 'mfa-enroll') return <Navigate to="/admin/mfa/enroll" replace />;
+  if (sessionStatus === 'mfa-verify') return <Navigate to="/admin/mfa/verify" replace />;
   // A temporary connection failure must not discard an authenticated user's
   // open form. Backend endpoints still enforce the session for every action.
   if (!isLoggedIn || !['online', 'offline'].includes(sessionStatus)) {
     return <Navigate to="/admin/login" replace />;
   }
   if (roles && !roles.includes(user?.role)) {
-    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'} replace />;
+    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'} replace />;
   }
-  if(permission && !can(permission))return <div className="container section"><p>คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p><a href="/admin/workspace">กลับพื้นที่ทำงาน</a></div>;
+  if(permission && !can(permission))return <div className="container section"><p>คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link></div>;
+  if (anyPermissions && !anyPermissions.some(can)) return <div className="container section"><p role="alert">คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p></div>;
   return children;
 }
 
@@ -144,7 +150,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -206,6 +212,11 @@ export default function App() {
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
 
+            <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
+            <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view','faqs.view']}><ContentAdminPage /></StaffProtectedRoute>} />
+            <Route path="/admin/mfa/enroll" element={<MfaPage mode="enroll" />} />
+            <Route path="/admin/mfa/verify" element={<MfaPage mode="verify" />} />
+            <Route path="/admin/2fa" element={<MfaPage mode="verify" />} />
             {/* RYCOOP LED Member Check Routes */}
             <Route path="/admin/dividends/import" element={<StaffProtectedRoute permission="dividends.import"><AdminDividendImportPage /></StaffProtectedRoute>} />
             <Route path="/admin/members/dashboard" element={<StaffProtectedRoute permission="members.view"><AdminMembersDashboardPage /></StaffProtectedRoute>} />

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/RequireTestDatabase.php';
 
 use App\Core\Database;
 use App\Services\GoogleAuthService;

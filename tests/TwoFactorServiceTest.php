@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+putenv('APP_KEY=isolated-unit-test-key-not-for-production-0001');
 require_once __DIR__ . '/../vendor/autoload.php';
+$fixturePdo=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+$fixturePdo->sqliteCreateFunction('NOW',fn()=>date('Y-m-d H:i:s'));
+$fixturePdo->exec('CREATE TABLE user_mfa_recovery_codes(id INTEGER PRIMARY KEY,user_id INTEGER,code_hash TEXT,created_at TEXT,used_at TEXT)');
+(new ReflectionProperty(\App\Core\Database::class,'instance'))->setValue(null,$fixturePdo);
 
 use App\Core\Database;
 use App\Services\TwoFactorService;
@@ -81,7 +86,7 @@ try {
     // Test with user ID 1
     $userId = 1;
     $codes = TwoFactorService::generateRecoveryCodes($userId, 8);
-    if (count($codes) === 8 && preg_match('/^[A-Z0-9]{4}-[A-Z0-9]{4}$/', $codes[0])) {
+    if (count($codes) === 8 && preg_match('/^[A-Z0-9]{16}-[A-Z0-9]{16}$/', $codes[0])) {
         echo "PASS: generateRecoveryCodes generated 8 formatted recovery codes\n";
     } else {
         echo "FAIL: generateRecoveryCodes count or format invalid\n";

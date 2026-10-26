@@ -79,8 +79,8 @@ class TwoFactorService
 
         $decoded = base64_decode($stored, true);
         if ($decoded === false || strlen($decoded) < 28) {
-            // Not a valid GCM ciphertext, return raw fallback
-            return $stored;
+            // Invalid ciphertext must never be treated as a TOTP secret.
+            return '';
         }
 
         $iv = substr($decoded, 0, 12);
@@ -180,7 +180,7 @@ class TwoFactorService
     }
 
     /**
-     * Generate single-use recovery codes (e.g. 8 codes formatted as XXXX-XXXX).
+     * Generate single-use recovery codes (8 codes of 128 bits each, formatted as 16 hex characters per group).
      * Hashes codes using password_hash and persists to user_mfa_recovery_codes.
      * Returns the array of plaintext codes for one-time display to user.
      */
@@ -191,9 +191,9 @@ class TwoFactorService
 
         $plainCodes = [];
         for ($i = 0; $i < $count; $i++) {
-            // Generate clean 8-character uppercase alphanumeric code: XXXX-XXXX
-            $part1 = strtoupper(bin2hex(random_bytes(2))); // 4 hex
-            $part2 = strtoupper(bin2hex(random_bytes(2))); // 4 hex
+            // Generate a 128-bit code; plaintext is returned only for initial display.
+            $part1 = strtoupper(bin2hex(random_bytes(8))); // 16 hex
+            $part2 = strtoupper(bin2hex(random_bytes(8))); // 16 hex
             $code = "{$part1}-{$part2}";
             $plainCodes[] = $code;
 
@@ -214,8 +214,9 @@ class TwoFactorService
     {
         $clean = strtoupper(trim($inputCode));
         // Normalize: allow user to type with or without hyphen
-        if (strlen($clean) === 8 && !str_contains($clean, '-')) {
-            $clean = substr($clean, 0, 4) . '-' . substr($clean, 4);
+        if (in_array(strlen($clean),[8,32],true) && !str_contains($clean, '-')) {
+            $half=(int)(strlen($clean)/2);
+            $clean = substr($clean, 0, $half) . '-' . substr($clean, $half);
         }
 
         $records = Database::query(
@@ -226,10 +227,11 @@ class TwoFactorService
         foreach ($records as $record) {
             if (password_verify($clean, $record['code_hash'])) {
                 // Mark consumed immediately
-                Database::execute(
-                    "UPDATE user_mfa_recovery_codes SET used_at = NOW() WHERE id = ?",
-                    [$record['id']]
+                $consumed = Database::execute(
+                    "UPDATE user_mfa_recovery_codes SET used_at = NOW() WHERE id = ? AND user_id = ? AND used_at IS NULL",
+                    [$record['id'], $userId]
                 );
+                if ($consumed !== 1) return false;
                 Logger::auth("Single-use recovery code consumed for user ID: {$userId}");
                 return true;
             }
@@ -256,9 +258,7 @@ class TwoFactorService
     private static function deriveKey(): string
     {
         $keySource = (string) config('security.two_factor.encryption_key', '');
-        if ($keySource === '') {
-            $keySource = (string) config('app.key', 'rayongcoop-fallback-secret-key-32ch!');
-        }
+        if (strlen($keySource) < 32) throw new \RuntimeException('MFA encryption requires an explicit key of at least 32 characters.');
         return hash('sha256', $keySource, true); // 32 bytes for AES-256
     }
 

@@ -40,7 +40,7 @@ class AuthMiddleware
                     ], 403);
                     return false;
                 }
-                $response->redirect(url('admin/2fa'));
+                $response->redirect(url('admin/mfa/verify'));
                 return false;
             }
 

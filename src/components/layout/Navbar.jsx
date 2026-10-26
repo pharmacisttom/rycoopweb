@@ -1,3 +1,4 @@
+import { usePublicInformation } from '../../context/PublicContentContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -11,10 +12,11 @@ import {
   ArrowRight, CheckCircle2, ChevronRight, User, Power, Gauge, Wallet
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { COOP_INFO } from '../../data/mockData';
+
 import UserStatusBadge from '../common/UserStatusBadge';
 
 export default function Navbar() {
+  const { COOP_INFO } = usePublicInformation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState(null);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);

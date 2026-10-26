@@ -290,7 +290,7 @@ class GoogleAuthController extends Controller
         if ($hasMfa) {
             // User has already enrolled in MFA: require TOTP verification
             Auth::login($identity, false, false);
-            $this->redirect(url('admin/2fa'));
+            $this->redirect(url('admin/mfa/verify'));
             return;
         }
 
@@ -307,7 +307,7 @@ class GoogleAuthController extends Controller
         $targetPath = match ($roleSlug) {
             'super_admin' => 'admin/dashboard',
             'member_admin' => 'admin/members/dashboard',
-            default => 'staff/dashboard'
+            default => 'admin/workspace'
         };
         $this->redirect(url($targetPath));
     }

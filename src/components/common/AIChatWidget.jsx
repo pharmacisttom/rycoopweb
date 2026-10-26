@@ -1,3 +1,4 @@
+import { usePublicInformation } from '../../context/PublicContentContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Sparkles, Send, MessageCircle, X, RefreshCw, 
@@ -5,7 +6,7 @@ import {
   Award, TrendingUp, HelpCircle, ChevronRight, Laptop,
   Lightbulb, HeartHandshake, FileText, AlertCircle, Play
 } from 'lucide-react';
-import { INTEREST_RATES } from '../../data/mockData';
+
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -48,6 +49,7 @@ const FORTUNES = [
 ];
 
 export default function AIChatWidget() {
+  const { INTEREST_RATES } = usePublicInformation();
   const { user } = useAuth();
   const { confirmDialog, toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);

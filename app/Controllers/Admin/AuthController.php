@@ -14,6 +14,13 @@ use App\Services\TwoFactorService;
 
 class AuthController extends Controller
 {
+    public function options(): void
+    {
+        $service=new \App\Services\GoogleAuthService();
+        $enabled=$service->isEnabled() && $service->isConfigured();
+        $this->json(['success'=>true,'google_enabled'=>$enabled,'staff_google_required'=>$enabled && (bool)config('google.staff_google_login_required',false)]);
+    }
+
     public function showLogin(): void
     {
         if (Auth::check()) {
@@ -31,7 +38,7 @@ class AuthController extends Controller
             } elseif ($roleSlug === 'super_admin') {
                 $this->redirect(url('admin/dashboard'));
             } else {
-                $this->redirect(url('staff/dashboard'));
+                $this->redirect(url('admin/workspace'));
             }
             return;
         }
@@ -138,14 +145,25 @@ class AuthController extends Controller
             return;
         }
 
+        if ($roleSlug !== 'member' && config('google.enabled',false) && (new \App\Services\GoogleAuthService())->isConfigured() && config('google.staff_google_login_required',false)) {
+            $this->response->json(['success'=>false,'message'=>'บัญชีเจ้าหน้าที่นี้ต้องเข้าสู่ระบบด้วย Google ของสหกรณ์'],403);return;
+        }
+
+        // Staff must finish enrollment before gaining an authenticated session.
+        if ($roleSlug !== 'member' && config('google.staff_mfa_required', true) && empty($user['two_factor_enabled'])) {
+            Auth::login($user, false, true);
+            if ($isAjax) { $this->response->json(['success'=>true,'redirect'=>'/admin/mfa/enroll']); return; }
+            $this->redirect(url('admin/mfa/enroll')); return;
+        }
+        if ((int)($user['two_factor_enabled']??0)===1 && empty($user['two_factor_secret'])) { $this->response->json(['success'=>false,'message'=>'การตั้งค่า MFA ของบัญชีไม่สมบูรณ์ กรุณาติดต่อผู้ดูแล'],403); return; }
         // Check if 2FA is enabled.
         if ((int)($user['two_factor_enabled'] ?? 0) === 1 && !empty($user['two_factor_secret'])) {
             Auth::login($user, false);
             if ($isAjax) {
-                $this->response->json(['success' => true, 'redirect' => '/admin/2fa']);
+                $this->response->json(['success' => true, 'redirect' => '/admin/mfa/verify']);
                 return;
             }
-            $this->redirect(url('admin/2fa'));
+            $this->redirect(url('admin/mfa/verify'));
             return;
         }
 
@@ -164,7 +182,7 @@ class AuthController extends Controller
             'member' => '/member/dividends',
             'member_admin' => '/admin/members/dashboard',
             'super_admin' => '/admin/dashboard',
-            default => '/staff/dashboard'
+            default => '/admin/workspace'
         };
 
         if ($isAjax) {
@@ -208,65 +226,14 @@ class AuthController extends Controller
 
     public function verifyTwoFactor(): void
     {
-        if (!Auth::checkPending2FA()) {
-            $this->redirect(url('login'));
-            return;
-        }
-
-        $code = trim((string)$this->request->input('code'));
-        $userId = Auth::id();
-        $user = Database::first(
-            "SELECT u.*, r.slug AS role_slug, r.name AS role_name
-             FROM users u
-             LEFT JOIN user_roles ur ON u.id = ur.user_id
-             LEFT JOIN roles r ON ur.role_id = r.id
-             WHERE u.id = ? AND u.deleted_at IS NULL AND u.status = 'active'
-             LIMIT 1",
-            [$userId]
-        );
-
-        if (!$user || !TwoFactorService::verifyCode($user['two_factor_secret'], $code)) {
-            try {
-                Database::execute("INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, '2fa_failed', 'รหัส 2FA ไม่ถูกต้อง', ?, ?, NOW())", [$user['id'], $user['email'], $this->request->ip(), $this->request->userAgent()]);
-            } catch (\Throwable $e) {}
-            Session::flash('error', 'รหัส 2FA 6 หลักไม่ถูกต้องหรือหมดอายุ');
-            $this->redirect(url('admin/2fa'));
-            return;
-        }
-
-        // 2FA Success
-        Auth::verify2FA();
-        try {
-            Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$this->request->ip(), $user['id']]);
-            Database::execute("INSERT INTO login_logs (user_id, email, status, ip_address, user_agent, created_at) VALUES (?, ?, 'success', ?, ?, NOW())", [$user['id'], $user['email'], $this->request->ip(), $this->request->userAgent()]);
-            AuditService::log('auth', '2fa_verified', (string)$user['id'], null, ['status' => '2fa_success']);
-        } catch (\Throwable $e) {}
-
-        Session::flash('success', 'ยืนยันตัวตนสำเร็จ');
-
-        $roleSlug = (string) ($user['role_slug'] ?? '');
-        if ($roleSlug === '' || ($roleSlug === 'member' && !config('features.member_login', false))) {
-            Auth::logout();
-            Session::flash('error', $roleSlug === ''
-                ? 'บัญชีนี้ยังไม่ได้รับการกำหนดสิทธิ์ใช้งาน'
-                : 'ระบบสมาชิกออนไลน์ยังไม่เปิดให้บริการ');
-            $this->redirect(url($roleSlug === 'member' ? 'service-unavailable' : 'admin/login'));
-            return;
-        }
-        $targetUrl = match($roleSlug) {
-            'member' => url('member/dashboard'),
-            'member_admin' => url('admin/members/dashboard'),
-            'super_admin' => url('admin/dashboard'),
-            default => url('staff/dashboard')
-        };
-
-        $this->redirect($targetUrl);
+        (new MfaController($this->request, $this->response))->verify();
     }
 
     public function changePassword(): void
     {
-        $inputUsername = trim((string)($this->request->input('username') ?? ''));
-        $userId = $this->request->input('user_id') ? (int)$this->request->input('user_id') : (Auth::id() ?? null);
+        if (!Auth::check()) { $this->response->json(['success'=>false,'message'=>'กรุณาเข้าสู่ระบบ'],401); return; }
+        $inputUsername = '';
+        $userId = Auth::id();
         $currentPass = (string)$this->request->input('current_password');
         $newPass = (string)$this->request->input('new_password');
         $confirmPass = (string)$this->request->input('confirm_password');
@@ -320,6 +287,7 @@ class AuthController extends Controller
         }
 
         // Check current password against DB hash — never compare plaintext
+        if (empty($user['password'])) { $this->response->json(['success'=>false,'message'=>'บัญชีนี้ต้องจัดการรหัสผ่านผ่านผู้ให้บริการยืนยันตัวตน'],403); return; }
         if (!empty($user['password'])) {
             if (!password_verify($currentPass, $user['password'])) {
                 $msg = 'รหัสผ่านปัจจุบันไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';

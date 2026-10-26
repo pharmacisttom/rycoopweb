@@ -21,6 +21,10 @@ class Auth
             return false;
         }
 
+        if (time() - (int) Session::get('authenticated_at', 0) > (int) config('security.session.lifetime', 7200)) {
+            self::logout();
+            return false;
+        }
         $sessionVersion = (int) Session::get('session_version', 1);
         $dbVersion = (int) ($user['session_version'] ?? 1);
         if ($sessionVersion !== $dbVersion) {
@@ -31,16 +35,27 @@ class Auth
         return true;
     }
 
+    private static function pendingSessionValid(): bool
+    {
+        Session::start();
+        if (!Session::has('user_id') || Session::get('2fa_verified',false)===true) return false;
+        $user=self::user();
+        if (!$user || time()-(int)Session::get('mfa_started_at',0)>600 || (int)Session::get('session_version',1)!==(int)($user['session_version']??1)) {
+            self::logout(); return false;
+        }
+        return true;
+    }
+
     public static function checkPending2FA(): bool
     {
         Session::start();
-        return Session::has('user_id') && Session::get('2fa_verified', false) === false && Session::get('mfa_enrollment', false) !== true;
+        return self::pendingSessionValid() && Session::get('mfa_enrollment', false) !== true;
     }
 
     public static function checkPendingMfaEnrollment(): bool
     {
         Session::start();
-        return Session::has('user_id') && Session::get('mfa_enrollment', false) === true;
+        return self::pendingSessionValid() && Session::get('mfa_enrollment', false) === true;
     }
 
     public static function id(): ?int
@@ -82,6 +97,8 @@ class Auth
         Session::set('session_version', (int) ($user['session_version'] ?? 1));
         Session::set('2fa_verified', $verified2FA);
         Session::set('mfa_enrollment', $requiresEnrollment);
+        Session::set('authenticated_at', time());
+        Session::set('mfa_started_at', time());
         self::$user = null;
 
         Logger::auth("User authenticated: {$user['email']} (ID: {$user['id']}) - 2FA Verified: " . ($verified2FA ? 'yes' : 'pending'));
@@ -90,6 +107,9 @@ class Auth
     public static function verify2FA(): void
     {
         Session::start();
+        Session::regenerate();
+        Session::remove('mfa_enroll_secret');
+        Session::remove('mfa_enroll_expires');
         Session::set('2fa_verified', true);
         Session::set('mfa_enrollment', false);
         self::$user = null;

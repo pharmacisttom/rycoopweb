@@ -1,8 +1,8 @@
+import { usePublicInformation } from '../context/PublicContentContext';
 import React from 'react';
 import { Building, Landmark } from 'lucide-react';
-import { BOARD_MEMBERS, COOP_INFO } from '../data/mockData';
+
 import SafeImage from '../components/common/SafeImage';
-import legacyReference from '../data/legacyReference.json';
 
 function PeopleGrid({ members, type }) {
   const isBoard = type === 'board';
@@ -104,19 +104,20 @@ export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, mem
 }
 
 export default function BoardPage() {
+  const { COOP_INFO, BOARD_MEMBERS, legacyReference } = usePublicInformation();
   return (
     <PeopleDirectoryPage
       badge="คณะผู้บริหาร"
-      title="คณะกรรมการดำเนินงาน ชุดที่ 38"
+      title={BOARD_MEMBERS[0]?.term ? `คณะกรรมการดำเนินงาน ${BOARD_MEMBERS[0].term}` : 'คณะกรรมการดำเนินงาน'}
       subtitle={`ทำเนียบคณะกรรมการดำเนินการ ${COOP_INFO.nameTh}`}
-      heading="คณะกรรมการดำเนินงาน ชุดที่ 38"
+      heading={BOARD_MEMBERS[0]?.term ? `คณะกรรมการดำเนินงาน ${BOARD_MEMBERS[0].term}` : 'คณะกรรมการดำเนินงาน'}
       Icon={Landmark}
       members={BOARD_MEMBERS}
       type="board"
     >
       <p style={{ margin: '1.5rem 0', color: 'var(--text-muted)' }}>
         อ้างอิงรายชื่อจาก{' '}
-        <a href={legacyReference.sources.board.url} target="_blank" rel="noopener noreferrer">เว็บไซต์เดิมของสหกรณ์</a>
+        <a href={legacyReference.sources.board.url} target="_blank" rel="noopener noreferrer">เอกสารอ้างอิงสหกรณ์</a>
         {' '}ตรวจเทียบ {legacyReference.sources.board.checkedOn}
       </p>
       {legacyReference.boardGroups.map(group => (

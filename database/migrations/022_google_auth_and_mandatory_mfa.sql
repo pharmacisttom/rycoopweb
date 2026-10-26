@@ -58,14 +58,28 @@ CREATE TABLE IF NOT EXISTS `user_mfa_recovery_codes` (
     CONSTRAINT `fk_user_mfa_recovery_codes_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Additive columns to `users` for enhanced MFA assurance & session revocation
-ALTER TABLE `users`
-    ADD COLUMN IF NOT EXISTS `two_factor_confirmed_at` DATETIME NULL DEFAULT NULL AFTER `two_factor_enabled`,
-    ADD COLUMN IF NOT EXISTS `two_factor_last_used_slice` BIGINT NULL DEFAULT NULL AFTER `two_factor_confirmed_at`,
-    ADD COLUMN IF NOT EXISTS `session_version` INT UNSIGNED NOT NULL DEFAULT 1 AFTER `two_factor_last_used_slice`,
-    ADD COLUMN IF NOT EXISTS `department` VARCHAR(191) NULL DEFAULT NULL AFTER `name`;
+-- MySQL 8 does not support ADD COLUMN IF NOT EXISTS. Match the existing repair migration pattern.
 
--- 5. Additive columns to `login_logs` for authentication provider audit
-ALTER TABLE `login_logs`
-    ADD COLUMN IF NOT EXISTS `auth_provider` VARCHAR(50) NOT NULL DEFAULT 'local' AFTER `status`,
-    ADD COLUMN IF NOT EXISTS `google_sub` VARCHAR(191) NULL DEFAULT NULL AFTER `auth_provider`;
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='two_factor_confirmed_at')=0,
+'ALTER TABLE `users` ADD COLUMN `two_factor_confirmed_at` DATETIME NULL DEFAULT NULL AFTER `two_factor_enabled`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='two_factor_last_used_slice')=0,
+'ALTER TABLE `users` ADD COLUMN `two_factor_last_used_slice` BIGINT NULL DEFAULT NULL AFTER `two_factor_confirmed_at`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='session_version')=0,
+'ALTER TABLE `users` ADD COLUMN `session_version` INT UNSIGNED NOT NULL DEFAULT 1 AFTER `two_factor_last_used_slice`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='department')=0,
+'ALTER TABLE `users` ADD COLUMN `department` VARCHAR(191) NULL DEFAULT NULL AFTER `name`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='login_logs' AND COLUMN_NAME='auth_provider')=0,
+'ALTER TABLE `login_logs` ADD COLUMN `auth_provider` VARCHAR(50) NOT NULL DEFAULT ''local'' AFTER `status`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='login_logs' AND COLUMN_NAME='google_sub')=0,
+'ALTER TABLE `login_logs` ADD COLUMN `google_sub` VARCHAR(191) NULL DEFAULT NULL AFTER `auth_provider`', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

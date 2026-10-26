@@ -1,9 +1,11 @@
+import { usePublicInformation } from '../../context/PublicContentContext';
 import React from 'react';
 import { Phone, Clock, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { COOP_INFO } from '../../data/mockData';
+
 
 export default function TopBar() {
+  const { COOP_INFO } = usePublicInformation();
   const { theme, toggleTheme } = useTheme();
 
   return (

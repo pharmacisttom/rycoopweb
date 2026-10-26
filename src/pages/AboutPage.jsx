@@ -1,8 +1,10 @@
+import { usePublicInformation } from '../context/PublicContentContext';
 import React from 'react';
 import { Landmark, Target, Shield, Heart, Award, CheckCircle2 } from 'lucide-react';
-import { COOP_INFO } from '../data/mockData';
+
 
 export default function AboutPage() {
+  const { COOP_INFO } = usePublicInformation();
   return (
     <div className="section">
       <div className="container">

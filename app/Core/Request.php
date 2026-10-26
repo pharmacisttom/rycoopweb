@@ -86,7 +86,7 @@ class Request
                 $clean[$cleanKey] = $this->sanitizeArray($val);
             } elseif (is_string($val)) {
                 // Trim whitespace, leave HTML for markdown/editor sanitize separately
-                $clean[$cleanKey] = trim($val);
+                $clean[$cleanKey] = in_array($cleanKey, ['password','current_password','new_password','confirm_password','password_confirmation'], true) ? $val : trim($val);
             } else {
                 $clean[$cleanKey] = $val;
             }
@@ -162,14 +162,16 @@ class Request
 
     public function ip(): string
     {
-        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
-            return $_SERVER['HTTP_CF_CONNECTING_IP'];
+        $remote=(string)($this->server['REMOTE_ADDR']??'127.0.0.1');
+        $trusted=array_filter(array_map('trim',explode(',',(string)config('security.trusted_proxy_ips',''))));
+        if (!in_array($remote,$trusted,true)) return $remote;
+        // Walk from the trusted proxy towards the client; the leftmost value can be attacker supplied.
+        foreach(array_reverse(explode(',',(string)($this->server['HTTP_X_FORWARDED_FOR']??''))) as $ip){
+            $ip=trim($ip);
+            if(!filter_var($ip,FILTER_VALIDATE_IP)) return $remote;
+            if(!in_array($ip,$trusted,true)) return $ip;
         }
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            return trim($ips[0]);
-        }
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        return $remote;
     }
 
     public function userAgent(): string

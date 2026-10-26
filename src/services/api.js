@@ -29,6 +29,10 @@ const apiFetch = async (path, options = {}) => {
       if (res.ok) {
         return await res.json();
       }
+      if (res.status === 403) {
+        const result=await res.json();
+        return result;
+      }
       if (res.status === 401) {
         return { success: false, authenticated: false, message: 'กรุณาเข้าสู่ระบบ' };
       }
@@ -82,7 +86,7 @@ export const fetchStatistics = () => apiFetch('/api/public/statistics');
 // ──────────────────────────────────────────────
 
 /** Check if current user is authenticated */
-export const fetchCurrentUser = () => apiFetch('/api/auth/me');
+export const fetchCurrentUser = () => apiFetch('/api/auth/me', { cache: 'no-store' });
 
 // ──────────────────────────────────────────────
 // MEMBER DATA APIs (require authentication)
@@ -202,7 +206,7 @@ export const apiPost = async (path, body = {}) => {
         },
         credentials: 'include',
       });
-      if (res.ok || [400, 401, 403, 419, 422].includes(res.status)) {
+      if (res.ok || [400, 401, 403, 409, 419, 422, 429].includes(res.status)) {
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           return await res.json();

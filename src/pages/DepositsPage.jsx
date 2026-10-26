@@ -1,9 +1,11 @@
+import { usePublicInformation } from '../context/PublicContentContext';
 import React from 'react';
 import { Landmark, TrendingUp, ShieldCheck, CheckCircle2, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { INTEREST_RATES } from '../data/mockData';
+
 
 export default function DepositsPage() {
+  const { INTEREST_RATES } = usePublicInformation();
   return (
     <div className="section">
       <div className="container">
@@ -52,7 +54,7 @@ export default function DepositsPage() {
         <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '1.3rem', color: 'var(--primary-800)' }}>ตารางประกาศอัตราดอกเบี้ยเงินฝาก</h3>
-            <span className="badge badge-gold">ตรวจเทียบหน้าเว็บเดิม {INTEREST_RATES.depositSource.checkedOn}</span>
+            <span className="badge badge-gold">{INTEREST_RATES.depositSource.published ? 'มีผลตั้งแต่' : 'ตรวจเทียบหน้าเว็บเดิม'} {INTEREST_RATES.depositSource.checkedOn}</span>
           </div>
           <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
             {INTEREST_RATES.depositSource.note}{' '}

@@ -844,6 +844,7 @@ export default function AdminDashboardPage() {
         {/* =========================================================================
             MODULE 2: NEWS & ACTIVITIES (จัดการข่าวสารและกิจกรรม)
             ========================================================================= */}
+        {activeTab === 'news' && <p><Link className="btn btn-primary" to="/admin/content?tab=news">ร่าง ตรวจสอบ และอนุมัติเผยแพร่ข่าว</Link></p>}
         {activeTab === 'news' && (
           <div className="surface-card animate-fade-in" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
 
@@ -1383,6 +1384,7 @@ export default function AdminDashboardPage() {
         {/* =========================================================================
             MODULE 7: LOAN PRODUCTS & INTEREST RATES (10 MASTER DATA ITEMS & DEPOSITS)
             ========================================================================= */}
+        {activeTab === 'loans' && <p className="alert alert-info">แก้ไขอัตราที่เผยแพร่และดูประวัติได้ที่ <Link to="/admin/public-content">จัดการข้อมูลพื้นฐานและดอกเบี้ย</Link></p>}
         {activeTab === 'loans' && (
           <div className="surface-card animate-fade-in" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
             
@@ -1566,8 +1568,6 @@ export default function AdminDashboardPage() {
                       {(adminRatesData.deposit && adminRatesData.deposit.length > 0 ? adminRatesData.deposit : [
                         { id: 16, product_name: 'เงินฝากออมทรัพย์', rate: '1.500', min_amount: 100, condition_note: 'เปิดบัญชีขั้นต่ำ 100 บาท ไม่จำกัดจำนวนครั้งการฝาก-ถอน' },
                         { id: 1, product_name: 'เงินฝากออมทรัพย์พิเศษ', rate: '1.750', min_amount: 1000, condition_note: 'เปิดบัญชีขั้นต่ำ 1,000 บาท จ่ายดอกเบี้ยปีละ 2 ครั้ง' },
-                        { id: 2, product_name: 'เงินฝากประจำ 12 เดือน', rate: '3.350', min_amount: 1000, condition_note: 'ฝากประจำ 12 เดือน ดอกเบี้ยสูง' },
-                        { id: 3, product_name: 'เงินฝากออมทรัพย์สินมัธยัสถ์ (24 เดือน)', rate: '3.500', min_amount: 1000, condition_note: 'ฝากรายเดือนสม่ำเสมอ 24 เดือน' }
                       ]).map((item, idx) => (
                         <tr key={item.id} style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
                           <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1}</td>

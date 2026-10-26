@@ -1,3 +1,4 @@
+import { usePublicInformation } from '../context/PublicContentContext';
 import React, { useState, useEffect } from 'react';
 import { fetchFaqs } from '../services/api';
 import RichTextContent from '../components/common/RichTextContent';
@@ -5,9 +6,10 @@ import {
   MapPin, Phone, Mail, Clock, MessageSquare,
   Send, CheckCircle2, ChevronDown, ChevronUp, Search, ShieldCheck, AlertCircle
 } from 'lucide-react';
-import { COOP_INFO, FAQS, MEMBER_COMPLAINTS } from '../data/mockData';
+import { FAQS, MEMBER_COMPLAINTS } from '../data/mockData';
 
 export default function ContactPage() {
+  const { COOP_INFO } = usePublicInformation();
   const [activeTab, setActiveTab] = useState('contact');
   const [submitted, setSubmitted] = useState(false);
   const [lastSubmittedId, setLastSubmittedId] = useState('');

@@ -44,6 +44,7 @@ return {
         target: backend,
         changeOrigin: true,
       },
+      '/auth': { target: backend, changeOrigin: true },
       '/api': {
         target: backend,
         changeOrigin: true,

@@ -1,11 +1,12 @@
 import React from 'react';
 import { Banknote, CheckCircle2, Download, FileCheck, Home, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { LOAN_PRODUCTS, INTEREST_RATES } from '../data/mockData';
+import { usePublicInformation } from '../context/PublicContentContext';
 
+function makeCategories(LOAN_PRODUCTS) {
 const loanById = (id) => LOAN_PRODUCTS.find((product) => product.id === id);
 
-const LOAN_CATEGORIES = [
+const categories = [
   {
     id: 'emergency', icon: Zap, eyebrow: 'สำหรับความจำเป็นเร่งด่วน', title: 'เงินกู้เพื่อเหตุฉุกเฉิน',
     description: 'ทางเลือกสำหรับเหตุจำเป็นเฉพาะหน้า ด้วยวงเงินและระยะเวลาผ่อนชำระที่เหมาะกับการแก้ปัญหาเร่งด่วน',
@@ -27,7 +28,12 @@ const LOAN_CATEGORIES = [
     products: [loanById('goods_installment'), loanById('life_development'), loanById('car_purchase')],
     color: 'var(--primary-700)', background: 'var(--primary-100)',
   },
-];
+ ];
+const assigned = new Set(categories.flatMap(c=>c.products.filter(Boolean).map(p=>p.id)));
+categories[categories.length-1].products.push(...LOAN_PRODUCTS.filter(p=>!assigned.has(p.id)));
+return categories;
+
+}
 
 function LoanProductCard({ product }) {
   return (
@@ -63,6 +69,8 @@ function LoanProductCard({ product }) {
 }
 
 export default function LoansPage() {
+  const { LOAN_PRODUCTS, INTEREST_RATES } = usePublicInformation();
+  const LOAN_CATEGORIES = makeCategories(LOAN_PRODUCTS);
   return (
     <div className="section">
       <div className="container">

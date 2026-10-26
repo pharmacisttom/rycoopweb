@@ -111,16 +111,16 @@ $router->get('/api/auth/me', 'Api\\SpaApiController@me');
 $router->get('/api/member/dividends', 'Member\\DividendController@index', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
 $router->get('/api/member/requests', 'Api\\SpaApiController@memberGetRequests', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
 $router->post('/api/member/requests/profile-change', 'Api\\SpaApiController@memberSubmitProfileRequest', [AuthMiddleware::class, new RoleMiddleware(['member']), CsrfMiddleware::class]);
-$router->post('/api/admin/dividends/preview', 'Admin\\DividendImportController@preview', [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin']), new PermissionMiddleware('dividends','import'), CsrfMiddleware::class]);
-$router->post('/api/admin/dividends/confirm', 'Admin\\DividendImportController@confirm', [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin']), new PermissionMiddleware('dividends','import'), CsrfMiddleware::class]);
-$router->get('/api/admin/members', 'Admin\\MemberManagementController@index', [AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin']), new PermissionMiddleware('members','view')]);
-$router->group(['prefix'=>'api/admin/members','middleware'=>[AuthMiddleware::class, new RoleMiddleware(['super_admin', 'member_admin']), new PermissionMiddleware('members','view')]],function(\App\Core\Router $r){
+$router->post('/api/admin/dividends/preview', 'Admin\\DividendImportController@preview', [AuthMiddleware::class, new PermissionMiddleware('dividends','import'), CsrfMiddleware::class]);
+$router->post('/api/admin/dividends/confirm', 'Admin\\DividendImportController@confirm', [AuthMiddleware::class, new PermissionMiddleware('dividends','import'), CsrfMiddleware::class]);
+$router->get('/api/admin/members', 'Admin\\MemberManagementController@index', [AuthMiddleware::class, new PermissionMiddleware('members','view')]);
+$router->group(['prefix'=>'api/admin/members','middleware'=>[AuthMiddleware::class, new PermissionMiddleware('members','view')]],function(\App\Core\Router $r){
     $r->get('/dashboard','Admin\\MemberManagementController@dashboard');
     $r->get('/health','Admin\\MemberManagementController@health');
+    $r->get('/requests','Admin\\MemberManagementController@requests');
     $r->get('/{id}','Admin\\MemberManagementController@show');
     $r->post('/{id}','Admin\\MemberManagementController@update',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
     $r->post('/{id}/dividends/{year}','Admin\\MemberManagementController@updateDividend',[new PermissionMiddleware('dividends','update'),CsrfMiddleware::class]);
-    $r->get('/requests','Admin\\MemberManagementController@requests');
     $r->post('/requests/{id}/approve','Admin\\MemberManagementController@approveRequest',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
     $r->post('/requests/{id}/reject','Admin\\MemberManagementController@rejectRequest',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
 });
@@ -158,11 +158,12 @@ $router->group(['prefix' => 'api/admin', 'middleware' => [AuthMiddleware::class,
     $r->post('/loan-products/{id}', 'Api\\SpaApiController@updateAdminLoanProduct', [CsrfMiddleware::class]);
 });
 
-$router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class, new RoleMiddleware(['super_admin'])]],function(\App\Core\Router $r){
+$router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],function(\App\Core\Router $r){
     $r->get('/access/me','Admin\\AccessController@me');
     $r->get('/news','Api\\SpaApiController@adminNews',[new PermissionMiddleware('news','view')]);
     $r->post('/news','Api\\SpaApiController@createAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','create'),CsrfMiddleware::class]);
     $r->post('/news/{id}/update','Api\\SpaApiController@updateAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->post('/news/{id}/publish','Admin\\NewsWorkflowController@publish',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
     $r->post('/news/{id}/delete','Api\\SpaApiController@deleteAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','delete'),CsrfMiddleware::class]);
     $r->post('/faqs','Api\\SpaApiController@createAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','create'),CsrfMiddleware::class]);
     $r->post('/faqs/{id}/update','Api\\SpaApiController@updateAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','update'),CsrfMiddleware::class]);
@@ -212,6 +213,7 @@ $router->group(['prefix' => 'api/admin/led', 'middleware' => [AuthMiddleware::cl
 | Google OAuth 2.0 & OpenID Connect Routes
 |--------------------------------------------------------------------------
 */
+$router->get('/api/auth/options', 'Admin\\AuthController@options');
 $router->get('/auth/google/start', 'Admin\\GoogleAuthController@start');
 $router->get('/auth/google/callback', 'Admin\\GoogleAuthController@callback');
 $router->post('/api/auth/google/unlink', 'Admin\\GoogleAuthController@unlink', [AuthMiddleware::class, CsrfMiddleware::class]);
@@ -494,4 +496,13 @@ $router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class,
     $r->get('/review', 'Admin\\LedController@review');
     $r->get('/batch', 'Admin\\LedController@batch');
     $r->get('/schema', 'Admin\\LedController@schema');
+});
+
+// Public CMS: controller checks the section's module and action on every call.
+$router->get('/api/public/content', 'Admin\\PublicContentController@publicCatalog');
+$router->group(['prefix'=>'api/admin/public-content','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r){
+    $r->get('/sections', 'Admin\\PublicContentController@index');
+    $r->get('/sections/{section}', 'Admin\\PublicContentController@show');
+    $r->post('/sections/{section}/drafts', 'Admin\\PublicContentController@draft', [CsrfMiddleware::class]);
+    $r->post('/revisions/{id}/publish', 'Admin\\PublicContentController@publish', [CsrfMiddleware::class]);
 });

@@ -19,14 +19,14 @@ class GoogleAuthService
     {
         $this->clientId = (string) config('google.client_id', '');
         $this->clientSecret = (string) config('google.client_secret', '');
-        $this->redirectUri = (string) config('google.redirect_uri', 'https://test.rayongcoop.org/auth/google/callback');
-        $this->enabled = (bool) config('google.enabled', true);
-        $this->primarySuperAdminEmail = strtolower(trim((string) config('google.primary_superadmin_email', 'pharmacisttom@gmail.com')));
+        $this->redirectUri = (string) config('google.redirect_uri', '');
+        $this->enabled = (bool) config('google.enabled', false);
+        $this->primarySuperAdminEmail = strtolower(trim((string) config('google.primary_superadmin_email', '')));
     }
 
     public function isConfigured(): bool
     {
-        return !empty($this->clientId) && !empty($this->clientSecret);
+        return !empty($this->clientId) && !empty($this->clientSecret) && filter_var($this->redirectUri,FILTER_VALIDATE_URL)!==false && parse_url($this->redirectUri,PHP_URL_SCHEME)==='https' && !parse_url($this->redirectUri,PHP_URL_USER) && !parse_url($this->redirectUri,PHP_URL_PASS);
     }
 
     public function isEnabled(): bool

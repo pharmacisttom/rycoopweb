@@ -12,15 +12,18 @@ import heroPortrait from '../assets/hero-portrait-official.png';
 import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
-import { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } from '../data/mockData';
+import reference from '../data/legacyReference.json';
+import { usePublicInformation } from '../context/PublicContentContext';
 
 // Fallback defaults when API is unreachable (development/offline mode)
 const FALLBACK_COOP = {
   nameTh: 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
-  slogan: COOP_INFO.slogan,
+  slogan: reference.coopInfo.slogan,
 };
 
 export default function HomePage() {
+  const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
+  const coopInfo = COOP_INFO;
   const { setShowAuthModal, isLoggedIn } = useAuth();
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
@@ -32,7 +35,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   // API-fetched data state
-  const [coopInfo, setCoopInfo] = useState(FALLBACK_COOP);
+  const [apiCoopInfo, setCoopInfo] = useState(FALLBACK_COOP);
   const [keyStats, setKeyStats] = useState([]);
   const [depositRates, setDepositRates] = useState([]);
   const [loanRates, setLoanRates] = useState([]);

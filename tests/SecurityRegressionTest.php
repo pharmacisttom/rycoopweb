@@ -6,6 +6,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Router;
 use App\Middlewares\RoleMiddleware;
+use App\Middlewares\{AuthMiddleware,PermissionMiddleware,CsrfMiddleware};
 use App\Middlewares\FeatureFlagMiddleware;
 
 final class SecurityRegressionTest
@@ -60,17 +61,34 @@ final class SecurityRegressionTest
         self::assertRouteHasRoles($routes, '/staff/dashboard', ['staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer', 'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin']);
         self::assertRouteHasRoles($routes, '/admin/dashboard', ['super_admin']);
         self::assertRouteHasRoles($routes, '/dashboard', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members/dashboard', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members/health', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/members/{id}', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/dividends/preview', ['super_admin', 'member_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/dividends/confirm', ['super_admin', 'member_admin']);
         self::assertRouteHasRoles($routes, '/api/admin/users', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/faqs', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/news/{id}/update', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/faqs/{id}/update', ['super_admin']);
-        self::assertRouteHasRoles($routes, '/api/admin/faqs/{id}/delete', ['super_admin']);
+        self::assertRouteHasRoles($routes, '/api/admin/access/roles', ['super_admin']);
+        foreach([
+            ['/api/admin/members/dashboard','GET','members','view'],
+            ['/api/admin/members/health','GET','members','view'],
+            ['/api/admin/members','GET','members','view'],
+            ['/api/admin/members/{id}','GET','members','view'],
+            ['/api/admin/members/{id}','POST','members','update'],
+            ['/api/admin/dividends/preview','POST','dividends','import'],
+            ['/api/admin/dividends/confirm','POST','dividends','import'],
+            ['/api/admin/news/{id}/update','POST','news','update'],
+            ['/api/admin/news/{id}/publish','POST','news','publish'],
+            ['/api/admin/faqs','POST','faqs','create'],
+            ['/api/admin/faqs/{id}/update','POST','faqs','update'],
+            ['/api/admin/faqs/{id}/delete','POST','faqs','delete'],
+        ] as [$path,$method,$module,$action])self::assertPermissionRoute($routes,$path,$method,$module,$action);
+    }
+
+    private static function assertPermissionRoute(array $routes,string $path,string $method,string $module,string $action):void
+    {
+        $route=null;foreach($routes as $candidate)if($candidate['path']===$path&&$candidate['method']===$method){$route=$candidate;break;}
+        self::assert($route!==null,"$method $path is registered");if(!$route)return;
+        self::assert(in_array(AuthMiddleware::class,$route['middlewares'],true),"$method $path requires authentication");
+        $matched=false;foreach($route['middlewares'] as $guard)if($guard instanceof PermissionMiddleware){
+            $matched=$matched||((new ReflectionProperty(PermissionMiddleware::class,'module'))->getValue($guard)===$module&&(new ReflectionProperty(PermissionMiddleware::class,'action'))->getValue($guard)===$action);
+        }
+        self::assert($matched,"$method $path requires $module.$action");
+        if($method!=='GET')self::assert(in_array(CsrfMiddleware::class,$route['middlewares'],true),"$method $path requires CSRF");
     }
 
     private static function assertRateLimitUsesSharedStorage(): void

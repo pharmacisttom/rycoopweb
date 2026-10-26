@@ -78,6 +78,11 @@ class SpaApiController extends Controller
             $upcomingEvents = Database::query("SELECT id, title, description, start_date, start_time, end_date, location, event_type FROM events WHERE status = 'upcoming' AND deleted_at IS NULL AND start_date >= CURDATE() ORDER BY start_date ASC, start_time ASC LIMIT 4");
         } catch (\Throwable $e) {}
 
+        try {
+            $catalog=\App\Services\PublicContentService::catalog();$rates=\App\Services\PublicContentService::apiRates($catalog);
+            $depositRates=$rates['deposit'];$loanRates=$rates['loan'];$featuredLoans=$calcLoanProducts=\App\Services\PublicContentService::apiProducts($catalog);
+        }catch(\Throwable $e){$depositRates=[];$loanRates=[];$featuredLoans=[];$calcLoanProducts=[];}
+
         $this->json([
             'success' => true,
             'data' => [
@@ -102,7 +107,9 @@ class SpaApiController extends Controller
      */
     public function coopInfo(): void
     {
-        $coopConfig = config('app.coop');
+        try {$profile=\App\Services\PublicContentService::catalog()['coopInfo'];}
+        catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);return;}
+        $coopConfig=['full_name_th'=>$profile['nameTh'],'full_name_en'=>$profile['nameEn'],'short_name'=>$profile['shortName'],'phone'=>$profile['phone'],'fax'=>$profile['fax'],'email'=>$profile['email'],'address'=>$profile['address'],'office_hours'=>$profile['workHours']];
         $stats = null;
         try {
             $stats = Database::first("SELECT total_members, total_assets, total_shares, total_deposits, total_loans, dividend_rate, loan_refund_rate, year, month FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 1");
@@ -129,27 +136,13 @@ class SpaApiController extends Controller
      */
     public function interestRates(): void
     {
-        $deposit = [];
-        $loan = [];
-        try {
-            $deposit = Database::query("SELECT id, product_name, product_type, rate, min_amount, condition_note AS description, NULL AS icon, sort_order FROM interest_rates WHERE product_type = 'deposit' AND status = 'active' ORDER BY sort_order ASC");
-            $loan = Database::query("SELECT id, product_name, product_type, rate, min_amount, max_amount, condition_note AS description, NULL AS icon, sort_order FROM interest_rates WHERE product_type = 'loan' AND status = 'active' ORDER BY sort_order ASC");
-        } catch (\Throwable $e) {}
-
-        $this->json(['success' => true, 'data' => ['deposit' => $deposit, 'loan' => $loan]]);
+        try {$catalog=\App\Services\PublicContentService::catalog();$this->json(['success'=>true,'data'=>\App\Services\PublicContentService::apiRates($catalog)]);}
+        catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);}
     }
-
-    /**
-     * GET /api/public/loan-products
-     */
     public function loanProducts(): void
     {
-        $products = [];
-        try {
-            $products = Database::query("SELECT id, name, slug, short_description, full_description AS description, interest_rate, max_loan_limit AS max_amount, max_term_months, guarantor_requirement, is_featured, is_calculator_enabled, NULL AS icon, NULL AS badge, sort_order FROM loan_products WHERE status = 'active' ORDER BY sort_order ASC");
-        } catch (\Throwable $e) {}
-
-        $this->json(['success' => true, 'data' => $products]);
+        try {$catalog=\App\Services\PublicContentService::catalog();$this->json(['success'=>true,'data'=>\App\Services\PublicContentService::apiProducts($catalog)]);}
+        catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);}
     }
 
     /**
@@ -229,13 +222,8 @@ class SpaApiController extends Controller
      */
     public function boardMembers(): void
     {
-        $members = [];
-        try {
-            $members = Database::query("SELECT id, name, position, photo AS image_url, role_type AS group_name, term_number, sort_order FROM boards WHERE status = 'active' AND deleted_at IS NULL ORDER BY role_type ASC, sort_order ASC");
-            $members = array_map(fn(array $member): array => $this->withResolvedMediaUrls($member, ['image_url', 'photo']), $members);
-        } catch (\Throwable $e) {}
-
-        $this->json(['success' => true, 'data' => $members]);
+        try {$catalog=\App\Services\PublicContentService::catalog();$members=[];foreach(['boardMembers'=>'board','staffMembers'=>'staff'] as $key=>$group)foreach($catalog[$key] as $index=>$person)$members[]=[...$person,'image_url'=>$person['image']??null,'group_name'=>$group,'term_number'=>$person['term']??null,'sort_order'=>$index];$this->json(['success'=>true,'data'=>$members]);}
+        catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);}
     }
 
     /**
@@ -491,11 +479,13 @@ class SpaApiController extends Controller
      */
     public function me(): void
     {
+        header('Cache-Control: no-store, private');
         if (!Auth::check()) {
             if (Auth::checkPendingMfaEnrollment()) {
                 $this->json([
                     'success' => false,
                     'authenticated' => false,
+                    'code' => 'MFA_ENROLLMENT_REQUIRED',
                     'requiresMfaEnrollment' => true,
                     'redirect' => '/admin/mfa/enroll'
                 ], 403);
@@ -505,6 +495,7 @@ class SpaApiController extends Controller
                 $this->json([
                     'success' => false,
                     'authenticated' => false,
+                    'code' => 'TWO_FACTOR_REQUIRED',
                     'requiresTwoFactor' => true,
                     'redirect' => '/admin/mfa/verify'
                 ], 403);
@@ -715,89 +706,16 @@ class SpaApiController extends Controller
      */
     public function updateAdminRate(string $id): void
     {
-        if (!Auth::check()) {
-            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
-            return;
-        }
-
-        $rateId = (int) $id;
-        $existing = Database::first("SELECT * FROM interest_rates WHERE id = ? LIMIT 1", [$rateId]);
-        if (!$existing) {
-            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลอัตราดอกเบี้ยที่ระบุ'], 404);
-            return;
-        }
-
-        $newRateInput = $this->request->input('rate');
-        if ($newRateInput === null || !is_numeric($newRateInput)) {
-            $this->json(['success' => false, 'message' => 'กรุณาระบุอัตราดอกเบี้ยให้ถูกต้อง'], 422);
-            return;
-        }
-        $newRate = (float) $newRateInput;
-        if ($newRate < 0 || $newRate > 50) {
-            $this->json(['success' => false, 'message' => 'อัตราดอกเบี้ยต้องอยู่ระหว่าง 0% ถึง 50%'], 422);
-            return;
-        }
-
-        $effectiveDate = trim((string) ($this->request->input('effective_date') ?? $existing['effective_date'] ?? date('Y-m-d')));
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $effectiveDate)) {
-            $effectiveDate = date('Y-m-d');
-        }
-
-        $conditionNote = trim((string) ($this->request->input('condition_note') ?? $existing['condition_note'] ?? ''));
-        $note = trim((string) ($this->request->input('note') ?? 'ปรับปรุงอัตราดอกเบี้ย'));
-        $minAmount = $this->request->input('min_amount') !== null ? (float) $this->request->input('min_amount') : $existing['min_amount'];
-        $maxAmount = $this->request->input('max_amount') !== null ? (float) $this->request->input('max_amount') : $existing['max_amount'];
-
-        $oldRate = (float) $existing['rate'];
-        $userId = Auth::id() ?? 1;
-
         try {
-            // Record audit in interest_rate_history
-            Database::execute(
-                "INSERT INTO interest_rate_history (interest_rate_id, product_name, old_rate, new_rate, effective_date, changed_by, approved_by, note, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
-                [$rateId, $existing['product_name'], $oldRate, $newRate, $effectiveDate, $userId, $userId, $note]
-            );
-
-            // Update interest_rates table
-            Database::execute(
-                "UPDATE interest_rates 
-                 SET rate = ?, effective_date = ?, condition_note = ?, min_amount = ?, max_amount = ?, updated_by = ?, updated_at = NOW()
-                 WHERE id = ?",
-                [$newRate, $effectiveDate, $conditionNote, $minAmount, $maxAmount, $userId, $rateId]
-            );
-
-            // Synchronize with loan_products if this is a loan product
-            if ($existing['product_type'] === 'loan') {
-                Database::execute(
-                    "UPDATE loan_products SET interest_rate = ?, updated_at = NOW() WHERE name = ?",
-                    [$newRate, $existing['product_name']]
-                );
-            } elseif ($existing['product_type'] === 'deposit') {
-                Database::execute(
-                    "UPDATE deposit_products SET interest_rate = ?, updated_at = NOW() WHERE name LIKE ?",
-                    [$newRate, '%' . $existing['product_name'] . '%']
-                );
-            }
-
-            AuditService::log('rates', 'update', (string) $rateId, [
-                'rate' => $oldRate,
-                'effective_date' => $existing['effective_date'],
-            ], [
-                'rate' => $newRate,
-                'effective_date' => $effectiveDate,
-                'note' => $note,
-            ]);
-
-            $updated = Database::first("SELECT * FROM interest_rates WHERE id = ?", [$rateId]);
-            $this->json([
-                'success' => true,
-                'message' => "บันทึกอัตราดอกเบี้ย {$existing['product_name']} เป็น " . number_format($newRate, 2) . "% เรียบร้อยแล้ว",
-                'data' => $updated
-            ]);
-        } catch (\Throwable $e) {
-            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage()], 500);
-        }
+            $existing=Database::first('SELECT * FROM interest_rates WHERE id=?',[(int)$id]);
+            if(!$existing)throw new \RuntimeException('ไม่พบอัตราดอกเบี้ย',404);
+            $section=$existing['product_type']==='deposit'?'deposits':'loan_rates';
+            $current=\App\Services\PublicContentService::section($section);$value=$current['value'];$found=false;
+            foreach($value as &$rate)if($rate['type']===$existing['product_name']){$rate['rate']=(string)$this->request->input('rate').'%';$found=true;}
+            unset($rate);if(!$found)throw new \RuntimeException('ไม่พบรายการในข้อมูลกลาง กรุณาแก้ไขผ่านหน้าข้อมูลพื้นฐาน',409);
+            $draft=\App\Services\PublicContentService::saveDraft($section,['value'=>$value,'version'=>$current['version'],'source_url'=>(string)$this->request->input('source_url','https://rayongcoop.com/'),'effective_on'=>(string)$this->request->input('effective_date',date('Y-m-d')),'note'=>(string)$this->request->input('note','ปรับดอกเบี้ยจากหน้าจัดการเดิม')]);
+            $this->json(['success'=>true,'id'=>$draft,'message'=>'บันทึกเป็นร่างแล้ว กรุณาตรวจสอบและเผยแพร่ที่หน้าข้อมูลพื้นฐาน','redirect'=>'/admin/public-content']);
+        } catch(\Throwable $e){$status=$e instanceof \InvalidArgumentException?422:(in_array($e->getCode(),[401,403,404,409],true)?$e->getCode():500);$this->json(['success'=>false,'message'=>$status===500?'บันทึกร่างไม่สำเร็จ':$e->getMessage()],$status);}
     }
 
     /**
@@ -806,122 +724,39 @@ class SpaApiController extends Controller
      */
     public function updateAdminLoanProduct(string $id): void
     {
-        if (!Auth::check()) {
-            $this->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน'], 401);
-            return;
-        }
-
-        $productId = (int) $id;
-        $existing = Database::first("SELECT * FROM loan_products WHERE id = ? LIMIT 1", [$productId]);
-        if (!$existing) {
-            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลผลิตภัณฑ์สินเชื่อที่ระบุ'], 404);
-            return;
-        }
-
-        $maxLimit = $this->request->input('max_loan_limit') !== null ? (float) $this->request->input('max_loan_limit') : $existing['max_loan_limit'];
-        $maxMonths = $this->request->input('max_term_months') !== null ? (int) $this->request->input('max_term_months') : $existing['max_term_months'];
-        $shortDesc = trim((string) ($this->request->input('short_description') ?? $existing['short_description']));
-        $guarantor = trim((string) ($this->request->input('guarantor_requirement') ?? $existing['guarantor_requirement']));
-        $calcType = trim((string) ($this->request->input('calculation_type') ?? $existing['calculation_type']));
-        if (!in_array($calcType, ['effective', 'flat'], true)) {
-            $calcType = 'effective';
-        }
-
         try {
-            Database::execute(
-                "UPDATE loan_products 
-                 SET max_loan_limit = ?, max_term_months = ?, short_description = ?, guarantor_requirement = ?, calculation_type = ?, updated_at = NOW()
-                 WHERE id = ?",
-                [$maxLimit, $maxMonths, $shortDesc, $guarantor, $calcType, $productId]
-            );
-
-            AuditService::log('loan_products', 'update', (string) $productId, [
-                'max_loan_limit' => $existing['max_loan_limit'],
-                'max_term_months' => $existing['max_term_months'],
-            ], [
-                'max_loan_limit' => $maxLimit,
-                'max_term_months' => $maxMonths,
-            ]);
-
-            $updated = Database::first("SELECT * FROM loan_products WHERE id = ?", [$productId]);
-            $this->json([
-                'success' => true,
-                'message' => "บันทึกข้อมูลผลิตภัณฑ์ {$existing['name']} เรียบร้อยแล้ว",
-                'data' => $updated
-            ]);
-        } catch (\Throwable $e) {
-            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage()], 500);
-        }
+            $existing=Database::first('SELECT name FROM loan_products WHERE id=?',[(int)$id]);
+            if(!$existing)throw new \RuntimeException('ไม่พบผลิตภัณฑ์',404);
+            $current=\App\Services\PublicContentService::section('products');$value=$current['value'];$found=false;
+            foreach($value as &$product)if($product['title']===$existing['name']){
+                if($this->request->input('max_loan_limit')!==null)$product['maxLimit']=$this->request->input('max_loan_limit');
+                if($this->request->input('max_term_months')!==null)$product['maxTerm']=$this->request->input('max_term_months');
+                if($this->request->input('short_description')!==null)$product['subtitle']=$this->request->input('short_description');
+                $found=true;
+            }unset($product);
+            if(!$found)throw new \RuntimeException('ไม่พบผลิตภัณฑ์ในข้อมูลกลาง กรุณาแก้ไขผ่านหน้าข้อมูลพื้นฐาน',409);
+            $id=\App\Services\PublicContentService::saveDraft('products',['value'=>$value,'version'=>$current['version'],'source_url'=>(string)$this->request->input('source_url','https://rayongcoop.com/'),'effective_on'=>date('Y-m-d'),'note'=>(string)$this->request->input('note','ปรับผลิตภัณฑ์จากหน้าจัดการเดิม')]);
+            $this->json(['success'=>true,'id'=>$id,'message'=>'บันทึกเป็นร่างแล้ว กรุณาตรวจสอบและเผยแพร่ที่หน้าข้อมูลพื้นฐาน','redirect'=>'/admin/public-content']);
+        }catch(\Throwable $e){$status=$e instanceof \InvalidArgumentException?422:(in_array($e->getCode(),[401,403,404,409],true)?$e->getCode():500);$this->json(['success'=>false,'message'=>$status===500?'บันทึกร่างไม่สำเร็จ':$e->getMessage()],$status);}
     }
 
-    /**
-     * GET /api/admin/news
-     * Returns the same database-backed news records that the public website reads.
-     */
     public function adminNews(): void
     {
-        $news = [];
-        try {
-            $news = Database::query("SELECT n.id, n.title, n.summary AS excerpt, n.content, n.cover_image AS image, n.publish_at AS date, n.views_count AS views, c.name AS category
-                FROM news n
-                JOIN news_categories c ON n.category_id = c.id
-                WHERE n.deleted_at IS NULL
-                ORDER BY n.created_at DESC");
-            $news = array_map($this->withPublicNewsImageUrl(...), $news);
-        } catch (\Throwable $e) {}
-
-        $this->json(['success' => true, 'data' => $news]);
+        header('Cache-Control: no-store, private');
+        try {$this->json(['success'=>true,'data'=>\App\Services\NewsWorkflowService::listing()]);}
+        catch (\Throwable $e) {$this->json(['success'=>false,'message'=>'โหลดข่าวไม่สำเร็จ'],in_array($e->getCode(),[401,403],true)?$e->getCode():500);}
     }
-
-    /**
-     * POST /api/admin/news
-     * Creates a published article for the React administrator dashboard.
-     */
     public function updateAdminNews(string $id): void { $this->createAdminNews($id); }
-
     public function createAdminNews(?string $editingId = null): void
     {
-        $title = trim((string) $this->request->input('title', ''));
-        $categoryName = trim((string) $this->request->input('category', ''));
-        $excerpt = trim((string) $this->request->input('excerpt', ''));
-        $content = \App\Services\RichTextService::clean((string) $this->request->input('content', $excerpt));
-
-        if (mb_strlen($title) < 5 || mb_strlen($title) > 255 || $categoryName === '' || $excerpt === '' || \App\Services\RichTextService::text($content) === '' || strlen($content)>200000) {
-            $this->json(['success' => false, 'message' => 'กรุณากรอกหัวข้อ หมวดหมู่ และสรุปข่าวให้ครบถ้วน'], 422);
-            return;
-        }
-
-        $category = Database::first('SELECT id FROM news_categories WHERE name = ? AND status = \'active\' LIMIT 1', [$categoryName]);
-        if (!$category) {
-            $this->json(['success' => false, 'message' => 'ไม่พบหมวดหมู่ข่าวที่เลือก'], 422);
-            return;
-        }
-
         try {
-            $coverImage = $this->storeNewsCoverImage($this->request->input('image'));
-            $authorId = Auth::id();
-            if($editingId!==null){
-                $old=Database::first('SELECT id,title FROM news WHERE id=? AND deleted_at IS NULL',[(int)$editingId]);
-                if(!$old){$this->json(['success'=>false,'message'=>'ไม่พบข่าวสาร'],404);return;}
-                Database::execute('UPDATE news SET category_id=?,title=?,summary=?,content=?,cover_image=?,updated_by=?,updated_at=NOW() WHERE id=?',[(int)$category['id'],$title,$excerpt,$content,$coverImage,$authorId,(int)$editingId]);
-                $id=(int)$editingId;
-            }else{$id = Database::insert(
-                'INSERT INTO news (category_id, title, slug, summary, content, cover_image, workflow_status, author_id, created_by, publish_at, created_at) VALUES (?, ?, ?, ?, ?, ?, \'published\', ?, ?, NOW(), NOW())',
-                [(int) $category['id'], $title, str_slug($title) . '-' . time(), $excerpt, $content, $coverImage, $authorId, $authorId]
-            );}
-            AuditService::log('news', $editingId===null?'create':'update', (string) $id, $old??null, ['title' => $title, 'status' => 'published']);
-            $item = Database::first("SELECT n.id, n.title, n.summary AS excerpt, n.content, n.cover_image AS image, n.publish_at AS date, n.views_count AS views, c.name AS category
-                FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.id = ? LIMIT 1", [(int) $id]);
-            $item = $item ? $this->withPublicNewsImageUrl($item) : null;
-        } catch (\InvalidArgumentException $e) {
-            $this->json(['success' => false, 'message' => $e->getMessage()], 422);
-            return;
+            $image=$this->storeNewsCoverImage($this->request->input('image'));
+            $item=\App\Services\NewsWorkflowService::save($this->request->all(),$image,$editingId===null?null:(int)$editingId);
+            $this->json(['success'=>true,'data'=>$item,'message'=>'บันทึกร่าง / ส่งตรวจแล้ว ยังไม่เผยแพร่'], $editingId===null?201:200);
         } catch (\Throwable $e) {
-            $this->json(['success' => false, 'message' => 'ไม่สามารถบันทึกข่าวสารได้'], 500);
-            return;
+            $status=$e instanceof \InvalidArgumentException?422:(in_array($e->getCode(),[401,403,404,409],true)?$e->getCode():500);
+            $this->json(['success'=>false,'message'=>$status===500?'ไม่สามารถบันทึกข่าวได้':$e->getMessage()],$status);
         }
-
-        $this->json(['success' => true, 'data' => $item, 'message' => 'บันทึกข่าวสารเรียบร้อยแล้ว'], $editingId===null?201:200);
     }
 
     /** POST /api/admin/news/{id}/delete */
