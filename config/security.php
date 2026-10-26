@@ -38,6 +38,12 @@ return [
     'two_factor' => [
         'issuer' => env('TWO_FACTOR_ISSUER', 'RayongCoop'),
         'window' => (int) env('TWO_FACTOR_WINDOW', 1),
+        'encryption_key' => env('APP_KEY', 'rayongcoop-secure-portal-default-key-32ch!'),
+        'recovery_codes_count' => 8,
+        'rate_limit' => [
+            'max_attempts' => 5,
+            'decay_seconds' => 300,
+        ],
     ],
     'upload' => [
         'max_size' => 20 * 1024 * 1024, // 20 MB

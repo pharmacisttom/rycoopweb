@@ -207,6 +207,48 @@ $router->group(['prefix' => 'api/admin/led', 'middleware' => [AuthMiddleware::cl
 
 /*
 |--------------------------------------------------------------------------
+/*
+|--------------------------------------------------------------------------
+| Google OAuth 2.0 & OpenID Connect Routes
+|--------------------------------------------------------------------------
+*/
+$router->get('/auth/google/start', 'Admin\\GoogleAuthController@start');
+$router->get('/auth/google/callback', 'Admin\\GoogleAuthController@callback');
+$router->post('/api/auth/google/unlink', 'Admin\\GoogleAuthController@unlink', [AuthMiddleware::class, CsrfMiddleware::class]);
+
+/*
+|--------------------------------------------------------------------------
+| Mandatory MFA & Two-Factor Authentication API Routes
+|--------------------------------------------------------------------------
+*/
+$router->get('/api/auth/mfa/status', 'Admin\\MfaController@status');
+$router->post('/api/auth/mfa/enroll', 'Admin\\MfaController@enroll', [CsrfMiddleware::class]);
+$router->post('/api/auth/mfa/confirm', 'Admin\\MfaController@confirm', [CsrfMiddleware::class]);
+$router->post('/api/auth/mfa/verify', 'Admin\\MfaController@verify', [CsrfMiddleware::class]);
+$router->post('/api/auth/mfa/recovery', 'Admin\\MfaController@recovery', [CsrfMiddleware::class]);
+
+/*
+|--------------------------------------------------------------------------
+| Staff Management & Security Dashboard API Routes (Super Admin)
+|--------------------------------------------------------------------------
+*/
+$router->group(['prefix' => 'api/admin/staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(['super_admin'])]], function (\App\Core\Router $r) {
+    $r->get('', 'Admin\\StaffManagementController@index');
+    $r->post('/invite', 'Admin\\StaffManagementController@invite', [CsrfMiddleware::class]);
+    $r->post('/invitations/{id}/revoke', 'Admin\\StaffManagementController@revokeInvitation', [CsrfMiddleware::class]);
+    $r->post('/invitations/{id}/resend', 'Admin\\StaffManagementController@resendInvitation', [CsrfMiddleware::class]);
+    $r->post('/{id}/suspend', 'Admin\\StaffManagementController@suspend', [CsrfMiddleware::class]);
+    $r->post('/{id}/activate', 'Admin\\StaffManagementController@activate', [CsrfMiddleware::class]);
+    $r->post('/{id}/role', 'Admin\\StaffManagementController@updateRole', [CsrfMiddleware::class]);
+    $r->post('/{id}/revoke-sessions', 'Admin\\StaffManagementController@revokeSessions', [CsrfMiddleware::class]);
+    $r->post('/{id}/relink', 'Admin\\StaffManagementController@relink', [CsrfMiddleware::class]);
+});
+
+$router->get('/api/admin/security/dashboard', 'Admin\\StaffManagementController@securityDashboard', [AuthMiddleware::class, new RoleMiddleware(['super_admin'])]);
+$router->post('/api/auth/logout', 'Admin\\AuthController@logout', [CsrfMiddleware::class]);
+
+/*
+|--------------------------------------------------------------------------
 | Authentication & Standard Dashboard Routes
 |--------------------------------------------------------------------------
 */
