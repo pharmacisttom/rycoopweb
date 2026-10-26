@@ -209,14 +209,105 @@ switch ($command) {
         echo "✓ Backup created: {$filename} (" . number_format(filesize($target) / 1024, 2) . " KB)\n";
         break;
 
+    case 'auth:bootstrap-superadmin':
+        $targetEmail = strtolower(trim((string) ($argv[2] ?? config('google.primary_superadmin_email', 'pharmacisttom@gmail.com'))));
+        echo "Primary Super Admin Bootstrap Procedure\n";
+        echo "----------------------------------------\n";
+        echo "Designated Email: {$targetEmail}\n";
+
+        $pdo = Database::connect();
+        // 1. Verify super_admin role exists
+        $superAdminRoleId = (int) Database::value("SELECT id FROM roles WHERE slug = 'super_admin' LIMIT 1");
+        if ($superAdminRoleId <= 0) {
+            echo "✗ Error: super_admin role not found in database.\n";
+            exit(1);
+        }
+
+        // 2. Find or ensure primary local super_admin account exists
+        $superAdmin = Database::first(
+            "SELECT u.id, u.username, u.email, u.status 
+             FROM users u 
+             JOIN user_roles ur ON u.id = ur.user_id 
+             WHERE ur.role_id = ? AND u.deleted_at IS NULL 
+             ORDER BY u.id ASC LIMIT 1",
+            [$superAdminRoleId]
+        );
+
+        if (!$superAdmin) {
+            echo "Creating initial local Super Admin account...\n";
+            $uuid = bin2hex(random_bytes(16));
+            $randomPassword = password_hash(bin2hex(random_bytes(32)), PASSWORD_ARGON2ID);
+            $userId = (int) Database::insert(
+                "INSERT INTO users (uuid, name, username, email, password, status, created_at, updated_at) 
+                 VALUES (?, 'ผู้ดูแลระบบสูงสุด', 'superadmin', ?, ?, 'active', NOW(), NOW())",
+                [$uuid, $targetEmail, $randomPassword]
+            );
+            Database::execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", [$userId, $superAdminRoleId]);
+            echo "✓ Created local Super Admin account (ID: {$userId})\n";
+        } else {
+            $userId = (int) $superAdmin['id'];
+            echo "✓ Found existing local Super Admin account (ID: {$userId}, User: {$superAdmin['username']})\n";
+            // Update email to designated approved identity
+            Database::execute("UPDATE users SET email = ?, updated_at = NOW() WHERE id = ?", [$targetEmail, $userId]);
+        }
+
+        // 3. Check if already linked
+        $linked = Database::first("SELECT google_sub, google_email, linked_at FROM user_google_identities WHERE user_id = ? LIMIT 1", [$userId]);
+        if ($linked) {
+            echo "ℹ Notice: Account is already linked to Google sub: {$linked['google_sub']} ({$linked['google_email']}) on {$linked['linked_at']}\n";
+            echo "To re-link, run: php bin/console auth:unlink-user {$userId}\n";
+            break;
+        }
+
+        // 4. Enable authorized one-time bootstrap linking flag
+        Database::execute(
+            "INSERT INTO site_settings (`key`, `value`, `group`, updated_at) 
+             VALUES ('superadmin_bootstrap_enabled', '1', 'system', NOW()) 
+             ON DUPLICATE KEY UPDATE `value` = '1', `updated_at` = NOW()"
+        );
+
+        // 5. Also create a pending staff invitation record for pharmacisttom@gmail.com with super_admin role
+        // so both invitation matching and bootstrap matching work seamlessly and auditably
+        $token = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $token);
+        Database::execute(
+            "INSERT INTO staff_invitations (email, name, department, intended_role_id, invited_by, token_hash, expires_at, status, created_at, updated_at) 
+             VALUES (?, 'Super Admin (Bootstrap)', 'บริหารจัดการระบบ', ?, ?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'pending', NOW(), NOW())
+             ON DUPLICATE KEY UPDATE status = 'pending', token_hash = VALUES(token_hash), expires_at = VALUES(expires_at), updated_at = NOW()",
+            [$targetEmail, $superAdminRoleId, $userId, $tokenHash]
+        );
+
+        echo "✓ One-time bootstrap authorized successfully!\n";
+        echo "Instructions for {$targetEmail}:\n";
+        echo "1. Go to: " . url('admin/login') . "\n";
+        echo "2. Click 'เข้าสู่ระบบด้วยบัญชี Google'\n";
+        echo "3. Authenticate with {$targetEmail}\n";
+        echo "4. The application will verify the Google OpenID Connect ID Token and bind your immutable Google sub claim to the local Super Admin account.\n";
+        echo "5. You will be prompted to complete mandatory 2FA enrollment.\n";
+        break;
+
+    case 'auth:unlink-user':
+        $userId = (int) ($argv[2] ?? 0);
+        if ($userId <= 0) {
+            echo "Usage: php bin/console auth:unlink-user <userId>\n";
+            exit(1);
+        }
+        $googleAuth = new \App\Services\GoogleAuthService();
+        $googleAuth->unlinkUser($userId);
+        \App\Core\Auth::revokeAllSessions($userId);
+        echo "✓ Unlinked Google identity and revoked active sessions for User ID {$userId}.\n";
+        break;
+
     case 'help':
     default:
         echo "Usage: php bin/console <command>\n\n";
         echo "Available commands:\n";
-        echo "  db:create     Create the MySQL database if it doesn't exist\n";
-        echo "  db:migrate    Run all database SQL migrations\n";
-        echo "  db:seed       Run database seeders with initial financial & system data\n";
-        echo "  cron:run      Run scheduled system tasks (content schedules, cleanups)\n";
-        echo "  backup:run    Create a full database SQL backup archive\n";
+        echo "  db:create                  Create the MySQL database if it doesn't exist\n";
+        echo "  db:migrate                 Run all database SQL migrations\n";
+        echo "  db:seed                    Run database seeders with initial financial & system data\n";
+        echo "  auth:bootstrap-superadmin  Authorize one-time Google OIDC bootstrap for primary Super Admin\n";
+        echo "  auth:unlink-user <id>      Unlink Google identity for a specific user ID\n";
+        echo "  cron:run                   Run scheduled system tasks (content schedules, cleanups)\n";
+        echo "  backup:run                 Create a full database SQL backup archive\n";
         break;
 }

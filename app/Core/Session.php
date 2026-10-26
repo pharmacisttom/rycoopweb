@@ -22,7 +22,7 @@ class Session
         ini_set('session.use_only_cookies', '1');
         ini_set('session.cookie_httponly', '1');
         $savePath = (string) ($sessionConfig['save_path'] ?? '');
-        if ($savePath !== '') {
+        if ($savePath !== '' && is_dir($savePath)) {
             ini_set('session.save_path', $savePath);
         }
 

@@ -32,6 +32,9 @@ const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage')
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const AdminAccessPage = lazy(() => import('./pages/AdminAccessPage'));
 const AdminWorkspacePage = lazy(() => import('./pages/AdminWorkspacePage'));
+const AdminStaffManagementPage = lazy(() => import('./pages/AdminStaffManagementPage'));
+const MfaEnrollmentPage = lazy(() => import('./pages/MfaEnrollmentPage'));
+const MfaVerifyPage = lazy(() => import('./pages/MfaVerifyPage'));
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const LoansPage = lazy(() => import('./pages/LoansPage'));
 const DepositsPage = lazy(() => import('./pages/DepositsPage'));
@@ -144,7 +147,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|staff|security|mfa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -204,6 +207,11 @@ export default function App() {
             <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute roles={['super_admin']}><AdminDashboardPage /></StaffProtectedRoute>} />)}
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
+            <Route path="/admin/staff" element={<StaffProtectedRoute roles={['super_admin']}><AdminStaffManagementPage /></StaffProtectedRoute>} />
+            <Route path="/admin/security" element={<StaffProtectedRoute roles={['super_admin']}><AdminStaffManagementPage /></StaffProtectedRoute>} />
+            <Route path="/admin/mfa/enroll" element={<MfaEnrollmentPage />} />
+            <Route path="/admin/mfa/verify" element={<MfaVerifyPage />} />
+            <Route path="/admin/2fa" element={<MfaVerifyPage />} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
 
             {/* RYCOOP LED Member Check Routes */}

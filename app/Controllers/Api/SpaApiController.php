@@ -492,6 +492,24 @@ class SpaApiController extends Controller
     public function me(): void
     {
         if (!Auth::check()) {
+            if (Auth::checkPendingMfaEnrollment()) {
+                $this->json([
+                    'success' => false,
+                    'authenticated' => false,
+                    'requiresMfaEnrollment' => true,
+                    'redirect' => '/admin/mfa/enroll'
+                ], 403);
+                return;
+            }
+            if (Auth::checkPending2FA()) {
+                $this->json([
+                    'success' => false,
+                    'authenticated' => false,
+                    'requiresTwoFactor' => true,
+                    'redirect' => '/admin/mfa/verify'
+                ], 403);
+                return;
+            }
             $this->json(['success' => false, 'authenticated' => false], 401);
             return;
         }
@@ -505,6 +523,13 @@ class SpaApiController extends Controller
             return;
         }
 
+        $googleIdentity = Database::first(
+            "SELECT google_email, google_sub, linked_at FROM user_google_identities WHERE user_id = ? LIMIT 1",
+            [$user['id']]
+        );
+
+        $hasMfa = (int) ($user['two_factor_enabled'] ?? 0) === 1 && !empty($user['two_factor_confirmed_at']);
+
         $userData = [
             'id' => $user['id'] ?? null,
             'username' => $user['username'] ?? '',
@@ -512,19 +537,29 @@ class SpaApiController extends Controller
             'email' => $user['email'] ?? '',
             'role' => $roleSlug,
             'role_slug' => $roleSlug,
-            'permissions' => \App\Services\MemberPortalPermissionService::current(),
+            'department' => $user['department'] ?? '',
+            'permissions' => \App\Services\AccessService::permissions((int)$user['id']),
             'role_name' => $user['role_name'] ?? match($roleSlug) {
                 'super_admin' => 'ผู้ดูแลระบบสูงสุด',
                 'staff' => 'เจ้าหน้าที่สินเชื่อ/การเงิน',
                 'auditor' => 'ผู้ตรวจสอบกิจการ / ผู้จัดการ',
                 default => 'สมาชิกสหกรณ์'
             },
+            'mfa' => [
+                'enrolled' => $hasMfa,
+                'confirmed_at' => $user['two_factor_confirmed_at'] ?? null,
+            ],
+            'google' => [
+                'linked' => !empty($googleIdentity),
+                'google_email' => $googleIdentity['google_email'] ?? null,
+                'linked_at' => $googleIdentity['linked_at'] ?? null,
+            ],
         ];
 
         if ($member) {
             $userData['member_no'] = $member['member_no'] ?? '';
             $userData['phone'] = $member['phone'] ?? '';
-            $userData['department'] = $member['org_name'] ?? '';
+            $userData['department'] = $member['org_name'] ?? ($userData['department'] ?? '');
             $userData['position'] = $member['position'] ?? '';
         }
 

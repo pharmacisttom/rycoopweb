@@ -29,8 +29,12 @@ const apiFetch = async (path, options = {}) => {
       if (res.ok) {
         return await res.json();
       }
-      if (res.status === 401) {
-        return { success: false, authenticated: false, message: 'กรุณาเข้าสู่ระบบ' };
+      if (res.status === 401 || res.status === 403 || res.status === 422 || res.status === 429) {
+        try {
+          return await res.json();
+        } catch {
+          return { success: false, authenticated: false, message: 'กรุณาเข้าสู่ระบบ' };
+        }
       }
     } catch (e) {
       // try next URL

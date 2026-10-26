@@ -24,7 +24,15 @@ export default function AdminWorkspacePage() {
     <p>{user?.name} · {user?.role_name || user?.role}</p>
     <div className="grid-3" style={{ margin: '1.5rem 0' }}>
       {links.map(([permission, path, label]) => <Link className="surface-card" style={{ padding: '1.5rem' }} key={permission} to={path}>{label}</Link>)}
-      {user?.role === 'super_admin' && <Link className="btn btn-outline" to="/admin/access">จัดการผู้ใช้งานและสิทธิ์</Link>}
+      {user?.role === 'super_admin' && (
+        <>
+          <Link className="surface-card" style={{ padding: '1.5rem', borderLeft: '4px solid var(--color-primary, #2563eb)' }} to="/admin/staff">
+            <div style={{ fontWeight: 600, color: 'var(--color-primary, #1e40af)', marginBottom: '0.25rem' }}>🔐 จัดการเจ้าหน้าที่ & Google 2FA</div>
+            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>เชิญเจ้าหน้าที่, ตรวจสอบ Google ID, บังคับใช้ 2FA และระบบความปลอดภัย</div>
+          </Link>
+          <Link className="btn btn-outline" to="/admin/access">จัดการผู้ใช้งานและสิทธิ์เดิม</Link>
+        </>
+      )}
     </div>
     {!links.length && user?.role !== 'super_admin' && <p role="status">ยังไม่มีสิทธิ์ในโมดูลเหล่านี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {error && <p role="alert">{error}</p>}

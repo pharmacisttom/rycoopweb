@@ -61,6 +61,14 @@ export function AuthProvider({ children }) {
           if(result.user)setUser(current=>{const updated={...current,name:result.user.name,role:result.user.role,roleName:result.user.role_name,permissions:result.user.permissions || []};return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
           setSessionStatus('online');
         } else if (result?.authenticated === false) {
+          if (result.requiresMfaEnrollment && window.location.pathname !== '/admin/mfa/enroll') {
+            window.location.href = '/admin/mfa/enroll';
+            return;
+          }
+          if (result.requiresTwoFactor && window.location.pathname !== '/admin/mfa/verify' && window.location.pathname !== '/admin/2fa') {
+            window.location.href = '/admin/mfa/verify';
+            return;
+          }
           setUser(null);
           setSessionStatus('expired');
         } else {
