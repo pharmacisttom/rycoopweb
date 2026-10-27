@@ -63,7 +63,7 @@
 
 ### 3.1 การรัน Migration ไฟล์เดี่ยวผ่าน `database/run_migration.php`
 ```bash
-# ตรวจสอบความถูกต้องล่วงหน้า (Preflight / Dry-run)
+# ตรวจสอบความถูกต้องล่วงหน้า (Preflight / Dry-run — ไม่มีการรัน DDL/DML ใดๆ ทั้งสิ้น)
 php database/run_migration.php 022_google_auth_and_mandatory_mfa.sql --dry-run
 
 # รันจริงสำหรับ migration ทั่วไป
@@ -71,6 +71,12 @@ php database/run_migration.php 022_google_auth_and_mandatory_mfa.sql
 
 # รัน migration ทางการเงิน (เช่น 019 หรือ 020) ต้องมี flag ยืนยัน
 php database/run_migration.php 020_sync_deposit_rates.sql --confirm-financial
+
+# รัน migration ที่มีผลกระทบต่อโครงสร้างตาราง (DROP / TRUNCATE)
+php database/run_migration.php 018_drop_unused_tables.sql --confirm-destructive
+
+# รันซ้ำหลังจาก reconciliation ในกรณีที่เคยเกิด partial DDL failure
+php database/run_migration.php 022_google_auth_and_mandatory_mfa.sql --force-retry-failed
 ```
 
 ### 3.2 การรัน Migration ทั้งหมดผ่าน `bin/console db:migrate`
@@ -83,20 +89,119 @@ php bin/console db:migrate --file=022_google_auth_and_mandatory_mfa.sql
 
 # รัน migration ทั้งหมดที่ยังไม่เคยรัน
 php bin/console db:migrate
+
+# รัน migration โดยอนุญาต force retry กรณีมี migration ที่เคย failed
+php bin/console db:migrate --force-retry-failed
 ```
 
 ---
 
-## 4. ผลการทดสอบความปลอดภัยอัตโนมัติ (Automated Safety Test Results)
+## 4. กลไกความปลอดภัยขั้นสูง (Advanced Security Hardening)
 
-ผ่านการทดสอบครบถ้วน 100% จาก [tests/MigrationRunnerTest.php](file:///d:/rycoopweb/tests/MigrationRunnerTest.php):
-- `PASS: Path traversal attempt with ../.. is rejected`
-- `PASS: Non-sql file extension is rejected`
-- `PASS: Non-existent migration file is safely reported`
-- `PASS: Valid migration file resolves strictly inside migrations directory`
-- `PASS: Destructive statements (DROP TABLE, DROP COLUMN) are detected`
-- `PASS: Financial table mutations (interest_rates) are detected`
-- `PASS: Financial migration without confirmation is blocked`
-- `PASS: Dry-run with financial confirmation passes preflight`
-- `PASS: System database target is rejected`
-- `PASS: Mismatched database name is rejected immediately`
+### 4.1 Fail-closed Migration History
+- **ขจัด Silent Catch**: ตัดทิ้งพฤติกรรม `catch (Throwable) { return []; }` ทั้งหมด เมื่อเกิดข้อผิดพลาดในการเชื่อมต่อหรืออ่านตาราง `migrations` ระบบจะ throw controlled `RuntimeException` ทันที ป้องกันสถานการณ์ที่ฐานข้อมูลขัดข้องชั่วคราวแล้วระบบเข้าใจผิดว่าไม่เคยมี migration ใดๆ ถูกรันมาก่อน ซึ่งอาจทำให้ระบบพยายามรัน migration ตั้งแต่ไฟล์ 001 ซ้ำ
+- **Redaction of Credentials**: มีฟังก์ชัน `sanitizeErrorMessage()` ในตัว ตัดทิ้ง password, secret token, หรือ DSN parameters จาก exception message ก่อนส่งออกไปยัง CLI หรือ log (`password=******`)
+- **Read-only History Inspection**: มีเมธอด `hasMigrationsTable()` และ `getMigrationTableColumns()` ที่ทำการตรวจสอบโครงสร้างแบบ read-only ทำให้สามารถทำงานร่วมกับตาราง `migrations` แบบเดิม (legacy schema ที่มีเพียง `id, migration, applied_at`) ได้อย่างราบรื่นโดยไม่ error
+
+### 4.2 Strict Dry-run Guarantee
+- **Zero DDL / DML Guarantee**: ในโหมด `--dry-run` ระบบรับประกันว่าจะไม่มีการรันคำสั่ง `CREATE TABLE`, `ALTER TABLE`, `DROP TABLE`, `INSERT`, `UPDATE`, หรือ `DELETE` ใดๆ ทั้งสิ้น
+- **Zero Schema Mutation during Preflight**: การตรวจสอบใน dry-run จะไม่สร้างตาราง `migrations` และจะไม่เพิ่มคอลัมน์ audit ในตาราง legacy
+- **Limitations Transparency**: รายงานข้อจำกัดของการทำ dry-run อย่างชัดเจนว่า: Dry-run ตรวจสอบความถูกต้องของโครงสร้าง, Checksum และ Safety Gate ผ่านการวิเคราะห์แบบ Read-only แต่ MySQL syntax error ระดับ runtime หรือ constraint violation เชิงลึก จะสามารถตรวจสอบได้สมบูรณ์เมื่อรันจริงเท่านั้น
+
+### 4.3 Partial DDL Failure Handling & MySQL Implicit Commits
+- **MySQL Implicit Commit Risk**: ใน MySQL / MariaDB คำสั่งประเภท DDL (`CREATE TABLE`, `ALTER TABLE`, `DROP TABLE` ฯลฯ) จะบังคับ `COMMIT` โดยอัตโนมัติ ไม่สามารถ rollback ผ่าน transaction ได้ หากไฟล์ migration มีหลายคำสั่งแล้วเกิดล้มเหลวที่คำสั่งกลางไฟล์ คำสั่งก่อนหน้าจะยังคงถูก commit ค้างอยู่ในฐานข้อมูล
+- **Separate Attempt & Failure Recording**: หากเกิดความผิดพลาดในการประมวลผล ระบบจะบันทึกสถานะ `status = 'failed'`, เวลาที่ใช้ และข้อความ error ที่ผ่านการ sanitize ลงในตาราง `migrations` ทันที
+- **Strict Automatic Retry Block**: เมื่อมี migration ที่อยู่ในสถานะ `failed` ระบบจะระงับการรันอัตโนมัติในครั้งถัดไปทันที เพื่อป้องกัน schema corruption จากการรันคำสั่ง DDL ซ้ำ
+- **Manual Reconciliation Gate**: ผู้ดูแลระบบต้องตรวจสอบความสมบูรณ์ของ schema ในฐานข้อมูลจริง (reconciliation) และสั่งรันซ้ำด้วยแฟล็ก `--force-retry-failed` อย่างชัดเจนเท่านั้น
+
+---
+
+## 5. แผนการสำรองข้อมูลและการกู้คืน (Backup & Recovery Procedures)
+
+### 5.1 ขั้นตอนก่อนรัน Migration ในทุกสภาพแวดล้อม (Pre-migration Protocol)
+ก่อนรัน migration ใดๆ ให้สร้าง snapshot สำรองข้อมูลฐานข้อมูล MySQL เสมอ:
+```bash
+# คำสั่งสำรองฐานข้อมูลฉุกเฉิน (Snapshot Backup)
+mysqldump -u <DB_USER> -p \
+  --single-transaction \
+  --quick \
+  --routines \
+  --triggers \
+  <DB_NAME> | gzip > /var/backups/db_backup_$(date +%Y%m%d_%H%M%S).sql.gz
+
+# หรือผ่าน RYCOOP Console:
+php bin/console backup:run
+```
+
+### 5.2 ขั้นตอนเมื่อเกิด Partial DDL Failure (Incident Recovery Runbook)
+หาก migration ล้มเหลวกลางคันและถูกบันทึกสถานะ `failed`:
+
+1. **ตรวจสอบรายละเอียดข้อผิดพลาด**:
+   ```sql
+   SELECT id, migration, checksum, status, error_message, applied_at 
+   FROM migrations 
+   WHERE status = 'failed';
+   ```
+2. **ตรวจสอบ Schema ที่ถูกสร้างค้างไว้ในฐานข้อมูล**:
+   - ตรวจสอบ `SHOW TABLES;` หรือ `DESCRIBE <table_name>;` ว่าคำสั่งส่วนใดของ migration ถูก commit ไปแล้วบ้าง
+3. **การ Reconcile Schema**:
+   - **ทางเลือก ก (Rollback)**: หากต้องการเริ่มใหม่ทั้งหมด ให้ย้อนสถานะ DDL ที่ค้างอยู่ (เช่น `DROP TABLE <partially_created_table>;`) จากนั้นลบแถวออกจากตาราง migrations:
+     ```sql
+     DELETE FROM migrations WHERE migration = '<failing_file.sql>';
+     ```
+   - **ทางเลือก ข (Forward-fix)**: หากแก้ไขข้อผิดพลาดในไฟล์ SQL ให้รองรับสถานะปัจจุบัน (เช่น ใส่ `IF NOT EXISTS` หรือปรับปรุง syntax) จากนั้นทดสอบด้วย dry-run:
+     ```bash
+     php database/run_migration.php <failing_file.sql> --dry-run
+     ```
+4. **รันซ้ำด้วย Approval Gate**:
+   ```bash
+   php database/run_migration.php <failing_file.sql> --force-retry-failed
+   ```
+
+---
+
+## 6. ผลการทดสอบความปลอดภัยอัตโนมัติ (Automated Safety Test Results)
+
+ผ่านการทดสอบครบถ้วน 100% จาก [tests/MigrationRunnerTest.php](file:///d:/rycoopweb/tests/MigrationRunnerTest.php) (32 assertions):
+
+```
+Running MigrationRunner Comprehensive Unit, Safety & Security Tests...
+=========================================================================
+PASS: 1.1 Path traversal attempt with ../.. is rejected
+PASS: 1.2 Non-sql file extension is rejected
+PASS: 1.3 Non-existent migration file is safely reported
+PASS: 1.4 Valid migration file resolves strictly inside migrations directory
+PASS: 2.1 Destructive statements (DROP TABLE, DROP COLUMN) are detected
+PASS: 2.2 Financial table mutations (interest_rates) are detected
+PASS: 3.1 Financial migration without confirmation is blocked
+PASS: 3.2 Dry-run with financial confirmation passes preflight
+PASS: 4.1 System database target is rejected
+PASS: 4.2 Mismatched database name is rejected immediately
+PASS: 5.1 History query failure throws fail-closed exception
+PASS: 5.2 Credentials in DB error messages are redacted
+PASS: 5.3 Sensitive credentials replaced with asterisks
+PASS: 5.4 Table check failure throws fail-closed exception
+PASS: 6.1 Legacy migrations table read successfully
+PASS: 6.2 Missing checksum column is represented as null
+PASS: 6.3 Missing status column defaults to success
+PASS: 7.1 Dry-run recognizes applied migration in legacy table
+PASS: 7.2 Legacy migrations table schema was NOT modified during dry-run (still 3 columns)
+PASS: 7.3 No checksum column added during dry-run
+PASS: 8.1 Dry-run passed on empty database without migrations table
+PASS: 8.2 Dry-run explicitly reports validation limitations
+PASS: 8.3 Migrations table was NOT created during dry-run on empty database
+PASS: 9.1 Lock acquisition failure triggers concurrency exception
+PASS: 10.1 Failing migration throws execution exception
+PASS: 10.2 Failed migration recorded in migrations table
+PASS: 10.3 Failed status is explicitly recorded
+PASS: 10.4 Error message is stored in migrations table
+PASS: 10.5 Automatic retry of failed migration is strictly BLOCKED
+PASS: 10.6 Force retry allows execution after manual reconciliation
+PASS: 10.7 Status updated to success upon successful retry
+PASS: 10.8 Error message cleared on successful retry
+PASS: 11.1 Checksum mismatch triggers integrity exception
+PASS: 12.1 Previously applied migration is skipped idempotently
+=========================================================================
+All MigrationRunner Unit, Safety & Security tests PASSED successfully!
+```
+

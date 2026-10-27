@@ -33,6 +33,7 @@ switch ($command) {
             $isDryRun = in_array('--dry-run', $argv, true);
             $confirmFinancial = in_array('--confirm-financial', $argv, true);
             $confirmDestructive = in_array('--confirm-destructive', $argv, true);
+            $forceRetryFailed = in_array('--force-retry-failed', $argv, true);
             $singleFile = null;
             foreach ($argv as $arg) {
                 if (str_starts_with($arg, '--file=')) {
@@ -43,7 +44,8 @@ switch ($command) {
             $runner = new \App\Services\MigrationRunner();
             $runner->setDryRun($isDryRun)
                    ->setConfirmFinancial($confirmFinancial)
-                   ->setConfirmDestructive($confirmDestructive);
+                   ->setConfirmDestructive($confirmDestructive)
+                   ->setForceRetryFailed($forceRetryFailed);
 
             if ($singleFile !== null && $singleFile !== '') {
                 echo "Running single migration: {$singleFile}...\n";

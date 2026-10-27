@@ -34,6 +34,7 @@ class MigrationRunner
     private bool $dryRun = false;
     private bool $confirmFinancial = false;
     private bool $confirmDestructive = false;
+    private bool $forceRetryFailed = false;
     private array $logs = [];
 
     public function __construct(
@@ -69,9 +70,78 @@ class MigrationRunner
         return $this;
     }
 
+    public function setForceRetryFailed(bool $force): self
+    {
+        $this->forceRetryFailed = $force;
+        return $this;
+    }
+
     public function getLogs(): array
     {
         return $this->logs;
+    }
+
+    /**
+     * Sanitize sensitive connection parameters, passwords, and tokens from error messages.
+     */
+    public static function sanitizeErrorMessage(string $message): string
+    {
+        $sanitized = preg_replace('/(password|pwd|pass|secret)=[^; &]+/i', '$1=******', $message);
+        $sanitized = preg_replace('/(:)[^\/:@]+(@)/i', '$1******$2', (string) $sanitized);
+        return (string) $sanitized;
+    }
+
+    /**
+     * Read-only inspection to check if migrations tracking table exists.
+     */
+    public function hasMigrationsTable(): bool
+    {
+        $driver = (string) $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        try {
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='migrations'");
+                return (bool) ($stmt && $stmt->fetchColumn());
+            }
+
+            $stmt = $this->pdo->query("SHOW TABLES LIKE 'migrations'");
+            return (bool) ($stmt && $stmt->fetchColumn());
+        } catch (\Throwable $e) {
+            $sanitized = self::sanitizeErrorMessage($e->getMessage());
+            throw new RuntimeException("Database error checking migration history table: {$sanitized}", (int) $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Read-only inspection of columns in the migrations table.
+     *
+     * @return array<string, bool> Map of column names
+     */
+    public function getMigrationTableColumns(): array
+    {
+        $driver = (string) $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $cols = [];
+        try {
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info('migrations')");
+                if ($stmt) {
+                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                        $cols[$row['name']] = true;
+                    }
+                }
+                return $cols;
+            }
+
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `migrations`");
+            if ($stmt) {
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $cols[$row['Field']] = true;
+                }
+            }
+            return $cols;
+        } catch (\Throwable $e) {
+            $sanitized = self::sanitizeErrorMessage($e->getMessage());
+            throw new RuntimeException("Database error inspecting migration history schema: {$sanitized}", (int) $e->getCode(), $e);
+        }
     }
 
     /**
@@ -160,6 +230,7 @@ class MigrationRunner
 
     /**
      * Ensure the migrations tracking table exists and has all audit columns.
+     * In dry-run mode, this method strictly performs ZERO schema modifications.
      */
     public function ensureMigrationTable(): void
     {
@@ -175,7 +246,8 @@ class MigrationRunner
                 `checksum` CHAR(64) NULL,
                 `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `execution_time_ms` INTEGER NULL,
-                `status` VARCHAR(20) NOT NULL DEFAULT 'success'
+                `status` VARCHAR(20) NOT NULL DEFAULT 'success',
+                `error_message` TEXT NULL
             );");
             return;
         }
@@ -187,12 +259,8 @@ class MigrationRunner
             `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
-        // 2. Extend with additive audit columns (checksum, execution_time_ms, status)
-        $columns = [];
-        $stmt = $this->pdo->query("SHOW COLUMNS FROM `migrations`");
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $columns[$row['Field']] = true;
-        }
+        // 2. Extend with additive audit columns
+        $columns = $this->getMigrationTableColumns();
 
         if (!isset($columns['checksum'])) {
             $this->pdo->exec("ALTER TABLE `migrations` ADD COLUMN `checksum` CHAR(64) NULL AFTER `migration`");
@@ -203,27 +271,62 @@ class MigrationRunner
         if (!isset($columns['status'])) {
             $this->pdo->exec("ALTER TABLE `migrations` ADD COLUMN `status` ENUM('success', 'failed') NOT NULL DEFAULT 'success' AFTER `execution_time_ms`");
         }
+        if (!isset($columns['error_message'])) {
+            $this->pdo->exec("ALTER TABLE `migrations` ADD COLUMN `error_message` TEXT NULL AFTER `status`");
+        }
     }
 
     /**
      * Get list of applied migrations with metadata.
+     * Fail-closed: database query failures throw a controlled RuntimeException,
+     * preventing errors from being silently interpreted as an empty migration history.
      *
-     * @return array<string, array{id: int, migration: string, checksum: ?string, applied_at: string}>
+     * @return array<string, array{id: int, migration: string, checksum: ?string, applied_at: string, status: string, error_message: ?string}>
      */
     public function getAppliedMigrations(): array
     {
+        if (!$this->hasMigrationsTable()) {
+            return [];
+        }
+
+        $cols = $this->getMigrationTableColumns();
+        $hasChecksum = isset($cols['checksum']);
+        $hasStatus = isset($cols['status']);
+        $hasErrorMsg = isset($cols['error_message']);
+
+        $selectFields = ['id', 'migration', 'applied_at'];
+        if ($hasChecksum) {
+            $selectFields[] = 'checksum';
+        }
+        if ($hasStatus) {
+            $selectFields[] = 'status';
+        }
+        if ($hasErrorMsg) {
+            $selectFields[] = 'error_message';
+        }
+
+        $sql = 'SELECT ' . implode(', ', $selectFields) . ' FROM `migrations` ORDER BY id ASC';
+
         try {
-            $stmt = $this->pdo->query("SELECT id, migration, checksum, applied_at FROM `migrations` ORDER BY id ASC");
+            $stmt = $this->pdo->query($sql);
             if (!$stmt) {
-                return [];
+                throw new RuntimeException("Database returned empty statement when reading migration history.");
             }
             $applied = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $applied[$row['migration']] = $row;
+                $applied[$row['migration']] = [
+                    'id' => (int) $row['id'],
+                    'migration' => (string) $row['migration'],
+                    'applied_at' => (string) $row['applied_at'],
+                    'checksum' => $hasChecksum && isset($row['checksum']) ? (string) $row['checksum'] : null,
+                    'status' => $hasStatus && isset($row['status']) ? (string) $row['status'] : 'success',
+                    'error_message' => $hasErrorMsg && isset($row['error_message']) ? (string) $row['error_message'] : null,
+                ];
             }
             return $applied;
         } catch (\Throwable $e) {
-            return [];
+            $sanitized = self::sanitizeErrorMessage($e->getMessage());
+            throw new RuntimeException("Failed to read migration history from database: {$sanitized}", (int) $e->getCode(), $e);
         }
     }
 
@@ -262,6 +365,7 @@ class MigrationRunner
             'destructive_reasons' => [],
             'is_financial' => false,
             'financial_reasons' => [],
+            'limitations' => 'Preflight dry-run inspects safety boundaries, destructive operations, and financial tables via read-only analysis. Full MySQL DDL syntax validation, foreign key constraints, and multi-statement runtime compatibility can only be verified upon actual execution.',
         ];
 
         // Destructive patterns: DROP TABLE, DROP DATABASE, TRUNCATE, ALTER TABLE ... DROP COLUMN
@@ -302,23 +406,38 @@ class MigrationRunner
         $checksum = hash('sha256', $sql);
         $analysis = $this->analyzeSql($sql);
 
-        // Check if already applied
+        // Check if already applied or failed
         $applied = $this->getAppliedMigrations();
         if (isset($applied[$basename])) {
             $existing = $applied[$basename];
-            if (!empty($existing['checksum']) && $existing['checksum'] !== $checksum) {
-                throw new RuntimeException(
-                    "Integrity error: Migration `{$basename}` was already applied on {$existing['applied_at']}, but its checksum has changed! " .
-                    "Recorded: {$existing['checksum']}, Current: {$checksum}."
-                );
+            $status = $existing['status'] ?? 'success';
+
+            if ($status === 'failed') {
+                if (!$this->forceRetryFailed) {
+                    $prevError = $existing['error_message'] ?? 'Unknown error';
+                    throw new RuntimeException(
+                        "Migration `{$basename}` previously failed or was partially applied on {$existing['applied_at']}! " .
+                        "Due to MySQL implicit DDL commits, automatic retry is BLOCKED to prevent schema corruption. " .
+                        "Manual schema inspection, reconciliation, and explicit approval (--force-retry-failed) are required. " .
+                        "Previous error: {$prevError}"
+                    );
+                }
+                $this->log("⚠ Warning: Forcing retry of previously failed migration `{$basename}` as requested (--force-retry-failed).");
+            } else {
+                if (!empty($existing['checksum']) && $existing['checksum'] !== $checksum) {
+                    throw new RuntimeException(
+                        "Integrity error: Migration `{$basename}` was already applied on {$existing['applied_at']}, but its checksum has changed! " .
+                        "Recorded: {$existing['checksum']}, Current: {$checksum}."
+                    );
+                }
+                $this->log("⏭ Migration `{$basename}` is already applied. Skipping.");
+                return [
+                    'migration' => $basename,
+                    'status' => 'skipped',
+                    'checksum' => $checksum,
+                    'execution_time_ms' => 0,
+                ];
             }
-            $this->log("⏭ Migration `{$basename}` is already applied. Skipping.");
-            return [
-                'migration' => $basename,
-                'status' => 'skipped',
-                'checksum' => $checksum,
-                'execution_time_ms' => 0,
-            ];
         }
 
         // Check confirmation gates
@@ -340,11 +459,13 @@ class MigrationRunner
 
         if ($this->dryRun) {
             $this->log("🔍 [DRY-RUN] Preflight OK for `{$basename}` (Checksum: " . substr($checksum, 0, 12) . "...)");
+            $this->log("ℹ [DRY-RUN] Note: Dry-run does not execute DDL/DML. Runtime MySQL constraints and multi-statement syntax can only be verified on execution.");
             return [
                 'migration' => $basename,
                 'status' => 'dry_run_passed',
                 'checksum' => $checksum,
                 'analysis' => $analysis,
+                'limitations' => $analysis['limitations'],
                 'execution_time_ms' => 0,
             ];
         }
@@ -358,12 +479,25 @@ class MigrationRunner
             $this->pdo->exec($sql);
             $durationMs = (int) round((microtime(true) - $startTime) * 1000);
 
-            // Record execution in migrations table
-            $stmt = $this->pdo->prepare(
-                "INSERT INTO `migrations` (`migration`, `checksum`, `execution_time_ms`, `status`, `applied_at`) 
-                 VALUES (?, ?, ?, 'success', NOW())"
-            );
-            $stmt->execute([$basename, $checksum, $durationMs]);
+            // Record execution in migrations table (update if retrying a failed attempt, else insert)
+            $stmt = $this->pdo->prepare("SELECT id FROM `migrations` WHERE `migration` = ?");
+            $stmt->execute([$basename]);
+            $existingId = $stmt->fetchColumn();
+
+            if ($existingId) {
+                $updateStmt = $this->pdo->prepare(
+                    "UPDATE `migrations` 
+                     SET `checksum` = ?, `execution_time_ms` = ?, `status` = 'success', `error_message` = NULL, `applied_at` = CURRENT_TIMESTAMP 
+                     WHERE `id` = ?"
+                );
+                $updateStmt->execute([$checksum, $durationMs, $existingId]);
+            } else {
+                $insertStmt = $this->pdo->prepare(
+                    "INSERT INTO `migrations` (`migration`, `checksum`, `execution_time_ms`, `status`, `applied_at`) 
+                     VALUES (?, ?, ?, 'success', CURRENT_TIMESTAMP)"
+                );
+                $insertStmt->execute([$basename, $checksum, $durationMs]);
+            }
 
             $this->log("✓ Successfully applied `{$basename}` in {$durationMs}ms (Checksum: " . substr($checksum, 0, 12) . "...)");
             Logger::info("Database migration `{$basename}` applied successfully in {$durationMs}ms.");
@@ -376,10 +510,36 @@ class MigrationRunner
             ];
         } catch (\Throwable $e) {
             $durationMs = (int) round((microtime(true) - $startTime) * 1000);
-            $this->log("✗ Error applying `{$basename}`: " . $e->getMessage());
-            Logger::error("Migration `{$basename}` failed after {$durationMs}ms: " . $e->getMessage());
+            $sanitizedErr = self::sanitizeErrorMessage($e->getMessage());
 
-            throw new RuntimeException("Migration `{$basename}` failed: " . $e->getMessage(), (int) $e->getCode(), $e);
+            $this->log("✗ Error applying `{$basename}`: " . $sanitizedErr);
+            Logger::error("Migration `{$basename}` failed after {$durationMs}ms: " . $sanitizedErr);
+
+            // Record partial DDL / failure state in migrations table so subsequent runs cannot silently skip or blindly retry
+            try {
+                $stmt = $this->pdo->prepare("SELECT id FROM `migrations` WHERE `migration` = ?");
+                $stmt->execute([$basename]);
+                $existingId = $stmt->fetchColumn();
+
+                if ($existingId) {
+                    $updateStmt = $this->pdo->prepare(
+                        "UPDATE `migrations` 
+                         SET `checksum` = ?, `execution_time_ms` = ?, `status` = 'failed', `error_message` = ?, `applied_at` = CURRENT_TIMESTAMP 
+                         WHERE `id` = ?"
+                    );
+                    $updateStmt->execute([$checksum, $durationMs, $sanitizedErr, $existingId]);
+                } else {
+                    $insertStmt = $this->pdo->prepare(
+                        "INSERT INTO `migrations` (`migration`, `checksum`, `execution_time_ms`, `status`, `applied_at`, `error_message`) 
+                         VALUES (?, ?, ?, 'failed', CURRENT_TIMESTAMP, ?)"
+                    );
+                    $insertStmt->execute([$basename, $checksum, $durationMs, $sanitizedErr]);
+                }
+            } catch (\Throwable $recErr) {
+                Logger::error("Could not record failure state in migrations table: " . self::sanitizeErrorMessage($recErr->getMessage()));
+            }
+
+            throw new RuntimeException("Migration `{$basename}` failed: " . $sanitizedErr, (int) $e->getCode(), $e);
         } finally {
             $this->releaseLock();
         }
@@ -401,7 +561,7 @@ class MigrationRunner
 
         foreach ($files as $file) {
             $basename = basename($file);
-            if (isset($applied[$basename])) {
+            if (isset($applied[$basename]) && ($applied[$basename]['status'] ?? 'success') === 'success') {
                 continue;
             }
             $results[] = $this->runSingle($basename);

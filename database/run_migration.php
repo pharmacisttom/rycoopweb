@@ -23,6 +23,7 @@ $options = [
     'dry-run' => in_array('--dry-run', $argv, true),
     'confirm-financial' => in_array('--confirm-financial', $argv, true),
     'confirm-destructive' => in_array('--confirm-destructive', $argv, true),
+    'force-retry-failed' => in_array('--force-retry-failed', $argv, true),
 ];
 
 // Extract filename (first non-flag argument)
@@ -42,7 +43,8 @@ if ($targetFile === null || $targetFile === '' || in_array($targetFile, ['-h', '
     echo "Options:\n";
     echo "  --dry-run               Simulate and validate migration without applying.\n";
     echo "  --confirm-financial     Required for migrations altering financial rates (019, 020).\n";
-    echo "  --confirm-destructive   Required for destructive migrations (DROP/TRUNCATE).\n\n";
+    echo "  --confirm-destructive   Required for destructive migrations (DROP/TRUNCATE).\n";
+    echo "  --force-retry-failed    Force retry of a failed migration after manual schema reconciliation.\n\n";
     echo "Example:\n";
     echo "  php database/run_migration.php 022_google_auth_and_mandatory_mfa.sql --dry-run\n";
     echo "  php database/run_migration.php 022_google_auth_and_mandatory_mfa.sql\n";
@@ -53,7 +55,8 @@ try {
     $runner = new MigrationRunner();
     $runner->setDryRun($options['dry-run'])
            ->setConfirmFinancial($options['confirm-financial'])
-           ->setConfirmDestructive($options['confirm-destructive']);
+           ->setConfirmDestructive($options['confirm-destructive'])
+           ->setForceRetryFailed($options['force-retry-failed']);
 
     echo "Running migration checks for: {$targetFile}...\n";
     $result = $runner->runSingle($targetFile);
