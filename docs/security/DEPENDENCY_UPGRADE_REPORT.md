@@ -1,12 +1,12 @@
 # รายงานการยกระดับความปลอดภัย Dependency Vulnerabilities ระดับ Moderate (RYCOOPWEB)
 
-**วันที่จัดทำ**: 2026-10-27  
-**Repository**: [pharmacisttom/rycoopweb](https://github.com/pharmacisttom/rycoopweb)  
-**Source Branch**: `codex/workflow-repair`  
-**Baseline Commit**: `5266f3904891467dd37bb8f6b3aff92de8316bc1`  
-**Target Branch สำหรับ PR**: `Test` (อ้างอิง PR #3)  
-**Feature Branch**: `codex/dependency-moderate-fixes`  
-**ผู้จัดทำ**: Senior Frontend & Application Security Engineer  
+**วันที่จัดทำ**: 2026-10-27
+**Repository**: [pharmacisttom/rycoopweb](https://github.com/pharmacisttom/rycoopweb)
+**Source Branch**: `codex/workflow-repair`
+**Baseline Commit**: `5266f3904891467dd37bb8f6b3aff92de8316bc1`
+**Target Branch สำหรับ PR**: `Test` (อ้างอิง PR #3)
+**Feature Branch**: `codex/dependency-moderate-fixes`
+**ผู้จัดทำ**: Senior Frontend & Application Security Engineer
 
 ---
 

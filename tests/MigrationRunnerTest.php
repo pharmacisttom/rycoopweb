@@ -646,5 +646,3 @@ assertTrue(!file_exists($incidentFile), '15.10 Incident marker file automaticall
 
 echo "=========================================================================\n";
 echo "All MigrationRunner Unit, Safety & Security tests PASSED successfully!\n";
-
-

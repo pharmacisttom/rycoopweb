@@ -1,9 +1,9 @@
 # รายงานสถาปัตยกรรมและมาตรการบังคับใช้ Multi-Factor Authentication (MFA Implementation Report)
 
-**ระบบ**: RYCOOPWEB 2.3  
-**วันที่จัดทำ**: 2026-10-27  
-**ผู้จัดทำ**: Application Security Engineer & Cryptographic Controls Architect  
-**สถานะ**: Production-Ready & Formally Verified  
+**ระบบ**: RYCOOPWEB 2.3
+**วันที่จัดทำ**: 2026-10-27
+**ผู้จัดทำ**: Application Security Engineer & Cryptographic Controls Architect
+**สถานะ**: Production-Ready & Formally Verified
 
 ---
 
@@ -25,10 +25,10 @@ stateDiagram-v2
     [*] --> Unauthenticated: ผู้ใช้เข้าสู่ระบบ
     Unauthenticated --> Pending_MFA_Enrollment: ล็อกอินผ่าน (แต่ยังไม่ได้ตั้งค่า MFA)
     Unauthenticated --> Pending_MFA_Verification: ล็อกอินผ่าน (มี MFA แล้ว)
-    
+
     Pending_MFA_Enrollment --> Fully_Authenticated: ยืนยันรหัส OTP ครั้งแรกสำเร็จ
     Pending_MFA_Verification --> Fully_Authenticated: ตรวจสอบรหัส OTP / Recovery Code ถูกต้อง
-    
+
     Fully_Authenticated --> Unauthenticated: Logout / Session Timeout / Session Revocation
 ```
 

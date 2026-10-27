@@ -62,7 +62,7 @@ export default function VisitorStatsPage() {
   return (
     <div className="section" style={{ background: 'var(--bg-main)', minHeight: '90vh', padding: '2.5rem 0 4rem' }}>
       <div className="container" style={{ maxWidth: '1200px' }}>
-        
+
         {/* Navigation Breadcrumb & Back */}
         <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -163,7 +163,7 @@ export default function VisitorStatsPage() {
           gap: '1.25rem',
           marginBottom: '2rem'
         }}>
-          
+
           {/* 1. Online Now */}
           <div className="surface-card shadow-sm" style={{
             padding: '1.5rem',
@@ -439,7 +439,7 @@ export default function VisitorStatsPage() {
           gap: '2rem',
           marginBottom: '2rem'
         }}>
-          
+
           {/* Column A: Device, Browser, and OS Breakdown */}
           <div className="surface-card shadow-sm" style={{
             padding: '2rem',
@@ -696,7 +696,7 @@ function getFallbackAnalytics() {
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
     const base = isWeekend ? 380 : 840;
     const count = base + ((i * 47) % 180) - 90;
-    
+
     const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     timeline.push({
       date: d.toISOString().split('T')[0],

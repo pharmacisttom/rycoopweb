@@ -1,9 +1,9 @@
 # รายงานการทบทวนความมั่นคงปลอดภัยระบบยืนยันตัวตน Google OIDC (Google Auth Security Review)
 
-**ระบบ**: RYCOOPWEB 2.3  
-**วันที่จัดทำ**: 2026-10-27  
-**ผู้จัดทำ**: PHP Security Architect & Application Security Engineer  
-**ขอบเขต**: สถาปัตยกรรม Google OAuth 2.0 / OpenID Connect, มาตรการป้องกันการยกระดับสิทธิ์, และความเข้ากันได้กับ TEST Gateway  
+**ระบบ**: RYCOOPWEB 2.3
+**วันที่จัดทำ**: 2026-10-27
+**ผู้จัดทำ**: PHP Security Architect & Application Security Engineer
+**ขอบเขต**: สถาปัตยกรรม Google OAuth 2.0 / OpenID Connect, มาตรการป้องกันการยกระดับสิทธิ์, และความเข้ากันได้กับ TEST Gateway
 
 ---
 
