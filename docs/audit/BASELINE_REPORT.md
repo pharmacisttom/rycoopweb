@@ -1,15 +1,15 @@
 # RYCOOPWEB 2.1 — รายงานการตรวจสอบสถานะระบบและแผนกู้คืน (BASELINE REPORT)
-**ระบบบริหารจัดการข้อมูลและบริการดิจิทัล สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด**  
-**วันที่ตรวจสอบ:** 21 ตุลาคม 2569  
-**ผู้ตรวจสอบ:** Principal Full-Stack & Application Security Engineer  
-**สภาพแวดล้อมที่ตรวจสอบ:** Local Workspace (`D:\rycoopweb`), Git Branch: `codex/member-portal-integration`  
+**ระบบบริหารจัดการข้อมูลและบริการดิจิทัล สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด**
+**วันที่ตรวจสอบ:** 21 ตุลาคม 2569
+**ผู้ตรวจสอบ:** Principal Full-Stack & Application Security Engineer
+**สภาพแวดล้อมที่ตรวจสอบ:** Local Workspace (`D:\rycoopweb`), Git Branch: `codex/member-portal-integration`
 **สถานะการทำงาน:** PHASE 0 — Baseline Discovery and Recovery Plan (ไม่แก้ไข Source Code ของระบบ)
 
 ---
 
 ## 1. บทสรุปผู้บริหาร (Executive Summary)
 
-จากการตรวจสอบ Source Code, Architecture, Dependencies, Database Migrations, Route Declarations, และชุดทดสอบอัตโนมัติทั้งหมดของระบบ **RYCOOPWEB** พบว่าระบบมีรากฐานสถาปัตยกรรมที่ดีและมีโมดูลหลักที่ทำงานได้จริงหลายส่วน (Authentication, Member Management, LED Check, Rich Text News/FAQ, Financial Calculations) 
+จากการตรวจสอบ Source Code, Architecture, Dependencies, Database Migrations, Route Declarations, และชุดทดสอบอัตโนมัติทั้งหมดของระบบ **RYCOOPWEB** พบว่าระบบมีรากฐานสถาปัตยกรรมที่ดีและมีโมดูลหลักที่ทำงานได้จริงหลายส่วน (Authentication, Member Management, LED Check, Rich Text News/FAQ, Financial Calculations)
 
 อย่างไรก็ตาม **ระบบใน Working Tree ปัจจุบันยัง "ไม่พร้อมสำหรับการ Deployment ขึ้น TEST หรือ Production" และยังไม่ควรเริ่มการ Refactor ความปลอดภัยในส่วนอื่น จนกว่าจะจัดการปัญหา Baseline ที่ตกค้างให้ผ่านการทดสอบเสียก่อน**
 

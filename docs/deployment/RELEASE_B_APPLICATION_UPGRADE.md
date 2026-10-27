@@ -1,9 +1,9 @@
 # เอกสารข้อกำหนดการส่งมอบ Release B: การยกระดับระบบเจ้าหน้าที่และสถาปัตยกรรมความมั่นคงปลอดภัย (Release B Specification)
 
-**รหัสเวอร์ชัน**: Release B (RYCOOPWEB 2.3 Application & Security Upgrade)  
-**Branch ต้นทาง**: `codex/member-portal-integration`  
-**Target Branch**: `Test` (หลังควบรวม Release A สำเร็จ)  
-**สถานะการอนุมัติ**: รอการอนุมัติและทดสอบบน TEST Sandbox  
+**รหัสเวอร์ชัน**: Release B (RYCOOPWEB 2.3 Application & Security Upgrade)
+**Branch ต้นทาง**: `codex/member-portal-integration`
+**Target Branch**: `Test` (หลังควบรวม Release A สำเร็จ)
+**สถานะการอนุมัติ**: รอการอนุมัติและทดสอบบน TEST Sandbox
 
 ---
 

@@ -1,8 +1,8 @@
 # คู่มือการกู้คืนระบบและขั้นตอนย้อนกลับฉุกเฉิน (Rollback and Disaster Recovery Runbook)
 
-**ระบบ**: RYCOOPWEB 2.3  
-**วันที่จัดทำ**: 2026-10-27  
-**เป้าหมายสภาพแวดล้อม**: TEST VPS (`https://test.rayongcoop.org`) และ PRODUCTION (`https://www.rayongcoop.org`)  
+**ระบบ**: RYCOOPWEB 2.3
+**วันที่จัดทำ**: 2026-10-27
+**เป้าหมายสภาพแวดล้อม**: TEST VPS (`https://test.rayongcoop.org`) และ PRODUCTION (`https://www.rayongcoop.org`)
 
 ---
 

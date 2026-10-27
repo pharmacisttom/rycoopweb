@@ -1,8 +1,8 @@
 # รายการตรวจสอบความพร้อมก่อนขึ้นระบบจริง (Production Readiness Checklist)
 
-**ระบบ**: RYCOOPWEB 2.3  
-**วันที่ประเมิน**: 2026-10-27  
-**เป้าหมายการส่งมอบ**: Staging / TEST VPS (`https://test.rayongcoop.org`) -> Production (`https://www.rayongcoop.org`)  
+**ระบบ**: RYCOOPWEB 2.3
+**วันที่ประเมิน**: 2026-10-27
+**เป้าหมายการส่งมอบ**: Staging / TEST VPS (`https://test.rayongcoop.org`) -> Production (`https://www.rayongcoop.org`)
 
 ---
 

@@ -1,10 +1,10 @@
 # บันทึกผลการทดสอบการถดถอยของระบบ (Regression Test Results)
 
-**ระบบ**: RYCOOPWEB 2.3  
-**วันที่ทดสอบ**: 2026-10-27  
-**Branch**: `codex/dependency-moderate-fixes`  
-**สภาพแวดล้อม**: Local Build & Automated CI Fixtures  
-**ผู้ทดสอบ**: QA Automation Lead & Application Security Engineer  
+**ระบบ**: RYCOOPWEB 2.3
+**วันที่ทดสอบ**: 2026-10-27
+**Branch**: `codex/dependency-moderate-fixes`
+**สภาพแวดล้อม**: Local Build & Automated CI Fixtures
+**ผู้ทดสอบ**: QA Automation Lead & Application Security Engineer
 
 ---
 

@@ -1,8 +1,8 @@
 # คู่มือขั้นตอนการนำขึ้นระบบทดสอบ (TEST Deployment Runbook)
 
-**ระบบ**: RYCOOPWEB 2.3  
-**วันที่จัดทำ**: 2026-10-27  
-**เป้าหมาย**: สภาพแวดล้อมทดสอบ TEST VPS (`https://test.rayongcoop.org`)  
+**ระบบ**: RYCOOPWEB 2.3
+**วันที่จัดทำ**: 2026-10-27
+**เป้าหมาย**: สภาพแวดล้อมทดสอบ TEST VPS (`https://test.rayongcoop.org`)
 
 ---
 

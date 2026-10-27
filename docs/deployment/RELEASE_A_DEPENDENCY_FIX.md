@@ -1,10 +1,10 @@
 # เอกสารข้อกำหนดการส่งมอบ Release A: การแก้ปัญหา Dependency ระดับ Moderate (Release A Specification)
 
-**รหัสเวอร์ชัน**: Release A (Dependency Security Fix)  
-**Branch ต้นทาง**: `codex/dependency-moderate-fixes`  
-**Commit**: [`88f8805`](https://github.com/pharmacisttom/rycoopweb/commit/88f8805)  
-**Target Branch**: `Test` (อ้างอิง Pull Request #3)  
-**สถานะการอนุมัติ**: พร้อมส่งมอบ (Production-Ready)  
+**รหัสเวอร์ชัน**: Release A (Dependency Security Fix)
+**Branch ต้นทาง**: `codex/dependency-moderate-fixes`
+**Commit**: [`88f8805`](https://github.com/pharmacisttom/rycoopweb/commit/88f8805)
+**Target Branch**: `Test` (อ้างอิง Pull Request #3)
+**สถานะการอนุมัติ**: พร้อมส่งมอบ (Production-Ready)
 
 ---
 

@@ -1,9 +1,9 @@
 # รายงานการวิเคราะห์ผลกระทบการย้ายข้อมูลทางการเงิน (Financial Migration Review 017–023)
 
-**ระบบ**: RYCOOPWEB 2.3  
-**วันที่จัดทำ**: 2026-10-27  
-**ขอบเขต**: ตรวจสอบผลกระทบรายไฟล์สำหรับ Migration 017 ถึง 023 โดยเน้นมาตรการควบคุมความเสี่ยงสำหรับ Migration 019 และ 020  
-**ผู้จัดทำ**: Application Security Engineer & Financial Data Integrity Reviewer  
+**ระบบ**: RYCOOPWEB 2.3
+**วันที่จัดทำ**: 2026-10-27
+**ขอบเขต**: ตรวจสอบผลกระทบรายไฟล์สำหรับ Migration 017 ถึง 023 โดยเน้นมาตรการควบคุมความเสี่ยงสำหรับ Migration 019 และ 020
+**ผู้จัดทำ**: Application Security Engineer & Financial Data Integrity Reviewer
 
 ---
 
@@ -28,9 +28,9 @@
 
 ### 2.2 โค้ด SQL ปัจจุบัน
 ```sql
-UPDATE interest_rates 
-SET status = 'inactive' 
-WHERE id IN (4, 6) 
+UPDATE interest_rates
+SET status = 'inactive'
+WHERE id IN (4, 6)
   AND product_name IN ('เงินกู้เพื่อเหตุฉุกเฉิน', 'เงินกู้พิเศษเพื่อเคหะสงเคราะห์');
 ```
 
