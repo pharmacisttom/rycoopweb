@@ -193,8 +193,8 @@ jobs:
       - name: Check public reference content
         run: node tests/PublicContentReferenceTest.mjs
 
-      - name: Reject high or critical npm advisories
-        run: npm audit --audit-level=high
+      - name: Reject moderate, high or critical npm advisories
+        run: npm audit --audit-level=moderate
 
       - name: Test frontend workflow contracts
         run: node tests/WorkflowFrontendTest.mjs

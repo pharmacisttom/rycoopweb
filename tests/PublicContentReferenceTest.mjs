@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server.js';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -30,8 +29,9 @@ for (const [id, expected] of Object.entries(expectedLimits)) {
 }
 
 // Render the real pages to catch imports, JSON wiring, omitted groups and stale visible rates.
-const server = await createServer({ configFile: false, plugins: [react()], optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, appType: 'custom' });
+const server = await createServer({ configFile: false, plugins: [react()], resolve: { alias: { 'react-router-dom': 'react-router' } }, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, appType: 'custom' });
 try {
+  const { StaticRouter } = await server.ssrLoadModule('react-router');
   for (const [path, strings] of [
     ['/src/pages/BoardPage.jsx', ['ชุดที่ 38', ...reference.boardMembers.map(p => p.name), ...reference.boardGroups.map(g => g.title), ...reference.advisors.map(p => p[0]), ...reference.auditors.map(p => p[0])]],
     ['/src/pages/BoardOfficerPage.jsx', reference.staffMembers.map(p => p.name)],

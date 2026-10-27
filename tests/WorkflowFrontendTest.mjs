@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import React from 'react';
 import { renderToPipeableStream } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server.js';
 import { Writable } from 'node:stream';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -14,9 +13,10 @@ const mockPlugin={name:'workflow-test-contexts',enforce:'pre',load(id){
  if(path.endsWith('/src/hooks/useVisitorTracker.js'))return 'export const useVisitorTracker=()=>{};';
  if(path.includes('/src/components/layout/')||/\/src\/components\/(?:common\/(?:AIChatWidget|CookieConsent|CampaignModal|SessionTimeoutModal|ChangePasswordModal|RichTextEditor)|member\/AuthModal)\.jsx$/.test(path))return 'export default function Fixture(){return null;}';
  }};
-const server=await createServer({configFile:false,plugins:[mockPlugin,react()],optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true},appType:'custom'});
+const server=await createServer({configFile:false,plugins:[mockPlugin,react()],resolve:{alias:{'react-router-dom':'react-router'}},optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true},appType:'custom'});
 function render(element){return new Promise((resolve,reject)=>{let html='';const output=new Writable({write(chunk,encoding,done){html+=chunk.toString();done();}});output.on('finish',()=>resolve(html));const stream=renderToPipeableStream(element,{onAllReady(){stream.pipe(output);},onError:reject});});}
 try{
+ const {StaticRouter}=await server.ssrLoadModule('react-router');
  const {default:App}=await server.ssrLoadModule('/src/App.jsx');
  for(const [url,permissions,expected] of [
   ['/admin/workspace',['news.view'],'จัดการข่าวประชาสัมพันธ์'],
