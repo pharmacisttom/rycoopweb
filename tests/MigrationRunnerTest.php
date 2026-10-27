@@ -330,6 +330,140 @@ $dupPdo->prepare("INSERT INTO `migrations` (`migration`, `checksum`, `status`, `
 $dupResult = $runnerDup->runSingle('001_initial_schema.sql');
 assertTrue($dupResult['status'] === 'skipped', '12.1 Previously applied migration is skipped idempotently');
 
+// --------------------------------------------------------------------------
+// 13. Database Isolation, Config Validator & Lab Isolation Tests
+// --------------------------------------------------------------------------
+require_once __DIR__ . '/MigrationLabTestHarness.php';
+use App\Services\MigrationConfigValidator;
+use App\Services\MigrationConnectionFactory;
+use Tests\MigrationLabTestHarness;
+
+// 13.1 Missing host
+assertThrows(function () {
+    MigrationConfigValidator::validate(['host' => '']);
+}, 'DB_HOST is required', '13.1 Missing DB_HOST is rejected before opening connection');
+
+// 13.2 Missing database port
+assertThrows(function () {
+    MigrationConfigValidator::validate(['host' => '127.0.0.1', 'port' => '', 'database' => 'test_db']);
+}, 'DB_PORT is required', '13.2 Missing DB_PORT is rejected');
+
+assertThrows(function () {
+    MigrationConfigValidator::validate(['host' => '127.0.0.1', 'port' => 99999, 'database' => 'test_db']);
+}, 'Port must be between 1 and 65535', '13.3 Out of range DB_PORT is rejected');
+
+// 13.4 Missing database name
+assertThrows(function () {
+    MigrationConfigValidator::validate(['host' => '127.0.0.1', 'port' => 3306, 'database' => '']);
+}, 'DB_DATABASE is required', '13.4 Missing DB_DATABASE is rejected');
+
+// 13.5 System database rejection
+assertThrows(function () {
+    MigrationConfigValidator::validate(['host' => '127.0.0.1', 'port' => 3306, 'database' => 'mysql', 'username' => 'migrator', 'password' => 'pass']);
+}, 'Cannot target system database', '13.5 System database target is rejected');
+
+// 13.6 Default root username rejection
+assertThrows(function () {
+    MigrationConfigValidator::validate([
+        'host' => '127.0.0.1',
+        'port' => 3306,
+        'database' => 'my_custom_db',
+        'username' => 'root',
+        'password' => 'secret123',
+    ]);
+}, "Executing migrations as 'root' is strictly prohibited", '13.6 Default root username is strictly rejected');
+
+// 13.7 Silent default rayongcoop_db rejection
+assertThrows(function () {
+    MigrationConfigValidator::validate([
+        'host' => '127.0.0.1',
+        'port' => 3306,
+        'database' => 'rayongcoop_db',
+        'username' => 'rycoop_migrator',
+        'password' => 'secret123',
+    ]);
+}, 'Default database `rayongcoop_db` cannot be used silently', '13.7 Silent default database rayongcoop_db is rejected');
+
+// 13.8 Valid explicit configuration passes
+$validConfig = MigrationConfigValidator::validate([
+    'host' => '127.0.0.1',
+    'port' => 3306,
+    'database' => 'rayongcoop_db',
+    'explicit_database' => true,
+    'username' => 'rycoop_migrator',
+    'password' => 'secret123',
+]);
+assertTrue($validConfig['database'] === 'rayongcoop_db', '13.8 Explicitly confirmed database configuration passes');
+
+// 13.9 Lab Database Isolation Tests
+assertThrows(function () {
+    MigrationConfigValidator::validate([
+        'host' => '127.0.0.1',
+        'port' => 3306,
+        'database' => 'rycoopweb_test',
+        'is_lab' => true,
+        'username' => 'rycoop_lab',
+        'password' => 'lab_pass',
+    ]);
+}, 'Lab migrations must strictly target `rycoopweb_migration_lab`', '13.9 Lab configuration targeting rycoopweb_test is rejected');
+
+assertThrows(function () {
+    MigrationConfigValidator::validate([
+        'host' => '127.0.0.1',
+        'port' => 3306,
+        'database' => 'rycoopweb_migration_lab',
+        'is_lab' => true,
+        'username' => 'rycoop_app',
+        'password' => 'lab_pass',
+    ]);
+}, 'Reusing application/root credentials `rycoop_app` in Lab environment is prohibited', '13.10 Reusing application credentials in Lab is rejected');
+
+// 13.11 Lab privilege cross-database leakage rejection
+$mockLabPdoWithLeak = MigrationLabTestHarness::createMockLabPdo(
+    'rycoopweb_migration_lab',
+    'rycoop_lab',
+    [
+        "GRANT ALL PRIVILEGES ON `rycoopweb_migration_lab`.* TO 'rycoop_lab'@'localhost'",
+        "GRANT SELECT ON `rycoopweb_test`.* TO 'rycoop_lab'@'localhost'",
+    ]
+);
+assertThrows(function () use ($mockLabPdoWithLeak) {
+    MigrationConnectionFactory::validatePrivileges($mockLabPdoWithLeak, 'rycoopweb_migration_lab', 'rycoop_lab', true);
+}, 'Lab privilege violation: Migration user `rycoop_lab` has unauthorized grant on protected database `rycoopweb_test`', '13.11 Lab user grant on protected database is rejected');
+
+// 13.12 Connection failure credential redaction
+try {
+    // Attempt connecting to invalid host to trigger PDOException
+    $badConfig = [
+        'host' => 'nonexistent.invalid.host.local',
+        'port' => 3306,
+        'database' => 'rycoopweb_migration_lab',
+        'is_lab' => true,
+        'username' => 'rycoop_lab',
+        'password' => 'SuperSecretP@ssword999!',
+    ];
+    MigrationConnectionFactory::createConnection($badConfig);
+    echo "FAIL: Expected connection failure, but succeeded\n";
+    exit(1);
+} catch (\Throwable $e) {
+    assertTrue(!str_contains($e->getMessage(), 'SuperSecretP@ssword999!'), '13.12 Passwords in connection errors are redacted');
+    assertTrue(str_contains($e->getMessage(), 'Failed to establish dedicated migration connection'), '13.13 Controlled connection failure exception');
+}
+
+// 13.14 Preflight info diagnostic verification (No secrets exposed)
+$mockLabPdoClean = MigrationLabTestHarness::createMockLabPdo('rycoopweb_migration_lab', 'rycoop_lab');
+$runnerLab = new MigrationRunner($mockLabPdoClean, $migrationsDir, 'rycoopweb_migration_lab');
+$preflight = $runnerLab->getPreflightInfo('001_initial_schema.sql');
+assertTrue($preflight['active_database'] === 'rycoopweb_migration_lab', '13.14 Preflight identifies active database');
+assertTrue($preflight['database_identity_ok'] === true, '13.15 Preflight validates database identity match');
+assertTrue(!isset($preflight['password']), '13.16 Preflight never exposes passwords or secrets');
+
+// 13.17 MySQL mode requires explicit database name on injected PDO
+assertThrows(function () use ($mockLabPdoClean, $migrationsDir) {
+    new MigrationRunner($mockLabPdoClean, $migrationsDir, '');
+}, 'Security violation: MigrationRunner requires an explicit expected database name', '13.17 Empty expected database with MySQL PDO is rejected');
+
 echo "=========================================================================\n";
 echo "All MigrationRunner Unit, Safety & Security tests PASSED successfully!\n";
+
 

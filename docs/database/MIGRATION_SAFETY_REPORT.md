@@ -114,6 +114,18 @@ php bin/console db:migrate --force-retry-failed
 - **Strict Automatic Retry Block**: เมื่อมี migration ที่อยู่ในสถานะ `failed` ระบบจะระงับการรันอัตโนมัติในครั้งถัดไปทันที เพื่อป้องกัน schema corruption จากการรันคำสั่ง DDL ซ้ำ
 - **Manual Reconciliation Gate**: ผู้ดูแลระบบต้องตรวจสอบความสมบูรณ์ของ schema ในฐานข้อมูลจริง (reconciliation) และสั่งรันซ้ำด้วยแฟล็ก `--force-retry-failed` อย่างชัดเจนเท่านั้น
 
+### 4.4 Database Isolation & Explicit Configuration
+- **Explicit Target Requirement**: ปฏิเสธการรันคำสั่ง Migration ทันทีหากขาดการกำหนด `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` อย่างชัดเจน
+- **Prohibition of Default Credentials**: ห้ามใช้งานค่า default `rayongcoop_db` โดยเงียบๆ และห้ามเชื่อมต่อด้วยบัญชี `root` โดยเด็ดขาด เพื่อป้องกันการยกระดับสิทธิ์ (Privilege Escalation) และความเสี่ยงในการรันผิดฐานข้อมูล
+- **Dedicated PDO Instance**: สคริปต์ Migration จะสร้าง PDO instance เฉพาะกิจผ่าน `MigrationConnectionFactory` แยกต่างหากจาก Shared Singleton `Database::connect()` ของ Web Application
+- **Lab Database Isolation (`rycoopweb_migration_lab`)**:
+  - รองรับการทดสอบ Integration ผ่านฐานข้อมูล Lab โดยเฉพาะ
+  - บังคับใช้บัญชี Lab-only ห้ามใช้บัญชี Production หรือ Web App
+  - ตรวจสอบ Privilege Isolation ไม่อนุญาตให้มี Grant ข้ามไปยัง `rycoopweb_test` หรือ Production
+- **Migration CLI Preflight Inspection**:
+  - แสดงผลสรุป Host, Port, Target Database, Database User, สิทธิ์ผู้ใช้, Checksum, Safety Gate Assessment ก่อนเริ่มทำงาน
+  - ห้ามแสดงรหัสผ่านหรือความลับในหน้าจอหรือ Log เด็ดขาด (`Never display secrets`)
+
 ---
 
 ## 5. แผนการสำรองข้อมูลและการกู้คืน (Backup & Recovery Procedures)
@@ -162,7 +174,7 @@ php bin/console backup:run
 
 ## 6. ผลการทดสอบความปลอดภัยอัตโนมัติ (Automated Safety Test Results)
 
-ผ่านการทดสอบครบถ้วน 100% จาก [tests/MigrationRunnerTest.php](file:///d:/rycoopweb/tests/MigrationRunnerTest.php) (32 assertions):
+ผ่านการทดสอบครบถ้วน 100% จาก [tests/MigrationRunnerTest.php](file:///d:/rycoopweb/tests/MigrationRunnerTest.php) (49 assertions / 13 test groups):
 
 ```
 Running MigrationRunner Comprehensive Unit, Safety & Security Tests...
@@ -201,7 +213,25 @@ PASS: 10.7 Status updated to success upon successful retry
 PASS: 10.8 Error message cleared on successful retry
 PASS: 11.1 Checksum mismatch triggers integrity exception
 PASS: 12.1 Previously applied migration is skipped idempotently
+PASS: 13.1 Missing DB_HOST is rejected before opening connection
+PASS: 13.2 Missing DB_PORT is rejected
+PASS: 13.3 Out of range DB_PORT is rejected
+PASS: 13.4 Missing DB_DATABASE is rejected
+PASS: 13.5 System database target is rejected
+PASS: 13.6 Default root username is strictly rejected
+PASS: 13.7 Silent default database rayongcoop_db is rejected
+PASS: 13.8 Explicitly confirmed database configuration passes
+PASS: 13.9 Lab configuration targeting rycoopweb_test is rejected
+PASS: 13.10 Reusing application credentials in Lab is rejected
+PASS: 13.11 Lab user grant on protected database is rejected
+PASS: 13.12 Passwords in connection errors are redacted
+PASS: 13.13 Controlled connection failure exception
+PASS: 13.14 Preflight identifies active database
+PASS: 13.15 Preflight validates database identity match
+PASS: 13.16 Preflight never exposes passwords or secrets
+PASS: 13.17 Empty expected database with MySQL PDO is rejected
 =========================================================================
 All MigrationRunner Unit, Safety & Security tests PASSED successfully!
 ```
+
 

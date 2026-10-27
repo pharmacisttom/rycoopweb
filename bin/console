@@ -34,14 +34,48 @@ switch ($command) {
             $confirmFinancial = in_array('--confirm-financial', $argv, true);
             $confirmDestructive = in_array('--confirm-destructive', $argv, true);
             $forceRetryFailed = in_array('--force-retry-failed', $argv, true);
+            $isLab = in_array('--lab', $argv, true);
+
+            $dbOverrides = [];
+            if ($isLab) {
+                $dbOverrides['database'] = 'rycoopweb_migration_lab';
+                $dbOverrides['is_lab'] = true;
+                $dbOverrides['explicit_database'] = true;
+            }
+
             $singleFile = null;
             foreach ($argv as $arg) {
                 if (str_starts_with($arg, '--file=')) {
                     $singleFile = substr($arg, 7);
+                } elseif (str_starts_with($arg, '--db-host=')) {
+                    $dbOverrides['host'] = substr($arg, 10);
+                } elseif (str_starts_with($arg, '--db-port=')) {
+                    $dbOverrides['port'] = (int) substr($arg, 10);
+                } elseif (str_starts_with($arg, '--db-name=')) {
+                    $dbOverrides['database'] = substr($arg, 10);
+                    $dbOverrides['explicit_database'] = true;
+                } elseif (str_starts_with($arg, '--db-user=')) {
+                    $dbOverrides['username'] = substr($arg, 10);
+                } elseif (str_starts_with($arg, '--db-pass=')) {
+                    $dbOverrides['password'] = substr($arg, 10);
                 }
             }
 
-            $runner = new \App\Services\MigrationRunner();
+            // Establish dedicated, isolated PDO connection
+            $conn = \App\Services\MigrationConnectionFactory::createConnection($dbOverrides);
+            $dedicatedPdo = $conn['pdo'];
+            $targetDb = $conn['database'];
+
+            echo "====================================================================\n";
+            echo "RYCOOPWEB Migration CLI — Target Database Verification\n";
+            echo "====================================================================\n";
+            echo "Target Host:        {$conn['host']}:{$conn['port']}\n";
+            echo "Target Database:    {$conn['database']}" . ($conn['is_lab'] ? " [LAB ISOLATED]" : "") . "\n";
+            echo "Database User:      {$conn['username']} (Connected as: {$conn['current_user']})\n";
+            echo "Privileges:         " . (empty($conn['privileges']['warnings']) ? "✓ Verified" : "⚠ Warnings present") . "\n";
+            echo "====================================================================\n\n";
+
+            $runner = new \App\Services\MigrationRunner($dedicatedPdo, null, $targetDb);
             $runner->setDryRun($isDryRun)
                    ->setConfirmFinancial($confirmFinancial)
                    ->setConfirmDestructive($confirmDestructive)
@@ -66,7 +100,8 @@ switch ($command) {
                     : "Nothing to migrate — all migrations are up to date.\n";
             }
         } catch (Exception $e) {
-            echo "✗ Migration failed: " . $e->getMessage() . "\n";
+            $sanitized = \App\Services\MigrationRunner::sanitizeErrorMessage($e->getMessage());
+            echo "✗ Migration failed: {$sanitized}\n";
             exit(1);
         }
         break;

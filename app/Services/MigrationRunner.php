@@ -42,14 +42,28 @@ class MigrationRunner
         ?string $migrationsDir = null,
         ?string $expectedDatabase = null
     ) {
-        $this->pdo = $pdo ?? Database::connect();
         $this->migrationsDir = realpath($migrationsDir ?? (__DIR__ . '/../../database/migrations')) ?: '';
         if ($this->migrationsDir === '' || !is_dir($this->migrationsDir)) {
             throw new RuntimeException("Invalid migrations directory: {$migrationsDir}");
         }
 
-        $configDb = config('database.connections.mysql.database', '');
-        $this->expectedDatabase = $expectedDatabase ?? (string) $configDb;
+        if ($pdo !== null) {
+            $this->pdo = $pdo;
+            $driver = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $this->expectedDatabase = $expectedDatabase ?? 'sqlite';
+            } elseif ($expectedDatabase !== null && $expectedDatabase !== '') {
+                $this->expectedDatabase = $expectedDatabase;
+            } else {
+                throw new InvalidArgumentException(
+                    "Security violation: MigrationRunner requires an explicit expected database name when injecting a PDO instance."
+                );
+            }
+        } else {
+            $conn = MigrationConnectionFactory::createConnection();
+            $this->pdo = $conn['pdo'];
+            $this->expectedDatabase = $expectedDatabase ?? $conn['database'];
+        }
     }
 
     public function setDryRun(bool $dryRun): self
@@ -389,6 +403,48 @@ class MigrationRunner
         }
 
         return $analysis;
+    }
+
+    /**
+     * Perform comprehensive preflight security inspection before executing a migration.
+     *
+     * @return array{
+     *   migration: string,
+     *   checksum: string,
+     *   active_database: string,
+     *   expected_database: string,
+     *   database_identity_ok: bool,
+     *   history_accessible: bool,
+     *   is_already_applied: bool,
+     *   analysis: array,
+     *   limitations: string
+     * }
+     */
+    public function getPreflightInfo(string $filename): array
+    {
+        $realPath = $this->resolveMigrationFile($filename);
+        $basename = basename($realPath);
+        $activeDb = $this->verifyDatabaseTarget();
+
+        $sql = (string) file_get_contents($realPath);
+        $checksum = hash('sha256', $sql);
+        $analysis = $this->analyzeSql($sql);
+
+        // Fail-closed history read
+        $applied = $this->getAppliedMigrations();
+        $isAlreadyApplied = isset($applied[$basename]);
+
+        return [
+            'migration' => $basename,
+            'checksum' => $checksum,
+            'active_database' => $activeDb,
+            'expected_database' => $this->expectedDatabase,
+            'database_identity_ok' => strtolower($activeDb) === strtolower($this->expectedDatabase),
+            'history_accessible' => true,
+            'is_already_applied' => $isAlreadyApplied,
+            'analysis' => $analysis,
+            'limitations' => $analysis['limitations'],
+        ];
     }
 
     /**
