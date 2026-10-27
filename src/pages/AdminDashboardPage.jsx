@@ -7,12 +7,12 @@ import {
   Sliders, Shield, HardDrive, Cpu, Terminal, Sparkles,
   LogOut, ArrowRight, Eye, Bell, Newspaper, Image,
   Megaphone, MessageSquare, HelpCircle, Plus, Check, X, ExternalLink,
-  UploadCloud, FileImage, ImagePlus, Edit3, Phone, Camera, Percent, Scale
+  UploadCloud, FileImage, ImagePlus, Edit3, Phone, Camera, Percent, Scale, History, Landmark
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { COOP_INFO, KEY_STATS, INTEREST_RATES, ANNOUNCEMENTS, NEWS_LIST, FAQS, MEMBER_COMPLAINTS, LOAN_PRODUCTS } from '../data/mockData';
-import { fetchAdminDashboard, fetchAdminNews, createAdminNews, deleteAdminNews, fetchFaqs, apiPost } from '../services/api';
+import { fetchAdminDashboard, fetchAdminNews, createAdminNews, deleteAdminNews, fetchFaqs, apiPost, fetchAdminRates, updateAdminRate, updateAdminLoanProduct } from '../services/api';
 import { normalizeNewsItem } from '../utils/news';
 import { richTextPlain } from '../utils/richText';
 import RichTextEditor from '../components/common/RichTextEditor';
@@ -193,6 +193,89 @@ export default function AdminDashboardPage() {
 
   // 7. Loan Products & Interest Rates State (Master Data 10 Items)
   const [loanProductsList, setLoanProductsList] = useState(LOAN_PRODUCTS);
+  const [ratesSubTab, setRatesSubTab] = useState('loans');
+  const [adminRatesData, setAdminRatesData] = useState({ deposit: [], loan: [], loanProducts: [], history: [] });
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [rateModalOpen, setRateModalOpen] = useState(false);
+  const [editingRate, setEditingRate] = useState(null);
+  const [rateForm, setRateForm] = useState({ rate: '', effective_date: '', note: '', condition_note: '', min_amount: '', max_amount: '' });
+  const [rateSaving, setRateSaving] = useState(false);
+
+  const loadAdminRates = async () => {
+    setRatesLoading(true);
+    try {
+      const res = await fetchAdminRates();
+      if (res?.success && res?.data) {
+        setAdminRatesData(res.data);
+        if (Array.isArray(res.data.loan) && res.data.loan.length > 0) {
+          setLoanProductsList(prev => prev.map(p => {
+            const match = res.data.loan.find(r => r.product_name === p.title);
+            if (match) {
+              const val = parseFloat(match.rate);
+              return { ...p, rateValue: val, interestRate: `${val.toFixed(2)}% ต่อปี`, dbId: match.id, effective_date: match.effective_date };
+            }
+            return p;
+          }));
+        }
+      }
+    } catch (e) {
+      // keep fallback
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
+  const handleOpenEditRate = (rateItem, isFromLoanProduct = false) => {
+    let target = rateItem;
+    if (isFromLoanProduct) {
+      target = (adminRatesData.loan || []).find(r => r.product_name === rateItem.title) || {
+        id: rateItem.dbId || rateItem.id,
+        product_name: rateItem.title,
+        rate: rateItem.rateValue,
+        effective_date: rateItem.effective_date || new Date().toISOString().split('T')[0],
+        condition_note: rateItem.guarantee,
+        product_type: 'loan'
+      };
+    }
+    setEditingRate(target);
+    setRateForm({
+      rate: target.rate !== undefined ? String(target.rate) : '',
+      effective_date: target.effective_date || new Date().toISOString().split('T')[0],
+      note: 'ปรับปรุงตามประกาศอัตราดอกเบี้ยล่าสุด',
+      condition_note: target.condition_note || '',
+      min_amount: target.min_amount != null ? String(target.min_amount) : '',
+      max_amount: target.max_amount != null ? String(target.max_amount) : '',
+    });
+    setRateModalOpen(true);
+  };
+
+  const handleSaveRate = async (e) => {
+    e.preventDefault();
+    if (!editingRate?.id) {
+      toast.error('ไม่พบรหัสรายการดอกเบี้ย');
+      return;
+    }
+    const numRate = parseFloat(rateForm.rate);
+    if (isNaN(numRate) || numRate < 0 || numRate > 50) {
+      toast.error('กรุณาระบุอัตราดอกเบี้ยให้ถูกต้อง (0 - 50%)');
+      return;
+    }
+    setRateSaving(true);
+    try {
+      const res = await updateAdminRate(editingRate.id, rateForm);
+      if (res?.success) {
+        toast.success(res.message || 'บันทึกอัตราดอกเบี้ยเรียบร้อยแล้ว');
+        setRateModalOpen(false);
+        await loadAdminRates();
+      } else {
+        toast.error(res?.message || 'บันทึกไม่สำเร็จ');
+      }
+    } catch (err) {
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    } finally {
+      setRateSaving(false);
+    }
+  };
 
   // Users Management State
   const [usersList, setUsersList] = useState([]);
@@ -201,14 +284,17 @@ export default function AdminDashboardPage() {
   const isSuperAdmin = user && user.role === 'super_admin';
 
   useEffect(() => {
-    if (isLoggedIn && isSuperAdmin) {
+    if (isLoggedIn) {
+      loadAdminRates();
+      if (isSuperAdmin) {
       fetchAdminDashboard().then(res => {
         if (res?.success && res?.data) {
           setApiAdminData(res.data);
         }
       }).catch(() => {});
     }
-  }, [isLoggedIn, isSuperAdmin]);
+    }
+  }, [isLoggedIn, isSuperAdmin, activeTab]);
 
   if (!isLoggedIn) {
     return (
@@ -758,6 +844,7 @@ export default function AdminDashboardPage() {
         {/* =========================================================================
             MODULE 2: NEWS & ACTIVITIES (จัดการข่าวสารและกิจกรรม)
             ========================================================================= */}
+        {activeTab === 'news' && <p><Link className="btn btn-primary" to="/admin/content?tab=news">ร่าง ตรวจสอบ และอนุมัติเผยแพร่ข่าว</Link></p>}
         {activeTab === 'news' && (
           <div className="surface-card animate-fade-in" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
 
@@ -1295,8 +1382,9 @@ export default function AdminDashboardPage() {
         )}
 
         {/* =========================================================================
-            MODULE 7: LOAN PRODUCTS & INTEREST RATES (10 MASTER DATA ITEMS)
+            MODULE 7: LOAN PRODUCTS & INTEREST RATES (10 MASTER DATA ITEMS & DEPOSITS)
             ========================================================================= */}
+        {activeTab === 'loans' && <p className="alert alert-info">แก้ไขอัตราที่เผยแพร่และดูประวัติได้ที่ <Link to="/admin/public-content">จัดการข้อมูลพื้นฐานและดอกเบี้ย</Link></p>}
         {activeTab === 'loans' && (
           <div className="surface-card animate-fade-in" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
             
@@ -1304,55 +1392,259 @@ export default function AdminDashboardPage() {
               <div>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--primary-800)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Percent className="text-primary" size={20} />
-                  <span>ประเภทเงินกู้และอัตราดอกเบี้ย (Master Data 10 รายการ)</span>
+                  <span>จัดการอัตราดอกเบี้ยและผลิตภัณฑ์ (Interest Rates & Master Data)</span>
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0' }}>
-                  Source of Truth ตามประกาศสหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด (คิดดอกเบี้ยแบบลดต้นลดดอก)
+                  กำหนดอัตราดอกเบี้ยเงินกู้ 10 ประเภท และดอกเบี้ยเงินฝาก พร้อมแสดงผลคำนวณแบบลดต้นลดดอกบนหน้าเว็บไซต์จริงทันที
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={loadAdminRates}
+                  disabled={ratesLoading}
+                  className="btn btn-sm btn-subtle"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <RefreshCw size={14} className={ratesLoading ? 'animate-spin' : ''} />
+                  <span>{ratesLoading ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล'}</span>
+                </button>
                 <span className="badge badge-primary" style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}>
-                  ครบ 10 ประเภท
+                  Master Data สหกรณ์
                 </span>
               </div>
             </div>
 
-            {/* Table of 10 items */}
-            <div className="table-scroll-hint">👈 เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม 👉</div>
-            <div className="table-scroll-container" style={{ border: '1px solid var(--border-subtle)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-subtle)', textAlign: 'left' }}>
-                    <th style={{ padding: '0.85rem', width: '50px' }}>#</th>
-                    <th style={{ padding: '0.85rem' }}>ประเภทเงินกู้</th>
-                    <th style={{ padding: '0.85rem', textAlign: 'center' }}>อัตราดอกเบี้ย</th>
-                    <th style={{ padding: '0.85rem' }}>วงเงินกู้สูงสุด</th>
-                    <th style={{ padding: '0.85rem' }}>ผ่อนสูงสุด</th>
-                    <th style={{ padding: '0.85rem' }}>หลักประกัน / เงื่อนไข</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loanProductsList.map((p, idx) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                      <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1}</td>
-                      <td style={{ padding: '0.85rem', fontWeight: 700, color: 'var(--primary-900)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span>{p.title}</span>
-                          <span className={`badge badge-${p.badgeColor}`} style={{ fontSize: '0.7rem' }}>{p.badge}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800, color: 'var(--accent-gold-dark)', fontSize: '1.15rem', fontFamily: 'var(--font-display)' }}>
-                        {p.rateValue.toFixed(2)}%
-                      </td>
-                      <td style={{ padding: '0.85rem', fontWeight: 600, color: 'var(--primary-700)' }}>{p.maxAmount}</td>
-                      <td style={{ padding: '0.85rem' }}>{p.period}</td>
-                      <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>{p.guarantee}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Sub-tabs Switcher */}
+            <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid var(--border-subtle)', marginBottom: '1.5rem', paddingBottom: '0.25rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setRatesSubTab('loans')}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '10px 10px 0 0',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: ratesSubTab === 'loans' ? 'var(--primary-600)' : 'transparent',
+                  color: ratesSubTab === 'loans' ? '#ffffff' : 'var(--text-muted)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Percent size={16} />
+                <span>อัตราดอกเบี้ยเงินกู้ (10 ประเภท)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRatesSubTab('deposits')}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '10px 10px 0 0',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: ratesSubTab === 'deposits' ? 'var(--primary-600)' : 'transparent',
+                  color: ratesSubTab === 'deposits' ? '#ffffff' : 'var(--text-muted)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Landmark size={16} />
+                <span>อัตราดอกเบี้ยเงินฝาก</span>
+                {adminRatesData.deposit?.length > 0 && (
+                  <span style={{ fontSize: '0.75rem', padding: '0.1rem 0.45rem', borderRadius: '10px', background: ratesSubTab === 'deposits' ? 'rgba(255,255,255,0.25)' : 'var(--bg-subtle)' }}>
+                    {adminRatesData.deposit.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRatesSubTab('history')}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '10px 10px 0 0',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: ratesSubTab === 'history' ? 'var(--primary-600)' : 'transparent',
+                  color: ratesSubTab === 'history' ? '#ffffff' : 'var(--text-muted)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <History size={16} />
+                <span>ประวัติการเปลี่ยนแปลง (Audit Log)</span>
+                {adminRatesData.history?.length > 0 && (
+                  <span style={{ fontSize: '0.75rem', padding: '0.1rem 0.45rem', borderRadius: '10px', background: ratesSubTab === 'history' ? 'rgba(255,255,255,0.25)' : 'var(--bg-subtle)' }}>
+                    {adminRatesData.history.length}
+                  </span>
+                )}
+              </button>
             </div>
+
+            {/* TAB 1: Loans */}
+            {ratesSubTab === 'loans' && (
+              <>
+                <div className="table-scroll-hint">👈 เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม 👉</div>
+                <div className="table-scroll-container" style={{ border: '1px solid var(--border-subtle)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-subtle)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.85rem', width: '45px' }}>#</th>
+                        <th style={{ padding: '0.85rem' }}>ประเภทเงินกู้</th>
+                        <th style={{ padding: '0.85rem', textAlign: 'center' }}>อัตราดอกเบี้ย</th>
+                        <th style={{ padding: '0.85rem' }}>วงเงินกู้สูงสุด</th>
+                        <th style={{ padding: '0.85rem' }}>ผ่อนสูงสุด</th>
+                        <th style={{ padding: '0.85rem' }}>หลักประกัน / เงื่อนไข</th>
+                        <th style={{ padding: '0.85rem', textAlign: 'center', width: '130px' }}>การกระทำ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loanProductsList.map((p, idx) => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
+                          <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '0.85rem', fontWeight: 700, color: 'var(--primary-900)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span>{p.title}</span>
+                              <span className={`badge badge-${p.badgeColor}`} style={{ fontSize: '0.7rem' }}>{p.badge}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800, color: 'var(--accent-gold-dark)', fontSize: '1.15rem', fontFamily: 'var(--font-display)' }}>
+                            {p.rateValue.toFixed(2)}%
+                          </td>
+                          <td style={{ padding: '0.85rem', fontWeight: 600, color: 'var(--primary-700)' }}>{p.maxAmount}</td>
+                          <td style={{ padding: '0.85rem' }}>{p.period}</td>
+                          <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>{p.guarantee}</td>
+                          <td style={{ padding: '0.85rem', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditRate(p, true)}
+                              className="btn btn-sm btn-outline"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', padding: '0.3rem 0.65rem' }}
+                              title="แก้ไขอัตราดอกเบี้ย"
+                            >
+                              <Edit3 size={13} />
+                              <span>แก้ไขดอกเบี้ย</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* TAB 2: Deposits */}
+            {ratesSubTab === 'deposits' && (
+              <>
+                <div className="table-scroll-hint">👈 เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม 👉</div>
+                <div className="table-scroll-container" style={{ border: '1px solid var(--border-subtle)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-subtle)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.85rem', width: '45px' }}>#</th>
+                        <th style={{ padding: '0.85rem' }}>ประเภทเงินฝาก</th>
+                        <th style={{ padding: '0.85rem', textAlign: 'center' }}>อัตราดอกเบี้ย (% ต่อปี)</th>
+                        <th style={{ padding: '0.85rem' }}>เปิดบัญชีขั้นต่ำ</th>
+                        <th style={{ padding: '0.85rem' }}>เงื่อนไข / การจ่ายดอกเบี้ย</th>
+                        <th style={{ padding: '0.85rem', textAlign: 'center', width: '130px' }}>การกระทำ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(adminRatesData.deposit && adminRatesData.deposit.length > 0 ? adminRatesData.deposit : [
+                        { id: 16, product_name: 'เงินฝากออมทรัพย์', rate: '1.500', min_amount: 100, condition_note: 'เปิดบัญชีขั้นต่ำ 100 บาท ไม่จำกัดจำนวนครั้งการฝาก-ถอน' },
+                        { id: 1, product_name: 'เงินฝากออมทรัพย์พิเศษ', rate: '1.750', min_amount: 1000, condition_note: 'เปิดบัญชีขั้นต่ำ 1,000 บาท จ่ายดอกเบี้ยปีละ 2 ครั้ง' },
+                      ]).map((item, idx) => (
+                        <tr key={item.id} style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
+                          <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '0.85rem', fontWeight: 700, color: 'var(--primary-900)' }}>
+                            {item.product_name}
+                          </td>
+                          <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800, color: 'var(--accent-teal-dark, #0d9488)', fontSize: '1.15rem', fontFamily: 'var(--font-display)' }}>
+                            {parseFloat(item.rate).toFixed(2)}%
+                          </td>
+                          <td style={{ padding: '0.85rem', fontWeight: 600, color: 'var(--primary-700)' }}>
+                            {item.min_amount != null ? `${Number(item.min_amount).toLocaleString('th-TH')} บาท` : '—'}
+                          </td>
+                          <td style={{ padding: '0.85rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                            {item.condition_note || 'ตามประกาศสหกรณ์'}
+                          </td>
+                          <td style={{ padding: '0.85rem', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditRate(item, false)}
+                              className="btn btn-sm btn-outline"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', padding: '0.3rem 0.65rem' }}
+                              title="แก้ไขอัตราดอกเบี้ย"
+                            >
+                              <Edit3 size={13} />
+                              <span>แก้ไขดอกเบี้ย</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* TAB 3: History */}
+            {ratesSubTab === 'history' && (
+              <>
+                {(!adminRatesData.history || adminRatesData.history.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                    <History size={36} style={{ margin: '0 auto 0.75rem auto', opacity: 0.5 }} />
+                    <p>ยังไม่มีบันทึกประวัติการปรับอัตราดอกเบี้ย หรือประวัติอยู่ในระบบสำรอง</p>
+                  </div>
+                ) : (
+                  <div className="table-scroll-container" style={{ border: '1px solid var(--border-subtle)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-subtle)', textAlign: 'left' }}>
+                          <th style={{ padding: '0.75rem' }}>วันที่บันทึก</th>
+                          <th style={{ padding: '0.75rem' }}>ผลิตภัณฑ์</th>
+                          <th style={{ padding: '0.75rem', textAlign: 'center' }}>การเปลี่ยนแปลง</th>
+                          <th style={{ padding: '0.75rem' }}>วันที่มีผล</th>
+                          <th style={{ padding: '0.75rem' }}>หมายเหตุ / อ้างอิง</th>
+                          <th style={{ padding: '0.75rem' }}>ผู้ดำเนินการ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminRatesData.history.map((h) => (
+                          <tr key={h.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{h.created_at}</td>
+                            <td style={{ padding: '0.75rem', fontWeight: 600 }}>{h.product_name}</td>
+                            <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                              <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>{parseFloat(h.old_rate).toFixed(2)}%</span>
+                              <span style={{ margin: '0 0.35rem' }}>➔</span>
+                              <strong style={{ color: 'var(--accent-gold-dark)' }}>{parseFloat(h.new_rate).toFixed(2)}%</strong>
+                            </td>
+                            <td style={{ padding: '0.75rem' }}>{h.effective_date}</td>
+                            <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{h.note || '—'}</td>
+                            <td style={{ padding: '0.75rem' }}>{h.changed_by_name || 'Admin'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
 
           </div>
         )}
@@ -1560,6 +1852,117 @@ export default function AdminDashboardPage() {
                   <span>ปิดหน้าต่าง</span>
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Edit Interest Rate */}
+        {rateModalOpen && editingRate && (
+          <div style={modalBackdropStyle}>
+            <div className="glass-card animate-fade-in" style={modalBoxStyle}>
+              <div style={modalHeaderStyle}>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', color: 'var(--primary-800)', margin: 0 }}>
+                    แก้ไขอัตราดอกเบี้ย: {editingRate.product_name}
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    ประเภท: {editingRate.product_type === 'deposit' ? 'เงินฝาก' : 'สินเชื่อ'}
+                  </span>
+                </div>
+                <button type="button" onClick={() => setRateModalOpen(false)} style={{ border: 'none', background: 'transparent', fontSize: '1.25rem', cursor: 'pointer' }}>✕</button>
+              </div>
+
+              <form onSubmit={handleSaveRate}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>อัตราดอกเบี้ยใหม่ (% ต่อปี) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="50"
+                      className="form-control"
+                      required
+                      value={rateForm.rate}
+                      onChange={(e) => setRateForm({ ...rateForm, rate: e.target.value })}
+                      placeholder="เช่น 6.15"
+                      style={{ fontSize: '1.1rem', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>วันที่มีผลบังคับใช้ *</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      required
+                      value={rateForm.effective_date}
+                      onChange={(e) => setRateForm({ ...rateForm, effective_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {editingRate.product_type === 'deposit' && (
+                  <div className="form-group">
+                    <label className="form-label">เปิดบัญชีขั้นต่ำ (บาท)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      className="form-control"
+                      value={rateForm.min_amount}
+                      onChange={(e) => setRateForm({ ...rateForm, min_amount: e.target.value })}
+                      placeholder="เช่น 1000"
+                    />
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">เงื่อนไข / รายละเอียดดอกเบี้ย</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={rateForm.condition_note}
+                    onChange={(e) => setRateForm({ ...rateForm, condition_note: e.target.value })}
+                    placeholder="เช่น คิดดอกเบี้ยแบบลดต้นลดดอก หรือเปิดบัญชีขั้นต่ำ 1,000 บาท"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">บันทึกช่วยจำ / ประกาศอ้างอิง *</label>
+                  <textarea
+                    className="form-control"
+                    rows={2}
+                    required
+                    value={rateForm.note}
+                    onChange={(e) => setRateForm({ ...rateForm, note: e.target.value })}
+                    placeholder="เช่น ตามประกาศสหกรณ์ออมทรัพย์ฯ ที่ 1/2569 ลงวันที่ 1 มกราคม 2569"
+                  />
+                </div>
+
+                <div style={{ background: 'var(--bg-subtle)', padding: '0.85rem', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                  ℹ️ ระบบจะบันทึกประวัติการเปลี่ยนแปลงลงใน Audit Log และปรับปรุงอัตราดอกเบี้ยในหน้าแสดงผลและการคำนวณสินเชื่อทันที
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    disabled={rateSaving}
+                    onClick={() => setRateModalOpen(false)}
+                    className="btn btn-subtle"
+                    style={{ flex: 1 }}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={rateSaving}
+                    className="btn btn-primary"
+                    style={{ flex: 1 }}
+                  >
+                    {rateSaving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

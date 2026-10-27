@@ -1,0 +1,720 @@
+{
+  "counts": {
+    "app/Controllers/": 59,
+    "app/Core/": 12,
+    "app/Services/": 23,
+    "app/Middlewares/": 6,
+    "app/Models/": 0,
+    "views/": 0,
+    "src/pages/": 36,
+    "src/components/": 37,
+    "src/context/": 3,
+    "src/hooks/": 1,
+    "src/services/": 3,
+    "database/migrations/": 19,
+    "tests/": 13
+  },
+  "files": [
+    "bin/test_routes.php",
+    "bin/test_lint.php",
+    "bin/test_fast_lint.php",
+    "bin/test_calculator.php",
+    "bin/set_admin.php",
+    "bin/reset-member-passwords.php",
+    "bin/member-admin.php",
+    "bin/import-dividends.php",
+    "bin/generate_assets.php",
+    "bin/deploy-production.sh",
+    "bin/console",
+    "bin/check-member-system.php",
+    "config/security.php",
+    "scripts/vitePhpBackend.js",
+    "config/routes.php",
+    "scripts/prepare-dividends.py",
+    "config/permissions.php",
+    "scripts/check-seed-assets.php",
+    "config/features.php",
+    "scripts/check-dividend-database.php",
+    "config/database.php",
+    "config/app.php",
+    "tests/AuthDatabaseIntegrationTest.php",
+    "database/create_coop_tables.php",
+    "tests/AuthRedirectRegressionTest.php",
+    "database/seed_test_user.php",
+    "database/seed_four_roles_users.php",
+    "database/seed_coop_data.php",
+    "src/App.jsx",
+    "tests/SecurityRegressionTest.php",
+    "tests/RichTextServiceTest.php",
+    "tests/RichTextPublicationTest.php",
+    "tests/NavigationRedirectTest.mjs",
+    "tests/MemberPortalRequestsTest.php",
+    "tests/MemberDeploymentCompatibilityTest.php",
+    "tests/MemberAdministrationTest.php",
+    "tests/MemberAdministrationHttpTest.py",
+    "tests/MediaUrlTest.php",
+    "tests/LoanMasterDataTest.php",
+    "tests/DividendImportTest.php",
+    "database/Seeders/DatabaseSeeder.php",
+    "app/Services/LedSchemaService.php",
+    "app/Services/LedMatcherService.php",
+    "app/Services/LedBatchService.php",
+    "app/Services/DividendImportService.php",
+    "app/Services/AuditService.php",
+    "app/Services/AccessService.php",
+    "src/assets/hero-portrait-official.png",
+    "app/Services/TwoFactorService.php",
+    "app/Services/TaxCertificateService.php",
+    "app/Services/SuggestionService.php",
+    "app/Services/StaffService.php",
+    "app/Services/RichTextService.php",
+    "app/Services/ReceiptService.php",
+    "app/Services/MemberSystemHealth.php",
+    "app/Services/MemberSchemaException.php",
+    "app/Services/MemberRequestService.php",
+    "app/Services/MemberPortalService.php",
+    "app/Services/MemberPortalPermissionService.php",
+    "app/Services/MemberImportService.php",
+    "app/Services/MemberDataException.php",
+    "app/Services/MemberAdminService.php",
+    "app/Services/MediaService.php",
+    "app/Services/MailService.php",
+    "app/Services/LedService.php",
+    "public/index.php",
+    "app/Middlewares/RoleMiddleware.php",
+    "app/Controllers/Api/SpaApiController.php",
+    "app/Middlewares/RateLimitMiddleware.php",
+    "app/Controllers/Api/LedApiController.php",
+    "app/Middlewares/PermissionMiddleware.php",
+    "app/Middlewares/FeatureFlagMiddleware.php",
+    "app/Middlewares/CsrfMiddleware.php",
+    "app/Middlewares/AuthMiddleware.php",
+    "app/Controllers/Staff/StaffController.php",
+    "app/Controllers/PublicReceiptController.php",
+    "public/templates/member-dividends-template.xlsx",
+    "public/templates/member-dividends-template.csv",
+    "public/img/logo.webp",
+    "database/migrations/018_member_profile_requests.sql",
+    "database/migrations/017_access_management_permissions.sql",
+    "database/migrations/016_repair_member_admin_profile_columns.sql",
+    "database/migrations/015_member_admin_role.sql",
+    "database/migrations/014_member_admin_history.sql",
+    "database/migrations/013_member_dividends.sql",
+    "database/migrations/012_repair_members_auth_columns.sql",
+    "database/migrations/011_disable_member_portal_content.sql",
+    "database/migrations/010_create_led_member_check_tables.sql",
+    "database/migrations/009_update_loan_products_and_interest_rates.sql",
+    "database/migrations/008_create_rate_limit_attempts_table.sql",
+    "database/migrations/007_create_member_suggestions_table.sql",
+    "database/migrations/006_create_surveys_table.sql",
+    "database/migrations/006b_create_members_table.sql",
+    "database/migrations/005_create_tax_certificates_table.sql",
+    "database/migrations/004_create_events_table.sql",
+    "database/migrations/003_create_important_announcements_table.sql",
+    "database/migrations/002_create_contact_messages_table.sql",
+    "database/migrations/001_initial_schema.sql",
+    "app/Controllers/Admin/AnnouncementController.php",
+    "app/Controllers/Admin/AccessController.php",
+    "app/Controllers/Admin/AuditLogController.php",
+    "public/robots.txt",
+    ".github/workflows/ci.yml",
+    "app/Core/Controller.php",
+    "app/Core/Auth.php",
+    "app/Core/App.php",
+    "app/Controllers/Admin/AuthController.php",
+    "app/Core/Database.php",
+    "app/Core/Csrf.php",
+    "app/Core/Helpers.php",
+    "app/Core/Logger.php",
+    "app/Core/View.php",
+    "app/Core/Session.php",
+    "app/Core/Router.php",
+    "app/Core/Response.php",
+    "app/Core/Request.php",
+    "app/Controllers/Admin/ContactMessageController.php",
+    "app/Controllers/Admin/ComplaintController.php",
+    "app/Controllers/Admin/BoardStaffController.php",
+    "app/Controllers/Admin/BackupController.php",
+    "app/Controllers/Admin/DepositProductController.php",
+    "app/Controllers/Admin/DashboardController.php",
+    "app/Controllers/Admin/DividendImportController.php",
+    "app/Controllers/Member/TaxCertificateController.php",
+    "app/Controllers/Member/SurveyController.php",
+    "app/Controllers/Member/SuggestionController.php",
+    "app/Controllers/Member/MemberPortalController.php",
+    "app/Controllers/Member/DividendEstimatorController.php",
+    "app/Controllers/Member/DividendController.php",
+    "app/Controllers/Admin/HeroSlideController.php",
+    "app/Controllers/Admin/FaqController.php",
+    "app/Controllers/Admin/EventController.php",
+    "app/Controllers/Admin/EServiceController.php",
+    "app/Controllers/Admin/DocumentController.php",
+    "app/Controllers/Admin/LoanProductController.php",
+    "app/Controllers/Admin/LedController.php",
+    "app/Controllers/Admin/InterestRateController.php",
+    "app/Controllers/Admin/MediaController.php",
+    "app/Controllers/Admin/MemberManagementController.php",
+    "src/index.css",
+    "public/assets/system/image-placeholder.webp",
+    "app/Controllers/Public/WelfareController.php",
+    "app/Controllers/Public/TaxCertificateController.php",
+    "app/Controllers/Public/SurveyController.php",
+    "app/Controllers/Public/SitemapController.php",
+    "app/Controllers/Public/PrivacyController.php",
+    "app/Controllers/Public/NewsController.php",
+    "app/Controllers/Public/LoanController.php",
+    "app/Controllers/Public/LoanChecklistController.php",
+    "app/Controllers/Public/HomeController.php",
+    "app/Controllers/Public/EventController.php",
+    "app/Controllers/Public/EServiceController.php",
+    "app/Controllers/Public/DocumentController.php",
+    "app/Controllers/Public/DividendEstimatorController.php",
+    "app/Controllers/Public/DepositController.php",
+    "app/Controllers/Public/ContactController.php",
+    "app/Controllers/Public/ComplaintController.php",
+    "app/Controllers/Public/CalculatorController.php",
+    "app/Controllers/Public/ApiController.php",
+    "app/Controllers/Public/AnnouncementController.php",
+    "app/Controllers/Public/AboutController.php",
+    "app/Controllers/Admin/WelfareController.php",
+    "app/Controllers/Admin/UserController.php",
+    "app/Controllers/Admin/SurveyController.php",
+    "app/Controllers/Admin/SuggestionController.php",
+    "app/Controllers/Admin/SettingController.php",
+    "app/Controllers/Admin/PrivacyCookieController.php",
+    "app/Controllers/Admin/PopupController.php",
+    "app/Controllers/Admin/NewsController.php",
+    "src/hooks/useInactivityTimeout.js",
+    "src/utils/richText.js",
+    "src/utils/news.js",
+    "src/utils/navigation.js",
+    "src/utils/media.js",
+    "src/styles/mobile-responsive.css",
+    "src/data/mockData.js",
+    "public/assets/img/Announcement.png",
+    "src/services/memberAdminApi.js",
+    "src/services/ledApi.js",
+    "src/services/api.js",
+    "src/components/staff/StaffReviewModal.jsx",
+    "public/assets/img/popup_dividend.jpg",
+    "public/assets/news/sample_news_3.jpg",
+    "public/assets/news/sample_news_2.jpg",
+    "public/assets/news/sample_news_1.jpg",
+    "public/assets/news/news-f99b110811cc69117c872daee09c7b8a.png",
+    "public/assets/news/news-e6f5429d113fd7f493569944a525b55a.png",
+    "public/assets/news/news-d518f3cb827beec0ddc268790b2bb867.png",
+    "public/assets/news/news-c0f31eb4aefce3c30062bfdffe1b345c.png",
+    "public/assets/news/news-9bb77c55965394e0af62164d8c07c296.png",
+    "public/assets/news/news-98862965e8742e6f6fce523d7c9fac7a.png",
+    "public/assets/news/news-701720b12b766b85d5331927b4473a8b.png",
+    "public/assets/news/news-3493f2392414189f6a8c17e3bb7bf726.webp",
+    "public/assets/news/news-06b7e053713c2b038681413006a34200.png",
+    "src/context/ToastContext.jsx",
+    "src/context/ThemeContext.jsx",
+    "src/context/AuthContext.jsx",
+    "src/main.jsx",
+    "public/assets/css/admin.css",
+    "public/assets/img/hero_bg_default.jpg",
+    "public/assets/img/hero_bg_coop.jpg",
+    "public/assets/css/style.css",
+    "public/assets/img/logo.webp",
+    "public/assets/img/hero_bg_health.jpg",
+    "public/assets/img/news_placeholder.jpg",
+    "src/components/member/NewLoanRequestModal.jsx",
+    "public/assets/img/officer/officer-06-loans.jpg",
+    "src/components/member/MemberAdminWarnings.jsx",
+    "public/assets/img/officer/officer-05-unit.jpg",
+    "public/assets/img/officer/officer-04-accounting.jpg",
+    "src/components/member/EditProfileModal.jsx",
+    "public/assets/img/officer/officer-03-administration.jpg",
+    "src/components/member/AuthModal.jsx",
+    "public/assets/img/officer/officer-02-finance.jpg",
+    "src/components/member/AdminMemberShell.jsx",
+    "public/assets/img/officer/officer-01-manager.jpg",
+    "src/components/dashboard/StatusBadge.jsx",
+    "src/components/dashboard/SectionHeader.jsx",
+    "src/components/dashboard/KpiCard.jsx",
+    "src/components/dashboard/EmptyState.jsx",
+    "src/components/dashboard/DashboardHeader.jsx",
+    "public/assets/js/cookie-consent.js",
+    "public/assets/js/loan-calculator.js",
+    "public/assets/js/swal-config.js",
+    "public/assets/js/popup-manager.js",
+    "public/assets/js/main.js",
+    "public/assets/img/committee/committee-01-president.webp",
+    "public/assets/img/board_placeholder.jpg",
+    "public/assets/img/committee/committee-02-vice-president.webp",
+    "src/pages/AdminLedDashboardPage.jsx",
+    "src/pages/AdminLedBatchPage.jsx",
+    "src/pages/AdminDividendImportPage.jsx",
+    "src/pages/AdminDashboardPage.jsx",
+    "src/pages/AboutPage.jsx",
+    "src/pages/AdminLedSearchPage.jsx",
+    "src/pages/AdminLedSchemaPage.jsx",
+    "src/pages/AdminLedReviewPage.jsx",
+    "public/assets/img/committee/committee-03-pochawan.webp",
+    "src/pages/AdminMembers.css",
+    "src/pages/AdminMemberDetailPage.jsx",
+    "src/pages/AdminMembersDashboardPage.jsx",
+    "src/components/layout/TopBar.jsx",
+    "src/components/layout/QuickActionDock.jsx",
+    "src/components/layout/Navbar.jsx",
+    "src/components/layout/Footer.jsx",
+    "src/components/led/LedResultCard.jsx",
+    "src/components/led/LedKpiCard.jsx",
+    "src/components/led/LedReviewModal.jsx",
+    "public/assets/img/committee/committee-15-chatchai.webp",
+    "public/assets/img/committee/committee-14-nonglak.webp",
+    "public/assets/img/committee/committee-13-surapong.webp",
+    "public/assets/img/committee/committee-09-rojana.webp",
+    "public/assets/img/committee/committee-12-pichaya.webp",
+    "public/assets/img/committee/committee-08-khrueathip.webp",
+    "public/assets/img/committee/committee-11-anuchit.webp",
+    "public/assets/img/committee/committee-07-chalerm.webp",
+    "public/assets/img/committee/committee-10-marissa.webp",
+    "public/assets/img/committee/committee-06-wanna.webp",
+    "public/assets/img/committee/committee-05-sunetra.webp",
+    "public/assets/img/committee/committee-04-jatupol.webp",
+    "src/pages/ContactPage.jsx",
+    "src/pages/CalculatorPage.jsx",
+    "src/pages/BoardPage.jsx",
+    "src/pages/BoardOfficerPage.jsx",
+    "src/pages/AdminMembersPage.jsx",
+    "src/pages/AdminMembersHealthPage.jsx",
+    "src/pages/EServicePage.jsx",
+    "src/pages/DocumentsPage.jsx",
+    "src/pages/DepositsPage.jsx",
+    "src/pages/HomePage.jsx",
+    "src/pages/LoanChecklistPage.jsx",
+    "src/components/common/ChangePasswordModal.jsx",
+    "src/components/common/CookieConsent.jsx",
+    "src/components/common/CampaignModal.jsx",
+    "src/components/common/AIChatWidget.jsx",
+    "src/components/common/ErrorBoundary.jsx",
+    "src/components/led/LedRunHistoryTable.jsx",
+    "src/pages/LoansPage.jsx",
+    "src/components/common/PageSkeletonLoader.jsx",
+    "src/components/calculators/DividendEstimator.jsx",
+    "src/components/calculators/LoanReadinessChecklist.jsx",
+    "src/components/calculators/LoanCalculator.jsx",
+    "src/components/led/LedStatusBadge.jsx",
+    "src/components/led/LedSubNav.jsx",
+    "src/pages/LoginPage.jsx",
+    "src/pages/LoginPage.css",
+    "src/pages/MemberDashboardPage.jsx",
+    "src/components/common/RichTextEditor.css",
+    "src/components/common/RichTextContent.jsx",
+    "src/components/common/RichTextEditor.jsx",
+    "src/components/led/LedWarningNotice.jsx",
+    "src/pages/MemberDividendsPage.css",
+    "src/components/common/SafeImage.jsx",
+    "src/components/common/SessionTimeoutModal.jsx",
+    "src/components/common/UserStatusBadge.jsx",
+    "src/pages/MemberDividendsPage.jsx",
+    "src/pages/NewsPage.jsx",
+    "src/pages/WelfarePage.jsx",
+    "src/pages/VerifyReceiptPage.jsx",
+    "src/pages/StatisticsPage.jsx",
+    "src/pages/ServiceUnavailablePage.jsx",
+    "src/pages/ProfilePage.jsx",
+    "src/pages/PrivacyPolicyPage.jsx",
+    "src/pages/NotFoundPage.jsx"
+  ],
+  "missingImports": [
+    {
+      "file": "src/App.jsx",
+      "import": "./pages/AdminAccessPage"
+    },
+    {
+      "file": "src/App.jsx",
+      "import": "./pages/AdminWorkspacePage"
+    }
+  ],
+  "missingViews": [
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/dashboard.php"
+    },
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/members.php"
+    },
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/member_detail.php"
+    },
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/loans.php"
+    },
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/welfare.php"
+    },
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/reports.php"
+    },
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/import.php"
+    },
+    {
+      "file": "app/Controllers/Staff/StaffController.php",
+      "view": "views/staff/billing.php"
+    },
+    {
+      "file": "app/Controllers/PublicReceiptController.php",
+      "view": "views/public/verify_receipt.php"
+    },
+    {
+      "file": "app/Controllers/Admin/AnnouncementController.php",
+      "view": "views/admin/announcements/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/AnnouncementController.php",
+      "view": "views/admin/announcements/create.php"
+    },
+    {
+      "file": "app/Controllers/Admin/AnnouncementController.php",
+      "view": "views/admin/announcements/edit.php"
+    },
+    {
+      "file": "app/Controllers/Admin/AuditLogController.php",
+      "view": "views/admin/audit_logs/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/AuthController.php",
+      "view": "views/auth/login.php"
+    },
+    {
+      "file": "app/Controllers/Admin/AuthController.php",
+      "view": "views/auth/two_factor.php"
+    },
+    {
+      "file": "app/Controllers/Admin/ContactMessageController.php",
+      "view": "views/admin/contact_messages/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/ContactMessageController.php",
+      "view": "views/admin/contact_messages/show.php"
+    },
+    {
+      "file": "app/Controllers/Admin/ComplaintController.php",
+      "view": "views/admin/complaints/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/ComplaintController.php",
+      "view": "views/admin/complaints/show.php"
+    },
+    {
+      "file": "app/Controllers/Admin/BoardStaffController.php",
+      "view": "views/admin/board_staff/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/BackupController.php",
+      "view": "views/admin/backups/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/DepositProductController.php",
+      "view": "views/admin/deposits/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/DashboardController.php",
+      "view": "views/admin/dashboard.php"
+    },
+    {
+      "file": "app/Controllers/Admin/DashboardController.php",
+      "view": "views/admin/executive.php"
+    },
+    {
+      "file": "app/Controllers/Member/TaxCertificateController.php",
+      "view": "views/member/tax_certificates/index.php"
+    },
+    {
+      "file": "app/Controllers/Member/TaxCertificateController.php",
+      "view": "views/member/tax_certificates/print.php"
+    },
+    {
+      "file": "app/Controllers/Member/SurveyController.php",
+      "view": "views/member/surveys/index.php"
+    },
+    {
+      "file": "app/Controllers/Member/SurveyController.php",
+      "view": "views/member/surveys/show.php"
+    },
+    {
+      "file": "app/Controllers/Member/SuggestionController.php",
+      "view": "views/member/suggestions/index.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/dashboard.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/profile.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/shares.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/deposits.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/loans.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/loan_apply.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/welfare.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/beneficiaries.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/receipts.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/receipt_print.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/notifications.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/online_services.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/financial_summary.php"
+    },
+    {
+      "file": "app/Controllers/Member/MemberPortalController.php",
+      "view": "views/member/settings.php"
+    },
+    {
+      "file": "app/Controllers/Member/DividendEstimatorController.php",
+      "view": "views/member/dividend_estimator.php"
+    },
+    {
+      "file": "app/Controllers/Admin/HeroSlideController.php",
+      "view": "views/admin/hero_slides/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/FaqController.php",
+      "view": "views/admin/faqs/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/EventController.php",
+      "view": "views/admin/events/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/EventController.php",
+      "view": "views/admin/events/create.php"
+    },
+    {
+      "file": "app/Controllers/Admin/EventController.php",
+      "view": "views/admin/events/edit.php"
+    },
+    {
+      "file": "app/Controllers/Admin/EServiceController.php",
+      "view": "views/admin/eservices/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/DocumentController.php",
+      "view": "views/admin/documents/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/LoanProductController.php",
+      "view": "views/admin/loans/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/InterestRateController.php",
+      "view": "views/admin/interest_rates/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/MediaController.php",
+      "view": "views/admin/media/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/WelfareController.php",
+      "view": "views/public/welfare/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/TaxCertificateController.php",
+      "view": "views/public/verify_tax_cert.php"
+    },
+    {
+      "file": "app/Controllers/Public/SurveyController.php",
+      "view": "views/public/404.php"
+    },
+    {
+      "file": "app/Controllers/Public/SurveyController.php",
+      "view": "views/public/surveys/show.php"
+    },
+    {
+      "file": "app/Controllers/Public/PrivacyController.php",
+      "view": "views/public/privacy/policy.php"
+    },
+    {
+      "file": "app/Controllers/Public/PrivacyController.php",
+      "view": "views/public/privacy/cookies.php"
+    },
+    {
+      "file": "app/Controllers/Public/PrivacyController.php",
+      "view": "views/public/privacy/terms.php"
+    },
+    {
+      "file": "app/Controllers/Public/NewsController.php",
+      "view": "views/public/news/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/NewsController.php",
+      "view": "views/public/news/show.php"
+    },
+    {
+      "file": "app/Controllers/Public/LoanController.php",
+      "view": "views/public/loans/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/LoanChecklistController.php",
+      "view": "views/public/loan_checklist.php"
+    },
+    {
+      "file": "app/Controllers/Public/HomeController.php",
+      "view": "views/public/home.php"
+    },
+    {
+      "file": "app/Controllers/Public/EventController.php",
+      "view": "views/public/events/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/EServiceController.php",
+      "view": "views/public/eservice.php"
+    },
+    {
+      "file": "app/Controllers/Public/DocumentController.php",
+      "view": "views/public/documents/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/DividendEstimatorController.php",
+      "view": "views/public/dividend_estimator.php"
+    },
+    {
+      "file": "app/Controllers/Public/DepositController.php",
+      "view": "views/public/deposits/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/DepositController.php",
+      "view": "views/public/deposits/show.php"
+    },
+    {
+      "file": "app/Controllers/Public/ContactController.php",
+      "view": "views/public/contact.php"
+    },
+    {
+      "file": "app/Controllers/Public/ContactController.php",
+      "view": "views/public/faqs.php"
+    },
+    {
+      "file": "app/Controllers/Public/ComplaintController.php",
+      "view": "views/public/complaints/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/ComplaintController.php",
+      "view": "views/public/complaints/track.php"
+    },
+    {
+      "file": "app/Controllers/Public/CalculatorController.php",
+      "view": "views/public/calculator.php"
+    },
+    {
+      "file": "app/Controllers/Public/AnnouncementController.php",
+      "view": "views/public/announcements/index.php"
+    },
+    {
+      "file": "app/Controllers/Public/AnnouncementController.php",
+      "view": "views/public/404.php"
+    },
+    {
+      "file": "app/Controllers/Public/AnnouncementController.php",
+      "view": "views/public/announcements/show.php"
+    },
+    {
+      "file": "app/Controllers/Public/AboutController.php",
+      "view": "views/public/about.php"
+    },
+    {
+      "file": "app/Controllers/Public/AboutController.php",
+      "view": "views/public/board.php"
+    },
+    {
+      "file": "app/Controllers/Public/AboutController.php",
+      "view": "views/public/statistics.php"
+    },
+    {
+      "file": "app/Controllers/Admin/WelfareController.php",
+      "view": "views/admin/welfare/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/UserController.php",
+      "view": "views/admin/users/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/SurveyController.php",
+      "view": "views/admin/surveys/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/SurveyController.php",
+      "view": "views/admin/surveys/create.php"
+    },
+    {
+      "file": "app/Controllers/Admin/SurveyController.php",
+      "view": "views/admin/surveys/results.php"
+    },
+    {
+      "file": "app/Controllers/Admin/SuggestionController.php",
+      "view": "views/admin/suggestions/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/SuggestionController.php",
+      "view": "views/admin/suggestions/show.php"
+    },
+    {
+      "file": "app/Controllers/Admin/SettingController.php",
+      "view": "views/admin/settings/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/PrivacyCookieController.php",
+      "view": "views/admin/privacy_cookies/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/PopupController.php",
+      "view": "views/admin/popups/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/NewsController.php",
+      "view": "views/admin/news/index.php"
+    },
+    {
+      "file": "app/Controllers/Admin/NewsController.php",
+      "view": "views/admin/news/form.php"
+    },
+    {
+      "file": "app/Controllers/Admin/NewsController.php",
+      "view": "views/admin/news/form.php"
+    }
+  ],
+  "routeCount": 253
+}

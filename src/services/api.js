@@ -29,6 +29,10 @@ const apiFetch = async (path, options = {}) => {
       if (res.ok) {
         return await res.json();
       }
+      if (res.status === 403) {
+        const result=await res.json();
+        return result;
+      }
       if (res.status === 401) {
         return { success: false, authenticated: false, message: 'กรุณาเข้าสู่ระบบ' };
       }
@@ -82,7 +86,7 @@ export const fetchStatistics = () => apiFetch('/api/public/statistics');
 // ──────────────────────────────────────────────
 
 /** Check if current user is authenticated */
-export const fetchCurrentUser = () => apiFetch('/api/auth/me');
+export const fetchCurrentUser = () => apiFetch('/api/auth/me', { cache: 'no-store' });
 
 // ──────────────────────────────────────────────
 // MEMBER DATA APIs (require authentication)
@@ -155,6 +159,15 @@ export const fetchAdminAuditLogs = () => apiFetch('/api/admin/audit-logs');
 /** Fetch database-backed news for the administrator dashboard */
 export const fetchAdminNews = () => apiFetch('/api/admin/news');
 
+/** Fetch interest rates, loan products, and rate change history for admin */
+export const fetchAdminRates = () => apiFetch('/api/admin/rates');
+
+/** Update an interest rate with audit history */
+export const updateAdminRate = (id, data) => apiPost(`/api/admin/rates/${id}`, data);
+
+/** Update loan product limits, terms, and conditions */
+export const updateAdminLoanProduct = (id, data) => apiPost(`/api/admin/loan-products/${id}`, data);
+
 // ──────────────────────────────────────────────
 // POST APIs (mutations)
 // ──────────────────────────────────────────────
@@ -193,7 +206,7 @@ export const apiPost = async (path, body = {}) => {
         },
         credentials: 'include',
       });
-      if (res.ok || [400, 401, 403, 419, 422].includes(res.status)) {
+      if (res.ok || [400, 401, 403, 409, 419, 422, 429].includes(res.status)) {
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           return await res.json();
@@ -216,3 +229,12 @@ export const createAdminNews = (body) => apiPost('/api/admin/news', body);
 
 /** Soft-delete a news item from the React administrator dashboard */
 export const deleteAdminNews = (id) => apiPost(`/api/admin/news/${id}/delete`);
+
+/** Fetch public visitor statistics */
+export const fetchVisitorStats = () => apiFetch('/api/visits/stats');
+
+/** Fetch detailed visitor analytics for /visitor-stats */
+export const fetchVisitorAnalytics = () => apiFetch('/api/visits/analytics');
+
+/** Record page visit */
+export const recordPageVisit = (payload) => apiPost('/api/visits/record', payload);

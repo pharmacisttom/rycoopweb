@@ -1,3 +1,4 @@
+import { usePublicInformation } from '../../context/PublicContentContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Sparkles, Send, MessageCircle, X, RefreshCw, 
@@ -5,6 +6,7 @@ import {
   Award, TrendingUp, HelpCircle, ChevronRight, Laptop,
   Lightbulb, HeartHandshake, FileText, AlertCircle, Play
 } from 'lucide-react';
+
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -47,6 +49,7 @@ const FORTUNES = [
 ];
 
 export default function AIChatWidget() {
+  const { INTEREST_RATES } = usePublicInformation();
   const { user } = useAuth();
   const { confirmDialog, toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -120,11 +123,11 @@ export default function AIChatWidget() {
       const lower = query.toLowerCase();
 
       if (lower.includes('กู้') || lower.includes('ดอกเบี้ยกู้')) {
-        reply = `💸 **ข้อมูลเงินกู้และอัตราดอกเบี้ย สหกรณ์ฯ ระยอง (10 ประเภท):**\n- **1. เงินกู้สามัญ:** ดอกเบี้ย 6.15% สูงสุด 3,000,000 บ. ผ่อนได้ 180 งวด\n- **2. เงินกู้ฉุกเฉิน:** ดอกเบี้ย 4.75% สูงสุด 100,000 บ. อนุมัติไว 24 ชม.\n- **3. เงินกู้พิเศษ:** ดอกเบี้ย 5.25% สูงสุด 5,000,000 บ. ผ่อน 360 งวด\n- **4. เงินกู้ผ่อนชำระสินค้า ฯ:** ดอกเบี้ย 5.50% ผ่อน 36 งวด\n- **5. เงินกู้เพื่อการศึกษา:** ดอกเบี้ยพิเศษ 2.00%\n- **6. เงินกู้เพื่อพัฒนาคุณภาพชีวิต:** ดอกเบี้ย 5.50%\n- **7. เงินกู้เพื่อจัดซื้อรถยนต์:** ดอกเบี้ย 4.00%\n- **8. เงินกู้พิเศษเพื่อความมั่นคงในชีวิต:** ดอกเบี้ย 5.25%\n- **9. เงินกู้เพื่อปรับปรุงโครงสร้างหนี้:** ดอกเบี้ย 4.75%\n- **10. เงินกู้รับการค้ำประกัน:** ดอกเบี้ยพิเศษสุด 2.00%\n\n👉 สามารถกดเมนู "คำนวณเงินกู้" หรือยื่นคำขอออนไลน์ได้เลยครับ!`;
+        reply = "ข้อมูลวงเงิน อัตราดอกเบี้ย และสิทธิเงินเฉลี่ยคืนขึ้นอยู่กับประเภทสมาชิกและประกาศที่มีผล กรุณาติดต่อสหกรณ์ 038-967-409 เพื่อตรวจสอบก่อนยื่นคำขอ";
       } else if (lower.includes('ฝาก') || lower.includes('ดอกเบี้ยฝาก')) {
-        reply = `🏦 **อัตราดอกเบี้ยเงินฝาก (สูงกว่าธนาคารพาณิชย์):**\n- **ออมทรัพย์พิเศษพลัส:** 3.10% ต่อปี (ดอกเบี้ยปลอดภาษี)\n- **ออมทรัพย์สุขใจ:** 2.25% ต่อปี\n- **ออมทรัพย์สินมัธยัสถ์:** 2.75% ต่อปี\n\nฝากเงินกับสหกรณ์ ผลตอบแทนคุ้มค่า ปลอดภัย 100% ครับ`;
+        reply = INTEREST_RATES.deposits.map(item => `${item.type}: ${item.rate} ต่อปี เปิดบัญชีขั้นต่ำ ${item.minDeposit}`).join('\n') + '\n' + INTEREST_RATES.depositSource.note + '\nแหล่งข้อมูล: ' + INTEREST_RATES.depositSource.url;
       } else if (lower.includes('ปันผล') || lower.includes('เฉลี่ยคืน')) {
-        reply = `📈 **เงินปันผล & เฉลี่ยคืนประจำปี 2566/2567:**\n- **เงินปันผลตามหุ้น:** 5.25% ต่อปี\n- **เงินเฉลี่ยคืนดอกเบี้ยเงินกู้:** 12.50%\n\n💡 สมาชิกสามารถตรวจสอบยอดประมาณการได้ที่หน้า **Member Dashboard** หรือแท็บ "ประมาณการปันผล" ครับ`;
+        reply = "ยอดปันผลและเงินเฉลี่ยคืนต้องตรวจสอบตามปีบัญชีและข้อมูลของสมาชิก กรุณาเข้าสู่ระบบสมาชิกเพื่อตรวจสอบยอดจริง หรือติดต่อสหกรณ์ 038-967-409";
       } else if (lower.includes('อู้') || lower.includes('ขี้เกียจ') || lower.includes('เบื่อ') || lower.includes('หนีงาน')) {
         reply = `🤫 **คู่มือการอู้งานฉบับมืออาชีพ:**\n1. กดปุ่ม **"🚨 หัวหน้ามา!"** ด้านบนเพื่อแปลงร่างหน้าจอเป็น Excel ทันที!\n2. ไปที่แท็บ **"🪄 Gen ข้ออ้าง"** เพื่อก๊อปข้ออ้างลางานสุดเนียนไปส่ง\n3. จิ้มแท็บ **"🍱 กินไรดี"** หาของอร่อยกินย้อมใจ\n\nจำไว้ครับ: *"งานคือเงิน แต่พักผ่อนคือชีวิต"* 5555`;
       } else if (lower.includes('มุก') || lower.includes('ตลก') || lower.includes('ขำ')) {

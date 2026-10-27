@@ -1,9 +1,11 @@
+import { usePublicInformation } from '../../context/PublicContentContext';
 import React from 'react';
 import { Phone, Clock, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { COOP_INFO, INTEREST_RATES } from '../../data/mockData';
+
 
 export default function TopBar() {
+  const { COOP_INFO } = usePublicInformation();
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -24,7 +26,7 @@ export default function TopBar() {
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} className="hide-mobile">
             <Clock size={14} style={{ color: 'var(--accent-teal)' }} />
-            <span>เวลาทำการ: 08:30 - 16:30 น.</span>
+            <span>{COOP_INFO.workHours}</span>
           </span>
           <span style={{ 
             background: 'rgba(245, 158, 11, 0.15)', 
@@ -34,7 +36,7 @@ export default function TopBar() {
             fontSize: '0.75rem',
             fontWeight: '600'
           }} className="hide-mobile">
-            ✨ ดอกเบี้ยเงินฝากสูงสุด {INTEREST_RATES.deposits[4]?.rate || '3.10%'} | กู้ฉุกเฉิน {INTEREST_RATES.loans.find(l => l.type === 'เงินกู้ฉุกเฉิน')?.rate || '4.75%'}
+            ตรวจสอบอัตราดอกเบี้ยและเงื่อนไขล่าสุดกับสหกรณ์
           </span>
         </div>
 

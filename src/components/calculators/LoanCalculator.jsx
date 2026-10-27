@@ -1,8 +1,10 @@
+import { usePublicInformation } from '../../context/PublicContentContext';
 import React, { useState, useMemo } from 'react';
 import { Calculator, DollarSign, Calendar, Percent, FileText, CheckCircle, RefreshCw, Printer, Sparkles } from 'lucide-react';
-import { LOAN_PRODUCTS } from '../../data/mockData';
+
 
 export default function LoanCalculator() {
+  const { LOAN_PRODUCTS } = usePublicInformation();
   const [selectedProductId, setSelectedProductId] = useState('ordinary');
   const [principal, setPrincipal] = useState(300000);
   const [rate, setRate] = useState(6.15);
@@ -90,7 +92,7 @@ export default function LoanCalculator() {
             <span>โปรแกรมคำนวณเงินกู้สหกรณ์</span>
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            คำนวณค่างวดรายเดือนและดอกเบี้ยแบบลดต้นลดดอก (Effective Rate) ตรงตามประกาศอัตราดอกเบี้ยจริง
+            ประมาณการค่างวดแบบลดต้นลดดอก โดยใช้อัตราอ้างอิงจากเว็บเดิม กรุณาตรวจสอบประกาศและสิทธิของสมาชิกก่อนยื่นกู้
           </p>
         </div>
 

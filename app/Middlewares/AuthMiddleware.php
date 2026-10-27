@@ -14,8 +14,33 @@ class AuthMiddleware
     public function handle(Request $request, Response $response): bool
     {
         if (!Auth::check()) {
+            if (Auth::checkPendingMfaEnrollment()) {
+                if ($request->isAjax()) {
+                    $response->json([
+                        'success' => false,
+                        'code' => 'MFA_ENROLLMENT_REQUIRED',
+                        'requiresMfaEnrollment' => true,
+                        'redirect' => '/admin/mfa/enroll',
+                        'message' => 'จำเป็นต้องลงทะเบียน 2FA ก่อนเข้าใช้งาน'
+                    ], 403);
+                    return false;
+                }
+                $response->redirect(url('admin/mfa/enroll'));
+                return false;
+            }
+
             if (Auth::checkPending2FA()) {
-                $response->redirect(url('admin/2fa'));
+                if ($request->isAjax()) {
+                    $response->json([
+                        'success' => false,
+                        'code' => 'TWO_FACTOR_REQUIRED',
+                        'requiresTwoFactor' => true,
+                        'redirect' => '/admin/mfa/verify',
+                        'message' => 'กรุณายืนยันรหัสความปลอดภัย 2FA'
+                    ], 403);
+                    return false;
+                }
+                $response->redirect(url('admin/mfa/verify'));
                 return false;
             }
 

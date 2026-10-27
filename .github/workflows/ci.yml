@@ -21,9 +21,14 @@ jobs:
     name: PHP, database, media and security checks
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.5']
+
     services:
       mysql:
-        image: mysql:8.4
+        image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
         ports:
@@ -39,12 +44,16 @@ jobs:
       APP_DEBUG: "false"
       APP_URL: http://127.0.0.1:8080
       APP_TIMEZONE: Asia/Bangkok
-      APP_KEY: ci-only-not-a-production-secret
+      APP_KEY: ci-only-not-a-production-secret-32-characters
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_DATABASE: rayongcoop_ci
-      DB_USERNAME: root
-      DB_PASSWORD: root
+      DB_USERNAME: rycoop_ci_app
+      DB_PASSWORD: ci-app-password-2026-secure!
+      CI_MIGRATOR_USER: rycoop_ci_migrator
+      CI_MIGRATOR_PASSWORD: ci-migrator-password-2026-secure!
+      MYSQL_ADMIN_USER: root
+      MYSQL_ADMIN_PASSWORD: root
       DB_CHARSET: utf8mb4
       DB_COLLATION: utf8mb4_unicode_ci
       INITIAL_ADMIN_USERNAME: ci_admin
@@ -66,8 +75,8 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5'
-          extensions: pdo_mysql, mbstring, xml, curl, gd, zip, bcmath, intl, fileinfo
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, pdo_sqlite, mbstring, xml, curl, gd, zip, bcmath, intl, fileinfo
           tools: composer:v2
 
       - name: Install PHP dependencies
@@ -75,6 +84,9 @@ jobs:
 
       - name: Validate Composer manifest
         run: composer validate --no-check-publish
+
+      - name: Check Composer advisories
+        run: composer audit --locked
 
       - name: Check PHP syntax
         run: |
@@ -93,8 +105,51 @@ jobs:
       - name: Run security regression tests
         run: php tests/SecurityRegressionTest.php
 
+      - name: Run isolated workflow checks
+        run: |
+          php tests/PublicContentWorkflowTest.php
+          php tests/WorkflowRoutesTest.php
+          php tests/PermissionBehaviorTest.php
+          php tests/RequestSecurityTest.php
+          php tests/GoogleAuthCoreTest.php
+          php tests/FeatureFlagContractTest.php
+          php tests/DividendImportTest.php
+          php tests/MfaWorkflowTest.php
+          php tests/TwoFactorServiceTest.php
+          php tests/NewsWorkflowTest.php
+          php tests/PasswordWorkflowTest.php
+          php tests/MigrationRunnerTest.php
+
+      - name: Validate release guard without deploying
+        run: |
+          bash -n bin/deploy-production.sh
+          if bash bin/deploy-production.sh > /tmp/release-guard.log 2>&1; then
+            echo 'Deployment unexpectedly passed without approval.'
+            exit 1
+          fi
+          grep -q 'DEPLOY_APPROVED_COMMIT' /tmp/release-guard.log
+
+      - name: Provision CI database and security accounts
+        env:
+          MYSQL_ADMIN_USER: root
+          MYSQL_ADMIN_PASSWORD: root
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: rayongcoop_ci
+          CI_MIGRATOR_USER: ${{ env.CI_MIGRATOR_USER }}
+          CI_MIGRATOR_PASSWORD: ${{ env.CI_MIGRATOR_PASSWORD }}
+          CI_APP_USER: ${{ env.DB_USERNAME }}
+          CI_APP_PASSWORD: ${{ env.DB_PASSWORD }}
+        run: php scripts/ci-provision-database.php
+
       - name: Migrate fresh CI database
-        run: php bin/console db:migrate
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: rayongcoop_ci
+          DB_USERNAME: ${{ env.CI_MIGRATOR_USER }}
+          DB_PASSWORD: ${{ env.CI_MIGRATOR_PASSWORD }}
+        run: php bin/console db:migrate --confirm-financial
 
       - name: Seed CI database twice
         run: |
@@ -152,8 +207,22 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Set up PHP for public config parity checks
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Check public reference content
+        run: node tests/PublicContentReferenceTest.mjs
+
+      - name: Reject moderate, high or critical npm advisories
+        run: npm audit --audit-level=moderate
+
+      - name: Test frontend workflow contracts
+        run: node tests/WorkflowFrontendTest.mjs
 
       - name: Build frontend
         run: npm run build

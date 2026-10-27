@@ -9,6 +9,7 @@
 # Storage & Temporary files
 /storage/logs/*.log
 /storage/backups/*.sql
+/storage/backups/*.sha256
 /storage/uploads/*
 !/storage/uploads/.gitkeep
 /storage/cache/*
@@ -40,3 +41,11 @@ dist-ssr/
 *.local
 .vite/
 /storage/private/
+
+# Temporary / review outputs & worktrees
+/outputs/
+
+# Raw dividend & spreadsheet data imports (PII safety)
+/*.xlsx
+/*.xls
+/*.csv

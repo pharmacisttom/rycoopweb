@@ -29,7 +29,7 @@ class Session
         session_set_cookie_params([
             'lifetime' => $lifetime,
             'path' => '/',
-            'domain' => '',
+            'domain' => (string) ($sessionConfig['domain'] ?? ''),
             'secure' => (bool) ($sessionConfig['secure'] ?? false),
             'httponly' => true,
             'samesite' => $sessionConfig['samesite'] ?? 'Lax',
@@ -40,7 +40,7 @@ class Session
         self::$started = true;
 
         // Idle Timeout Check
-        $idleTimeout = $sessionConfig['idle_timeout'] ?? 1800; // 30 mins
+        $idleTimeout = $sessionConfig['idle_timeout'] ?? 1200; // 20 mins
         $now = time();
 
         if (isset($_SESSION['__last_activity']) && ($now - $_SESSION['__last_activity'] > $idleTimeout)) {
@@ -51,7 +51,8 @@ class Session
                 return;
             }
         }
-        $_SESSION['__last_activity'] = $now;
+        $probe = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) === '/api/auth/me';
+        if (!$probe || !isset($_SESSION['__last_activity'])) $_SESSION['__last_activity'] = $now;
 
         // Age Rotation
         if (!isset($_SESSION['__created_at'])) {

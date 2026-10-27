@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
   });
 
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [sessionStatus, setSessionStatus] = useState(user ? 'checking' : 'guest');
+  const [sessionStatus, setSessionStatus] = useState('checking');
 
   useEffect(() => {
     if (user) {
@@ -30,11 +30,6 @@ export function AuthProvider({ children }) {
   // localStorage only remembers the UI state. The PHP session remains the source
   // of truth for protected actions such as publishing news.
   useEffect(() => {
-    if (!user) {
-      setSessionStatus('guest');
-      return undefined;
-    }
-
     let cancelled = false;
     let checking = false;
     let lastCheckStarted = 0;
@@ -58,7 +53,11 @@ export function AuthProvider({ children }) {
         if (cancelled) return;
 
         if (result?.success && result.authenticated) {
+          if(result.user)setUser(current=>{const updated={...current,name:result.user.name,role:result.user.role,roleName:result.user.role_name,permissions:result.user.permissions || []};return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
           setSessionStatus('online');
+        } else if (['MFA_ENROLLMENT_REQUIRED','TWO_FACTOR_REQUIRED'].includes(result?.code)) {
+          setUser(null);
+          setSessionStatus(result.code === 'MFA_ENROLLMENT_REQUIRED' ? 'mfa-enroll' : 'mfa-verify');
         } else if (result?.authenticated === false) {
           setUser(null);
           setSessionStatus('expired');
@@ -151,6 +150,7 @@ export function AuthProvider({ children }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.redirect && !data.user) {
+          setUser(null); setSessionStatus('guest');
           return { success: true, requiresTwoFactor: true, redirect: normalizeSameOriginRedirect(data.redirect, '/admin/2fa'), user: null };
         }
         if (data.success && data.user) {
@@ -160,6 +160,7 @@ export function AuthProvider({ children }) {
                 username: data.user.username || inputUsername,
                 name: data.user.name || inputUsername,
                 role: roleSlug,
+                permissions: data.user.permissions || [],
                 roleName: data.user.role_name || (roleSlug === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด' : roleSlug === 'staff' ? 'เจ้าหน้าที่สินเชื่อ/การเงิน' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
                 roleBadge: data.user.role_badge || (roleSlug === 'member_admin' ? 'ผู้ดูแลระบบสมาชิก' : roleSlug === 'super_admin' ? 'Super Admin' : roleSlug === 'staff' ? 'เจ้าหน้าที่สหกรณ์' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
                 department: data.user.department || data.user.org_name || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
@@ -185,7 +186,7 @@ export function AuthProvider({ children }) {
                 success: true,
                 redirect: normalizeSameOriginRedirect(
                   data.redirect,
-                  roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/staff/dashboard'
+                  roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'
                 ),
                 user: authUser
               };
@@ -265,11 +266,21 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('coop_auth_user');
   };
 
+  const refreshSession = async () => {
+    const result = await fetchCurrentUser();
+    if (!result?.success || !result.authenticated || !result.user) throw new Error('กรุณาเข้าสู่ระบบใหม่');
+    setUser({ ...result.user, role: result.user.role || result.user.role_slug, permissions: result.user.permissions || [] });
+    setSessionStatus('online');
+    return result.user;
+  };
+
   return (
     <AuthContext.Provider value={{
+      refreshSession,
       user,
       isLoggedIn: !!user,
       sessionStatus,
+      can: permission => user?.role === 'super_admin' || (user?.permissions || []).includes(permission),
       login,
       logout,
       invalidateSession,

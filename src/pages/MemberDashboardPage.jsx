@@ -1,3 +1,4 @@
+import { maskName, maskPhone } from '../utils/pdpa';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -871,7 +872,7 @@ export default function MemberDashboardPage() {
                       >
                         <div style={{ flex: 1, minWidth: '260px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>{item.memberName}</span>
+                            <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>{maskName(item.memberName)}</span>
                             <span className="badge badge-primary">{item.type}</span>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({item.id})</span>
                           </div>

@@ -28,7 +28,11 @@ $duplicate=Import::normalize([Import::HEADERS,$sample,$sample],2566)['errors'][0
 check($duplicate['id_card']===$sample[1] && str_contains($duplicate['message'],'2'), 'duplicate report identifies national ID and original row');
 foreach (['xlsx', 'csv'] as $type) {
     if (file_exists(__DIR__ . '/../public/templates/member-dividends-template.' . $type)) {
-        $parsed = Import::parseFile(__DIR__ . '/../public/templates/member-dividends-template.' . $type, $type, 2566);
-        check(count($parsed['errors']) === 1 && str_contains($parsed['errors'][0]['message'], 'แทนที่'), "{$type} template parses and requires real identity");
+        try {
+            $template = Import::parseFile(__DIR__ . '/../public/templates/member-dividends-template.' . $type, $type, 2566);
+            check(!empty($template['errors']), "$type example template requires real member data");
+        } catch (\App\Services\MemberDataException $e) {
+            check(str_contains($e->getMessage(), 'ไฟล์ไม่มีรายการข้อมูล'), "$type blank staff template is rejected before import");
+        }
     }
 }

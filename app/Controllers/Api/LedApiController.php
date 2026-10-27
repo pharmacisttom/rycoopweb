@@ -275,8 +275,10 @@ class LedApiController extends Controller
                     'first_name' => $row['first_name'],
                     'last_name' => $row['last_name'],
                     'full_name' => trim("{$row['prefix']} {$row['first_name']} {$row['last_name']}"),
+                    'name_pdpa' => \App\Services\PdpaService::maskName(trim("{$row['prefix']} {$row['first_name']} {$row['last_name']}")),
                     'department' => $row['department'],
                     'id_card_masked' => $this->maskCitizenId($row['id_card'] ?? ''),
+                    'id_card_pdpa' => \App\Services\PdpaService::maskIdCard($row['id_card'] ?? ''),
                     'last_status' => $row['last_status'] ?? null,
                     'last_score' => $row['last_score'] !== null ? (float) $row['last_score'] : null,
                     'last_checked_at' => $row['last_checked_at'] ?? null,
@@ -490,11 +492,13 @@ class LedApiController extends Controller
                         'first_name' => $result['first_name'],
                         'last_name' => $result['last_name'],
                         'full_name' => trim("{$result['prefix']} {$result['first_name']} {$result['last_name']}"),
+                        'name_pdpa' => \App\Services\PdpaService::maskName(trim("{$result['prefix']} {$result['first_name']} {$result['last_name']}")),
                         'department' => $result['department'],
                         'position' => $result['position'],
                         'join_date' => $result['join_date'],
                         'phone_masked' => $this->maskPhone($result['phone'] ?? ''),
                         'id_card_masked' => $this->maskCitizenId($result['id_card'] ?? ''),
+                        'id_card_pdpa' => \App\Services\PdpaService::maskIdCard($result['id_card'] ?? ''),
                     ],
                     'candidates' => $formattedCandidates,
                 ],
@@ -736,26 +740,18 @@ class LedApiController extends Controller
     }
 
     /**
-     * Mask citizen ID / id_card for PDPA compliance
+     * Mask citizen ID / id_card for PDPA compliance (192.xxxxxx171)
      */
     protected function maskCitizenId(string $idCard): string
     {
-        $clean = preg_replace('/\D/', '', $idCard);
-        if (strlen($clean) === 13) {
-            return substr($clean, 0, 1) . '-XXXX-XXXXX-' . substr($clean, 11, 2);
-        }
-        return 'X-XXXX-XXXXX-XX-X';
+        return \App\Services\PdpaService::maskIdCard($idCard);
     }
 
     /**
-     * Mask phone number for PDPA compliance
+     * Mask phone number for PDPA compliance (081-xxx-x234)
      */
     protected function maskPhone(string $phone): string
     {
-        $clean = preg_replace('/\D/', '', $phone);
-        if (strlen($clean) >= 9) {
-            return substr($clean, 0, 3) . '-XXX-' . substr($clean, -4);
-        }
-        return 'XXX-XXX-XXXX';
+        return \App\Services\PdpaService::maskPhone($phone);
     }
 }

@@ -123,7 +123,13 @@ class MemberManagementController extends Controller
                 foreach(['total_income','total_deductions','net'] as $field) $finance.=",JSON_UNQUOTE(JSON_EXTRACT(selected_d.details_json,'$.{$field}')) AS {$field}";
                 $finance.=',selected_d.imported_at AS dividend_updated_at';
             }
-            $items=Database::query("SELECT m.id,m.member_no,{$name} AS name,{$department} AS department,m.status,m.user_id IS NOT NULL AS has_account,CONCAT('*********',RIGHT(m.id_card,4)) AS id_card_masked,{$reportCount} AS record_count{$finance} FROM members m{$join} WHERE {$sql} ORDER BY m.member_no,m.id LIMIT {$limit} OFFSET {$offset}",$queryParams);
+            $items=Database::query("SELECT m.id,m.member_no,{$name} AS name,{$department} AS department,m.status,m.user_id IS NOT NULL AS has_account,m.id_card,CONCAT('*********',RIGHT(m.id_card,4)) AS id_card_masked,{$reportCount} AS record_count{$finance} FROM members m{$join} WHERE {$sql} ORDER BY m.member_no,m.id LIMIT {$limit} OFFSET {$offset}",$queryParams);
+            $items=array_map(static function(array $m): array {
+                $m['id_card_pdpa']=\App\Services\PdpaService::maskIdCard($m['id_card']??$m['id_card_masked']??'');
+                $m['name_pdpa']=\App\Services\PdpaService::maskName($m['name']??'');
+                unset($m['id_card']);
+                return $m;
+            },$items);
             $missing=array_values(array_diff(['prefix','department'],$columns['members']));
             if($missing)$warnings[]=['section'=>'members','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'ข้อมูลบางช่องยังไม่พร้อม กรุณาตรวจการอัปเดตฐานข้อมูล','missing'=>array_map(fn($f)=>'members.'.$f,$missing)];
             if(!$hasReports)$warnings[]=['section'=>'years','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'ยังไม่มีตารางปันผล กรุณาอัปเดตฐานข้อมูลก่อนนำเข้า'];
@@ -160,5 +166,32 @@ class MemberManagementController extends Controller
     public function updateDividend(string $id,string $year): void
     {
         $this->respond(function()use($id,$year){MemberSystemHealth::requireWrites();if(!preg_match('/^\d{4}$/D',$year))throw new MemberDataException('ปีไม่ถูกต้อง');MemberAdminService::updateDividend($this->id($id),(int)$year,$this->request->all());return ['message'=>'บันทึกข้อมูลปันผลแล้ว'];});
+    }
+    public function requests(): void
+    {
+        $this->respond(function() {
+            $status = (string)$this->request->query('status', '');
+            $page = max(1, (int)$this->request->query('page', 1));
+            $limit = in_array((int)$this->request->query('limit', 25), [25, 50, 100], true) ? (int)$this->request->query('limit', 25) : 25;
+            return \App\Services\MemberRequestService::listAdminRequests($status, $page, $limit);
+        });
+    }
+
+    public function approveRequest(string $id): void
+    {
+        $this->respond(function() use ($id) {
+            $notes = (string)($this->request->input('notes') ?? '');
+            $adminUserId = (int)\App\Core\Auth::id();
+            return \App\Services\MemberRequestService::approveProfileRequest($this->id($id), $adminUserId, $notes ?: null);
+        });
+    }
+
+    public function rejectRequest(string $id): void
+    {
+        $this->respond(function() use ($id) {
+            $reason = trim((string)($this->request->input('reason') ?? ''));
+            $adminUserId = (int)\App\Core\Auth::id();
+            return \App\Services\MemberRequestService::rejectProfileRequest($this->id($id), $adminUserId, $reason);
+        });
     }
 }

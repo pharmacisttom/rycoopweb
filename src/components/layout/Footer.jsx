@@ -1,12 +1,14 @@
+import { usePublicInformation } from '../../context/PublicContentContext';
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  MapPin, Phone, Mail, Clock, Shield, Award, 
+import {
+  MapPin, Phone, Mail, Clock, Shield, Award,
   ExternalLink, MessageCircle, FileText, ChevronRight, LockKeyhole
 } from 'lucide-react';
-import { COOP_INFO } from '../../data/mockData';
+
 
 export default function Footer() {
+  const { COOP_INFO } = usePublicInformation();
   return (
     <footer style={{
       background: 'var(--primary-950)',
@@ -18,7 +20,7 @@ export default function Footer() {
       marginTop: 'auto'
     }}>
       <div className="container">
-        
+
         {/* Top Grid */}
         <div style={{
           display: 'grid',
@@ -26,13 +28,13 @@ export default function Footer() {
           gap: '3rem',
           marginBottom: '3.5rem'
         }}>
-          
+
           {/* Col 1: About & Trust */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <img 
-                src="/assets/img/logo.webp" 
-                alt="Logo" 
+              <img
+                src="/assets/img/logo.webp"
+                alt="Logo"
                 style={{ width: '44px', height: '44px', objectFit: 'contain' }}
                 onError={(e) => { e.target.src = '/img/logo.webp'; }}
               />
@@ -41,7 +43,7 @@ export default function Footer() {
                 <p style={{ fontSize: '0.75rem', color: '#64748b' }}>ก่อตั้งเมื่อปี พ.ศ. {COOP_INFO.establishedYear}</p>
               </div>
             </div>
-            
+
             <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               {COOP_INFO.slogan} ยึดมั่นในหลักธรรมาภิบาล มุ่งพัฒนาคุณภาพชีวิตของสมาชิกบุคลากรสาธารณสุขจังหวัดระยองอย่างยั่งยืน
             </p>
@@ -58,7 +60,7 @@ export default function Footer() {
                 color: '#38bdf8'
               }}>
                 <Shield size={16} />
-                <span>ความมั่นคงทางการเงินมาตรฐาน A+</span>
+                <span>ข้อมูลบริการสหกรณ์</span>
               </div>
             </div>
           </div>
@@ -147,12 +149,12 @@ export default function Footer() {
               ติดต่อสำนักงาน
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <a 
-                href={COOP_INFO.mapUrl} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href={COOP_INFO.mapUrl || '/contact'}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', color: '#cbd5e1', textDecoration: 'none', transition: 'color 0.2s' }}
-                title="คลิกเพื่อดูแผนที่ Google Maps"
+                title="ติดต่อสำนักงานสหกรณ์"
               >
                 <MapPin size={18} style={{ color: 'var(--accent-gold)', flexShrink: 0, marginTop: '3px' }} />
                 <span style={{ fontSize: '0.85rem' }}>{COOP_INFO.address}</span>
@@ -172,24 +174,24 @@ export default function Footer() {
 
               {/* Social Channels */}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <a 
-                  href={`https://${COOP_INFO.facebook}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                {COOP_INFO.facebook && <a
+                  href={`https://${COOP_INFO.facebook}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={socialIconStyle}
                   title="Facebook Fanpage"
                 >
                   Facebook
-                </a>
-                <a 
-                  href="https://line.me" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                </a>}
+                {COOP_INFO.lineId && <a
+                  href={`https://line.me/R/ti/p/${encodeURIComponent(COOP_INFO.lineId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ ...socialIconStyle, background: 'rgba(6, 199, 85, 0.2)', color: '#4ade80' }}
                   title="LINE Official Account"
                 >
                   LINE ID: {COOP_INFO.lineId}
-                </a>
+                </a>}
               </div>
             </div>
           </div>

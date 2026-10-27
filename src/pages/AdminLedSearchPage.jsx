@@ -1,3 +1,4 @@
+import { maskIdCard, maskName } from '../utils/pdpa';
 import React, { useState } from 'react';
 import {
   Search, User, CheckCircle2, AlertTriangle, ShieldCheck,
@@ -187,7 +188,7 @@ export default function AdminLedSearchPage() {
                         {selectedMember.full_name}
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        เลขทะเบียน: {selectedMember.member_no} • สังกัด: {selectedMember.department} • บัตร ปชช. (Masked): {selectedMember.id_card_masked}
+                        เลขทะเบียน: {selectedMember.member_no} • สังกัด: {selectedMember.department} • บัตร ปชช. (Masked): {selectedMember.id_card_pdpa || maskIdCard(selectedMember.id_card_masked || selectedMember.id_card)}
                       </p>
                     </div>
                   </div>

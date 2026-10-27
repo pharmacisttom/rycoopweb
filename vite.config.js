@@ -19,6 +19,7 @@ return {
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'react-router-dom': 'react-router',
     },
   },
   build: {
@@ -44,6 +45,7 @@ return {
         target: backend,
         changeOrigin: true,
       },
+      '/auth': { target: backend, changeOrigin: true },
       '/api': {
         target: backend,
         changeOrigin: true,

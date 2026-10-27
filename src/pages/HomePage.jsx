@@ -12,14 +12,18 @@ import heroPortrait from '../assets/hero-portrait-official.png';
 import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
+import reference from '../data/legacyReference.json';
+import { usePublicInformation } from '../context/PublicContentContext';
 
 // Fallback defaults when API is unreachable (development/offline mode)
 const FALLBACK_COOP = {
   nameTh: 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
-  slogan: 'มั่นคง โปร่งใส ใส่ใจบริการ',
+  slogan: reference.coopInfo.slogan,
 };
 
 export default function HomePage() {
+  const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
+  const coopInfo = COOP_INFO;
   const { setShowAuthModal, isLoggedIn } = useAuth();
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
@@ -31,11 +35,11 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   // API-fetched data state
-  const [coopInfo, setCoopInfo] = useState(FALLBACK_COOP);
+  const [apiCoopInfo, setCoopInfo] = useState(FALLBACK_COOP);
   const [keyStats, setKeyStats] = useState([]);
   const [depositRates, setDepositRates] = useState([]);
   const [loanRates, setLoanRates] = useState([]);
-  const [loanProducts, setLoanProducts] = useState([]);
+  const loanProducts = LOAN_PRODUCTS.slice(0, 3);
   const [newsList, setNewsList] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [welfareItems, setWelfareItems] = useState([]);
@@ -53,7 +57,6 @@ export default function HomePage() {
           const d = homeRes.data;
           setDepositRates(d.depositRates || []);
           setLoanRates(d.loanRates || []);
-          setLoanProducts(d.featuredLoans || []);
           setNewsList((d.latestNews || []).map(normalizeNewsItem));
           setAnnouncements(d.importantAnnouncements || []);
           setWelfareItems(d.heroSlides || []); // welfare comes from separate endpoint if needed
@@ -254,7 +257,7 @@ export default function HomePage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Award size={20} style={{ color: '#fbbf24' }} />
-                  <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>ปันผลปีล่าสุด {depositRates.length > 0 ? `${depositRates[0].rate}%` : '-'}</span>
+                  <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>ตรวจสอบยอดปันผลในระบบสมาชิก</span>
                 </div>
               </div>
 
@@ -277,40 +280,11 @@ export default function HomePage() {
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>อัปเดตล่าสุด</span>
               </div>
 
-              {/* Rate Items */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.5rem' }}>
-                
-                <div style={{ background: 'rgba(255,255,255,0.08)', padding: '0.85rem 1rem', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>เงินฝากออมทรัพย์พิเศษพลัส</div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>จ่ายดอกเบี้ยรายเดือน</div>
-                  </div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-display)' }}>
-                    2.50% <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>ต่อปี</span>
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(255,255,255,0.08)', padding: '0.85rem 1rem', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>เงินฝากประจำ 24 เดือน</div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>เกษียณเกษม สบายใจ</div>
-                  </div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fbbf24', fontFamily: 'var(--font-display)' }}>
-                    3.10% <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>ต่อปี</span>
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(255,255,255,0.08)', padding: '0.85rem 1rem', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>เงินกู้สามัญ</div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>ผ่อนสูงสุด 180 งวด</div>
-                  </div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#4ade80', fontFamily: 'var(--font-display)' }}>
-                    6.15% <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>ต่อปี</span>
-                  </div>
-                </div>
-
-              </div>
+              <p style={{ marginBottom: '1.5rem', color: '#cbd5e1' }}>
+                {INTEREST_RATES.deposits.map(item => `${item.type} ${item.rate} ต่อปี`).join(' / ')}
+                <br />
+                <a href={INTEREST_RATES.depositSource.url} style={{ color: '#cbd5e1' }}>ข้อมูลตามเว็บเดิม — ตรวจสอบประกาศล่าสุดก่อนทำรายการ</a>
+              </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <Link to="/deposits" className="btn btn-sm" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)' }}>

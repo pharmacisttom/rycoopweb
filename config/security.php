@@ -3,13 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'trusted_proxy_ips' => env('TRUSTED_PROXY_IPS', ''),
     'session' => [
         'name' => 'rayongcoop_session',
         'lifetime' => (int) env('SESSION_LIFETIME', 7200), // 2 hours
-        'idle_timeout' => 1800, // 30 minutes idle timeout
+        'idle_timeout' => 1200, // 20 minutes, aligned with the frontend warning
         'secure' => filter_var(env('SESSION_SECURE', false), FILTER_VALIDATE_BOOL),
         'httponly' => true,
         'samesite' => env('SESSION_SAMESITE', 'Lax'),
+        'domain' => env('SESSION_DOMAIN', ''),
         'save_path' => env('SESSION_SAVE_PATH', ''),
     ],
     'rate_limiting' => [
@@ -37,6 +39,12 @@ return [
     'two_factor' => [
         'issuer' => env('TWO_FACTOR_ISSUER', 'RayongCoop'),
         'window' => (int) env('TWO_FACTOR_WINDOW', 1),
+        'encryption_key' => env('TWO_FACTOR_ENCRYPTION_KEY', env('APP_KEY', '')),
+        'recovery_codes_count' => 8,
+        'rate_limit' => [
+            'max_attempts' => 5,
+            'decay_seconds' => 300,
+        ],
     ],
     'upload' => [
         'max_size' => 20 * 1024 * 1024, // 20 MB

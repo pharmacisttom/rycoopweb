@@ -54,7 +54,8 @@ class NewsController extends Controller
         $authorId = Auth::id();
         $isPinned = (int) ($this->request->input('is_pinned') ? 1 : 0);
         $isFeatured = (int) ($this->request->input('is_featured') ? 1 : 0);
-        $workflowStatus = $this->request->input('workflow_status', 'published');
+        $workflowStatus = $this->request->input('workflow_status', 'draft');
+        if (!in_array($workflowStatus,['draft','submitted'],true)) { $this->response->json(['success'=>false,'message'=>'กรุณาเผยแพร่ผ่านหน้าตรวจข่าว'],422); return; }
 
         $sql = "INSERT INTO news (category_id, title, slug, summary, content, tags, is_pinned, is_featured, workflow_status, author_id, publish_at, created_by, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())";
@@ -111,7 +112,8 @@ class NewsController extends Controller
 
         $isPinned = (int) ($this->request->input('is_pinned') ? 1 : 0);
         $isFeatured = (int) ($this->request->input('is_featured') ? 1 : 0);
-        $workflowStatus = $this->request->input('workflow_status', 'published');
+        $workflowStatus = $this->request->input('workflow_status', 'draft');
+        if (!in_array($workflowStatus,['draft','submitted'],true)) { $this->response->json(['success'=>false,'message'=>'กรุณาเผยแพร่ผ่านหน้าตรวจข่าว'],422); return; }
 
         $sql = "UPDATE news SET 
                 category_id = ?, title = ?, summary = ?, content = ?, tags = ?, 

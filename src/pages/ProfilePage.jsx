@@ -1,3 +1,4 @@
+import { maskIdCard, maskName } from '../utils/pdpa';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
@@ -296,12 +297,12 @@ export default function ProfilePage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>ชื่อ - นามสกุล:</span>
-                  <div style={{ fontWeight: 700, color: 'var(--text-main)', marginTop: '0.1rem', fontSize: '0.95rem' }}>{user.name}</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-main)', marginTop: '0.1rem', fontSize: '0.95rem' }}>{maskName(user.name)}</div>
                 </div>
 
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>รหัสประจำตัว / สมาชิก:</span>
-                  <div style={{ fontWeight: 700, color: 'var(--primary-700)', marginTop: '0.1rem', fontSize: '0.95rem' }}>{user.username || user.memberId}</div>
+                  <div style={{ fontWeight: 700, color: 'var(--primary-700)', marginTop: '0.1rem', fontSize: '0.95rem' }}>{user.username && user.username.length === 13 ? maskIdCard(user.username) : (user.username || user.memberId)}</div>
                 </div>
 
                 <div>

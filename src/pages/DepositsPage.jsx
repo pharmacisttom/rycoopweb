@@ -1,9 +1,11 @@
+import { usePublicInformation } from '../context/PublicContentContext';
 import React from 'react';
 import { Landmark, TrendingUp, ShieldCheck, CheckCircle2, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { INTEREST_RATES } from '../data/mockData';
+
 
 export default function DepositsPage() {
+  const { INTEREST_RATES } = usePublicInformation();
   return (
     <div className="section">
       <div className="container">
@@ -11,7 +13,7 @@ export default function DepositsPage() {
         <div className="section-title-wrap">
           <span className="section-badge">ผลิตภัณฑ์เงินฝาก</span>
           <h1 className="section-title">เงินฝากและอัตราดอกเบี้ย</h1>
-          <p className="section-subtitle">ออมเงินอย่างมั่นคง ดอกเบี้ยสูงกว่าธนาคารพาณิชย์ และไม่ถูกหักภาษี ณ ที่จ่าย</p>
+          <p className="section-subtitle">ประเภทเงินฝากและข้อมูลอ้างอิงจากเว็บไซต์สหกรณ์</p>
           <div className="section-line" />
         </div>
 
@@ -23,7 +25,7 @@ export default function DepositsPage() {
             </div>
             <div>
               <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>ผลตอบแทนคุ้มค่า</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ให้อัตราดอกเบี้ยสูงกว่าธนาคารทั่วไป ดอกเบี้ยเงินฝากสูงสุดถึง 3.10% ต่อปี</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ตรวจสอบอัตราดอกเบี้ยและวันที่มีผลตามประกาศล่าสุดก่อนฝากเงิน</p>
             </div>
           </div>
 
@@ -32,8 +34,8 @@ export default function DepositsPage() {
               <ShieldCheck size={24} />
             </div>
             <div>
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>ยกเว้นภาษีดอกเบี้ย</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ดอกเบี้ยเงินฝากสหกรณ์ได้รับการยกเว้นภาษีเงินได้บุคคลธรรมดา 100%</p>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>เงื่อนไขบัญชีเงินฝาก</h4>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>สอบถามเงื่อนไขการจ่ายดอกเบี้ยและภาษีที่เกี่ยวข้องกับเจ้าหน้าที่</p>
             </div>
           </div>
 
@@ -43,7 +45,7 @@ export default function DepositsPage() {
             </div>
             <div>
               <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>ใช้เป็นหลักประกันเงินกู้</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>สามารถใช้สมุดบัญชีเงินฝากค้ำประกันเงินกู้ได้สูงสุดถึง 90 - 100%</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>การใช้เงินฝากเป็นหลักประกันขึ้นอยู่กับประเภทเงินกู้และระเบียบที่เกี่ยวข้อง</p>
             </div>
           </div>
         </div>
@@ -52,8 +54,12 @@ export default function DepositsPage() {
         <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '1.3rem', color: 'var(--primary-800)' }}>ตารางประกาศอัตราดอกเบี้ยเงินฝาก</h3>
-            <span className="badge badge-gold">มีผลบังคับใช้ {INTEREST_RATES.effectiveDate}</span>
+            <span className="badge badge-gold">{INTEREST_RATES.depositSource.published ? 'มีผลตั้งแต่' : 'ตรวจเทียบหน้าเว็บเดิม'} {INTEREST_RATES.depositSource.checkedOn}</span>
           </div>
+          <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+            {INTEREST_RATES.depositSource.note}{' '}
+            <a href={INTEREST_RATES.depositSource.url} target="_blank" rel="noopener noreferrer">ดูแหล่งข้อมูล</a>
+          </p>
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
