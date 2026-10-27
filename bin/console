@@ -30,48 +30,39 @@ switch ($command) {
 
     case 'db:migrate':
         try {
-            // First ensure DB exists
-            $config = config('database.connections.mysql');
-            $dsn = sprintf('mysql:host=%s;port=%d', $config['host'], $config['port']);
-            $pdoInit = new PDO($dsn, $config['username'], $config['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-            $pdoInit->exec("CREATE DATABASE IF NOT EXISTS `{$config['database']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
-
-            $pdo = Database::connect();
-
-            // Create migration tracking table if it doesn't exist
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `migrations` (
-                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `migration` VARCHAR(255) NOT NULL UNIQUE,
-                `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-
-            // Get already-applied migrations
-            $applied = [];
-            $stmt = $pdo->query("SELECT migration FROM migrations ORDER BY id ASC");
-            foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $m) {
-                $applied[$m] = true;
-            }
-
-            $migrationFiles = glob(__DIR__ . '/../database/migrations/*.sql');
-            sort($migrationFiles);
-
-            $newCount = 0;
-            foreach ($migrationFiles as $file) {
-                $basename = basename($file);
-                if (isset($applied[$basename])) {
-                    echo "⏭  Already applied: {$basename}\n";
-                    continue;
+            $isDryRun = in_array('--dry-run', $argv, true);
+            $confirmFinancial = in_array('--confirm-financial', $argv, true);
+            $confirmDestructive = in_array('--confirm-destructive', $argv, true);
+            $singleFile = null;
+            foreach ($argv as $arg) {
+                if (str_starts_with($arg, '--file=')) {
+                    $singleFile = substr($arg, 7);
                 }
-                echo "Running migration: {$basename}...\n";
-                $sql = file_get_contents($file);
-                $pdo->exec($sql);
-                $pdo->prepare("INSERT INTO migrations (migration) VALUES (?)")->execute([$basename]);
-                echo "✓ Applied {$basename}\n";
-                $newCount++;
             }
-            echo $newCount > 0
-                ? "{$newCount} new migration(s) applied successfully!\n"
-                : "Nothing to migrate — all migrations are up to date.\n";
+
+            $runner = new \App\Services\MigrationRunner();
+            $runner->setDryRun($isDryRun)
+                   ->setConfirmFinancial($confirmFinancial)
+                   ->setConfirmDestructive($confirmDestructive);
+
+            if ($singleFile !== null && $singleFile !== '') {
+                echo "Running single migration: {$singleFile}...\n";
+                $result = $runner->runSingle($singleFile);
+                foreach ($runner->getLogs() as $log) {
+                    echo "{$log}\n";
+                }
+                echo $result['status'] === 'dry_run_passed' ? "✓ Preflight passed.\n" : "✓ Done.\n";
+            } else {
+                echo "Checking database target & migrations...\n";
+                $results = $runner->runAll();
+                foreach ($runner->getLogs() as $log) {
+                    echo "{$log}\n";
+                }
+                $appliedCount = count(array_filter($results, fn($r) => in_array($r['status'], ['applied', 'dry_run_passed'], true)));
+                echo $appliedCount > 0
+                    ? ($isDryRun ? "✓ Preflight: {$appliedCount} pending migration(s) ready.\n" : "{$appliedCount} migration(s) applied successfully!\n")
+                    : "Nothing to migrate — all migrations are up to date.\n";
+            }
         } catch (Exception $e) {
             echo "✗ Migration failed: " . $e->getMessage() . "\n";
             exit(1);
