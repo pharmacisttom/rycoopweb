@@ -41,7 +41,7 @@ class MfaController extends Controller
         }
 
         $user = Database::first(
-            "SELECT id, name, email, two_factor_enabled, two_factor_confirmed_at 
+            "SELECT id, name, email, two_factor_enabled, two_factor_confirmed_at
              FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1",
             [$userId]
         );
@@ -160,9 +160,9 @@ class MfaController extends Controller
         Database::beginTransaction();
         try {
         $activated = Database::execute(
-            "UPDATE users 
-             SET two_factor_secret = ?, two_factor_enabled = 1, two_factor_confirmed_at = NOW(), 
-                 two_factor_last_used_slice = ?, updated_at = NOW() 
+            "UPDATE users
+             SET two_factor_secret = ?, two_factor_enabled = 1, two_factor_confirmed_at = NOW(),
+                 two_factor_last_used_slice = ?, updated_at = NOW()
              WHERE id = ? AND two_factor_enabled = 0",
             [$encryptedSecret, $matchedSlice, $userId]
         );
@@ -234,10 +234,10 @@ class MfaController extends Controller
         }
 
         $user = Database::first(
-            "SELECT u.*, r.slug as role_slug 
-             FROM users u 
-             LEFT JOIN user_roles ur ON u.id = ur.user_id 
-             LEFT JOIN roles r ON ur.role_id = r.id 
+            "SELECT u.*, r.slug as role_slug
+             FROM users u
+             LEFT JOIN user_roles ur ON u.id = ur.user_id
+             LEFT JOIN roles r ON ur.role_id = r.id
              WHERE u.id = ? AND u.deleted_at IS NULL AND u.status = 'active'
              LIMIT 1",
             [$userId]
@@ -336,10 +336,10 @@ class MfaController extends Controller
         }
 
         $user = Database::first(
-            "SELECT u.*, r.slug as role_slug 
-             FROM users u 
-             LEFT JOIN user_roles ur ON u.id = ur.user_id 
-             LEFT JOIN roles r ON ur.role_id = r.id 
+            "SELECT u.*, r.slug as role_slug
+             FROM users u
+             LEFT JOIN user_roles ur ON u.id = ur.user_id
+             LEFT JOIN roles r ON ur.role_id = r.id
              WHERE u.id = ? AND u.deleted_at IS NULL AND u.status = 'active'
              LIMIT 1",
             [$userId]

@@ -319,7 +319,7 @@ class GoogleAuthController extends Controller
     {
         // 1. Check if the local super admin account exists
         $superAdmin = Database::first(
-            "SELECT u.*, r.slug as role_slug 
+            "SELECT u.*, r.slug as role_slug
              FROM users u
              JOIN user_roles ur ON u.id = ur.user_id
              JOIN roles r ON ur.role_id = r.id

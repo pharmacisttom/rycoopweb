@@ -16,13 +16,13 @@ WHERE `product_type` = 'deposit'
 
 -- 2. Ensure Regular Savings (1.500%) exists in interest_rates
 INSERT INTO `interest_rates` (
-    `product_type`, `product_name`, `rate`, `min_amount`, `condition_note`, 
+    `product_type`, `product_name`, `rate`, `min_amount`, `condition_note`,
     `effective_date`, `status`, `sort_order`, `created_by`, `created_at`, `updated_at`
 )
 SELECT 'deposit', 'เงินฝากออมทรัพย์', 1.500, 100.00, 'เปิดบัญชีขั้นต่ำ 100 บาท ไม่จำกัดจำนวนครั้งการฝาก-ถอน',
        '2026-01-01', 'active', 0, 1, NOW(), NOW()
 WHERE NOT EXISTS (
-    SELECT 1 FROM `interest_rates` 
+    SELECT 1 FROM `interest_rates`
     WHERE `product_type` = 'deposit' AND `product_name` = 'เงินฝากออมทรัพย์'
 );
 

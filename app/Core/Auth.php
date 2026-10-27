@@ -73,7 +73,7 @@ class Auth
         }
 
         if (self::$user === null) {
-            $sql = "SELECT u.*, r.slug as role_slug, r.name as role_name 
+            $sql = "SELECT u.*, r.slug as role_slug, r.name as role_name
                     FROM users u
                     LEFT JOIN user_roles ur ON u.id = ur.user_id
                     LEFT JOIN roles r ON ur.role_id = r.id

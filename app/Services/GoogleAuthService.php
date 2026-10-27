@@ -241,7 +241,7 @@ class GoogleAuthService
     public function findIdentityBySub(string $googleSub): ?array
     {
         return Database::first(
-            "SELECT i.*, u.username, u.email as user_email, u.name as user_name, u.status as user_status, 
+            "SELECT i.*, u.username, u.email as user_email, u.name as user_name, u.status as user_status,
                     u.two_factor_enabled, u.two_factor_confirmed_at, u.session_version,
                     r.id as role_id, r.slug as role_slug, r.name as role_name
              FROM user_google_identities i

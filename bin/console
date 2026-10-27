@@ -122,7 +122,7 @@ switch ($command) {
     case 'cron:run':
         echo "Running scheduled jobs...\n";
         $pdo = Database::connect();
-        
+
         // 1. Expire outdated announcements
         $stmt = $pdo->prepare("UPDATE announcements SET is_active = 0 WHERE is_active = 1 AND end_at IS NOT NULL AND end_at < NOW()");
         $stmt->execute();
@@ -223,7 +223,7 @@ switch ($command) {
         // Simple SQL dump
         $pdo = Database::connect();
         $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-        
+
         $dump = "-- RayongCoop Database Backup\n-- Generated: " . date('Y-m-d H:i:s') . "\n\nSET FOREIGN_KEY_CHECKS=0;\n";
         foreach ($tables as $table) {
             $createTable = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch(PDO::FETCH_ASSOC);
@@ -268,10 +268,10 @@ switch ($command) {
 
         // 2. Find or ensure primary local super_admin account exists
         $superAdmin = Database::first(
-            "SELECT u.id, u.username, u.email, u.status 
-             FROM users u 
-             JOIN user_roles ur ON u.id = ur.user_id 
-             WHERE ur.role_id = ? AND u.deleted_at IS NULL 
+            "SELECT u.id, u.username, u.email, u.status
+             FROM users u
+             JOIN user_roles ur ON u.id = ur.user_id
+             WHERE ur.role_id = ? AND u.deleted_at IS NULL
              ORDER BY u.id ASC LIMIT 1",
             [$superAdminRoleId]
         );
@@ -281,7 +281,7 @@ switch ($command) {
             $uuid = bin2hex(random_bytes(16));
             $randomPassword = password_hash(bin2hex(random_bytes(32)), PASSWORD_ARGON2ID);
             $userId = (int) Database::insert(
-                "INSERT INTO users (uuid, name, username, email, password, status, created_at, updated_at) 
+                "INSERT INTO users (uuid, name, username, email, password, status, created_at, updated_at)
                  VALUES (?, 'ผู้ดูแลระบบสูงสุด', 'superadmin', ?, ?, 'active', NOW(), NOW())",
                 [$uuid, $targetEmail, $randomPassword]
             );
@@ -304,8 +304,8 @@ switch ($command) {
 
         // 4. Enable authorized one-time bootstrap linking flag
         Database::execute(
-            "INSERT INTO site_settings (`key`, `value`, `group`, updated_at) 
-             VALUES ('superadmin_bootstrap_enabled', '1', 'system', NOW()) 
+            "INSERT INTO site_settings (`key`, `value`, `group`, updated_at)
+             VALUES ('superadmin_bootstrap_enabled', '1', 'system', NOW())
              ON DUPLICATE KEY UPDATE `value` = '1', `updated_at` = NOW()"
         );
 
@@ -314,7 +314,7 @@ switch ($command) {
         $token = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $token);
         Database::execute(
-            "INSERT INTO staff_invitations (email, name, department, intended_role_id, invited_by, token_hash, expires_at, status, created_at, updated_at) 
+            "INSERT INTO staff_invitations (email, name, department, intended_role_id, invited_by, token_hash, expires_at, status, created_at, updated_at)
              VALUES (?, 'Super Admin (Bootstrap)', 'บริหารจัดการระบบ', ?, ?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'pending', NOW(), NOW())
              ON DUPLICATE KEY UPDATE status = 'pending', token_hash = VALUES(token_hash), expires_at = VALUES(expires_at), updated_at = NOW()",
             [$targetEmail, $superAdminRoleId, $userId, $tokenHash]

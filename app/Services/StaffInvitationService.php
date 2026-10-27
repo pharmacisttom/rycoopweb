@@ -45,9 +45,9 @@ class StaffInvitationService
 
         // Check if an active staff account already exists with this email
         $existingUser = Database::first(
-            "SELECT u.id FROM users u 
-             JOIN user_roles ur ON u.id = ur.user_id 
-             JOIN roles r ON ur.role_id = r.id 
+            "SELECT u.id FROM users u
+             JOIN user_roles ur ON u.id = ur.user_id
+             JOIN roles r ON ur.role_id = r.id
              WHERE u.email = ? AND u.deleted_at IS NULL AND r.slug != 'member'
              LIMIT 1",
             [$cleanEmail]
@@ -58,7 +58,7 @@ class StaffInvitationService
 
         // Check if there is already a pending invitation for this email; if so, revoke it first
         Database::execute(
-            "UPDATE staff_invitations SET status = 'revoked', revoked_at = NOW(), updated_at = NOW() 
+            "UPDATE staff_invitations SET status = 'revoked', revoked_at = NOW(), updated_at = NOW()
              WHERE email = ? AND status = 'pending'",
             [$cleanEmail]
         );
@@ -102,7 +102,7 @@ class StaffInvitationService
     public static function findValidByToken(string $rawToken): ?array
     {
         $tokenHash = hash('sha256', trim($rawToken));
-        $sql = "SELECT i.*, r.slug as role_slug, r.name as role_name, u.name as inviter_name 
+        $sql = "SELECT i.*, r.slug as role_slug, r.name as role_name, u.name as inviter_name
                 FROM staff_invitations i
                 JOIN roles r ON i.intended_role_id = r.id
                 JOIN users u ON i.invited_by = u.id
@@ -118,7 +118,7 @@ class StaffInvitationService
     public static function findValidByEmail(string $email): ?array
     {
         $cleanEmail = strtolower(trim($email));
-        $sql = "SELECT i.*, r.slug as role_slug, r.name as role_name, u.name as inviter_name 
+        $sql = "SELECT i.*, r.slug as role_slug, r.name as role_name, u.name as inviter_name
                 FROM staff_invitations i
                 JOIN roles r ON i.intended_role_id = r.id
                 JOIN users u ON i.invited_by = u.id

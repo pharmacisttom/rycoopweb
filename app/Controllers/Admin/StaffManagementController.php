@@ -275,23 +275,23 @@ class StaffManagementController extends Controller
     {
         // 1. Staff and Invitation Metrics
         $totalStaff = (int) Database::value(
-            "SELECT COUNT(DISTINCT u.id) FROM users u 
-             JOIN user_roles ur ON u.id = ur.user_id 
-             JOIN roles r ON ur.role_id = r.id 
+            "SELECT COUNT(DISTINCT u.id) FROM users u
+             JOIN user_roles ur ON u.id = ur.user_id
+             JOIN roles r ON ur.role_id = r.id
              WHERE u.deleted_at IS NULL AND r.slug != 'member'"
         );
 
         $activeStaff = (int) Database::value(
-            "SELECT COUNT(DISTINCT u.id) FROM users u 
-             JOIN user_roles ur ON u.id = ur.user_id 
-             JOIN roles r ON ur.role_id = r.id 
+            "SELECT COUNT(DISTINCT u.id) FROM users u
+             JOIN user_roles ur ON u.id = ur.user_id
+             JOIN roles r ON ur.role_id = r.id
              WHERE u.deleted_at IS NULL AND u.status = 'active' AND r.slug != 'member'"
         );
 
         $suspendedStaff = (int) Database::value(
-            "SELECT COUNT(DISTINCT u.id) FROM users u 
-             JOIN user_roles ur ON u.id = ur.user_id 
-             JOIN roles r ON ur.role_id = r.id 
+            "SELECT COUNT(DISTINCT u.id) FROM users u
+             JOIN user_roles ur ON u.id = ur.user_id
+             JOIN roles r ON ur.role_id = r.id
              WHERE u.deleted_at IS NULL AND u.status = 'suspended' AND r.slug != 'member'"
         );
 
@@ -301,10 +301,10 @@ class StaffManagementController extends Controller
 
         // 2. MFA Metrics
         $mfaEnrolledCount = (int) Database::value(
-            "SELECT COUNT(DISTINCT u.id) FROM users u 
-             JOIN user_roles ur ON u.id = ur.user_id 
-             JOIN roles r ON ur.role_id = r.id 
-             WHERE u.deleted_at IS NULL AND u.status = 'active' AND r.slug != 'member' 
+            "SELECT COUNT(DISTINCT u.id) FROM users u
+             JOIN user_roles ur ON u.id = ur.user_id
+             JOIN roles r ON ur.role_id = r.id
+             WHERE u.deleted_at IS NULL AND u.status = 'active' AND r.slug != 'member'
                AND u.two_factor_enabled = 1 AND u.two_factor_confirmed_at IS NOT NULL"
         );
 
@@ -312,9 +312,9 @@ class StaffManagementController extends Controller
 
         // 3. Google Linked Metrics
         $googleLinkedCount = (int) Database::value(
-            "SELECT COUNT(DISTINCT u.id) FROM users u 
-             JOIN user_roles ur ON u.id = ur.user_id 
-             JOIN roles r ON ur.role_id = r.id 
+            "SELECT COUNT(DISTINCT u.id) FROM users u
+             JOIN user_roles ur ON u.id = ur.user_id
+             JOIN roles r ON ur.role_id = r.id
              JOIN user_google_identities gi ON u.id = gi.user_id
              WHERE u.deleted_at IS NULL AND r.slug != 'member'"
         );
@@ -329,11 +329,11 @@ class StaffManagementController extends Controller
         );
 
         $topFailureReasons = Database::query(
-            "SELECT failure_reason, COUNT(*) as count 
-             FROM login_logs 
-             WHERE status != 'success' AND failure_reason IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
-             GROUP BY failure_reason 
-             ORDER BY count DESC 
+            "SELECT failure_reason, COUNT(*) as count
+             FROM login_logs
+             WHERE status != 'success' AND failure_reason IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+             GROUP BY failure_reason
+             ORDER BY count DESC
              LIMIT 5"
         );
 
@@ -378,9 +378,9 @@ class StaffManagementController extends Controller
 
         if ($role === 'super_admin') {
             $activeSuperAdmins = (int) Database::value(
-                "SELECT COUNT(DISTINCT u.id) FROM users u 
-                 JOIN user_roles ur ON u.id = ur.user_id 
-                 JOIN roles r ON ur.role_id = r.id 
+                "SELECT COUNT(DISTINCT u.id) FROM users u
+                 JOIN user_roles ur ON u.id = ur.user_id
+                 JOIN roles r ON ur.role_id = r.id
                  WHERE r.slug = 'super_admin' AND u.status = 'active' AND u.deleted_at IS NULL"
             );
 

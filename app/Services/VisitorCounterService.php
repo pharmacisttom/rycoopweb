@@ -42,8 +42,8 @@ class VisitorCounterService
 
         // Debounce: prevent duplicate count if same session visits same page within 10 seconds
         $recent = Database::first(
-            "SELECT id FROM website_visits 
-             WHERE session_id = ? AND page_url = ? AND visited_at >= DATE_SUB(NOW(), INTERVAL 10 SECOND) 
+            "SELECT id FROM website_visits
+             WHERE session_id = ? AND page_url = ? AND visited_at >= DATE_SUB(NOW(), INTERVAL 10 SECOND)
              LIMIT 1",
             [$sessionId, $pageUrl]
         );
@@ -173,7 +173,7 @@ class VisitorCounterService
             $d = (clone $today)->modify("-{$i} days");
             $dateStr = $d->format('Y-m-d');
             $thaiDate = self::formatThaiDateShort($d);
-            
+
             // Generate realistic curve matching cooperative operating days (Mon-Fri peak, Sat-Sun moderate)
             $dayOfWeek = (int)$d->format('w');
             $isWeekend = ($dayOfWeek === 0 || $dayOfWeek === 6);
