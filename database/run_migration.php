@@ -112,6 +112,10 @@ try {
     echo "Checksum (SHA-256): " . substr($preflight['checksum'], 0, 16) . "...\n";
     echo "Safety Gates:       " . ($preflight['analysis']['is_destructive'] ? "[DESTRUCTIVE] " : "") . ($preflight['analysis']['is_financial'] ? "[FINANCIAL] " : "") . ($preflight['analysis']['is_destructive'] || $preflight['analysis']['is_financial'] ? "" : "[NORMAL]") . "\n";
     echo "History Status:     " . ($preflight['is_already_applied'] ? "Already applied" : "Pending execution") . "\n";
+    if (!empty($preflight['has_active_incident'])) {
+        $incName = $preflight['active_incident']['migration'] ?? 'unknown';
+        echo "Incident Status:    🚨 CRITICAL INCIDENT ACTIVE (Migration: {$incName})\n";
+    }
     echo "====================================================================\n\n";
 
     echo "Running migration for: {$targetFile}...\n";
@@ -130,6 +134,9 @@ try {
     }
 
     exit(0);
+} catch (\App\Services\MigrationIncidentException $e) {
+    echo "\n🚨 CRITICAL MIGRATION INCIDENT: " . MigrationRunner::sanitizeErrorMessage($e->getMessage()) . "\n";
+    exit(2);
 } catch (\Throwable $e) {
     echo "\n✗ MIGRATION SAFETY ERROR: " . MigrationRunner::sanitizeErrorMessage($e->getMessage()) . "\n";
     exit(1);

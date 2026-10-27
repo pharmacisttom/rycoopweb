@@ -126,6 +126,31 @@ php bin/console db:migrate --force-retry-failed
   - แสดงผลสรุป Host, Port, Target Database, Database User, สิทธิ์ผู้ใช้, Checksum, Safety Gate Assessment ก่อนเริ่มทำงาน
   - ห้ามแสดงรหัสผ่านหรือความลับในหน้าจอหรือ Log เด็ดขาด (`Never display secrets`)
 
+### 4.5 การขจัดสภาวะแย่งชิง (TOCTOU Elimination) & In-Lock History Verification
+- **ปัญหาเดิม (Time-of-Check to Time-of-Use)**: ในอดีตกระบวนการจะอ่านประวัติ migration นอก lock เพื่อตัดสินว่าไฟล์ใดต้องรัน จากนั้นจึง acquire advisory lock แล้วรัน SQL ทันทีโดยไม่ตรวจประวัติซ้ำ หากมี 2 process ทำงานพร้อมกัน ทั้งคู่อาจตัดสินว่า migration ยังไม่ถูกรัน และนำไปสู่การรัน DDL ซ้ำซ้อน (Duplicate Execution)
+- **สถาปัตยกรรมใหม่ (Lock-Before-Check)**:
+  1. ทำ read-only preflight และตรวจสอบ database target นอก lock
+  2. ขอรับ MySQL advisory lock (`GET_LOCK`) เป็นลำดับแรก
+  3. ภายใน lock ดำเนินการเตรียม schema ตาราง `migrations`
+  4. **อ่านประวัติจากฐานข้อมูลซ้ำอีกครั้งภายใต้ lock (In-Lock Authoritative History Check)**
+  5. ตรวจสอบ SHA-256 checksum และสถานะภายใต้ lock หากมี process อื่นรันสำเร็จไปแล้ว ระบบจะข้าม (`skipped`) ทันทีโดยไม่แตะต้อง SQL
+  6. ตรวจสอบเงื่อนไข retry สำหรับ migration ที่เคยล้มเหลว
+  7. Re-evaluate confirmation gate (Financial / Destructive)
+  8. ทำการรัน migration SQL และบันทึกผล
+  9. ปลด lock ในบล็อก `finally` เสมอ
+
+### 4.6 Concurrency Protection สำหรับ Migration Metadata (`ensureMigrationTable`)
+- คุ้มครองการสร้างและอัปเกรดตาราง `migrations` (`ensureMigrationTable`) ด้วย MySQL Advisory Lock เดียวกัน
+- ป้องกันไม่ให้ 2 process รันคำสั่ง `CREATE TABLE` หรือ `ALTER TABLE migrations ADD COLUMN` แข่งกัน
+- รองรับ Re-entrant locking หาก lock ถูกถือครองอยู่แล้วโดย `runSingle` จะไม่แย่ง lock ซ้ำ และไม่ปลด lock ก่อนเวลาอันควร
+
+### 4.7 การป้องกันความล้มเหลวในการบันทึกสถานะ (Failure Recording Safety & Critical Incident)
+- หากการรัน SQL ล้มเหลวกลางคัน (เกิด Partial DDL Commit) และการบันทึกสถานะ `failed` ลงตาราง `migrations` ขัดข้องด้วย (เช่น disk เต็ม, connection หลุด):
+  - **Fail Closed**: ระบบจะไม่ยอมให้ปล่อยผ่านหรืออนุญาตให้รันซ้ำโดยปริยาย
+  - **Durable Incident Marker**: ระบบจะบันทึก Incident Marker File (`migration_incident.json`) ลงบน Filesystem ภายนอก Transaction ทันที
+  - **Raise MigrationIncidentException**: โยน dedicated exception ระดับวิกฤต
+  - **Block Subsequent Execution**: กระบวนการ migration ใดๆ ในอนาคตจะถูกระงับทันทีตราบใดที่ยังมี incident marker ค้างอยู่ จนกว่าผู้ดูแลระบบจะทำ reconciliation และสั่งปลดล็อกอย่างชัดเจน
+
 ---
 
 ## 5. แผนการสำรองข้อมูลและการกู้คืน (Backup & Recovery Procedures)
@@ -170,11 +195,31 @@ php bin/console backup:run
    php database/run_migration.php <failing_file.sql> --force-retry-failed
    ```
 
+### 5.3 ขั้นตอนเมื่อเกิด Critical Migration Incident (Dual Failure Recovery Runbook)
+หากเกิดเหตุฉุกเฉินระดับวิกฤตที่ทั้งคำสั่ง SQL และการบันทึกสถานะล้มเหลวพร้อมกัน:
+1. **สังเกตข้อความแจ้งเตือน**:
+   - ระบบจะแสดงข้อความ `🚨 CRITICAL MIGRATION INCIDENT` และแจ้งตำแหน่งของไฟล์ Incident Marker
+2. **ตรวจสอบรายละเอียดในไฟล์ Incident Marker**:
+   - ตรวจสอบไฟล์ `storage/logs/migration_incident.json` เพื่อดูชื่อ migration, checksum, migration error และ recording error
+3. **ตรวจสอบและแก้ไขฐานข้อมูล (Manual Reconciliation)**:
+   - ตรวจสอบโครงสร้างตารางในฐานข้อมูลจริงว่ามีคำสั่งใดถูก commit ไปแล้วบ้าง
+   - ปรับแก้โครงสร้างให้ถูกต้องตามที่ต้องการ
+4. **การรันต่อหรือเคลียร์ Incident**:
+   - หากแก้ไขไฟล์ migration ให้เข้ากับสถานะฐานข้อมูลแล้ว สามารถสั่งรันต่อด้วย:
+     ```bash
+     php database/run_migration.php <migration_file.sql> --force-retry-failed
+     ```
+     เมื่อสำเร็จ ระบบจะลบไฟล์ `migration_incident.json` ให้โดยอัตโนมัติ
+   - หรือหาก reconcile เสร็จสิ้นและไม่ต้องการรันไฟล์นั้นซ้ำ สามารถลบไฟล์ Incident Marker ได้โดยตรง:
+     ```bash
+     rm storage/logs/migration_incident.json
+     ```
+
 ---
 
 ## 6. ผลการทดสอบความปลอดภัยอัตโนมัติ (Automated Safety Test Results)
 
-ผ่านการทดสอบครบถ้วน 100% จาก [tests/MigrationRunnerTest.php](file:///d:/rycoopweb/tests/MigrationRunnerTest.php) (49 assertions / 13 test groups):
+ผ่านการทดสอบครบถ้วน 100% จาก [tests/MigrationRunnerTest.php](file:///d:/rycoopweb/tests/MigrationRunnerTest.php) (62 assertions / 15 test groups):
 
 ```
 Running MigrationRunner Comprehensive Unit, Safety & Security Tests...
@@ -230,6 +275,22 @@ PASS: 13.14 Preflight identifies active database
 PASS: 13.15 Preflight validates database identity match
 PASS: 13.16 Preflight never exposes passwords or secrets
 PASS: 13.17 Empty expected database with MySQL PDO is rejected
+PASS: 14.1 Runner B preflight sees migration as unapplied before lock
+PASS: 14.2 Runner A applies migration successfully
+PASS: 14.3 Runner B detects in-lock applied status and cleanly skips (TOCTOU resolved)
+PASS: 14.4 Runner B never executed migration SQL DDL after acquiring lock
+PASS: 14.5 ensureMigrationTable standalone acquires advisory lock
+PASS: 14.6 ensureMigrationTable standalone releases advisory lock in finally
+PASS: 15.1 Failure in both SQL and failure-recording raises MigrationIncidentException
+PASS: 15.2 Durable incident marker file was created on disk
+PASS: 15.3 Incident marker contains valid JSON
+PASS: 15.4 Incident marker records correct migration name
+PASS: 15.5 Incident marker records CRITICAL severity
+PASS: 15.6 Recording error is captured in incident marker
+PASS: 15.7 Subsequent migration execution is strictly blocked while incident marker is active
+PASS: 15.8 Preflight detects active incident state
+PASS: 15.9 Reconciled migration succeeds with --force-retry-failed
+PASS: 15.10 Incident marker file automatically cleared after successful reconciliation
 =========================================================================
 All MigrationRunner Unit, Safety & Security tests PASSED successfully!
 ```

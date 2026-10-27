@@ -463,6 +463,187 @@ assertThrows(function () use ($mockLabPdoClean, $migrationsDir) {
     new MigrationRunner($mockLabPdoClean, $migrationsDir, '');
 }, 'Security violation: MigrationRunner requires an explicit expected database name', '13.17 Empty expected database with MySQL PDO is rejected');
 
+// --------------------------------------------------------------------------
+// 14. TOCTOU Race Condition & In-Lock Authoritative History Check
+// --------------------------------------------------------------------------
+$sharedDbFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rycoop_shared_toctou_' . bin2hex(random_bytes(6)) . '.sqlite';
+$sharedPdoA = new PDO('sqlite:' . $sharedDbFile, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+
+$execCount = 0;
+$spyPdoB = new class($sharedDbFile, $execCount) extends PDO {
+    private int $countRef;
+    public function __construct(string $file, int &$count) {
+        parent::__construct('sqlite:' . $file, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $this->countRef = &$count;
+    }
+    public function exec(string $statement): int|false {
+        if (str_contains($statement, 'CREATE TABLE toctou_users')) {
+            $this->countRef++;
+        }
+        return parent::exec($statement);
+    }
+};
+
+$toctouTempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rycoop_toctou_dir_' . bin2hex(random_bytes(6));
+mkdir($toctouTempDir, 0777, true);
+file_put_contents($toctouTempDir . DIRECTORY_SEPARATOR . '001_toctou_test.sql', "CREATE TABLE toctou_users (id INT PRIMARY KEY, name VARCHAR(50));");
+
+$runnerA = new MigrationRunner($sharedPdoA, $toctouTempDir, 'sqlite');
+$runnerB = new MigrationRunner($spyPdoB, $toctouTempDir, 'sqlite');
+
+// Step 1: Runner B inspects migration before lock (TOCTOU "Time-of-Check")
+$preflightB = $runnerB->getPreflightInfo('001_toctou_test.sql');
+assertTrue($preflightB['is_already_applied'] === false, '14.1 Runner B preflight sees migration as unapplied before lock');
+
+// Step 2: Runner A acquires lock and runs migration first (Runner A wins race)
+$resultA = $runnerA->runSingle('001_toctou_test.sql');
+assertTrue($resultA['status'] === 'applied', '14.2 Runner A applies migration successfully');
+
+// Step 3: Runner B executes runSingle('001_toctou_test.sql') ("Time-of-Use")
+// Under the fix, Runner B acquires lock, rechecks migration history UNDER LOCK, sees it was applied, and SKIPS it!
+$resultB = $runnerB->runSingle('001_toctou_test.sql');
+assertTrue($resultB['status'] === 'skipped', '14.3 Runner B detects in-lock applied status and cleanly skips (TOCTOU resolved)');
+assertTrue($execCount === 0, '14.4 Runner B never executed migration SQL DDL after acquiring lock');
+
+// 14.5 EnsureMigrationTable Concurrency Protection test
+$mockMetadataPdo = new class extends PDO {
+    public int $getLockCalls = 0;
+    public int $releaseLockCalls = 0;
+    public function __construct() { parent::__construct('sqlite::memory:'); }
+    public function getAttribute(int $attribute): mixed {
+        if ($attribute === PDO::ATTR_DRIVER_NAME) return 'mysql';
+        return parent::getAttribute($attribute);
+    }
+    public function prepare(string $query, array $options = []): PDOStatement|false {
+        $parent = $this;
+        if (str_contains($query, 'GET_LOCK')) {
+            return new class($parent) extends PDOStatement {
+                private $p;
+                public function __construct($p) { $this->p = $p; }
+                public function execute(?array $params = null): bool {
+                    $this->p->getLockCalls++;
+                    return true;
+                }
+                public function fetchColumn(int $column = 0): mixed { return 1; }
+            };
+        }
+        if (str_contains($query, 'RELEASE_LOCK')) {
+            return new class($parent) extends PDOStatement {
+                private $p;
+                public function __construct($p) { $this->p = $p; }
+                public function execute(?array $params = null): bool {
+                    $this->p->releaseLockCalls++;
+                    return true;
+                }
+            };
+        }
+        return parent::prepare($query, $options);
+    }
+    public function query(string $query, ?int $fetchMode = null, ...$fetch_mode_args): mixed {
+        if (str_contains($query, 'SHOW COLUMNS')) {
+            return new class {
+                public function fetch(int $mode = PDO::FETCH_DEFAULT, int $cursorOrientation = PDO::FETCH_ORI_NEXT, int $cursorOffset = 0): mixed {
+                    return false;
+                }
+            };
+        }
+        return parent::query($query);
+    }
+    public function exec(string $statement): int|false {
+        return 1;
+    }
+};
+
+$runnerMeta = new MigrationRunner($mockMetadataPdo, $migrationsDir, 'test_db');
+$runnerMeta->ensureMigrationTable();
+assertTrue($mockMetadataPdo->getLockCalls === 1, '14.5 ensureMigrationTable standalone acquires advisory lock');
+assertTrue($mockMetadataPdo->releaseLockCalls === 1, '14.6 ensureMigrationTable standalone releases advisory lock in finally');
+
+// Cleanup TOCTOU temp files
+@unlink($toctouTempDir . DIRECTORY_SEPARATOR . '001_toctou_test.sql');
+@rmdir($toctouTempDir);
+@unlink($sharedDbFile);
+
+// --------------------------------------------------------------------------
+// 15. Failure Recording Safety & Critical Incident Marker
+// --------------------------------------------------------------------------
+$incidentDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rycoop_incident_' . bin2hex(random_bytes(6));
+mkdir($incidentDir, 0777, true);
+$incidentFile = $incidentDir . DIRECTORY_SEPARATOR . 'incident_marker.json';
+file_put_contents($incidentDir . DIRECTORY_SEPARATOR . '001_broken_incident.sql', "CREATE TABLE bad (id INT); INVALID SYNTAX;");
+
+// Mock PDO where migration exec fails AND subsequent history recording INSERT fails!
+$mockIncidentPdo = new class extends PDO {
+    public function __construct() { parent::__construct('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]); }
+    public function exec(string $statement): int|false {
+        if (str_contains($statement, 'CREATE TABLE bad')) {
+            throw new PDOException("SQLSTATE[42000]: Syntax error in migration SQL");
+        }
+        return parent::exec($statement);
+    }
+    public function prepare(string $query, array $options = []): PDOStatement|false {
+        if (str_contains($query, 'INSERT INTO `migrations`') || str_contains($query, 'UPDATE `migrations`')) {
+            throw new PDOException("SQLSTATE[HY000]: Database disk is full or table locked - cannot record failure");
+        }
+        return parent::prepare($query, $options);
+    }
+};
+
+$runnerIncident = new MigrationRunner($mockIncidentPdo, $incidentDir, 'sqlite');
+$runnerIncident->setIncidentMarkerPath($incidentFile);
+
+// 15.1 Verify that dual failure raises MigrationIncidentException (fail-closed)
+assertThrows(function () use ($runnerIncident) {
+    $runnerIncident->runSingle('001_broken_incident.sql');
+}, 'CRITICAL MIGRATION INCIDENT', '15.1 Failure in both SQL and failure-recording raises MigrationIncidentException');
+
+// 15.2 Verify durable incident marker was written to disk
+assertTrue(file_exists($incidentFile), '15.2 Durable incident marker file was created on disk');
+$markerContent = json_decode((string) file_get_contents($incidentFile), true);
+assertTrue(is_array($markerContent), '15.3 Incident marker contains valid JSON');
+assertTrue($markerContent['migration'] === '001_broken_incident.sql', '15.4 Incident marker records correct migration name');
+assertTrue($markerContent['severity'] === 'CRITICAL', '15.5 Incident marker records CRITICAL severity');
+assertTrue(str_contains($markerContent['recording_error'], 'Database disk is full'), '15.6 Recording error is captured in incident marker');
+
+// 15.7 Subsequent executions are BLOCKED by active incident
+assertThrows(function () use ($runnerIncident) {
+    $runnerIncident->runSingle('001_broken_incident.sql');
+}, 'CRITICAL MIGRATION INCIDENT ACTIVE', '15.7 Subsequent migration execution is strictly blocked while incident marker is active');
+
+// 15.8 Preflight identifies active incident
+$incidentPreflight = $runnerIncident->getPreflightInfo('001_broken_incident.sql');
+assertTrue($incidentPreflight['has_active_incident'] === true, '15.8 Preflight detects active incident state');
+
+// 15.9 Force retry of reconciled migration clears incident marker
+$mockReconciledPdo = new class extends PDO {
+    public function __construct() {
+        parent::__construct('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $this->exec("CREATE TABLE IF NOT EXISTS `migrations` (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+            `migration` VARCHAR(255) NOT NULL UNIQUE,
+            `checksum` CHAR(64) NULL,
+            `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `execution_time_ms` INTEGER NULL,
+            `status` VARCHAR(20) NOT NULL DEFAULT 'success',
+            `error_message` TEXT NULL
+        );");
+    }
+};
+
+file_put_contents($incidentDir . DIRECTORY_SEPARATOR . '001_broken_incident.sql', "CREATE TABLE IF NOT EXISTS reconciled (id INT);");
+$runnerReconciled = new MigrationRunner($mockReconciledPdo, $incidentDir, 'sqlite');
+$runnerReconciled->setIncidentMarkerPath($incidentFile);
+$runnerReconciled->setForceRetryFailed(true);
+
+$reconciledResult = $runnerReconciled->runSingle('001_broken_incident.sql');
+assertTrue($reconciledResult['status'] === 'applied', '15.9 Reconciled migration succeeds with --force-retry-failed');
+assertTrue(!file_exists($incidentFile), '15.10 Incident marker file automatically cleared after successful reconciliation');
+
+// Cleanup incident test temp files
+@unlink($incidentDir . DIRECTORY_SEPARATOR . '001_broken_incident.sql');
+@unlink($incidentFile);
+@rmdir($incidentDir);
+
 echo "=========================================================================\n";
 echo "All MigrationRunner Unit, Safety & Security tests PASSED successfully!\n";
 

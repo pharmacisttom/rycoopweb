@@ -99,6 +99,10 @@ switch ($command) {
                     ? ($isDryRun ? "✓ Preflight: {$appliedCount} pending migration(s) ready.\n" : "{$appliedCount} migration(s) applied successfully!\n")
                     : "Nothing to migrate — all migrations are up to date.\n";
             }
+        } catch (\App\Services\MigrationIncidentException $e) {
+            $sanitized = \App\Services\MigrationRunner::sanitizeErrorMessage($e->getMessage());
+            echo "🚨 Critical migration incident: {$sanitized}\n";
+            exit(2);
         } catch (Exception $e) {
             $sanitized = \App\Services\MigrationRunner::sanitizeErrorMessage($e->getMessage());
             echo "✗ Migration failed: {$sanitized}\n";
