@@ -1,3 +1,5 @@
+import AdminActionProvider from './components/admin/AdminActionProvider';
+import AdminAppShell from './components/admin/AdminAppShell';
 import React, { lazy, Suspense, useCallback, useEffect } from 'react';
 import { Navigate, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
@@ -139,19 +141,20 @@ function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
   if (!isLoggedIn || !['online', 'offline'].includes(sessionStatus)) {
     return <Navigate to="/admin/login" replace />;
   }
+  if (user?.role === 'member') return <Navigate to="/service-unavailable" replace />;
   if (roles && !roles.includes(user?.role)) {
     return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'} replace />;
   }
   if(permission && !can(permission))return <div className="container section"><p>คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link></div>;
   if (anyPermissions && !anyPermissions.some(can)) return <div className="container section"><p role="alert">คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p></div>;
-  return children;
+  return <AdminActionProvider><AdminAppShell title={null}>{children}</AdminAppShell></AdminActionProvider>;
 }
 
 export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|led|control-center|approvals|login|2fa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -210,6 +213,8 @@ export default function App() {
             <Route path="/staff" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute><AdminControlCenterPage section="dashboard" /></StaffProtectedRoute>} />)}
+            <Route path="/admin/approvals" element={<StaffProtectedRoute><AdminControlCenterPage section="approvals" /></StaffProtectedRoute>} />
+            <Route path="/admin/control-center" element={<StaffProtectedRoute><AdminControlCenterPage section="dashboard" /></StaffProtectedRoute>} />
             <Route path="/admin/analytics/visitors" element={<StaffProtectedRoute><AdminControlCenterPage section="visitor-analytics" /></StaffProtectedRoute>} />
             <Route path="/admin/cms" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/operations" element={<StaffProtectedRoute><AdminControlCenterPage section="operations" /></StaffProtectedRoute>} />

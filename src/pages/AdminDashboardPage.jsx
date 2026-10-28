@@ -1,3 +1,4 @@
+import { AdminPageHeader } from '../components/admin/AdminUI';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -146,7 +147,7 @@ export default function AdminDashboardPage() {
       const saved = localStorage.getItem('coop_member_complaints');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return MEMBER_COMPLAINTS;
+    return [];
   });
   const [feedbackFilter, setFeedbackFilter] = useState('all');
   const [feedbackSearch, setFeedbackSearch] = useState('');
@@ -469,8 +470,10 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="section" style={{ background: 'var(--bg-main)', minHeight: '90vh' }}>
-      <div className="container">
+    <div className="admin-module admin-legacy-cms">
+      <div className="admin-module-body">
+        <AdminPageHeader title="จัดการเว็บไซต์ (เครื่องมือเดิม)" description="ใช้โมดูลเนื้อหาและศูนย์ควบคุมสำหรับข้อมูลส่วนกลาง"/>
+        <p className="admin-warning" role="status">เครื่องมือ CMS เดิม: การตั้งค่าบางส่วนและคำร้องในหน้านี้เก็บเฉพาะเบราว์เซอร์ โปรดใช้ศูนย์ควบคุมและโมดูลจัดการเนื้อหาสำหรับข้อมูลส่วนกลาง</p>
 
         {/* Standardized Dashboard Hero Header */}
         <DashboardHeader
@@ -507,25 +510,24 @@ export default function AdminDashboardPage() {
           />
           <KpiCard
             title="สถานะความปลอดภัยเซิร์ฟเวอร์"
-            value="100%"
-            subtitle="TLS 1.3 / Firewall Active"
+            value="ยังไม่มีข้อมูล"
+            subtitle="ตรวจสถานะที่ศูนย์ความมั่นคงปลอดภัย"
             icon={Activity}
             variant="emerald"
-            badgeText="ปกติ"
-            badgeVariant="emerald"
+
           />
           <KpiCard
             title="ฐานข้อมูลและการสำรอง"
-            value="Auto Backup"
-            subtitle="สำรองข้อมูลล่าสุด: วันนี้ 04:00 น."
+            value="ยังไม่มีข้อมูล"
+            subtitle="ตรวจไฟล์และเวลาจริงที่ศูนย์สำรองข้อมูล"
             icon={Database}
             variant="gold"
           />
           <KpiCard
-            title="เรื่องร้องเรียนรอดำเนินการ"
+            title="รายการรอดำเนินการเฉพาะเครื่อง"
             value={feedbacks.filter(f => f.status === 'รอดำเนินการ').length}
             unit="เรื่อง"
-            subtitle={`จากทั้งหมด ${feedbacks.length} เรื่อง`}
+            subtitle={`รายการในเบราว์เซอร์นี้ ${feedbacks.length} เรื่อง ไม่ใช่ยอดฐานข้อมูลกลาง`}
             icon={MessageSquare}
             variant="primary"
           />

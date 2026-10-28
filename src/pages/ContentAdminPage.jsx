@@ -1,3 +1,4 @@
+import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -19,9 +20,9 @@ export default function ContentAdminPage(){
  await memberAdminApi(path,{data:edit});setEdit(null);setMessage(tab==='news'?'บันทึกร่าง / ส่งตรวจแล้ว ยังไม่เผยแพร่':'บันทึกคำถามแล้ว');setRevision(v=>v+1);
  }catch(e){setError(e.message);}finally{setBusy(false);}}
  async function publish(item){if(!window.confirm('ตรวจสอบตัวอย่างข่าวแล้ว และยืนยันเผยแพร่สู่หน้าเว็บหรือไม่?'))return;setBusy(true);setError('');try{await memberAdminApi(`/api/admin/news/${item.id}/publish`,{data:{version:item.version}});setPreview(null);setMessage('เผยแพร่ข่าวแล้ว');setRevision(v=>v+1);}catch(e){setError(e.message);}finally{setBusy(false);}}
- return <section className="container section"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><h1>จัดการข่าวและคำถาม</h1>
+ return <section className="admin-module"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข่าวและคำถาม" description="บันทึกร่าง ส่งตรวจ และตรวจตัวอย่างก่อนเผยแพร่"/>
  <nav style={{display:'flex',gap:12,marginBottom:20}}>{['news','faqs'].filter(t=>can(`${t}.view`)).map(t=><button className="btn btn-outline" key={t} disabled={busy||readingImages} onClick={()=>{if(edit&&!window.confirm('มีข้อมูลยังไม่บันทึก ต้องการเปลี่ยนหมวดหรือไม่?'))return;setParams({tab:t});setPreview(null);}}>{t==='news'?'ข่าวประชาสัมพันธ์':'คำถามที่พบบ่อย'}</button>)}</nav>
- {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
+ {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
  {!allowed?<p>ไม่มีสิทธิ์ในหมวดนี้</p>:loading?<p role="status">กำลังโหลด…</p>:<>
  {can(`${tab}.create`)&&<button className="btn btn-primary" disabled={busy||readingImages} onClick={()=>setEdit(tab==='news'?{...empty}:{question:'',answer:''})}>เพิ่ม{tab==='news'?'ข่าว':'คำถาม'}</button>}
  {edit&&<form onSubmit={save} style={{display:'grid',gap:12,margin:'24px 0'}}>
@@ -33,7 +34,7 @@ export default function ContentAdminPage(){
  {tab==='news'&&edit.id&&<p>การแก้ไขจะกลับเป็นร่าง / ส่งตรวจ และพักการแสดงข่าวนี้จนเผยแพร่อีกครั้ง</p>}
  <div><button className="btn btn-primary" disabled={busy||readingImages}>บันทึก</button><button type="button" className="btn btn-outline" disabled={busy||readingImages} onClick={()=>setEdit(null)}>ยกเลิก</button></div></form>}
  {!items.length&&<p>ยังไม่มีรายการ</p>}
- <div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th>หัวข้อ</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead><tbody>{items.map(item=><tr key={item.id}><td>{item.title||item.question}</td><td>{item.workflow_status||'เผยแพร่'}</td><td><button className="btn btn-outline btn-sm" onClick={()=>setPreview(item)}>ดูตัวอย่าง</button>{can(`${tab}.update`)&&<button className="btn btn-outline btn-sm" disabled={busy||readingImages} onClick={()=>setEdit({...item,workflow_status:item.workflow_status==='submitted'?'submitted':'draft'})}>แก้ไข</button>}</td></tr>)}</tbody></table></div>
+ <div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th scope="col">หัวข้อ</th><th scope="col">สถานะ</th><th scope="col">ดำเนินการ</th></tr></thead><tbody>{items.map(item=><tr key={item.id}><td>{item.title||item.question}</td><td>{item.workflow_status||'เผยแพร่'}</td><td><button className="btn btn-outline btn-sm" onClick={()=>setPreview(item)}>ดูตัวอย่าง</button>{can(`${tab}.update`)&&<button className="btn btn-outline btn-sm" disabled={busy||readingImages} onClick={()=>setEdit({...item,workflow_status:item.workflow_status==='submitted'?'submitted':'draft'})}>แก้ไข</button>}</td></tr>)}</tbody></table></div>
  {preview&&<article className="surface-card" style={{padding:24,marginTop:24}}><h2>{preview.title||preview.question}</h2>{tab==='news'&&<ActivitySlideshow images={preview.gallery_images||[]} title={preview.title}/>}<RichTextContent value={preview.content||preview.answer}/>{tab==='news'&&can('news.publish')&&preview.workflow_status==='submitted'&&<button disabled={busy||readingImages} className="btn btn-primary" onClick={()=>publish(preview)}>อนุมัติและเผยแพร่ข่าวนี้</button>}</article>}
  </>}
  </section>;

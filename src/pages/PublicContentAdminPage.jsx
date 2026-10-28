@@ -1,3 +1,4 @@
+import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { memberAdminApi } from '../services/memberAdminApi';
@@ -62,8 +63,8 @@ export default function PublicContentAdminPage() {
   async function publish(revision){if(!window.confirm(`เผยแพร่ร่าง #${revision.id} มีผล ${revision.effective_on}?`))return;setBusy(true);setError('');try{
     await memberAdminApi(`/api/admin/public-content/revisions/${revision.id}/publish`,{data:{}});await reload();setMessage('อนุมัติแล้ว ข้อมูลจะแสดงตามวันที่มีผล');setRefresh(n=>n+1);
   }catch(e){setError(e.message);}finally{setBusy(false);}}
-  return <main className="container section public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><h1>จัดการข้อมูลเว็บไซต์สหกรณ์</h1><p>บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่</p>
-    {error&&<p role="alert" className="public-content-error">{error}</p>}{message&&<p role="status">{message}</p>}
+  return <section className="admin-module public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่"/>
+    {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
     <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?'))setSection(e.target.value);}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
     <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
@@ -80,5 +81,5 @@ export default function PublicContentAdminPage() {
       <section><h2>ร่างและประวัติการเผยแพร่</h2>{!data.history.length&&<p>ยังไม่มีประวัติในระบบใหม่นี้</p>}{data.history.map(revision=><article className="surface-card public-content-revision" key={revision.id}><h3>#{revision.id} · {revision.state==='draft'?'รอเผยแพร่':revision.state==='published'?'อนุมัติแล้ว':'ไม่อนุมัติ'}</h3><p>{revision.note}</p><p>มีผล {revision.effective_on} · ผู้แก้ไข #{revision.created_by}{revision.published_by&&` · ผู้เผยแพร่ #${revision.published_by}`}</p><a href={revision.source_url} target="_blank" rel="noopener noreferrer">แหล่งอ้างอิง</a><details><summary>ตรวจข้อมูลก่อน–หลัง</summary><h4>ก่อนแก้ไข</h4><Preview value={JSON.parse(revision.previous_payload)} section={section} boardNames={boardNames}/><h4>หลังแก้ไข</h4><Preview value={JSON.parse(revision.payload)} section={section} boardNames={boardNames}/></details>
         <div className="public-content-toolbar">{revision.state==='draft'&&definition?.canPublish&&<button disabled={busy||dirty} className="btn btn-primary" onClick={()=>publish(revision)}>อนุมัติและเผยแพร่</button>}{definition?.canEdit&&<button disabled={busy} onClick={()=>{if(!dirty||window.confirm('แทนร่างปัจจุบันด้วยเวอร์ชันนี้?')){setValue(JSON.parse(revision.payload));setSelected(0);setNote(`นำข้อมูลเวอร์ชัน #${revision.id} มาจัดทำร่างใหม่`);setSource(revision.source_url);setEffective(today());setDirty(true);}}}>ใช้เวอร์ชันนี้สร้างร่างใหม่</button>}</div></article>)}</section>
     </>}
-  </main>;
+  </section>;
 }

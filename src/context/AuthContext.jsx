@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { mergeServerIdentity, hasEffectivePermission } from '../utils/identity';
 import { fetchCurrentUser } from '../services/api';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
 
@@ -53,7 +54,7 @@ export function AuthProvider({ children }) {
         if (cancelled) return;
 
         if (result?.success && result.authenticated) {
-          if(result.user)setUser(current=>{const updated={...current,name:result.user.name,role:result.user.role,roleName:result.user.role_name,permissions:result.user.permissions || [],effective_permissions:result.user.effective_permissions || []};return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
+          if(result.user)setUser(current=>{const updated=mergeServerIdentity(current,result.user);return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
           setSessionStatus('online');
         } else if (['MFA_ENROLLMENT_REQUIRED','TWO_FACTOR_REQUIRED'].includes(result?.code)) {
           setUser(null);
@@ -269,7 +270,7 @@ export function AuthProvider({ children }) {
   const refreshSession = async () => {
     const result = await fetchCurrentUser();
     if (!result?.success || !result.authenticated || !result.user) throw new Error('กรุณาเข้าสู่ระบบใหม่');
-    setUser({ ...result.user, role: result.user.role || result.user.role_slug, permissions: result.user.permissions || [] });
+    setUser(current=>mergeServerIdentity(current,result.user));
     setSessionStatus('online');
     return result.user;
   };
@@ -280,7 +281,7 @@ export function AuthProvider({ children }) {
       user,
       isLoggedIn: !!user,
       sessionStatus,
-      can: permission => user?.role === 'super_admin' || (user?.permissions || []).includes(permission),
+      can: permission => hasEffectivePermission(user,permission),
       login,
       logout,
       invalidateSession,

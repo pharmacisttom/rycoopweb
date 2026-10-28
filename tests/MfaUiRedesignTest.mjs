@@ -17,7 +17,7 @@ const mockPlugin = {
 };
 
 const server = await createServer({
-  configFile: false,
+  configFile: false,cacheDir:'storage/tmp/vite-mfa-ui-tests',
   plugins: [mockPlugin, react()],
   resolve: { alias: { 'react-router-dom': 'react-router' } },
   optimizeDeps: { noDiscovery: true, include: [] },

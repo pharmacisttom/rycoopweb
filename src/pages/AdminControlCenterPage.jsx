@@ -1,3 +1,7 @@
+import AdminStaffDirectory from '../components/admin/AdminStaffDirectory';
+import AdminApprovalWorkflow from '../components/admin/AdminApprovalWorkflow';
+import { useAdminAction } from '../components/admin/AdminActionProvider';
+import { AdminErrorState, AdminEmptyState } from '../components/admin/AdminUI';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import {
@@ -146,6 +150,7 @@ function SvgTrendChart({ data = [], xKey = 'date', series = [], emptyLabel = '�
         })}
       </svg>
 
+      <details><summary>อ่านข้อมูลกราฟเป็นตาราง</summary><div className="admin-table-scroll" tabIndex={0} role="region" aria-label="ข้อมูลกราฟ"><table className="admin-table"><thead><tr><th scope="col">ช่วงเวลา</th>{series.map(item=><th scope="col" key={item.key}>{item.label}</th>)}</tr></thead><tbody>{data.map((row,index)=><tr key={index}><th scope="row">{row[xKey]}</th>{series.map(item=><td key={item.key}>{formatNumber(row[item.key])}</td>)}</tr>)}</tbody></table></div></details>
       <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
         {series.map((s) => (
           <span key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -187,15 +192,16 @@ function HorizontalBarChart({ items = [], labelKey = 'label', valueKey = 'value'
 }
 
 const SECTION_META = {
+  approvals: {title:'คำขออนุมัติและการแยกหน้าที่',subtitle:'ตรวจคำขอ Maker / Checker และประวัติจาก API จริง',breadcrumbs:[{label:'คำขออนุมัติ'}],permissions:['backup.view','backup.restore.request','backup.restore.approve','security.view','audit.view','operations.view','dashboard.view']},
   dashboard: {
     title: 'ศูนย์ควบคุมผู้บริหาร (Executive Admin Control Center)',
-    subtitle: 'ติดตามตัวชี้วัดหลัก 12 รายการ แนวโน้มความมั่นคงปลอดภัย สถานะระบบ และภาพรวมการดำเนินงานแบบเรียลไทม์',
+    subtitle: 'ติดตามตัวชี้วัดหลัก 12 รายการ แนวโน้มความมั่นคงปลอดภัย สถานะระบบ และภาพรวมการดำเนินงาน ณ เวลาที่โหลดข้อมูลล่าสุด',
     breadcrumbs: [{ label: 'Executive Dashboard' }],
     permissions: ['dashboard.view', 'analytics.view'],
   },
   'visitor-analytics': {
     title: 'วิเคราะห์สถิติผู้เข้าชมและทราฟฟิกเว็บไซต์ (Enterprise Web & Visitor Analytics)',
-    subtitle: 'ติดตามผู้เข้าชมแบบเรียลไทม์ แนวโน้มรายวัน/รายเดือน พฤติกรรมรายชั่วโมง การคัดกรองบอท และส่งออกรายงานภายใต้ Audit Trail',
+    subtitle: 'ติดตามผู้เข้าชมตามช่วงเวลาที่เลือก แนวโน้มรายวัน/รายเดือน พฤติกรรมรายชั่วโมง การคัดกรองบอท และส่งออกรายงานภายใต้ Audit Trail',
     breadcrumbs: [{ label: 'Executive Dashboard', to: '/admin/dashboard' }, { label: 'Visitor Analytics' }],
     permissions: ['analytics.visitors.view', 'analytics.view'],
   },
@@ -304,6 +310,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, can } = useAuth();
+  const {run,busy:actionBusy}=useAdminAction();
 
   const section = useMemo(() => {
     if (propSection) return propSection;
@@ -376,14 +383,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
       } else if (section === 'operations') {
         const ops = await memberAdminApi('/api/admin/operations/overview', { signal });
         setOpsData(ops);
-      } else if (section === 'users' || section === 'roles' || section === 'permissions') {
-        const requests = [memberAdminApi('/api/admin/access/permissions', { signal })];
-        if (user?.role === 'super_admin') {
-          requests.push(memberAdminApi('/api/admin/staff', { signal }).catch(() => null));
-        }
-        const [matrix, staffRes] = await Promise.all(requests);
-        setPermMatrixData(matrix);
-        if (staffRes) setStaffDirData(staffRes);
+      } else if (section === 'users') {
+        if(user?.role==='super_admin')setStaffDirData(await memberAdminApi('/api/admin/staff',{signal}));
+      } else if (section === 'roles' || section === 'permissions') {
+        setPermMatrixData(await memberAdminApi('/api/admin/access/permissions',{signal}));
       } else if (section === 'departments') {
         const dept = await memberAdminApi('/api/admin/departments', { signal });
         setDeptData(dept);
@@ -410,7 +413,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
         const bkp = await memberAdminApi('/api/admin/backups', { signal });
         setBackupData(bkp);
       } else if (section === 'health' || section === 'settings') {
-        const hlt = await memberAdminApi('/api/admin/system/health', { signal }).catch(() => null);
+        const hlt = await memberAdminApi('/api/admin/system/health', { signal });
         setHealthData(hlt);
       } else if (section === 'reports') {
         const [rep, sum] = await Promise.all([
@@ -438,18 +441,11 @@ export default function AdminControlCenterPage({ section: propSection }) {
   }, [loadSectionData, refreshTick]);
 
   const handleRevokeStaffSessions = async (targetUserId, targetName) => {
-    if (typeof window !== 'undefined' && !window.confirm(`ยืนยันการเพิกถอนเซสชันทั้งหมดของ ${targetName}?`)) {
-      return;
-    }
-    setNotice('');
-    setError('');
+    setNotice('');setError('');
     try {
-      await memberAdminApi(`/api/admin/staff/${targetUserId}/revoke-sessions`, { data: {} });
-      setNotice(`เพิกถอนเซสชันของ ${targetName} และบันทึก Audit Log เรียบร้อยแล้ว`);
-      setRefreshTick((t) => t + 1);
-    } catch (err) {
-      setError(err?.message || 'ไม่สามารถเพิกถอนเซสชันได้');
-    }
+      await run(signal=>memberAdminApi(`/api/admin/staff/${targetUserId}/revoke-sessions`,{data:{},signal}),{label:`เพิกถอนเซสชัน ${targetName}`,scope:'security.sessions.revoke',confirm:'เจ้าหน้าที่บัญชีนี้จะต้องเข้าสู่ระบบใหม่ ตรวจสอบชื่อก่อนยืนยัน'});
+      setNotice(`เพิกถอนเซสชันของ ${targetName} แล้ว`);setRefreshTick(value=>value+1);
+    }catch(exception){if(exception.code!=='ACTION_CANCELLED'&&exception.name!=='AbortError')setError(exception.message);}
   };
 
   const handleExportVisitorAnalytics = async () => {
@@ -857,10 +853,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
                   <table className="acc-table">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>หัวข้อข่าว</th>
-                        <th>สถานะ</th>
-                        <th>อัปเดตล่าสุด</th>
+                        <th scope="col">ID</th>
+                        <th scope="col">หัวข้อข่าว</th>
+                        <th scope="col">สถานะ</th>
+                        <th scope="col">อัปเดตล่าสุด</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -893,10 +889,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
                   <table className="acc-table">
                     <thead>
                       <tr>
-                        <th>เลขสมาชิก</th>
-                        <th>ชื่อ-นามสกุล</th>
-                        <th>สถานะ</th>
-                        <th>วันที่ยื่น</th>
+                        <th scope="col">เลขสมาชิก</th>
+                        <th scope="col">ชื่อ-นามสกุล</th>
+                        <th scope="col">สถานะ</th>
+                        <th scope="col">วันที่ยื่น</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -920,7 +916,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
       {/* ===================================================================
           3. USERS, ROLES & PERMISSIONS (/admin/users, /admin/roles, /admin/permissions)
          =================================================================== */}
-      {!loading && (section === 'users' || section === 'roles' || section === 'permissions') && permMatrixData && (
+      {!loading && (section === 'roles' || section === 'permissions') && permMatrixData && (
         <>
           <div className="acc-card">
             <div className="acc-card-header">
@@ -941,12 +937,12 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <thead>
                   <tr>
-                    <th>ลำดับ</th>
-                    <th>บทบาทมาตรฐาน (Enterprise Role)</th>
-                    <th>รหัสในฐานข้อมูล (Canonical Slug)</th>
-                    <th>ชื่อภาษาไทย</th>
-                    <th>ระดับการแยกหน้าที่ (Tier)</th>
-                    <th>สิทธิ์เริ่มต้น (Default Permissions)</th>
+                    <th scope="col">ลำดับ</th>
+                    <th scope="col">บทบาทมาตรฐาน (Enterprise Role)</th>
+                    <th scope="col">รหัสในฐานข้อมูล (Canonical Slug)</th>
+                    <th scope="col">ชื่อภาษาไทย</th>
+                    <th scope="col">ระดับการแยกหน้าที่ (Tier)</th>
+                    <th scope="col">สิทธิ์เริ่มต้น (Default Permissions)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -976,11 +972,11 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <thead>
                   <tr>
-                    <th>ชื่อบทบาท</th>
-                    <th>รหัส (Slug)</th>
-                    <th>ประเภท</th>
-                    <th>จำนวนผู้ใช้งาน</th>
-                    <th>คำอธิบาย</th>
+                    <th scope="col">ชื่อบทบาท</th>
+                    <th scope="col">รหัส (Slug)</th>
+                    <th scope="col">ประเภท</th>
+                    <th scope="col">จำนวนผู้ใช้งาน</th>
+                    <th scope="col">คำอธิบาย</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1002,60 +998,6 @@ export default function AdminControlCenterPage({ section: propSection }) {
             </div>
           </section>
 
-          {section === 'users' && staffDirData?.data?.staff && (
-            <section className="acc-card">
-              <div className="acc-card-header">
-                <div>
-                  <h2 className="acc-card-title">รายชื่อบัญชีเจ้าหน้าที่และสถานะความปลอดภัย (Staff Directory)</h2>
-                  <p className="acc-card-subtitle">ข้อมูลจากระบบบริหารจัดการเจ้าหน้าที่ (/api/admin/staff)</p>
-                </div>
-              </div>
-              <div className="acc-table-wrap">
-                <table className="acc-table">
-                  <thead>
-                    <tr>
-                      <th>ชื่อ-นามสกุล</th>
-                      <th>ชื่อผู้ใช้ / อีเมล</th>
-                      <th>บทบาท</th>
-                      <th>สถานะบัญชี</th>
-                      <th>Google OIDC</th>
-                      <th>Mandatory MFA</th>
-                      <th>การจัดการเซสชัน</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {staffDirData.data.staff.map((st) => (
-                      <tr key={st.id}>
-                        <td><strong>{st.name}</strong></td>
-                        <td>{st.username}<br /><small>{st.email}</small></td>
-                        <td>{st.role_name || st.role_slug}</td>
-                        <td>
-                          <span className={`acc-badge-pill ${st.status === 'active' ? 'success' : 'danger'}`}>
-                            {st.status}
-                          </span>
-                        </td>
-                        <td>{st.google_email ? `ผูกแล้ว (${st.google_email})` : 'ยังไม่ผูก'}</td>
-                        <td>
-                          <span className={`acc-badge-pill ${Number(st.two_factor_enabled) === 1 ? 'success' : 'warning'}`}>
-                            {Number(st.two_factor_enabled) === 1 ? 'เปิดใช้งาน MFA แล้ว' : 'รอลงทะเบียน MFA'}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="acc-btn danger"
-                            onClick={() => handleRevokeStaffSessions(st.id, st.name)}
-                          >
-                            เพิกถอนเซสชัน
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
 
           <section className="acc-card">
             <div className="acc-card-header">
@@ -1068,10 +1010,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <thead>
                   <tr>
-                    <th>Permission Key</th>
-                    <th>โมดูล (Module)</th>
-                    <th>การกระทำ (Action)</th>
-                    <th>คำอธิบายสิทธิ์ (ภาษาไทย)</th>
+                    <th scope="col">Permission Key</th>
+                    <th scope="col">โมดูล (Module)</th>
+                    <th scope="col">การกระทำ (Action)</th>
+                    <th scope="col">คำอธิบายสิทธิ์ (ภาษาไทย)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1089,6 +1031,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
           </section>
         </>
       )}
+
+      {!loading&&section==='users'&&(user?.role==='super_admin'?<AdminStaffDirectory staff={staffDirData?.staff||[]} onRefresh={()=>setRefreshTick(value=>value+1)}/>:<AdminEmptyState>API ทะเบียนเจ้าหน้าที่แบบละเอียดจำกัดเฉพาะผู้ดูแลระบบสูงสุด โปรดใช้สิทธิ์ที่ได้รับอนุมัติ</AdminEmptyState>)}
+      {['approvals','operations','backups','backups-history','security'].includes(section)&&<AdminApprovalWorkflow backups={backupData?.recent_history||[]}/>}
 
       {/* ===================================================================
           4. DEPARTMENTS (/admin/departments)
@@ -1108,9 +1053,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <thead>
                   <tr>
-                    <th>ชื่อหน่วยงาน / แผนก</th>
-                    <th>เจ้าหน้าที่ทั้งหมด</th>
-                    <th>สถานะปฏิบัติงาน (Active)</th>
+                    <th scope="col">ชื่อหน่วยงาน / แผนก</th>
+                    <th scope="col">เจ้าหน้าที่ทั้งหมด</th>
+                    <th scope="col">สถานะปฏิบัติงาน (Active)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1227,13 +1172,13 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th>วัน-เวลา</th>
-                      <th>ผู้ดำเนินการ (Actor)</th>
-                      <th>หมวดหมู่</th>
-                      <th>โมดูล / การกระทำ</th>
-                      <th>เป้าหมาย (Target)</th>
-                      <th>IP Address</th>
-                      <th>ระดับ</th>
+                      <th scope="col">วัน-เวลา</th>
+                      <th scope="col">ผู้ดำเนินการ (Actor)</th>
+                      <th scope="col">หมวดหมู่</th>
+                      <th scope="col">โมดูล / การกระทำ</th>
+                      <th scope="col">เป้าหมาย (Target)</th>
+                      <th scope="col">IP Address</th>
+                      <th scope="col">ระดับ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1352,9 +1297,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th>เกณฑ์การประเมิน (Security Rule)</th>
-                      <th>คะแนนที่ได้</th>
-                      <th>รายละเอียด</th>
+                      <th scope="col">เกณฑ์การประเมิน (Security Rule)</th>
+                      <th scope="col">คะแนนที่ได้</th>
+                      <th scope="col">รายละเอียด</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1388,10 +1333,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
                   <table className="acc-table">
                     <thead>
                       <tr>
-                        <th>วัน-เวลา</th>
-                        <th>ผู้ใช้งาน / อีเมล</th>
-                        <th>สถานะ</th>
-                        <th>IP Address</th>
+                        <th scope="col">วัน-เวลา</th>
+                        <th scope="col">ผู้ใช้งาน / อีเมล</th>
+                        <th scope="col">สถานะ</th>
+                        <th scope="col">IP Address</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1437,13 +1382,13 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <thead>
                   <tr>
-                    <th>ผู้ใช้งาน</th>
-                    <th>บทบาท / แผนก</th>
-                    <th>Session Version</th>
-                    <th>IP ล่าสุด</th>
-                    <th>เข้าสู่ระบบล่าสุด</th>
-                    <th>สถานะเซสชัน</th>
-                    <th>การจัดการ</th>
+                    <th scope="col">ผู้ใช้งาน</th>
+                    <th scope="col">บทบาท / แผนก</th>
+                    <th scope="col">Session Version</th>
+                    <th scope="col">IP ล่าสุด</th>
+                    <th scope="col">เข้าสู่ระบบล่าสุด</th>
+                    <th scope="col">สถานะเซสชัน</th>
+                    <th scope="col">การจัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1464,10 +1409,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
                         </span>
                       </td>
                       <td>
-                        {user?.role === 'super_admin' && !s.is_current_user ? (
+                        {user?.role === 'super_admin' && can('security.sessions.revoke') && !s.is_current_user ? (
                           <button
                             type="button"
-                            className="acc-btn danger"
+                            className="acc-btn danger" disabled={actionBusy}
                             onClick={() => handleRevokeStaffSessions(s.user_id, s.name)}
                           >
                             บังคับออกจากระบบ
@@ -1496,7 +1441,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <span className="acc-kpi-label">อัตราการเปิดใช้งาน MFA ของเจ้าหน้าที่</span>
                 <span className="acc-kpi-icon success"><ShieldCheck size={18} /></span>
               </div>
-              <div className="acc-kpi-value">{mfaData.summary?.coverage_percent ?? 0}%</div>
+              <div className="acc-kpi-value">{mfaData.summary?.coverage_percent ?? '—'}%</div>
               <div className="acc-kpi-sub"><span>บังคับใช้ Mandatory MFA สำหรับบทบาทผู้ดูแล</span></div>
             </article>
             <article className="acc-kpi-card">
@@ -1536,12 +1481,12 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <thead>
                   <tr>
-                    <th>ชื่อ-นามสกุล</th>
-                    <th>ชื่อผู้ใช้ / อีเมล</th>
-                    <th>บทบาท</th>
-                    <th>สถานะ MFA</th>
-                    <th>วันที่ยืนยันตัวตน (Confirmed At)</th>
-                    <th>รหัสกู้คืนคงเหลือ (Recovery Codes)</th>
+                    <th scope="col">ชื่อ-นามสกุล</th>
+                    <th scope="col">ชื่อผู้ใช้ / อีเมล</th>
+                    <th scope="col">บทบาท</th>
+                    <th scope="col">สถานะ MFA</th>
+                    <th scope="col">วันที่ยืนยันตัวตน (Confirmed At)</th>
+                    <th scope="col">รหัสกู้คืนคงเหลือ (Recovery Codes)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1621,8 +1566,8 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <thead>
                   <tr>
-                    <th>หมวดหมู่ (Category)</th>
-                    <th>สถานะล่าสุด</th>
+                    <th scope="col">หมวดหมู่ (Category)</th>
+                    <th scope="col">สถานะล่าสุด</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1653,12 +1598,12 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th>ชื่อไฟล์สำรองข้อมูล</th>
-                      <th>หมวดหมู่</th>
-                      <th>ขนาดไฟล์</th>
-                      <th>วันที่สร้าง</th>
-                      <th>SHA-256 Checksum</th>
-                      <th>สถานะการตรวจสอบ</th>
+                      <th scope="col">ชื่อไฟล์สำรองข้อมูล</th>
+                      <th scope="col">หมวดหมู่</th>
+                      <th scope="col">ขนาดไฟล์</th>
+                      <th scope="col">วันที่สร้าง</th>
+                      <th scope="col">SHA-256 Checksum</th>
+                      <th scope="col">สถานะการตรวจสอบ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1740,9 +1685,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th>บริการ (Service)</th>
-                      <th>สถานะ</th>
-                      <th>รายละเอียด</th>
+                      <th scope="col">บริการ (Service)</th>
+                      <th scope="col">สถานะ</th>
+                      <th scope="col">รายละเอียด</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1773,9 +1718,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th>ชื่องาน (Job Name)</th>
-                      <th>ตารางเวลา</th>
-                      <th>สถานะ</th>
+                      <th scope="col">ชื่องาน (Job Name)</th>
+                      <th scope="col">ตารางเวลา</th>
+                      <th scope="col">สถานะ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1813,11 +1758,11 @@ export default function AdminControlCenterPage({ section: propSection }) {
             <table className="acc-table">
               <thead>
                 <tr>
-                  <th>รหัสรายงาน</th>
-                  <th>ชื่อรายงาน</th>
-                  <th>หมวดหมู่</th>
-                  <th>สิทธิ์ในการเข้าถึง</th>
-                  <th>การส่งออก</th>
+                  <th scope="col">รหัสรายงาน</th>
+                  <th scope="col">ชื่อรายงาน</th>
+                  <th scope="col">หมวดหมู่</th>
+                  <th scope="col">สิทธิ์ในการเข้าถึง</th>
+                  <th scope="col">การส่งออก</th>
                 </tr>
               </thead>
               <tbody>
@@ -2074,11 +2019,11 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>หน้าเว็บไซต์สาธารณะ</th>
-                      <th>เส้นทาง (Normalized Path)</th>
-                      <th>ผู้เข้าชมไม่ซ้ำ (Unique)</th>
-                      <th>การเปิดหน้าเว็บ (Views)</th>
+                      <th scope="col">#</th>
+                      <th scope="col">หน้าเว็บไซต์สาธารณะ</th>
+                      <th scope="col">เส้นทาง (Normalized Path)</th>
+                      <th scope="col">ผู้เข้าชมไม่ซ้ำ (Unique)</th>
+                      <th scope="col">การเปิดหน้าเว็บ (Views)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2113,10 +2058,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th>เวลา</th>
-                      <th>หน้าสาธารณะ</th>
-                      <th>อุปกรณ์ / เบราว์เซอร์</th>
-                      <th>IP (PDPA Masked)</th>
+                      <th scope="col">เวลา</th>
+                      <th scope="col">หน้าสาธารณะ</th>
+                      <th scope="col">อุปกรณ์ / เบราว์เซอร์</th>
+                      <th scope="col">IP (PDPA Masked)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2158,19 +2103,19 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <tbody>
                   <tr>
-                    <th>ชื่อ-นามสกุล</th>
+                    <th scope="col">ชื่อ-นามสกุล</th>
                     <td><strong>{user?.name || '-'}</strong></td>
                   </tr>
                   <tr>
-                    <th>ชื่อผู้ใช้ (Username)</th>
+                    <th scope="col">ชื่อผู้ใช้ (Username)</th>
                     <td><code>{user?.username || '-'}</code></td>
                   </tr>
                   <tr>
-                    <th>บทบาท (Role)</th>
+                    <th scope="col">บทบาท (Role)</th>
                     <td><span className="acc-badge-pill success">{user?.roleName || user?.role}</span></td>
                   </tr>
                   <tr>
-                    <th>หน่วยงาน</th>
+                    <th scope="col">หน่วยงาน</th>
                     <td>{user?.department || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด'}</td>
                   </tr>
                 </tbody>
@@ -2197,19 +2142,19 @@ export default function AdminControlCenterPage({ section: propSection }) {
               <table className="acc-table">
                 <tbody>
                   <tr>
-                    <th>การบังคับใช้ Mandatory MFA</th>
+                    <th scope="col">การบังคับใช้ Mandatory MFA</th>
                     <td><span className="acc-badge-pill success">เปิดใช้งาน (Enforced for Staff/Admin)</span></td>
                   </tr>
                   <tr>
-                    <th>การเข้ารหัส TOTP Secret</th>
+                    <th scope="col">การเข้ารหัส TOTP Secret</th>
                     <td><code>AES-256-GCM (Local SVG QR — BaconQrCode 3.1.1)</code></td>
                   </tr>
                   <tr>
-                    <th>การป้องกัน CSRF & Same-Origin</th>
+                    <th scope="col">การป้องกัน CSRF & Same-Origin</th>
                     <td><span className="acc-badge-pill success">เปิดใช้งาน (CsrfMiddleware)</span></td>
                   </tr>
                   <tr>
-                    <th>นโยบาย Database Migrations</th>
+                    <th scope="col">นโยบาย Database Migrations</th>
                     <td><span className="acc-badge-pill warning">Manual Approval Only (019/020 On Hold)</span></td>
                   </tr>
                 </tbody>

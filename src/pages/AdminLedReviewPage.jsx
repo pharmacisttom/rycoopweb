@@ -59,7 +59,7 @@ export default function AdminLedReviewPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
+    <div className="admin-led-page animate-fade-in space-y-8">
       {/* Sub Navigation */}
       <LedSubNav pendingReviewCount={statusFilter === 'PENDING' ? pagination.total : 0} />
 

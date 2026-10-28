@@ -8,7 +8,7 @@ const files = ['src/components/layout/Navbar.jsx', 'src/components/layout/Footer
   'src/components/member/AuthModal.jsx', 'src/components/admin/AdminControlCenterShell.jsx', 'src/components/auth/MfaAuthShell.jsx',
   'src/components/common/PageSkeletonLoader.jsx', 'src/pages/LoginPage.jsx', 'src/components/dashboard/DashboardHeader.jsx'];
 for (const file of files) {
-  const source = fs.readFileSync(file, 'utf8');assert.ok(source.includes('<CoopBrandLogo'), `${file} uses shared brand`);
+  const source = fs.readFileSync(file, 'utf8');assert.ok(source.includes('<CoopBrandLogo') || (file.endsWith('AdminMemberShell.jsx') && source.includes('<AdminAppShell')), `${file} uses shared brand`);
   assert.ok(!/\/assets\/(?:img\/logo|images\/logo)|\/img\/logo|logo-C7DMvEhb/.test(source), `${file} has no legacy runtime path`);
 }
 const built = fs.readdirSync('public/app/assets').filter(file => /^coop-logo-.*\.webp$/.test(file));

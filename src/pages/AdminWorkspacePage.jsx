@@ -1,3 +1,4 @@
+import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -19,15 +20,14 @@ export default function AdminWorkspacePage() {
   const [passwordOpen, setPasswordOpen] = React.useState(false);
   const [error, setError] = React.useState('');
   const links = destinations.filter(([permission]) => can(permission));
-  return <main className="container section">
-    <h1>พื้นที่ทำงานเจ้าหน้าที่</h1>
-    <p>{user?.name} · {user?.role_name || user?.role}</p>
+  return <section className="admin-module">
+    <AdminPageHeader title="พื้นที่ทำงานเจ้าหน้าที่" description={`${user?.name||''} · ${user?.role_name||user?.role||''}`}/>
     <div className="grid-3" style={{ margin: '1.5rem 0' }}>
       {links.map(([permission, path, label]) => <Link className="surface-card" style={{ padding: '1.5rem' }} key={permission} to={path}>{label}</Link>)}
       {user?.role === 'super_admin' && <Link className="btn btn-outline" to="/admin/access">จัดการผู้ใช้งานและสิทธิ์</Link>}
     </div>
     {!links.length && user?.role !== 'super_admin' && <p role="status">ยังไม่มีสิทธิ์ในโมดูลเหล่านี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
-    {error && <p role="alert">{error}</p>}
+    {error && <AdminErrorState message={error}/>}
     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
       <Link className="btn btn-primary" to="/admin/dashboard">ศูนย์ควบคุมผู้ดูแลระบบ 3.0</Link>
       <button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่านของฉัน</button>
@@ -35,5 +35,5 @@ export default function AdminWorkspacePage() {
       <Link className="btn btn-outline" to="/">กลับเว็บไซต์สหกรณ์</Link>
     </div>
     <ChangePasswordModal isOpen={passwordOpen} onClose={() => setPasswordOpen(false)} />
-  </main>;
+  </section>;
 }

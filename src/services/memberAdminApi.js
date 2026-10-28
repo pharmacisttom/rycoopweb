@@ -16,7 +16,7 @@ export async function memberAdminApi(path, { data, signal } = {}) {
   try { result = JSON.parse(text); }
   catch { throw Object.assign(new Error(`เซิร์ฟเวอร์ส่งข้อมูลไม่ถูกต้อง (HTTP ${response.status}) กรุณาให้ผู้ดูแลตรวจ PHP และเส้นทาง API`), { status: response.status, code: 'INVALID_API_RESPONSE' }); }
   if (!response.ok || !result.success) {
-    throw Object.assign(new Error(result.message || 'ไม่สามารถโหลดข้อมูลได้'), { status: response.status, code: result.code, reference: result.reference, missing: result.missing });
+    throw Object.assign(new Error(result.message || 'ไม่สามารถโหลดข้อมูลได้'), { status: response.status, code: result.code, reference: result.reference || result.correlation_id, context: result.context, missing: result.missing });
   }
   return result;
 }
