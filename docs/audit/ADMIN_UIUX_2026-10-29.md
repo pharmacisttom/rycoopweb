@@ -1,7 +1,7 @@
 # Admin UI audit and modernization
 
-Baseline: Test `8ac8202`. Logo work is PR #8; this branch builds on that work and
-must be reviewed after it. Slideshow is independent PR #7. No backend rewrite,
+Baseline: Test `8ac8202`. Logo work is PR #8; the final UI branch includes that work plus slideshow PR #7 as its base.
+Review PR #7 and #8 first; their published branches were not rewritten. The news-editor conflict was resolved before publication of the UI branch. No backend rewrite,
 database migration or automatic merge/deployment is authorized by this work.
 
 ## Phase A: inventory before implementation
@@ -61,3 +61,14 @@ operations, or writable settings that the existing APIs do not support.
 
 Live protected TEST screenshots need approved TEST login plus MFA. Do not weaken
 Basic Auth, change MFA keys, or bypass protected routes to obtain them.
+
+
+## Phases B–E delivery
+
+Shared shell applied across verified staff routes; shared UI primitives and Access,
+Step-Up, staff directory and approval workflows implemented. See
+`docs/ADMIN_UIUX_RELEASE.md` for the complete changes, tests, screenshot evidence,
+explicit legacy API gaps, TEST UAT acceptance criteria and rollback instructions.
+The UI-specific implementation remains frontend-only; existing slideshow backend
+code enters the combined branch as the unchanged PR #7 ancestor.
+User deferred authenticated TEST UAT until local QA is complete.

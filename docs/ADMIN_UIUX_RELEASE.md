@@ -7,12 +7,12 @@ will follow later. No live TEST/Production deployment or account mutation is par
 
 1. PR #7 `codex/activity-slideshow`: activity albums and slideshow, independent feature.
 2. PR #8 `codex/fix-global-logo-branding`: canonical verified official seal and all brand integration.
-3. `codex/admin-uiux-modernization`: shared admin UI, built on the branding branch;
+3. `codex/admin-uiux-modernization`: shared admin UI, with slideshow and branding commits already integrated;
    review branding first, then review the UI changes against that baseline.
 
 All PRs target `Test`. No automatic merge, Production push or deployment.
 No new migration; do not rerun migration 025, and keep 019/020 on hold.
-The UI branch changes no PHP controller, security service, route, migration or MySQL schema.
+The UI-specific commit changes no PHP controller, security service, route, migration or MySQL schema. The candidate branch includes the previously reviewed slideshow backend changes unchanged from PR #7.
 
 ## What changed
 
@@ -43,6 +43,9 @@ The UI branch changes no PHP controller, security service, route, migration or M
   disabled when the server policy is false; this branch never enables it.
 - Existing charts have a readable data-table alternative. Existing module tables gain
   column header scopes. Missing MFA coverage is shown as unavailable, rather than zero.
+- Rich-text editor cleanup captures its mounted host rather than dereferencing a ref
+  that React clears during unmount. Saving/closing an activity form no longer crashes
+  the page; the combined browser test covers an album save and editor unmount.
 - Legacy CMS no longer claims a fixed 100% security score or a fictitious 04:00 backup.
   Browser-only complaints are labelled separately and do not fall back to demo complaints.
   Legacy workflows are preserved, with a clear notice about local-only data.
@@ -81,7 +84,7 @@ at explicit local fixture URLs. It is **not** a bypass of a protected TEST route
 does not prove authenticated TEST UAT. The user explicitly deferred that UAT.
 
 - 32 module/page variants × desktop 1440, tablet 768 and mobile 390 × both themes,
-  plus Access at 360/1024/1920: 195 responsive screenshots; 3 sensitive-dialog screenshots.
+  plus Access at 360/1024/1920: 195 responsive screenshots; 3 sensitive-dialog screenshots. Before: 189 baseline screenshots, no uncaught JS errors.
 - No unexpected horizontal page overflow or uncaught JS errors in the after fixtures.
 - Exercised Access create with invalid/valid Step-Up; expired/consumed verification;
   rate limits/replay; bounded retry; no retry on 401/500; cancellation on navigation;
@@ -130,6 +133,9 @@ Representative screenshots (synthetic, no real member data):
    `composer install --no-dev --no-interaction --prefer-dist` release procedure.
 3. Preserve existing environment/secret configuration, shared uploads, keys, accounts,
    MFA records, sessions and Basic Auth. No migration command is needed for these UI changes.
+   If also releasing the gallery, verify the actual TEST `news.gallery_images` column
+   exists with a read-only schema check. Its presence in migration 001 is not evidence
+   of the live schema; if absent, stop and propose a separately reviewed additive migration.
 4. Verify emitted canonical logo and index/JS references before any approved cutover.
    Keep both previous backend/frontend targets. Current mappings in the supplied plan
    are `/var/www/rycoopweb/test-v2` and `/var/www/rycoopweb/test-v2-static`; verify the

@@ -7,7 +7,7 @@
 Repository: https://github.com/pharmacisttom/rycoopweb
 Base: Test
 
-งานแยกเป็นสามส่วน อย่าสรุปว่าแต่ละ PR รวมทุกฟีเจอร์แล้ว:
+งานแยกตรวจเป็นสามส่วน โดย branch UI สุดท้ายจัดฐานรวม Slideshow และ Branding ไว้แล้ว:
 1. Activity Slideshow — PR #7, branch codex/activity-slideshow
    https://github.com/pharmacisttom/rycoopweb/pull/7
    เพิ่มอัลบั้มข่าว/กิจกรรม จัดภาพปก เรียงภาพ คำบรรยาย alt text
@@ -28,7 +28,8 @@ Base: Test
    ไม่ retry คำสั่งเมื่อ network/401/500 และยกเลิกคำสั่งค้างเมื่อเปลี่ยนหน้า
    แสดงคำขอ Maker/Checker ห้ามอนุมัติคำขอตนเอง และคง Restore policy lock
    แก้การอ่าน staff response และการ hydrate ID/effective permissions จาก server
-   ไม่ได้เปลี่ยน backend security gate หรือ schema
+   โค้ด UI ไม่ได้เปลี่ยน backend security gate หรือ schema
+   สาขานี้รวม commit Slideshow เดิมเป็นฐานแล้ว และแก้ conflict หน้าจัดการข่าวก่อนเผยแพร่
 
 เอกสารที่ต้องอ่าน:
 - AGENTS.md และ docs/agents/*
