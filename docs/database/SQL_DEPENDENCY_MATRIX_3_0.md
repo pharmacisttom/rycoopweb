@@ -1,96 +1,83 @@
-# RYCOOPWEB 3.0 — SQL Dependency Matrix & Migration 025 Verification Report
+# RYCOOPWEB 3.0 — SQL Dependency Matrix, Foreign-Key Verification & RBAC Review (`Migration 025`)
 
-## 1. Repository Migration Inventory (`001` – `025`)
+## 1. Foreign-Key Verification Report (`025` vs `001`–`023`)
 
-| # | Migration File | Purpose | Safety Classification | Status on TEST |
-|---|---|---|---|---|
-| 001 | `001_initial_schema.sql` | Core `users`, `roles`, `permissions`, `role_permissions`, `user_roles`, `news`, `faqs`, `downloads`, `audit_logs`, `settings`, `visitor_stats` | Safe / Baseline | Applied |
-| 002 | `002_enhance_security_logs.sql` | `security_logs`, `rate_limits`, `users.locked_until` | Safe / Additive | Applied |
-| 003 | `003_financial_services.sql` | `deposit_products`, `loan_products`, `interest_rates` | Financial Baseline | Applied |
-| 004 | `004_enhance_news.sql` | News categories, pinning, gallery images | Safe / Additive | Applied |
-| 005 | `005_create_board_and_staff.sql` | `board_members`, `staff_members`, `advisors`, `committee_groups` | Safe / Additive | Applied |
-| 006 | `006_create_visitors_log.sql` | `visitors_log` (`ip_address`, `user_agent`, `page_url`, `visit_date`, `visit_time`) | Safe / Additive | Applied |
-| 006b | `006b_create_members_table.sql` | `members`, `member_dividends` | Financial Baseline | Applied |
-| 007 | `007_create_complaints_tables.sql` | `complaints`, `complaint_logs`, `complaint_attachments` | Safe / Additive | Applied |
-| 008 | `008_enhance_complaints_security.sql` | Complaint tracking tokens & encryption columns | Safe / Additive | Applied |
-| 009 | `009_update_dividend_rates_68.sql` | Seed FY 2568 dividend rates | Financial Seed | Applied |
-| 010 | `010_create_led_member_check_tables.sql` | `led_check_runs`, `led_check_results`, `led_Status_logs`, `led_audit_logs`, `led_schedules` | Safe / Additive | Applied |
-| 011 | `011_enhance_members_Import.sql` | `member_import_logs`, member status & profile fields | Safe / Additive | Applied |
-| 012 | `012_create_loan_estimate_requests.sql` | `loan_estimate_requests` | Safe / Additive | Applied |
-| 013 | `013_create_user_social_accounts.sql` | `user_social_accounts` | Safe / Additive | Applied |
-| 014 | `014_normalize_board_positions.sql` | Normalize board member ordering/positions | Safe | Applied |
-| 015 | `015_seed_board_69.sql` | Seed FY 2569 board members | Content Seed | Applied |
-| 016 | `016_add_workflow_fields_to_news.sql` | `news.workflow_status`, `submitted_by`, `approved_by`, `published_by` | Safe / Additive | Applied |
-| 017 | `017_seed_rbac_permissions.sql` | Seed initial 21 legacy permissions (`news.*`, `faqs.*`, `members.*`, `dividends.*`, `coop_info.*`, `people.*`) | Safe / Additive | Applied |
-| 018 | `018_member_profile_requests.sql` | `member_profile_requests`, `member_dividend_History`, `users.department` | Safe / Additive | Applied |
-| **019** | `019_cleanup_legacy_interest_rates.sql` | Legacy interest rate cleanup (`DELETE`/`UPDATE` on financial tables) | **BLOCKED (Destructive/Financial)** | **DO NOT RUN** |
-| **020** | `020_sync_deposit_rates.sql` | Deposit rate overwrite (`UPDATE` on financial tables) | **BLOCKED (Financial)** | **DO NOT RUN** |
-| 021 | `021_expand_staff_positions.sql` | Expand staff position length | Safe / Additive | Applied |
-| 022 | `022_google_auth_and_mandatory_mfa.sql` | `users.google_sub`, `users.two_factor_*`, `user_mfa_recovery_codes`, `staff_invitations`, `auth_audit_logs` | Safe / Additive | Applied |
-| 023 | `023_public_content_revisions.sql` | `public_content_revisions`, `rates.*` and `products.*` permissions | Safe / Additive | Applied |
-| **025** | `025_create_admin_control_center_tables.sql` | `approval_requests` (Dual-Control Maker-Checker), `admin_dashboard_preferences`, Enterprise RBAC roles (`it_admin`, `security_admin`, `auditor`, `executive`, `loan_officer`, `pr_officer`, `member_admin`), and 32 Enterprise permissions + `INSERT IGNORE` role mappings | **Safe / 100% Additive** | **Staged for Lab & TEST** |
+All foreign-key columns across `025_create_admin_control_center_tables.sql` have been verified against the referenced parent tables in `001_initial_schema.sql`:
 
-> **Note on Numbering (`024`)**: Migration `024` was intentionally skipped in the 3.0 architecture specification so `025_create_admin_control_center_tables.sql` matches the canonical Admin Control Center 3.0 specification.
+| Child Table (`025`) | Child Column | Child Column Type | Referenced Parent Table (`001`) | Parent Column | Parent Column Type | Constraint Name | `ON DELETE` Rule | Compatibility |
+|---|---|---|---|---|---|---|---|---|
+| `approval_requests` | `requested_by` | `BIGINT UNSIGNED NOT NULL` | `users` | `id` | `BIGINT UNSIGNED NOT NULL` | `fk_approval_requests_maker` | `RESTRICT` | **100% Exact Match** |
+| `approval_requests` | `reviewed_by` | `BIGINT UNSIGNED NULL DEFAULT NULL` | `users` | `id` | `BIGINT UNSIGNED NOT NULL` | `fk_approval_requests_checker` | `SET NULL` | **100% Exact Match** |
+| `admin_dashboard_preferences` | `user_id` | `BIGINT UNSIGNED NOT NULL PRIMARY KEY` | `users` | `id` | `BIGINT UNSIGNED NOT NULL` | `fk_admin_dashboard_prefs_user` | `CASCADE` | **100% Exact Match** |
+| `role_permissions` (`001`) | `role_id` | `BIGINT UNSIGNED NOT NULL` | `roles` | `id` | `BIGINT UNSIGNED NOT NULL` | `role_permissions_ibfk_1` | `CASCADE` | **100% Exact Match** |
+| `role_permissions` (`001`) | `permission_id` | `BIGINT UNSIGNED NOT NULL` | `permissions` | `id` | `BIGINT UNSIGNED NOT NULL` | `role_permissions_ibfk_2` | `CASCADE` | **100% Exact Match** |
+
+### Why `BIGINT UNSIGNED` Alignment Is Mandatory
+In `001_initial_schema.sql`, `users.id`, `roles.id`, and `permissions.id` are defined as `BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY` on `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`. Defining `approval_requests.requested_by`, `approval_requests.reviewed_by`, and `admin_dashboard_preferences.user_id` as `BIGINT UNSIGNED` guarantees full InnoDB foreign-key compatibility on MySQL 8.0 (`errno 150` / `ERROR 3780` prevention).
 
 ---
 
-## 2. 14-Module SQL Dependency Matrix (`AdminControlCenterService.php`)
+## 2. Safe Insertion Strategy & Double-Execution Idempotency Verification
 
-| # | Admin Control Center Module | Service Method(s) | Required Database Tables | Key Columns Queried | Originating Migration(s) | Required RBAC Permission(s) (`025`) |
-|---|---|---|---|---|---|---|
-| 1 | **Executive Dashboard** | `getExecutiveSummary()`, `getDashboardTrends()`, `getPendingTasksBreakdown()` | `users`, `user_roles`, `roles`, `members`, `visitor_stats`, `visitors_log`, `security_logs`, `audit_logs`, `member_profile_requests`, `complaints`, `news`, `public_content_revisions`, `led_check_results`, `staff_invitations`, `approval_requests` | `users.status/deleted_at/last_login_at`, `members.status`, `visitor_stats.visit_date/views_count/unique_visitors_count`, `visitors_log.visit_date/visit_time/ip_address`, `approval_requests.status` | `001`, `002`, `006`, `006b`, `007`, `010`, `016`, `018`, `022`, `023`, **`025`** | `dashboard.view` |
-| 2 | **Visitor Analytics** | `VisitorCounterService::getAdminAnalytics()`, `exportCsvData()` | `visitor_stats`, `visitors_log` | `visitor_stats.visit_date`, `views_count`, `unique_visitors_count`; `visitors_log.ip_address`, `user_agent`, `page_url`, `visit_date`, `visit_time` | `001`, `006` | `analytics.view`, `analytics.visitors.view`, `analytics.visitors.export` |
-| 3 | **Operations Center** | `getOperationsOverview()`, `getPendingTasksBreakdown()` | `member_profile_requests`, `members`, `complaints`, `news`, `public_content_revisions`, `led_check_results`, `staff_invitations`, `approval_requests` | `member_profile_requests.status IN ('submitted','in_progress','pending')`, `public_content_revisions.section AS section_key`, `led_check_results.status IN ('POSSIBLE_MATCH','MULTIPLE_MATCH','REVIEW_REQUIRED') AND reviewed_at IS NULL`, `approval_requests.status = 'pending'` | `001`, `006b`, `007`, `010`, `016`, `018`, `022`, `023`, **`025`** | `operations.view` |
-| 4 | **User Management** | `AccessService::users()`, `MemberManagementController::usersIndex()` | `users`, `user_roles`, `roles`, `staff_invitations` | `users.id`, `username`, `name`, `email`, `department`, `status`, `two_factor_enabled`, `two_factor_confirmed_at`, `google_email`, `last_login_at` | `001`, `018`, `022` | `users.view`, `users.create`, `users.update`, `users.disable` |
-| 5 | **Role & Permission Matrix** | `getAccessMatrix()`, `AccessService::roles()`, `AccessService::saveRole()` | `roles`, `permissions`, `role_permissions`, `user_roles` | `roles.id/name/slug/description`, `permissions.id/name/module/action`, `role_permissions.role_id/permission_id` | `001`, `017`, `023`, **`025`** | `roles.view`, `roles.manage`, `permissions.manage` |
-| 6 | **Departments Directory** | `getDepartmentsSummary()`, `getPendingWorkByDepartment()` | `users`, `user_roles`, `roles`, plus pending queues (`member_profile_requests`, `complaints`, `news`, `public_content_revisions`, `led_check_results`, `staff_invitations`) | `users.department`, `users.status`, `roles.slug` | `001`, `018`, **`025`** | `departments.view` |
-| 7 | **Member Management** | `MemberManagementController` | `members`, `member_profile_requests`, `member_import_logs`, `led_check_results` | `members.member_no`, `first_name`, `last_name`, `org_name`, `status` | `006b`, `010`, `011`, `018` | `members.view`, `members.update`, `members.import` |
-| 8 | **Financial Services** | `MemberManagementController`, `RateController`, `LoanController` | `deposit_products`, `loan_products`, `interest_rates`, `member_dividends`, `member_dividend_History`, `loan_estimate_requests` | Product rates, dividend records, loan estimate logs (Read/Managed via existing controllers) | `003`, `006b`, `009`, `012`, `018`, `023` | `finance.view`, `finance.export`, `rates.view/update`, `products.view/create/update`, `dividends.update/import` |
-| 9 | **Content Management** | `NewsController`, `FaqController`, `DownloadController`, `CoopInfoController` | `news`, `faqs`, `downloads`, `board_members`, `staff_members`, `public_content_revisions` | `news.workflow_status`, `public_content_revisions.section/state` | `001`, `004`, `005`, `014`, `015`, `016`, `021`, `023` | `content.create`, `content.publish`, `news.*`, `faqs.*`, `coop_info.*`, `people.*` |
-| 10 | **Audit Log Viewer** | `getAuditLogs()`, `exportAuditLogsCsv()`, `redactMetadata()` | `audit_logs`, `auth_audit_logs`, `users` | `audit_logs.user_id`, `module`, `action`, `record_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `created_at` | `001`, `022` | `audit.view`, `audit.export` |
-| 11 | **Security & MFA Center** | `getSecurityOverview()`, `getMfaAdministration()`, `TwoFactorService` | `security_logs`, `auth_audit_logs`, `rate_limits`, `users`, `user_roles`, `roles`, `user_mfa_recovery_codes` | `users.two_factor_enabled`, `two_factor_confirmed_at`, `user_mfa_recovery_codes.user_id/used_at` (Never exposes `two_factor_secret` or `code_hash`) | `001`, `002`, `022`, **`025`** | `security.view`, `security.mfa.view`, `security.sessions.revoke` |
-| 12 | **Backup & Recovery Governance** | `getBackupStatus()`, Dual-Control `approval_requests` | `approval_requests`, `audit_logs` + filesystem inspection of `storage/backups` | `approval_requests.request_no`, `module`, `action_key` (`backup.restore.request` / `backup.restore.approve`), `status`, `requested_by`, `reviewed_by` | `001`, **`025`** | `backup.view`, `backup.verify`, `backup.restore.request`, `backup.restore.approve` |
-| 13 | **System Health Diagnostics** | `getSystemHealth()` | `migrations`, `security_logs`, `audit_logs` + runtime PHP/MySQL/Disk/Session checks | `SELECT 1`, MySQL `VERSION()`, disk space, `storage/logs` error tail | `001`, `002`, **`025`** | `system.health.view`, `health.view` |
-| 14 | **Reports & System Settings** | `getReportsCatalog()`, `exportReportCsv()`, `admin_dashboard_preferences` | `settings`, `admin_dashboard_preferences`, `visitor_stats`, `audit_logs`, `security_logs`, `users`, `members` | `settings.key/value`, `admin_dashboard_preferences.user_id/sidebar_collapsed/default_date_range/pinned_widgets_json` | `001`, **`025`** | `reports.view`, `settings.view`, `settings.update` |
+1. **Zero `ON DUPLICATE KEY UPDATE` Side Effects**:
+   - All role seeds (`roles`), permission seeds (`permissions`), and role-permission mappings (`role_permissions`) in `025_create_admin_control_center_tables.sql` use `INSERT INTO ... SELECT ... WHERE NOT EXISTS (...)`.
+   - Existing roles (`super_admin`, `member`, `member_admin`, `staff`, or custom roles) are **never** updated, their `name`, `description`, and `updated_at` timestamps remain untouched, and `AUTO_INCREMENT` counters are not burned on repeated runs.
+2. **Disposable Lab DB Double-Execution Results**:
+   - Restored full schema (`001`, `015`, `017`, `022`, `023`) + existing custom roles/users into `rycoopweb_migration_lab_025_verify` and executed `025_create_admin_control_center_tables.sql` **twice**:
+     - **After Run #1**: `roles = 12`, `permissions = 57`, `role_permissions = 80`, `users = 3`, `user_roles = 1`
+     - **After Run #2**: `roles = 12`, `permissions = 57`, `role_permissions = 80`, `users = 3`, `user_roles = 1`
+     - **Dual-Control FK Behavior**: Deleting a reviewer user (`id = 103`) cleanly sets `approval_requests.reviewed_by = NULL` (`ON DELETE SET NULL`) and cascades deletion of `admin_dashboard_preferences` (`ON DELETE CASCADE`), while `ON DELETE RESTRICT` prevents deleting a Maker user (`requested_by = 101`) referenced by an approval request.
 
 ---
 
-## 3. Schema Discrepancies Resolved in `AdminControlCenterService.php`
+## 3. RBAC Privilege & Separation-of-Duties (SoD) Review
 
-During the pre-merge schema audit against MySQL 8.0 migrations `001`–`023`, four query discrepancies were identified and fixed in `app/Services/AdminControlCenterService.php`:
+All `role_permissions` seeded by `025_create_admin_control_center_tables.sql` match `AdminControlCenterService::ENTERPRISE_ROLE_MAP` with **zero privilege escalation**:
 
-1. **`getMfaAdministration()` (`users` vs `user_mfa_recovery_codes`)**:
-   - **Previous query**: Selected `u.two_factor_recovery_codes` directly from `users`. In Migration `022_google_auth_and_mandatory_mfa.sql`, recovery codes are stored in `user_mfa_recovery_codes` (`user_id`, `code_hash`, `used_at`), not in a `users.two_factor_recovery_codes` column.
-   - **Fix**: Query `SELECT u.*, r.slug AS role_slug, r.name AS role_name FROM users u ...` and count unused recovery codes via `TwoFactorService::getRecoveryCodesRemaining((int) $row['id'])` while projecting only non-sensitive metadata fields.
-2. **`getOperationsOverview()` (`public_content_revisions.section`)**:
-   - **Previous query**: Selected `section_key` from `public_content_revisions`. In Migration `023_public_content_revisions.sql`, the column is named `section`.
-   - **Fix**: Query `SELECT id, section, section AS section_key, state, effective_on, note, created_at FROM public_content_revisions WHERE state = 'draft'`.
-3. **`getOperationsOverview()` & `getPendingTasksBreakdown()` (`member_profile_requests.status`)**:
-   - **Previous query**: Filtered `WHERE status = 'pending'`. In Migration `018_member_profile_requests.sql`, the ENUM is `('submitted', 'in_progress', 'approved', 'rejected', 'cancelled')`.
-   - **Fix**: Filter `WHERE status IN ('submitted', 'in_progress', 'pending')`.
-4. **`getPendingTasksBreakdown()` (`led_check_results.status`)**:
-   - **Previous query**: Filtered `WHERE verification_status = 'PENDING_REVIEW'`. In Migration `010_create_led_member_check_tables.sql`, the column is `status` (`ENUM('NOT_FOUND','POSSIBLE_MATCH','MULTIPLE_MATCH','REVIEW_REQUIRED','VERIFIED_MATCH','FALSE_MATCH','API_ERROR')`) paired with `reviewed_at IS NULL`.
-   - **Fix**: Filter `WHERE status IN ('POSSIBLE_MATCH', 'MULTIPLE_MATCH', 'REVIEW_REQUIRED') AND reviewed_at IS NULL`.
+| Role Slug | Separation Tier | Granted Count | Exact Permissions Granted (`module.action`) | Explicitly Excluded High-Risk Permissions |
+|---|---|---:|---|---|
+| `super_admin` | System Governance | All (`*`) | Full governance under audit trail + last-admin lockout protection | Protected by `AccessService::protectAdministrator()` |
+| `it_admin` | System Operations (Maker) | 13 | `dashboard.view`, `analytics.view`, `analytics.visitors.view`, `analytics.visitors.export`, `users.view`, `roles.view`, `audit.view`, `security.view`, `backup.view`, `backup.verify`, `backup.restore.request`, `system.health.view`, `settings.view` | **Cannot** `backup.restore.approve` (Checker), **cannot** `users.create/update/disable`, `roles.manage`, `permissions.manage`, `settings.update`, `security.sessions.revoke` |
+| `security_admin` | Security Governance (Checker) | 13 | `dashboard.view`, `analytics.view`, `analytics.visitors.view`, `users.view`, `roles.view`, `security.view`, `security.mfa.view`, `security.sessions.revoke`, `audit.view`, `audit.export`, `backup.view`, `backup.restore.approve`, `system.health.view` | **Cannot** `backup.restore.request` (Maker), **cannot** `users.create/update/disable`, `roles.manage`, `permissions.manage`, `settings.update` |
+| `auditor` | Independent Audit (Read-Only) | 14 | `dashboard.view`, `analytics.view`, `analytics.visitors.view`, `analytics.visitors.export`, `users.view`, `roles.view`, `members.view`, `finance.view`, `finance.export`, `audit.view`, `audit.export`, `security.view`, `backup.view`, `system.health.view` | **Zero** `.create`, `.update`, `.delete`, `.publish`, `.import`, `.manage`, `.revoke`, `.request`, `.approve` permissions |
+| `executive` / `manager` | Executive Oversight (Read-Only) | 4 | `dashboard.view`, `analytics.view`, `analytics.visitors.view`, `finance.view` | **Zero** write permissions; **no** raw member PII (`members.view`), security, audit, or backup access |
+| `finance` | Financial Administration | 8 | `dashboard.view`, `analytics.view`, `finance.view`, `finance.export`, `rates.view`, `rates.update`, `products.view`, `products.update` | **Cannot** self-publish (`rates.publish`, `products.publish`) or import dividends |
+| `loan_officer` | Financial Operations | 5 | `dashboard.view`, `finance.view`, `rates.view`, `products.view`, `products.update` | **Cannot** update rates (`rates.update`), publish, or export finance |
+| `member_admin` | Member Administration | 5 | `members.view`, `members.update`, `members.import`, `dividends.update`, `dividends.import` | Strictly isolated from CMS, finance rates, users, roles, security, and backups |
+| `pr_officer` | Content Administration | 13 | `content.create`, `content.publish`, `news.view/create/update/publish`, `faqs.view/create/update`, `coop_info.view/update`, `people.view/update` | **Cannot** delete news/FAQs (`news.delete`, `faqs.delete`) or publish `coop_info`/`people` |
+| `staff` | Staff Operations | 1 | `dashboard.view` | **Zero** content or administrative mutation permissions |
+| `member` | Cooperative Member | 0 | **None** (`0` admin permissions) | Strictly blocked (`403`) on all `/admin/*` and `/api/admin/*` endpoints |
 
 ---
 
-## 4. Rollback & Recovery Plan for Migration `025`
+## 4. 14-Module SQL Dependency Matrix (`AdminControlCenterService.php`)
 
-Because `025_create_admin_control_center_tables.sql` is **100% additive** (it creates two new tables `approval_requests` and `admin_dashboard_preferences`, and uses `INSERT ... ON DUPLICATE KEY UPDATE` / `INSERT IGNORE` on `roles`, `permissions`, and `role_permissions`), it does **not** alter any existing columns or existing user/MFA/financial rows.
+| # | Admin Control Center Module | Service Method(s) | Required Database Tables | Originating Migration(s) | Required RBAC Permission(s) (`025`) |
+|---|---|---|---|---|---|
+| 1 | **Executive Dashboard** | `getDashboardSummary()`, `getDashboardTrends()`, `getPendingTasksBreakdown()` | `users`, `user_roles`, `roles`, `members`, `login_logs`, `led_check_runs`, `member_profile_requests`, `complaints`, `news`, `public_content_revisions`, `led_check_results`, `staff_invitations`, `approval_requests` | `001`, `006b`, `010`, `018`, `022`, `023`, **`025`** | `dashboard.view`, `analytics.view` |
+| 2 | **Visitor Analytics** | `VisitorCounterService::getDetailedAnalytics()`, `exportCsvData()` | `website_visits`, `visitor_counters` | `001`, `021` | `analytics.view`, `analytics.visitors.view`, `analytics.visitors.export` |
+| 3 | **Operations Center** | `getOperationsOverview()`, `getPendingTasksBreakdown()` | `member_profile_requests`, `members`, `complaints`, `news`, `public_content_revisions`, `led_check_results`, `staff_invitations`, `approval_requests` | `001`, `006b`, `010`, `018`, `022`, `023`, **`025`** | `dashboard.view`, `operations.view`, `members.view`, `news.view`, `rates.view` |
+| 4 | **User Management** | `AccessService::account()`, `AccessService::saveAccount()` | `users`, `user_roles`, `roles`, `staff_invitations` | `001`, `018`, `022` | `users.view`, `users.create`, `users.update`, `users.disable` |
+| 5 | **Role & Permission Matrix** | `getAccessMatrix()`, `AccessService::role()`, `AccessService::saveRole()` | `roles`, `permissions`, `role_permissions`, `user_roles` | `001`, `015`, `017`, `023`, **`025`** | `roles.view`, `roles.manage`, `permissions.manage` |
+| 6 | **Departments Directory** | `getDepartmentsSummary()`, `getPendingWorkByDepartment()` | `users`, `user_roles`, `roles` + pending queues | `001`, `018`, `022`, **`025`** | `users.view`, `roles.view`, `dashboard.view`, `departments.view` |
+| 7 | **Member Management** | `MemberManagementController` | `members`, `member_profile_requests`, `member_admin_history`, `led_check_results` | `006b`, `010`, `012`, `014`, `016`, `018` | `members.view`, `members.update`, `members.import` |
+| 8 | **Financial Services** | `PublicContentService`, `MemberManagementController` | `deposit_products`, `loan_products`, `interest_rates`, `member_dividends`, `financial_statistics`, `public_content_revisions` | `001`, `009`, `013`, `018`, `023` | `finance.view`, `finance.export`, `rates.view/update/publish`, `products.view/update/publish`, `dividends.update/import` |
+| 9 | **Content Management** | `NewsWorkflowService`, `PublicContentController` | `news`, `faqs`, `public_content_revisions` | `001`, `023` | `content.create`, `content.publish`, `news.*`, `faqs.*`, `coop_info.*`, `people.*` |
+| 10 | **Audit Log Viewer** | `getAuditLogs()`, `redactMetadata()` | `audit_logs`, `login_logs`, `users` | `001`, `022` | `audit.view`, `audit.export` |
+| 11 | **Security & MFA Center** | `getSecurityOverview()`, `getMfaAdministration()`, `getSanitizedSessions()` | `login_logs`, `rate_limit_attempts`, `users`, `user_roles`, `roles`, `user_mfa_recovery_codes` | `001`, `008`, `022`, **`025`** | `security.view`, `security.mfa.view`, `security.sessions.revoke` |
+| 12 | **Backup & Recovery Governance** | `getBackupHealth()`, Dual-Control `approval_requests` | `approval_requests`, `audit_logs` + `storage/backups` inspection | `001`, **`025`** | `backup.view`, `backup.verify`, `backup.restore.request`, `backup.restore.approve` |
+| 13 | **System Health Diagnostics** | `getSystemHealth()` | `migrations`, `system_logs`, `led_check_runs` + runtime checks | `001`, `010`, **`025`** | `system.health.view`, `health.view`, `settings.view` |
+| 14 | **Reports & System Settings** | `reportsCatalog()`, `admin_dashboard_preferences`, `site_settings` | `site_settings`, `admin_dashboard_preferences`, `financial_statistics`, `member_dividends` | `001`, `013`, **`025`** | `reports.view`, `settings.view`, `settings.update` |
 
-### 4.1 Application Rollback (Zero Database Downtime)
-If the application symlink `/var/www/rycoopweb/test-current` is rolled back to the previous release commit, the new tables (`approval_requests`, `admin_dashboard_preferences`) and additional rows in `permissions`/`roles` are completely ignored by earlier releases. **No destructive SQL rollback is required for application rollback.**
+---
 
-### 4.2 Full Schema Reversal (If Explicitly Required in Lab or TEST)
-If operators ever wish to remove the two new tables and the `025` migration tracking record in `rycoopweb_migration_lab` or `rycoopweb_test`:
+## 5. Rollback & Recovery Plan for Migration `025`
 
-```sql
--- 1. Drop only the two new additive tables created by 025 (if empty / verified)
-DROP TABLE IF EXISTS admin_dashboard_preferences;
-DROP TABLE IF EXISTS approval_requests;
-
--- 2. Remove the 025 tracking entry from migrations table
-DELETE FROM migrations WHERE migration = '025_create_admin_control_center_tables.sql';
-```
-*(Note: Seeded `permissions` and `roles` entries are harmless metadata and should be retained so any role assignments referencing them remain intact.)*
-
+1. **Application Rollback (< 60 Seconds, Zero DB Downtime)**:
+   - Because `025_create_admin_control_center_tables.sql` is 100% additive (`CREATE TABLE IF NOT EXISTS` and `INSERT INTO ... SELECT ... WHERE NOT EXISTS`), rolling back the `/var/www/rycoopweb/test-current` symlink requires no destructive SQL changes.
+2. **Optional Schema Reversal (Lab or TEST)**:
+   ```sql
+   DROP TABLE IF EXISTS `admin_dashboard_preferences`;
+   DROP TABLE IF EXISTS `approval_requests`;
+   DELETE FROM `migrations` WHERE `migration` = '025_create_admin_control_center_tables.sql';
+   ```

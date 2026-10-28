@@ -88,12 +88,19 @@ php database/run_migration.php 025_create_admin_control_center_tables.sql --lab 
 php database/run_migration.php 025_create_admin_control_center_tables.sql --lab
 php database/run_migration.php 025_create_admin_control_center_tables.sql --lab
 
-# 5. Verify tables & permissions in rycoopweb_migration_lab
+# 5. Verify tables, BIGINT UNSIGNED foreign keys & idempotent counts in rycoopweb_migration_lab
 mysql rycoopweb_migration_lab -e "
   SHOW TABLES LIKE 'approval_requests';
   SHOW TABLES LIKE 'admin_dashboard_preferences';
+  SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND ((TABLE_NAME = 'users' AND COLUMN_NAME = 'id')
+      OR (TABLE_NAME = 'approval_requests' AND COLUMN_NAME IN ('requested_by', 'reviewed_by'))
+      OR (TABLE_NAME = 'admin_dashboard_preferences' AND COLUMN_NAME = 'user_id'));
   SELECT COUNT(*) AS total_roles FROM roles;
   SELECT COUNT(*) AS total_permissions FROM permissions;
+  SELECT COUNT(*) AS total_role_permissions FROM role_permissions;
 "
 ```
 

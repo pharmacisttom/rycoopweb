@@ -646,7 +646,8 @@ assertTrue(!file_exists($incidentFile), '15.10 Incident marker file automaticall
 
 echo "=========================================================================\n";
 // --------------------------------------------------------------------------
-// 16. Migration 025 (Admin Control Center) Safety, Lab Dry-Run & 019/020 Gate Verification
+// 16. Migration 025 (Admin Control Center) FK Compatibility, Double-Run Idempotency,
+//     Least-Privilege RBAC, Lab Dry-Run & 019/020 Gate Verification
 // --------------------------------------------------------------------------
 $mig025Path = $migrationsDir . '/025_create_admin_control_center_tables.sql';
 assertTrue(file_exists($mig025Path), '16.1 Migration 025 file exists in database/migrations/');
@@ -655,31 +656,118 @@ $labPdo025 = MigrationLabTestHarness::createMockLabPdo('rycoopweb_migration_lab'
 $labRunner025 = new MigrationRunner($labPdo025, $migrationsDir, 'rycoopweb_migration_lab');
 
 $sql025 = (string) file_get_contents($mig025Path);
+$sql025CodeOnly = (string) preg_replace('/^\s*--.*$/m', '', $sql025);
 $analysis025 = $labRunner025->analyzeSql($sql025);
 assertTrue($analysis025['is_destructive'] === false, '16.2 Migration 025 is strictly non-destructive');
 assertTrue($analysis025['is_financial'] === false, '16.3 Migration 025 is strictly non-financial');
-assertTrue(str_contains($sql025, 'CREATE TABLE IF NOT EXISTS approval_requests'), '16.4 Migration 025 creates approval_requests table idempotently');
-assertTrue(str_contains($sql025, 'CREATE TABLE IF NOT EXISTS admin_dashboard_preferences'), '16.5 Migration 025 creates admin_dashboard_preferences table idempotently');
-assertTrue(str_contains($sql025, 'backup.restore'), '16.6 Migration 025 seeds Dual-Control backup.restore permissions');
-assertTrue(str_contains($sql025, 'analytics.visitors'), '16.7 Migration 025 seeds Visitor Analytics permissions');
-assertTrue(!preg_match('/\b(UPDATE|DELETE\s+FROM|TRUNCATE|DROP)\s+`?(users|user_roles|user_mfa_recovery_codes|member_dividends|interest_rates)`?/i', $sql025), '16.8 Migration 025 never mutates users, user_roles, MFA tables, or financial data');
+assertTrue((bool) preg_match('/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+`?approval_requests`?/i', $sql025CodeOnly), '16.4 Migration 025 creates approval_requests table idempotently');
+assertTrue((bool) preg_match('/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+`?admin_dashboard_preferences`?/i', $sql025CodeOnly), '16.5 Migration 025 creates admin_dashboard_preferences table idempotently');
+assertTrue(str_contains($sql025CodeOnly, 'restore.request') && str_contains($sql025CodeOnly, 'restore.approve'), '16.6 Migration 025 seeds Dual-Control backup.restore permissions');
+assertTrue(str_contains($sql025CodeOnly, 'visitors.view') && str_contains($sql025CodeOnly, 'visitors.export'), '16.7 Migration 025 seeds Visitor Analytics permissions');
+assertTrue(!preg_match('/\b(UPDATE|DELETE\s+FROM|TRUNCATE|DROP)\s+`?(users|user_roles|user_mfa_recovery_codes|member_dividends|interest_rates)`?/i', $sql025CodeOnly), '16.8 Migration 025 never mutates users, user_roles, MFA tables, or financial data');
+
+// Verify all 3 FK columns match users.id (BIGINT UNSIGNED) and never use INT UNSIGNED
+assertTrue((bool) preg_match('/`?requested_by`?\s+BIGINT\s+UNSIGNED\s+NOT\s+NULL/i', $sql025CodeOnly), '16.9 approval_requests.requested_by is BIGINT UNSIGNED NOT NULL');
+assertTrue((bool) preg_match('/`?reviewed_by`?\s+BIGINT\s+UNSIGNED\s+NULL/i', $sql025CodeOnly), '16.10 approval_requests.reviewed_by is BIGINT UNSIGNED NULL');
+assertTrue((bool) preg_match('/`?user_id`?\s+BIGINT\s+UNSIGNED\s+NOT\s+NULL\s+PRIMARY\s+KEY/i', $sql025CodeOnly), '16.11 admin_dashboard_preferences.user_id is BIGINT UNSIGNED NOT NULL PRIMARY KEY');
+assertTrue(!preg_match('/\b(?<!BIG)INT\s+UNSIGNED\b/i', $sql025CodeOnly), '16.12 Zero mismatched INT UNSIGNED columns exist in Migration 025');
+assertTrue(stripos($sql025CodeOnly, 'ON DUPLICATE KEY UPDATE') === false, '16.13 Migration 025 replaces ON DUPLICATE KEY UPDATE with safe WHERE NOT EXISTS strategy');
+
+// Execute Migration 025 seed statements twice against an isolated SQLite database with existing roles & users
+$doubleRunPdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$doubleRunPdo->exec("
+    CREATE TABLE roles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(50) NOT NULL,
+        slug VARCHAR(50) NOT NULL UNIQUE,
+        description VARCHAR(255) DEFAULT NULL
+    );
+    CREATE TABLE permissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL,
+        module VARCHAR(50) NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        UNIQUE(module, action)
+    );
+    CREATE TABLE role_permissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role_id INTEGER NOT NULL,
+        permission_id INTEGER NOT NULL,
+        UNIQUE(role_id, permission_id)
+    );
+    INSERT INTO roles (name, slug, description) VALUES
+        ('Super Admin Existing', 'super_admin', 'Existing Super Admin Description'),
+        ('Member Existing', 'member', 'Existing Member Description'),
+        ('Member Admin Custom', 'member_admin', 'Existing Custom Member Admin Description'),
+        ('Staff Custom', 'staff', 'Existing Custom Staff Description');
+");
+
+// Extract INSERT statements from 025 and execute twice
+if (preg_match_all('/INSERT\s+INTO\s+`(roles|permissions|role_permissions)`[\s\S]*?;/i', $sql025, $insertMatches)) {
+    foreach ($insertMatches[0] as $insertSql) {
+        $doubleRunPdo->exec($insertSql);
+    }
+    $countsRun1 = [
+        'roles' => (int) $doubleRunPdo->query("SELECT COUNT(*) FROM roles")->fetchColumn(),
+        'permissions' => (int) $doubleRunPdo->query("SELECT COUNT(*) FROM permissions")->fetchColumn(),
+        'role_permissions' => (int) $doubleRunPdo->query("SELECT COUNT(*) FROM role_permissions")->fetchColumn(),
+    ];
+    foreach ($insertMatches[0] as $insertSql) {
+        $doubleRunPdo->exec($insertSql);
+    }
+    $countsRun2 = [
+        'roles' => (int) $doubleRunPdo->query("SELECT COUNT(*) FROM roles")->fetchColumn(),
+        'permissions' => (int) $doubleRunPdo->query("SELECT COUNT(*) FROM permissions")->fetchColumn(),
+        'role_permissions' => (int) $doubleRunPdo->query("SELECT COUNT(*) FROM role_permissions")->fetchColumn(),
+    ];
+    assertTrue($countsRun1 === $countsRun2 && $countsRun1['roles'] === 12 && $countsRun1['permissions'] === 57, '16.14 Executing Migration 025 twice produces zero duplicate rows');
+}
+
+// Verify existing roles were preserved untouched
+$preservedMemberAdminDesc = (string) $doubleRunPdo->query("SELECT description FROM roles WHERE slug = 'member_admin'")->fetchColumn();
+$preservedStaffName = (string) $doubleRunPdo->query("SELECT name FROM roles WHERE slug = 'staff'")->fetchColumn();
+assertTrue($preservedMemberAdminDesc === 'Existing Custom Member Admin Description' && $preservedStaffName === 'Staff Custom', '16.15 Existing role names and descriptions are preserved untouched');
+
+// Verify Least-Privilege & Dual-Control Separation of Duties in role_permissions
+$getRolePerms = static function (string $slug) use ($doubleRunPdo): array {
+    $stmt = $doubleRunPdo->prepare("
+        SELECT p.module || '.' || p.action
+        FROM role_permissions rp
+        JOIN roles r ON r.id = rp.role_id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.slug = ?
+    ");
+    $stmt->execute([$slug]);
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+};
+$itAdminPerms = $getRolePerms('it_admin');
+$secAdminPerms = $getRolePerms('security_admin');
+$auditorPerms = $getRolePerms('auditor');
+$staffPerms = $getRolePerms('staff');
+$memberPerms = $getRolePerms('member');
+
+assertTrue(in_array('backup.restore.request', $itAdminPerms, true) && !in_array('backup.restore.approve', $itAdminPerms, true), '16.16 Dual-Control SoD: it_admin can request restore (Maker) but cannot approve');
+assertTrue(in_array('backup.restore.approve', $secAdminPerms, true) && !in_array('backup.restore.request', $secAdminPerms, true), '16.17 Dual-Control SoD: security_admin can approve restore (Checker) but cannot request');
+assertTrue(!in_array('users.create', $itAdminPerms, true) && !in_array('roles.manage', $secAdminPerms, true), '16.18 No privilege escalation on user/role management for non-super_admin roles');
+assertTrue(empty(array_filter($auditorPerms, fn($k) => !str_ends_with($k, '.view') && !str_ends_with($k, '.export'))), '16.19 Auditor role is strictly read-only (.view / .export only)');
+assertTrue($staffPerms === ['dashboard.view'] && $memberPerms === [], '16.20 Staff has only dashboard.view and Member has zero admin permissions');
 
 $labRunner025->setDryRun(true);
 
 $preflight025 = $labRunner025->getPreflightInfo('025_create_admin_control_center_tables.sql');
-assertTrue($preflight025['active_database'] === 'rycoopweb_migration_lab', '16.9 Preflight targets isolated rycoopweb_migration_lab database');
-assertTrue($preflight025['database_identity_ok'] === true, '16.10 Preflight confirms database identity match for rycoopweb_migration_lab');
+assertTrue($preflight025['active_database'] === 'rycoopweb_migration_lab', '16.21 Preflight targets isolated rycoopweb_migration_lab database');
+assertTrue($preflight025['database_identity_ok'] === true, '16.22 Preflight confirms database identity match for rycoopweb_migration_lab');
 
 $dryRun025 = $labRunner025->runSingle('025_create_admin_control_center_tables.sql');
-assertTrue($dryRun025['status'] === 'dry_run_passed', '16.11 Migration 025 passes dry-run in isolated rycoopweb_migration_lab');
+assertTrue($dryRun025['status'] === 'dry_run_passed', '16.23 Migration 025 passes dry-run in isolated rycoopweb_migration_lab');
 
 // Verify 019 and 020 remain strictly blocked in live mode without --confirm-financial
 $liveLabRunner = new MigrationRunner($labPdo025, $migrationsDir, 'rycoopweb_migration_lab');
 assertThrows(function () use ($liveLabRunner) {
     $liveLabRunner->runSingle('019_cleanup_legacy_interest_rates.sql');
-}, 'Financial migration safety gate triggered', '16.12 Migration 019 remains strictly blocked without financial confirmation');
+}, 'Financial migration safety gate triggered', '16.24 Migration 019 remains strictly blocked without financial confirmation');
 assertThrows(function () use ($liveLabRunner) {
     $liveLabRunner->runSingle('020_sync_deposit_rates.sql');
-}, 'Financial migration safety gate triggered', '16.13 Migration 020 remains strictly blocked without financial confirmation');
+}, 'Financial migration safety gate triggered', '16.25 Migration 020 remains strictly blocked without financial confirmation');
 
 echo "All MigrationRunner Unit, Safety & Security tests PASSED successfully!\n";
