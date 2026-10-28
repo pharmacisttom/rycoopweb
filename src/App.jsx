@@ -151,7 +151,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -210,6 +210,7 @@ export default function App() {
             <Route path="/staff" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute><AdminControlCenterPage section="dashboard" /></StaffProtectedRoute>} />)}
+            <Route path="/admin/analytics/visitors" element={<StaffProtectedRoute><AdminControlCenterPage section="visitor-analytics" /></StaffProtectedRoute>} />
             <Route path="/admin/cms" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/admin/operations" element={<StaffProtectedRoute><AdminControlCenterPage section="operations" /></StaffProtectedRoute>} />
             <Route path="/admin/users" element={<StaffProtectedRoute><AdminControlCenterPage section="users" /></StaffProtectedRoute>} />

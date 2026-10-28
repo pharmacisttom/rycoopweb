@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
 import reference from '../data/legacyReference.json';
 import { usePublicInformation } from '../context/PublicContentContext';
+import VisitorCounter from '../components/analytics/VisitorCounter';
 
 // Fallback defaults when API is unreachable (development/offline mode)
 const FALLBACK_COOP = {
@@ -654,6 +655,15 @@ export default function HomePage() {
             </Link>
           </div>
 
+        </div>
+      </section>
+
+      {/* =========================================================================
+          PUBLIC VISITOR ANALYTICS SUMMARY WIDGET
+          ========================================================================= */}
+      <section className="section" style={{ paddingTop: '0.5rem', paddingBottom: '3rem', background: 'var(--bg-surface)' }}>
+        <div className="container">
+          <VisitorCounter variant="home" />
         </div>
       </section>
 

@@ -193,6 +193,12 @@ const SECTION_META = {
     breadcrumbs: [{ label: 'Executive Dashboard' }],
     permissions: ['dashboard.view', 'analytics.view'],
   },
+  'visitor-analytics': {
+    title: 'วิเคราะห์สถิติผู้เข้าชมและทราฟฟิกเว็บไซต์ (Enterprise Web & Visitor Analytics)',
+    subtitle: 'ติดตามผู้เข้าชมแบบเรียลไทม์ แนวโน้มรายวัน/รายเดือน พฤติกรรมรายชั่วโมง การคัดกรองบอท และส่งออกรายงานภายใต้ Audit Trail',
+    breadcrumbs: [{ label: 'Executive Dashboard', to: '/admin/dashboard' }, { label: 'Visitor Analytics' }],
+    permissions: ['analytics.visitors.view', 'analytics.view'],
+  },
   operations: {
     title: 'ศูนย์ติดตามการดำเนินงาน (Operations Center)',
     subtitle: 'ตรวจสอบงานรอดำเนินการ คำร้องแก้ไขข้อมูลสมาชิก เรื่องร้องเรียน ข่าวสารรออนุมัติ และคิวตรวจสอบ LED',
@@ -302,6 +308,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
   const section = useMemo(() => {
     if (propSection) return propSection;
     const path = location.pathname.replace(/^\/admin\/?/, '') || 'dashboard';
+    if (path === 'analytics/visitors') return 'visitor-analytics';
     if (path === 'security/sessions') return 'sessions';
     if (path === 'security/mfa') return 'mfa';
     if (path === 'backups/history') return 'backups-history';
@@ -321,6 +328,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
   // Section states
   const [summaryData, setSummaryData] = useState(null);
   const [trendsData, setTrendsData] = useState(null);
+  const [visitorAnalyticsData, setVisitorAnalyticsData] = useState(null);
   const [opsData, setOpsData] = useState(null);
   const [securityData, setSecurityData] = useState(null);
   const [sessionsData, setSessionsData] = useState(null);
@@ -362,6 +370,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
         ]);
         setSummaryData(sum);
         setTrendsData(trn);
+      } else if (section === 'visitor-analytics') {
+        const vis = await memberAdminApi(`/api/admin/analytics/visitors?days=${days}`, { signal });
+        setVisitorAnalyticsData(vis);
       } else if (section === 'operations') {
         const ops = await memberAdminApi('/api/admin/operations/overview', { signal });
         setOpsData(ops);
@@ -441,6 +452,25 @@ export default function AdminControlCenterPage({ section: propSection }) {
     }
   };
 
+  const handleExportVisitorAnalytics = async () => {
+    setNotice('');
+    setError('');
+    try {
+      const res = await memberAdminApi('/api/admin/analytics/visitors/export', {
+        data: { days, format: 'csv' },
+      });
+      const timeline = res?.analytics?.timeline || visitorAnalyticsData?.timeline || [];
+      downloadCsv(
+        `visitor-analytics-${days}d-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Date (Asia/Bangkok)', 'Display Date', 'Unique Visitors', 'Page Views'],
+        timeline.map((row) => [row.full_date, row.date, row.visitors, row.page_views])
+      );
+      setNotice(`ส่งออกรายงานสถิติผู้เข้าชมเว็บไซต์ (${days} วัน) และบันทึก Audit Trail เรียบร้อยแล้ว`);
+    } catch (err) {
+      setError(err?.message || 'ไม่สามารถส่งออกรายงานสถิติผู้เข้าชมได้ (ตรวจสอบสิทธิ์ analytics.visitors.export)');
+    }
+  };
+
   if (!authorized) {
     return (
       <AdminControlCenterShell
@@ -466,7 +496,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
 
   const headerActions = (
     <>
-      {section === 'dashboard' && (
+      {(section === 'dashboard' || section === 'visitor-analytics') && (
         <select
           className="acc-select"
           aria-label="เลือกช่วงเวลาของกราฟ"
@@ -474,9 +504,22 @@ export default function AdminControlCenterPage({ section: propSection }) {
           onChange={(e) => setDays(Number(e.target.value))}
         >
           <option value={7}>ย้อนหลัง 7 วัน</option>
+          <option value={14}>ย้อนหลัง 14 วัน</option>
           <option value={30}>ย้อนหลัง 30 วัน</option>
+          <option value={60}>ย้อนหลัง 60 วัน</option>
           <option value={90}>ย้อนหลัง 90 วัน</option>
         </select>
+      )}
+      {section === 'visitor-analytics' && hasControlCenterAccess(user, can, ['analytics.visitors.export', 'audit.export']) && (
+        <button
+          type="button"
+          className="acc-btn"
+          onClick={handleExportVisitorAnalytics}
+          disabled={loading}
+        >
+          <Download size={15} />
+          <span>ส่งออก CSV (Audit Logged)</span>
+        </button>
       )}
       <button
         type="button"
@@ -1814,6 +1857,289 @@ export default function AdminControlCenterPage({ section: propSection }) {
             </table>
           </div>
         </section>
+      )}
+
+      {/* ===================================================================
+          11B. ENTERPRISE VISITOR & WEB ANALYTICS (/admin/analytics/visitors)
+         =================================================================== */}
+      {!loading && section === 'visitor-analytics' && visitorAnalyticsData && (
+        <>
+          {/* 8 Required Visitor Analytics KPI Cards */}
+          <section className="acc-kpi-grid" aria-label="ตัวชี้วัดสถิติผู้เข้าชมเว็บไซต์">
+            {[
+              {
+                key: 'online_now',
+                label: 'กำลังใช้งานเว็บไซต์ (Online Visitors)',
+                value: formatNumber(visitorAnalyticsData.summary?.online_now ?? 0),
+                sublabel: 'ผู้เข้าชมที่มีกิจกรรมใน 5 นาทีล่าสุด',
+                tone: 'success',
+                icon: Activity,
+              },
+              {
+                key: 'today_visitors',
+                label: 'ผู้เข้าชมวันนี้ (Unique Visitors Today)',
+                value: formatNumber(visitorAnalyticsData.summary?.today ?? 0),
+                sublabel: 'ตามเขตเวลาประเทศไทย (Asia/Bangkok)',
+                tone: 'info',
+                icon: Users,
+              },
+              {
+                key: 'month_visitors',
+                label: 'ผู้เข้าชมเดือนนี้ (Unique Visitors This Month)',
+                value: formatNumber(visitorAnalyticsData.summary?.this_month ?? 0),
+                sublabel: 'สะสมตั้งแต่วันที่ 1 ของเดือนปัจจุบัน',
+                tone: 'info',
+                icon: Users,
+              },
+              {
+                key: 'total_visitors',
+                label: 'ผู้เข้าชมทั้งหมด (Total Visitors)',
+                value: formatNumber(visitorAnalyticsData.summary?.total ?? 0),
+                sublabel: 'จำนวนผู้เข้าชมสะสมในระบบทั้งหมด',
+                tone: 'info',
+                icon: Users,
+              },
+              {
+                key: 'page_views',
+                label: 'จำนวนการเปิดหน้าเว็บ (Page Views)',
+                value: formatNumber(visitorAnalyticsData.summary?.today_page_views ?? 0),
+                sublabel: `เดือนนี้ ${formatNumber(visitorAnalyticsData.summary?.month_page_views ?? 0)} • สะสม ${formatNumber(visitorAnalyticsData.summary?.total_page_views ?? 0)}`,
+                tone: 'success',
+                icon: Layers,
+              },
+              {
+                key: 'sessions',
+                label: 'จำนวนเซสชัน (Sessions)',
+                value: formatNumber(visitorAnalyticsData.summary?.today_sessions ?? 0),
+                sublabel: `ช่วง ${days} วัน: ${formatNumber(visitorAnalyticsData.summary?.period_sessions ?? 0)} เซสชัน (ตัดที่ 30 นาที)`,
+                tone: 'info',
+                icon: Clock,
+              },
+              {
+                key: 'avg_pages',
+                label: 'ค่าเฉลี่ยหน้าต่อเซสชัน (Avg Pages / Session)',
+                value: Number(visitorAnalyticsData.summary?.avg_pages_per_session ?? 0).toLocaleString('th-TH', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                sublabel: `คำนวณจากข้อมูลจริงย้อนหลัง ${days} วัน`,
+                tone: 'info',
+                icon: Activity,
+              },
+              {
+                key: 'top_page',
+                label: 'หน้าสาธารณะยอดนิยมอันดับ 1 (Top Public Page)',
+                value: visitorAnalyticsData.top_pages?.[0]?.label || visitorAnalyticsData.top_pages?.[0]?.url || 'ยังไม่มีข้อมูล',
+                sublabel: visitorAnalyticsData.top_pages?.[0]
+                  ? `${formatNumber(visitorAnalyticsData.top_pages[0].views)} Views • ${formatNumber(visitorAnalyticsData.top_pages[0].unique_visitors)} Unique`
+                  : 'เฉพาะเส้นทางสาธารณะที่อนุมัติ',
+                tone: 'success',
+                icon: ExternalLink,
+              },
+            ].map((kpi) => {
+              const Icon = kpi.icon;
+              return (
+                <article key={kpi.key} className="acc-kpi-card">
+                  <div className="acc-kpi-top">
+                    <span className="acc-kpi-label">{kpi.label}</span>
+                    <span className={`acc-kpi-icon ${kpi.tone}`}>
+                      <Icon size={18} />
+                    </span>
+                  </div>
+                  <div className="acc-kpi-value" style={{ fontSize: kpi.key === 'top_page' ? '1.15rem' : undefined }}>
+                    {kpi.value}
+                  </div>
+                  <div className="acc-kpi-footer">
+                    <span>{kpi.sublabel}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+
+          {/* Charts Row 1: Daily Visitor & Page Views Trend + Monthly Visitor Trend */}
+          <div className="acc-grid-2">
+            <section className="acc-card">
+              <div className="acc-card-header">
+                <div>
+                  <h2 className="acc-card-title">1. แนวโน้มผู้เข้าชมและการเปิดหน้าเว็บรายวัน ({days} วันล่าสุด)</h2>
+                  <p className="acc-card-subtitle">เปรียบเทียบ Unique Visitors และ Page Views ตามวันปฏิทิน Asia/Bangkok</p>
+                </div>
+              </div>
+              <SvgTrendChart
+                data={visitorAnalyticsData.timeline || []}
+                xKey="date"
+                series={[
+                  { key: 'visitors', label: 'ผู้เข้าชมไม่ซ้ำ (Unique Visitors)', color: '#2563eb' },
+                  { key: 'page_views', label: 'การเปิดหน้าเว็บ (Page Views)', color: '#0d9488' },
+                ]}
+              />
+            </section>
+
+            <section className="acc-card">
+              <div className="acc-card-header">
+                <div>
+                  <h2 className="acc-card-title">2. แนวโน้มผู้เข้าชมและการเปิดหน้าเว็บรายเดือน (12 เดือนล่าสุด)</h2>
+                  <p className="acc-card-subtitle">สถิติรายเดือนจากตารางสรุปและประวัติการเข้าชมจริง</p>
+                </div>
+              </div>
+              <SvgTrendChart
+                data={visitorAnalyticsData.monthly_trend || []}
+                xKey="year_month"
+                series={[
+                  { key: 'visitors', label: 'ผู้เข้าชมรายเดือน (Unique)', color: '#4f46e5' },
+                  { key: 'page_views', label: 'การเปิดหน้าเว็บรายเดือน (Views)', color: '#059669' },
+                ]}
+              />
+            </section>
+          </div>
+
+          {/* Charts Row 2: Hourly Distribution + Device Breakdown & Bot Filtering */}
+          <div className="acc-grid-2">
+            <section className="acc-card">
+              <div className="acc-card-header">
+                <div>
+                  <h2 className="acc-card-title">3. การเข้าใช้งานรายชั่วโมง (Visits by Hour — 00:00 ถึง 23:00 น.)</h2>
+                  <p className="acc-card-subtitle">วิเคราะห์ช่วงเวลาที่มีทราฟฟิกหนาแน่นตามเวลาประเทศไทย</p>
+                </div>
+              </div>
+              <SvgTrendChart
+                data={visitorAnalyticsData.hourly_distribution || []}
+                xKey="label"
+                series={[
+                  { key: 'page_views', label: 'จำนวนการเปิดหน้าเว็บ (Views)', color: '#0284c7' },
+                  { key: 'visitors', label: 'ผู้เข้าชมไม่ซ้ำ (Visitors)', color: '#0d9488' },
+                ]}
+              />
+            </section>
+
+            <section className="acc-card">
+              <div className="acc-card-header">
+                <div>
+                  <h2 className="acc-card-title">4. สัดส่วนอุปกรณ์ & การคัดกรองทราฟฟิกอัตโนมัติ (Bot vs Accepted)</h2>
+                  <p className="acc-card-subtitle">จำแนกตามอุปกรณ์และสถิติการป้องกันบอท/การกดซ้ำ</p>
+                </div>
+              </div>
+              <HorizontalBarChart
+                items={(visitorAnalyticsData.devices || []).map((d) => ({
+                  label: `${d.label} (${Number(d.percentage || 0).toFixed(1)}%)`,
+                  value: Number(d.count || 0),
+                }))}
+                labelKey="label"
+                valueKey="value"
+                suffix=" ครั้ง"
+              />
+
+              <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--acc-border)' }}>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 10 }}>
+                  สถิติการคัดกรองทราฟฟิกและความปลอดภัย (Traffic Hygiene & Bot Filtering)
+                </h3>
+                <HorizontalBarChart
+                  items={[
+                    {
+                      label: 'เหตุการณ์การเข้าชมที่ผ่านเกณฑ์ (Accepted Page Views)',
+                      value: Number(visitorAnalyticsData.observability?.accepted_events ?? visitorAnalyticsData.summary?.total_page_views ?? 0),
+                    },
+                    {
+                      label: 'บอทและสคริปต์ตรวจสอบที่ถูกคัดกรองออก (Bot-Filtered Events)',
+                      value: Number(visitorAnalyticsData.observability?.bot_filtered_events ?? 0),
+                    },
+                    {
+                      label: 'การเปิดหน้าซ้ำภายใน 15 วินาทีที่ถูกระงับ (Deduplicated Hits)',
+                      value: Number(visitorAnalyticsData.observability?.deduplicated_events ?? 0),
+                    },
+                    {
+                      label: 'คำขอที่ถูกจำกัดอัตรา (Rate-Limited Requests)',
+                      value: Number(visitorAnalyticsData.observability?.rate_limited_events ?? 0),
+                    },
+                  ]}
+                  labelKey="label"
+                  valueKey="value"
+                  suffix=" รายการ"
+                />
+              </div>
+            </section>
+          </div>
+
+          {/* Row 3: Popular Public Pages & Recent Anonymized Activity */}
+          <div className="acc-grid-2">
+            <section className="acc-card">
+              <div className="acc-card-header">
+                <div>
+                  <h2 className="acc-card-title">5. หน้าเว็บไซต์สาธารณะยอดนิยม (Popular Public Pages)</h2>
+                  <p className="acc-card-subtitle">ไม่รวมเส้นทาง /admin/*, /member/*, /api/*, /login และตัดพารามิเตอร์ลับทั้งหมด</p>
+                </div>
+              </div>
+              <div className="acc-table-wrap">
+                <table className="acc-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>หน้าเว็บไซต์สาธารณะ</th>
+                      <th>เส้นทาง (Normalized Path)</th>
+                      <th>ผู้เข้าชมไม่ซ้ำ (Unique)</th>
+                      <th>การเปิดหน้าเว็บ (Views)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(visitorAnalyticsData.top_pages || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="acc-empty-state">ยังไม่มีข้อมูลหน้ายอดนิยมในช่วงเวลานี้</td>
+                      </tr>
+                    ) : (
+                      (visitorAnalyticsData.top_pages || []).map((page, idx) => (
+                        <tr key={page.url}>
+                          <td>{idx + 1}</td>
+                          <td><strong>{page.label || page.title}</strong></td>
+                          <td><code>{page.url}</code></td>
+                          <td>{formatNumber(page.unique_visitors)}</td>
+                          <td><strong>{formatNumber(page.views)}</strong></td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="acc-card">
+              <div className="acc-card-header">
+                <div>
+                  <h2 className="acc-card-title">6. กิจกรรมการเข้าชมล่าสุดแบบปกปิดตัวตน (PDPA-Anonymized Feed)</h2>
+                  <p className="acc-card-subtitle">แสดงเฉพาะข้อมูลที่ผ่านการคัดกรองและปกปิด IP Address ตามมาตรฐาน PDPA</p>
+                </div>
+              </div>
+              <div className="acc-table-wrap">
+                <table className="acc-table">
+                  <thead>
+                    <tr>
+                      <th>เวลา</th>
+                      <th>หน้าสาธารณะ</th>
+                      <th>อุปกรณ์ / เบราว์เซอร์</th>
+                      <th>IP (PDPA Masked)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(visitorAnalyticsData.recent_visits || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="acc-empty-state">ยังไม่มีข้อมูลการเข้าชมล่าสุด</td>
+                      </tr>
+                    ) : (
+                      (visitorAnalyticsData.recent_visits || []).slice(0, 10).map((visit, idx) => (
+                        <tr key={`${visit.url}-${idx}`}>
+                          <td>{visit.time_ago}</td>
+                          <td><code>{visit.url}</code></td>
+                          <td>{visit.device} • {visit.browser} ({visit.os})</td>
+                          <td><code>{visit.masked_ip}</code></td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </>
       )}
 
       {/* ===================================================================

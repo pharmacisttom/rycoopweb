@@ -99,8 +99,10 @@ $router->get('/api/public/statistics', 'Api\\SpaApiController@statistics');
 $router->post('/api/visits/record', 'Api\\SpaApiController@recordVisit');
 $router->get('/api/visits/stats', 'Api\\SpaApiController@visitorStats');
 $router->get('/api/public/visits/stats', 'Api\\SpaApiController@visitorStats');
+$router->get('/api/public/visitors/summary', 'Api\\SpaApiController@visitorStats');
 $router->get('/api/visits/analytics', 'Api\\SpaApiController@visitorAnalytics');
 $router->get('/api/public/visits/analytics', 'Api\\SpaApiController@visitorAnalytics');
+$router->get('/api/public/visitors/analytics', 'Api\\SpaApiController@visitorAnalytics');
 
 /*
 |--------------------------------------------------------------------------
@@ -163,6 +165,8 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->get('/dashboard/summary','Admin\\ControlCenterApiController@summary');
     $r->get('/dashboard/trends','Admin\\ControlCenterApiController@trends');
     $r->get('/analytics/usage','Admin\\ControlCenterApiController@usage');
+    $r->get('/analytics/visitors','Admin\\ControlCenterApiController@visitorAnalytics');
+    $r->post('/analytics/visitors/export','Admin\\ControlCenterApiController@exportVisitorAnalytics',[CsrfMiddleware::class]);
     $r->get('/operations/overview','Admin\\ControlCenterApiController@operations');
     $r->get('/security/overview','Admin\\ControlCenterApiController@securityOverview');
     $r->get('/security/sessions','Admin\\ControlCenterApiController@securitySessions');

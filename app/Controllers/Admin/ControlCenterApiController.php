@@ -312,4 +312,54 @@ class ControlCenterApiController extends Controller
             }
         );
     }
+
+    /**
+     * GET /api/admin/analytics/visitors
+     * Enterprise Admin Visitor Analytics Dashboard endpoint.
+     */
+    public function visitorAnalytics(): void
+    {
+        $days = max(7, min(90, (int) $this->request->query('days', 30)));
+        $this->authorizeAndRespond(
+            ['analytics.visitors.view', 'analytics.view'],
+            fn() => \App\Services\VisitorCounterService::getDetailedAnalytics($days, true)
+        );
+    }
+
+    /**
+     * POST /api/admin/analytics/visitors/export
+     * Authorized export of visitor analytics with Audit Trail logging.
+     */
+    public function exportVisitorAnalytics(): void
+    {
+        $days = max(7, min(90, (int) $this->request->input('days', 30)));
+        $format = strtolower(trim((string) $this->request->input('format', 'csv')));
+        if (!in_array($format, ['csv', 'json'], true)) {
+            $format = 'csv';
+        }
+
+        $this->authorizeAndRespond(
+            ['analytics.visitors.export', 'audit.export'],
+            function () use ($days, $format) {
+                $analytics = \App\Services\VisitorCounterService::getDetailedAnalytics($days, true);
+                \App\Services\AuditService::log(
+                    'visitor_analytics',
+                    'export',
+                    'visitors_' . $days . 'd',
+                    null,
+                    [
+                        'days' => $days,
+                        'format' => $format,
+                        'exported_by' => \App\Core\Auth::id(),
+                    ]
+                );
+                return [
+                    'exported_at_bangkok' => $analytics['generated_at_bangkok'] ?? null,
+                    'format' => $format,
+                    'days' => $days,
+                    'analytics' => $analytics,
+                ];
+            }
+        );
+    }
 }

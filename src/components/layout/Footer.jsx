@@ -5,6 +5,7 @@ import {
   MapPin, Phone, Mail, Clock, Shield, Award,
   ExternalLink, MessageCircle, FileText, ChevronRight, LockKeyhole
 } from 'lucide-react';
+import VisitorCounter from '../analytics/VisitorCounter';
 
 
 export default function Footer() {
@@ -198,6 +199,11 @@ export default function Footer() {
 
         </div>
 
+        {/* Public Visitor Counter Widget */}
+        <div style={{ marginBottom: '2rem' }}>
+          <VisitorCounter variant="footer" />
+        </div>
+
         {/* Bottom Bar */}
         <div style={{
           borderTop: '1px solid rgba(255,255,255,0.08)',
@@ -220,6 +226,7 @@ export default function Footer() {
             >
               <LockKeyhole size={14} /> เข้าสู่ระบบเจ้าหน้าที่
             </Link>
+            <Link to="/visitor-stats" style={{ color: '#94a3b8' }}>สถิติผู้เข้าชมเว็บไซต์</Link>
             <Link to="/contact" style={{ color: '#94a3b8' }}>รับเรื่องร้องเรียน</Link>
             <Link to="/privacy/policy" style={{ color: '#94a3b8' }}>นโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)</Link>
             <Link to="/documents" style={{ color: '#94a3b8' }}>ข้อกำหนดและเงื่อนไข</Link>

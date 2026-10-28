@@ -245,6 +245,9 @@ class SpaApiController extends Controller
      */
     public function recordVisit(): void
     {
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+        }
         $payload = $this->request->all();
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
         $rawIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
@@ -253,27 +256,63 @@ class SpaApiController extends Controller
         }
 
         $res = \App\Services\VisitorCounterService::recordVisit($payload, $userAgent, $rawIp);
-        $this->json($res);
+        $reason = (string) ($res['reason'] ?? '');
+        $statusCode = 200;
+        if ($reason === 'rate_limited') {
+            $statusCode = 429;
+        } elseif ($reason === 'storage_unavailable') {
+            $statusCode = 503;
+        }
+        $this->json($res, $statusCode);
     }
 
     /**
      * GET /api/visits/stats
+     * GET /api/public/visits/stats
+     * GET /api/public/visitors/summary
      * Returns public summary counter metrics for header/footer/badges.
      */
     public function visitorStats(): void
     {
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+        }
         $stats = \App\Services\VisitorCounterService::getPublicStats();
-        $this->json(['success' => true, 'data' => $stats]);
+        if (($stats['available'] ?? true) === false) {
+            $this->json([
+                'success' => false,
+                'available' => false,
+                'message' => 'ไม่สามารถโหลดข้อมูลสถิติผู้เข้าชมได้ในขณะนี้',
+                'data' => $stats,
+            ], 503);
+            return;
+        }
+        $this->json(['success' => true, 'available' => true, 'data' => $stats]);
     }
 
     /**
      * GET /api/visits/analytics
-     * Returns detailed analytics (30-day timeline, device breakdown, top pages, recent visits).
+     * GET /api/public/visits/analytics
+     * GET /api/public/visitors/analytics
+     * Returns detailed analytics (30-day timeline, device breakdown, top pages).
      */
     public function visitorAnalytics(): void
     {
-        $analytics = \App\Services\VisitorCounterService::getDetailedAnalytics();
-        $this->json(['success' => true, 'data' => $analytics]);
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+        }
+        $days = max(7, min(90, (int) ($this->request->query('days') ?? 30)));
+        $analytics = \App\Services\VisitorCounterService::getDetailedAnalytics($days, false);
+        if (($analytics['available'] ?? true) === false) {
+            $this->json([
+                'success' => false,
+                'available' => false,
+                'message' => 'ไม่สามารถโหลดข้อมูลวิเคราะห์การเข้าชมได้ในขณะนี้',
+                'data' => $analytics,
+            ], 503);
+            return;
+        }
+        $this->json(['success' => true, 'available' => true, 'data' => $analytics]);
     }
 
     // ──────────────────────────────────────────────

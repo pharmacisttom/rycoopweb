@@ -29,8 +29,8 @@ const apiFetch = async (path, options = {}) => {
       if (res.ok) {
         return await res.json();
       }
-      if (res.status === 403) {
-        const result=await res.json();
+      if (res.status === 403 || res.status === 503 || res.status === 429) {
+        const result = await res.json();
         return result;
       }
       if (res.status === 401) {
@@ -230,11 +230,20 @@ export const createAdminNews = (body) => apiPost('/api/admin/news', body);
 /** Soft-delete a news item from the React administrator dashboard */
 export const deleteAdminNews = (id) => apiPost(`/api/admin/news/${id}/delete`);
 
-/** Fetch public visitor statistics */
-export const fetchVisitorStats = () => apiFetch('/api/visits/stats');
+/** Fetch public visitor statistics summary */
+export const fetchVisitorStats = () => apiFetch('/api/public/visitors/summary');
+
+/** Alias for public visitor summary */
+export const fetchPublicVisitorSummary = () => apiFetch('/api/public/visitors/summary');
 
 /** Fetch detailed visitor analytics for /visitor-stats */
-export const fetchVisitorAnalytics = () => apiFetch('/api/visits/analytics');
+export const fetchVisitorAnalytics = (days = 30) => apiFetch(`/api/public/visitors/analytics?days=${encodeURIComponent(days)}`);
+
+/** Fetch admin-level visitor analytics for /admin/analytics/visitors */
+export const fetchAdminVisitorAnalytics = (days = 30) => apiFetch(`/api/admin/analytics/visitors?days=${encodeURIComponent(days)}`);
+
+/** Authorized export of visitor analytics (logged in Audit Trail) */
+export const exportAdminVisitorAnalytics = (days = 30, format = 'csv') => apiPost('/api/admin/analytics/visitors/export', { days, format });
 
 /** Record page visit */
 export const recordPageVisit = (payload) => apiPost('/api/visits/record', payload);

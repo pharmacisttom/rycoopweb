@@ -74,7 +74,8 @@ class AdminControlCenterService
             'separation_tier' => 'system_operations',
             'description' => 'ดูแลความพร้อมใช้งานของระบบ ตรวจสอบสถานะเซิร์ฟเวอร์ ฐานข้อมูล และการสำรองข้อมูล',
             'default_permissions' => [
-                'dashboard.view', 'analytics.view', 'users.view', 'roles.view',
+                'dashboard.view', 'analytics.view', 'analytics.visitors.view', 'analytics.visitors.export',
+                'users.view', 'roles.view',
                 'audit.view', 'security.view', 'backup.view', 'backup.verify',
                 'backup.restore.request', 'system.health.view', 'settings.view',
             ],
@@ -88,7 +89,7 @@ class AdminControlCenterService
             'separation_tier' => 'security_governance',
             'description' => 'กำกับดูแลสถานะ 2FA/MFA ประวัติการเข้าสู่ระบบ เหตุการณ์ความมั่นคงปลอดภัย และการเพิกถอนเซสชัน',
             'default_permissions' => [
-                'dashboard.view', 'analytics.view', 'users.view', 'roles.view',
+                'dashboard.view', 'analytics.view', 'analytics.visitors.view', 'users.view', 'roles.view',
                 'security.view', 'security.sessions.revoke', 'audit.view', 'audit.export',
                 'system.health.view',
             ],
@@ -149,7 +150,8 @@ class AdminControlCenterService
             'separation_tier' => 'independent_audit',
             'description' => 'สิทธิ์อ่านอย่างเดียว (Read-Only) สำหรับตรวจสอบ Audit Logs ประวัติการเข้าใช้ และส่งออกรายงาน',
             'default_permissions' => [
-                'dashboard.view', 'analytics.view', 'users.view', 'roles.view',
+                'dashboard.view', 'analytics.view', 'analytics.visitors.view', 'analytics.visitors.export',
+                'users.view', 'roles.view',
                 'members.view', 'finance.view', 'finance.export', 'audit.view',
                 'audit.export', 'security.view', 'backup.view', 'system.health.view',
             ],
@@ -163,7 +165,7 @@ class AdminControlCenterService
             'separation_tier' => 'executive_oversight',
             'description' => 'ดูภาพรวมสถิติผู้บริหารและรายงานสรุปโดยไม่เข้าถึงข้อมูลความลับหรือแก้ไขการตั้งค่าระบบ',
             'default_permissions' => [
-                'dashboard.view', 'analytics.view', 'finance.view',
+                'dashboard.view', 'analytics.view', 'analytics.visitors.view', 'finance.view',
             ],
         ],
         [
@@ -185,6 +187,8 @@ class AdminControlCenterService
     public const ENTERPRISE_PERMISSIONS = [
         'dashboard.view' => ['module' => 'dashboard', 'action' => 'view', 'label' => 'ดูแดชบอร์ดผู้บริหารและภาพรวมระบบ'],
         'analytics.view' => ['module' => 'analytics', 'action' => 'view', 'label' => 'ดูสถิติเชิงลึกและแนวโน้มการใช้งาน'],
+        'analytics.visitors.view' => ['module' => 'analytics', 'action' => 'visitors.view', 'label' => 'ดูสถิติผู้เข้าชมเว็บไซต์และการวิเคราะห์ทราฟฟิก'],
+        'analytics.visitors.export' => ['module' => 'analytics', 'action' => 'visitors.export', 'label' => 'ส่งออกรายงานสถิติผู้เข้าชมเว็บไซต์ (CSV)'],
         'users.view' => ['module' => 'users', 'action' => 'view', 'label' => 'ดูรายชื่อผู้ใช้งานและเจ้าหน้าที่'],
         'users.create' => ['module' => 'users', 'action' => 'create', 'label' => 'สร้างบัญชีหรือส่งคำเชิญเจ้าหน้าที่'],
         'users.update' => ['module' => 'users', 'action' => 'update', 'label' => 'แก้ไขข้อมูลและบทบาทเจ้าหน้าที่'],
