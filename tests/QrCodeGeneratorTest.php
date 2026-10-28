@@ -23,4 +23,15 @@ if (str_starts_with($dataUri, 'data:image/svg+xml;base64,')) {
     exit(1);
 }
 
-echo "QrCodeGenerator tests passed.\n";
+
+foreach ([['empty payload','',220,4,QrCodeGenerator::ECC_M],['missing quiet zone','fixture',220,0,QrCodeGenerator::ECC_M],['invalid ECC','fixture',220,4,99]] as [$label,$text,$size,$margin,$ecc]) {
+    try { QrCodeGenerator::svg($text,$size,$margin,$ecc); }
+    catch (InvalidArgumentException $e) { echo "PASS: {$label} rejected\n"; continue; }
+    throw new RuntimeException("Expected rejection: {$label}");
+}
+$rejected = false;
+try { QrCodeGenerator::svg(str_repeat('A',5000)); }
+catch (\BaconQrCode\Exception\WriterException $e) { $rejected = true; }
+if (!$rejected) throw new RuntimeException('Oversized QR payload was not rejected');
+echo "PASS: oversized payload rejected instead of truncated\n";
+echo "QrCodeGenerator tests passed (6 cases).\n";

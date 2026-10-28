@@ -115,6 +115,8 @@ jobs:
           php tests/FeatureFlagContractTest.php
           php tests/DividendImportTest.php
           php tests/MfaWorkflowTest.php
+          php tests/MfaRateLimitTest.php
+          php tests/QrCodeGeneratorTest.php
           php tests/TwoFactorServiceTest.php
           php tests/NewsWorkflowTest.php
           php tests/PasswordWorkflowTest.php
@@ -211,9 +213,17 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: pdo_sqlite, iconv
+          tools: composer:v2
+
+      - name: Install PHP QR encoder for round-trip tests
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Decode generated MFA QR images
+        run: node tests/QrCodeRoundTripTest.mjs
 
       - name: Check public reference content
         run: node tests/PublicContentReferenceTest.mjs

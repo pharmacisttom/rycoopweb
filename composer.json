@@ -5,7 +5,8 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.2",
-        "ezyang/htmlpurifier": "^4.19"
+        "ezyang/htmlpurifier": "^4.19",
+        "bacon/bacon-qr-code": "^3.0"
     },
     "autoload": {
         "psr-4": {

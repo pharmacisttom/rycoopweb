@@ -21,6 +21,17 @@ function mfaRequest(array $body = [], string $ip = '127.0.0.1'): \App\Core\Reque
     return new \App\Core\Request();
 }
 
+// Pick invalid codes deterministically: a hardcoded "000000" can occasionally be a real OTP.
+function wrongMfaCode(string $secret, int $candidate): string
+{
+    $calculate = new ReflectionMethod(Mfa::class, 'calculateCode');
+    $slice = (int) floor(time() / 30);
+    $valid = [];
+    foreach ([-1,0,1] as $offset) $valid[] = $calculate->invoke(null,$secret,$slice+$offset);
+    do { $code = str_pad((string)($candidate++ % 1000000),6,'0',STR_PAD_LEFT); } while (in_array($code,$valid,true));
+    return $code;
+}
+
 function callMfaWithIp(string $method, array $body = [], string $ip = '127.0.0.1'): WorkflowResponse
 {
     $r = new WorkflowResponse();
@@ -82,9 +93,9 @@ try {
 
     // Accumulate 3 failed attempts
     workflowLogin(1, false);
-    callMfaWithIp('verify', ['code' => '000000'], '192.168.1.100');
-    callMfaWithIp('verify', ['code' => '000001'], '192.168.1.100');
-    callMfaWithIp('verify', ['code' => '000002'], '192.168.1.100');
+    callMfaWithIp('verify', ['code' => wrongMfaCode($secret,0)], '192.168.1.100');
+    callMfaWithIp('verify', ['code' => wrongMfaCode($secret,1)], '192.168.1.100');
+    callMfaWithIp('verify', ['code' => wrongMfaCode($secret,2)], '192.168.1.100');
 
     // Verify valid TOTP code
     $calc = new ReflectionMethod(Mfa::class, 'calculateCode');
@@ -130,8 +141,8 @@ try {
     $enrollSecret = $enrollResp->data['secret'];
 
     // 2 failed confirmation attempts
-    callMfaWithIp('confirm', ['code' => '000000'], '192.168.1.102');
-    callMfaWithIp('confirm', ['code' => '000001'], '192.168.1.102');
+    callMfaWithIp('confirm', ['code' => wrongMfaCode($enrollSecret,0)], '192.168.1.102');
+    callMfaWithIp('confirm', ['code' => wrongMfaCode($enrollSecret,1)], '192.168.1.102');
 
     // Valid confirmation
     $validEnrollCode = $calc->invoke(null, $enrollSecret, (int) floor(time() / 30));

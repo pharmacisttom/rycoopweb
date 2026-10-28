@@ -36,7 +36,7 @@ export default function MfaPage({ mode }) {
     {codes?<><h2>บันทึกรหัสสำรองก่อนดำเนินการต่อ</h2><p>แสดงครั้งนี้ครั้งเดียว แต่ละรหัสใช้ได้หนึ่งครั้ง เก็บไว้ในที่ปลอดภัย</p><ul>{codes.map(c=><li key={c}><code>{c}</code></li>)}</ul><button className="btn btn-primary" disabled={busy} onClick={()=>finish(destination)}>บันทึกรหัสแล้ว เข้าพื้นที่ทำงาน</button></>:
       status&&<>
         {mode==='enroll'&&!setup&&<button className="btn btn-primary" disabled={busy} onClick={start}>เริ่มตั้งค่าด้วยแอป Authenticator</button>}
-        {setup&&<><p>สแกน QR ด้วยแอป Authenticator หรือกรอกรหัสตั้งค่าด้านล่าง</p><img src={setup.qr_code_uri} width="240" height="240" alt="QR ตั้งค่า MFA สำหรับบัญชีของคุณ"/><p><code>{setup.formatted_secret}</code></p></>}
+        {setup&&<><p>สแกน QR ด้วยแอป Authenticator หรือกรอกรหัสตั้งค่าด้านล่าง</p><img src={setup.qr_code_uri} style={{maxWidth:'100%',height:'auto'}} alt="QR ตั้งค่า MFA สำหรับบัญชีของคุณ"/><p><code>{setup.formatted_secret}</code></p></>}
         {(setup||mode==='verify')&&<form onSubmit={submit}>
           <label htmlFor="mfa-code">{recovery?'รหัสสำรอง':'รหัสยืนยัน 6 หลัก'}</label>
           <input id="mfa-code" className="form-control" autoComplete="one-time-code" inputMode={recovery?'text':'numeric'} value={code} onChange={e=>setCode(e.target.value)} maxLength={recovery?40:6} required pattern={recovery?undefined:'[0-9]{6}'} />

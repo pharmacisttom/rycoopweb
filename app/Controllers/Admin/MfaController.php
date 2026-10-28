@@ -99,7 +99,7 @@ class MfaController extends Controller
         Session::set('mfa_enroll_expires', time() + 600);
 
         $issuer = (string) config('security.two_factor.issuer', 'RayongCoop');
-        $qrDataUri = TwoFactorService::getQrCodeDataUri($user['email'], $secret, $issuer);
+        $qrDataUri = TwoFactorService::getQrCodeDataUri($user['email'], $secret, $issuer, 320);
         $formattedSecret = TwoFactorService::formatSecret($secret);
 
         $this->response->json([
