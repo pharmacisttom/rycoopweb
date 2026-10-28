@@ -1,37 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Clock, Eye, ChevronRight, Search, X } from 'lucide-react';
 import { fetchNews } from '../services/api';
 import { normalizeNewsItem } from '../utils/news';
 import SafeImage from '../components/common/SafeImage';
 import RichTextContent from '../components/common/RichTextContent';
 
+import ActivitySlideshow from '../components/common/ActivitySlideshow';
+
 export default function NewsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNews, setSelectedNews] = useState(null);
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const detail = useRef(null);
+  useEffect(() => { if (selectedNews && detail.current && !detail.current.open) detail.current.showModal(); }, [selectedNews]);
 
   useEffect(() => {
     let cancelled = false;
-    fetchNews().then((result) => {
+    setLoading(true);setError('');
+    fetchNews(page).then((result) => {
       if (!cancelled && result?.success && Array.isArray(result.data)) {
-        setNewsList(result.data.map(normalizeNewsItem));
+        setNewsList(result.data.map(normalizeNewsItem));setTotal(result.meta?.total||0);
+      } else if(!cancelled) {
+        setError(result?.message||'โหลดข่าวไม่สำเร็จ');
       }
-    }).finally(() => {
+    }).catch(() => { if(!cancelled)setError('โหลดข่าวไม่สำเร็จ กรุณาลองใหม่'); }).finally(() => {
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [page]);
 
   const filteredNews = newsList.filter(item =>
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="section">
       <div className="container">
-        
+
         <div className="section-title-wrap">
           <span className="section-badge">ข่าวสารและกิจกรรม</span>
           <h1 className="section-title">ข่าวสารประชาสัมพันธ์</h1>
@@ -42,7 +52,7 @@ export default function NewsPage() {
         {/* Search Bar */}
         <div style={{ maxWidth: '500px', margin: '0 auto 2.5rem auto', position: 'relative' }}>
           <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input 
+          <input
             type="text"
             className="form-control"
             placeholder="ค้นหาหัวข้อข่าว หรือกิจกรรม..."
@@ -52,14 +62,16 @@ export default function NewsPage() {
           />
         </div>
 
+        {loading&&<p role="status">กำลังโหลดข่าวและกิจกรรม…</p>}
+        {error&&<p role="alert">{error}</p>}
         {/* News Grid */}
         <div className="grid-3">
           {filteredNews.map((item) => (
             <div key={item.id} className="surface-card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '180px', background: 'var(--primary-100)', position: 'relative' }}>
                 <SafeImage
-                  src={item.image} 
-                  alt={item.title} 
+                  src={item.image}
+                  alt={item.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
                 <span style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(15, 23, 42, 0.8)', color: '#fff', padding: '0.25rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
@@ -81,7 +93,7 @@ export default function NewsPage() {
                   </p>
                 </div>
 
-                <button 
+                <button
                   onClick={() => setSelectedNews(item)}
                   className="btn btn-outline btn-sm"
                   style={{ width: '100%' }}
@@ -100,9 +112,15 @@ export default function NewsPage() {
           </p>
         )}
 
+        <nav aria-label="หน้าข่าว" className="activity-controls">
+          <button type="button" className="btn btn-outline" disabled={loading||page===1} onClick={()=>setPage(value=>value-1)}>หน้าก่อนหน้า</button>
+          <span>หน้า {page}</span>
+          <button type="button" className="btn btn-outline" disabled={loading||page*12>=total} onClick={()=>setPage(value=>value+1)}>หน้าถัดไป</button>
+        </nav>
         {/* News Detail Modal */}
         {selectedNews && (
-          <div style={{
+          <dialog ref={detail} aria-label={selectedNews.title} onCancel={()=>setSelectedNews(null)} style={{
+            border: 0, width:'100vw', maxWidth:'100vw', height:'100dvh', maxHeight:'100dvh', margin:0,
             position: 'fixed',
             top: 0,
             left: 0,
@@ -117,9 +135,9 @@ export default function NewsPage() {
             padding: '1rem'
           }}>
             <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: '2rem', position: 'relative' }}>
-              
-              <button 
-                onClick={() => setSelectedNews(null)} 
+
+              <button
+                aria-label="ปิดข่าว" onClick={() => setSelectedNews(null)}
                 style={{ position: 'absolute', top: '1rem', right: '1rem', padding: '0.4rem', borderRadius: '50%', background: 'var(--bg-subtle)', color: 'var(--text-main)' }}
               >
                 <X size={20} />
@@ -129,13 +147,14 @@ export default function NewsPage() {
               <h2 style={{ fontSize: '1.4rem', color: 'var(--primary-900)', marginBottom: '0.75rem', lineHeight: 1.35 }}>
                 {selectedNews.title}
               </h2>
-              
+
               <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                 <span>วันที่เผยแพร่: {selectedNews.date}</span>
                 <span>ยอดผู้เข้าชม: {selectedNews.views} ครั้ง</span>
               </div>
 
               <div style={{ lineHeight: 1.8, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                <ActivitySlideshow images={selectedNews.gallery_images} title={selectedNews.title} />
                 <RichTextContent value={selectedNews.content || selectedNews.excerpt} />
               </div>
 
@@ -146,7 +165,7 @@ export default function NewsPage() {
               </div>
 
             </div>
-          </div>
+          </dialog>
         )}
 
       </div>

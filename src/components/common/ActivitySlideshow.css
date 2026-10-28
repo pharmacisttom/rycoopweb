@@ -1,0 +1,21 @@
+.activity-gallery{margin:1.5rem 0;color:var(--text-main,#10294e)}
+.activity-stage{display:flex;align-items:center;justify-content:center;min-height:180px;background:var(--bg-subtle,#eaf1fb);border-radius:16px;overflow:hidden;touch-action:pan-y}
+.activity-stage>img{display:block;width:100%;height:clamp(220px,48vw,480px);object-fit:contain}
+.activity-controls{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;margin:12px 0}
+.activity-gallery button,.gallery-editor button{min-height:44px;min-width:44px;padding:8px 14px;border:1px solid var(--border-subtle,#bccce3);border-radius:8px;background:var(--bg-surface,#fff);color:var(--text-main,#123568);cursor:pointer}
+.activity-gallery button:disabled{opacity:.5;cursor:default}
+.activity-gallery button:focus-visible,.activity-stage:focus-visible,.gallery-editor button:focus-visible{outline:3px solid #2465ed;outline-offset:3px}
+.activity-caption{text-align:center;white-space:pre-wrap;overflow-wrap:anywhere}
+.activity-thumbnails{display:flex;gap:8px;overflow:auto;padding:6px}
+.activity-thumbnails button{padding:3px;flex:0 0 70px}
+.activity-thumbnails button[aria-pressed=true]{border:3px solid #2456ce}
+.activity-thumbnails img{width:64px;height:48px;object-fit:cover;display:block}
+.activity-lightbox{box-sizing:border-box;width:min(1100px,96vw);max-height:94dvh;border:0;border-radius:14px;background:#0c1930;color:#fff;padding:16px;overflow:auto}
+.activity-lightbox::backdrop{background:#041024e6}
+.activity-lightbox>img{display:block;width:100%;height:65dvh;object-fit:contain}
+.activity-close{display:block;margin-left:auto;margin-bottom:12px}
+.gallery-editor{border:1px solid var(--border-subtle,#cbd5e1);padding:16px;border-radius:12px;min-width:0}
+.gallery-editor ol{padding-left:24px}.gallery-editor li{margin:16px 0;padding:12px;background:var(--bg-subtle,#eef4ff);border-radius:8px}
+.gallery-editor img{width:150px;height:100px;object-fit:contain;display:block}
+.gallery-editor label{display:block;margin:8px 0}.gallery-editor-actions{display:flex;flex-wrap:wrap;gap:8px}
+@media(prefers-reduced-motion:reduce){.activity-gallery *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
