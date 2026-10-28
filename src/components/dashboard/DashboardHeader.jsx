@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import React from 'react';
 import { User, LogOut, Edit3, Calendar, Phone, KeyRound } from 'lucide-react';
 import UserStatusBadge from '../common/UserStatusBadge';
@@ -65,6 +66,7 @@ export default function DashboardHeader({
         boxShadow: 'var(--shadow-sm)'
       }}
     >
+      <div style={{padding:"16px 20px 0"}}><CoopBrandLogo variant="compact" /></div>
       <div className="dashboard-header-inner">
         {/* User Identity Info */}
         <div className="dashboard-user-info">

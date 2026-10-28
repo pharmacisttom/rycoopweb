@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import { usePublicInformation } from '../../context/PublicContentContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -118,20 +119,7 @@ export default function Navbar() {
 
         {/* Logo & Brand */}
         <Link to="/" className="navbar-brand-link">
-          <img
-            src="/assets/img/logo.webp"
-            alt="Logo"
-            className="navbar-brand-logo"
-            onError={(e) => { e.target.src = '/img/logo.webp'; }}
-          />
-          <div className="navbar-brand-text">
-            <div className="navbar-brand-title">
-              {COOP_INFO.nameTh}
-            </div>
-            <div className="navbar-brand-subtitle">
-              {COOP_INFO.nameEn}
-            </div>
-          </div>
+          <CoopBrandLogo variant="compact" nameTh={COOP_INFO.nameTh} nameEn={COOP_INFO.nameEn} showEnglish />
         </Link>
 
         {/* Desktop Navigation - 5 MAIN CATEGORIES */}

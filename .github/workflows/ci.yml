@@ -232,10 +232,15 @@ jobs:
         run: npm audit --audit-level=moderate
 
       - name: Test frontend workflow contracts
-        run: node tests/WorkflowFrontendTest.mjs
+        run: |
+          node tests/WorkflowFrontendTest.mjs
+          node tests/MfaUiRedesignTest.mjs
 
       - name: Build frontend
         run: npm run build
+
+      - name: Verify official branding build
+        run: node tests/BrandingTest.mjs
 
       - name: Verify production asset base
         run: |

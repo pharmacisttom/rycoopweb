@@ -61,6 +61,8 @@
   grid-template-columns: 76px minmax(0, 1fr);
 }
 
+.acc-shell.is-collapsed .acc-sidebar-header {flex-direction:column;padding:12px 8px;gap:12px}
+
 /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
 .acc-sidebar {
   position: sticky;

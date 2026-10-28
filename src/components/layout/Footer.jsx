@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import { usePublicInformation } from '../../context/PublicContentContext';
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -33,16 +34,7 @@ export default function Footer() {
           {/* Col 1: About & Trust */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <img
-                src="/assets/img/logo.webp"
-                alt="Logo"
-                style={{ width: '44px', height: '44px', objectFit: 'contain' }}
-                onError={(e) => { e.target.src = '/img/logo.webp'; }}
-              />
-              <div>
-                <h4 style={{ color: '#ffffff', fontSize: '1.05rem', lineHeight: 1.3 }}>{COOP_INFO.nameTh}</h4>
-                <p style={{ fontSize: '0.75rem', color: '#64748b' }}>ก่อตั้งเมื่อปี พ.ศ. {COOP_INFO.establishedYear}</p>
-              </div>
+              <CoopBrandLogo tone="dark" showEstablished establishedYear={COOP_INFO.establishedYear} nameTh={COOP_INFO.nameTh} />
             </div>
 
             <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
