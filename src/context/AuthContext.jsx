@@ -53,7 +53,7 @@ export function AuthProvider({ children }) {
         if (cancelled) return;
 
         if (result?.success && result.authenticated) {
-          if(result.user)setUser(current=>{const updated={...current,name:result.user.name,role:result.user.role,roleName:result.user.role_name,permissions:result.user.permissions || []};return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
+          if(result.user)setUser(current=>{const updated={...current,name:result.user.name,role:result.user.role,roleName:result.user.role_name,permissions:result.user.permissions || [],effective_permissions:result.user.effective_permissions || []};return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
           setSessionStatus('online');
         } else if (['MFA_ENROLLMENT_REQUIRED','TWO_FACTOR_REQUIRED'].includes(result?.code)) {
           setUser(null);

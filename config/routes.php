@@ -160,6 +160,20 @@ $router->group(['prefix' => 'api/admin', 'middleware' => [AuthMiddleware::class,
 
 $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],function(\App\Core\Router $r){
     $r->get('/access/me','Admin\\AccessController@me');
+    $r->get('/dashboard/summary','Admin\\ControlCenterApiController@summary');
+    $r->get('/dashboard/trends','Admin\\ControlCenterApiController@trends');
+    $r->get('/analytics/usage','Admin\\ControlCenterApiController@usage');
+    $r->get('/operations/overview','Admin\\ControlCenterApiController@operations');
+    $r->get('/security/overview','Admin\\ControlCenterApiController@securityOverview');
+    $r->get('/security/sessions','Admin\\ControlCenterApiController@securitySessions');
+    $r->get('/security/mfa','Admin\\ControlCenterApiController@securityMfa');
+    $r->get('/audit-logs/center','Admin\\ControlCenterApiController@auditLogs');
+    $r->get('/backups','Admin\\ControlCenterApiController@backups');
+    $r->get('/backups/health','Admin\\ControlCenterApiController@backupsHealth');
+    $r->get('/system/health','Admin\\ControlCenterApiController@systemHealth');
+    $r->get('/access/permissions','Admin\\ControlCenterApiController@accessPermissions');
+    $r->get('/departments','Admin\\ControlCenterApiController@departments');
+    $r->get('/reports/catalog','Admin\\ControlCenterApiController@reportsCatalog');
     $r->get('/news','Api\\SpaApiController@adminNews',[new PermissionMiddleware('news','view')]);
     $r->post('/news','Api\\SpaApiController@createAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','create'),CsrfMiddleware::class]);
     $r->post('/news/{id}/update','Api\\SpaApiController@updateAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);

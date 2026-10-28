@@ -30,6 +30,7 @@ const AdminMembersPage = lazy(() => import('./pages/AdminMembersPage'));
 const AdminMembersHealthPage = lazy(() => import('./pages/AdminMembersHealthPage'));
 const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+const AdminControlCenterPage = lazy(() => import('./pages/AdminControlCenterPage'));
 const AdminAccessPage = lazy(() => import('./pages/AdminAccessPage'));
 const MfaPage = lazy(() => import('./pages/MfaPage'));
 const PublicContentAdminPage = lazy(() => import('./pages/PublicContentAdminPage'));
@@ -150,7 +151,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -208,7 +209,22 @@ export default function App() {
             <Route path="/service-unavailable" element={<ServiceUnavailablePage />} />
             <Route path="/staff" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
-            {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute roles={['super_admin']}><AdminDashboardPage /></StaffProtectedRoute>} />)}
+            {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute><AdminControlCenterPage section="dashboard" /></StaffProtectedRoute>} />)}
+            <Route path="/admin/cms" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminDashboardPage /></StaffProtectedRoute>} />
+            <Route path="/admin/operations" element={<StaffProtectedRoute><AdminControlCenterPage section="operations" /></StaffProtectedRoute>} />
+            <Route path="/admin/users" element={<StaffProtectedRoute><AdminControlCenterPage section="users" /></StaffProtectedRoute>} />
+            <Route path="/admin/roles" element={<StaffProtectedRoute><AdminControlCenterPage section="roles" /></StaffProtectedRoute>} />
+            <Route path="/admin/permissions" element={<StaffProtectedRoute><AdminControlCenterPage section="permissions" /></StaffProtectedRoute>} />
+            <Route path="/admin/departments" element={<StaffProtectedRoute><AdminControlCenterPage section="departments" /></StaffProtectedRoute>} />
+            <Route path="/admin/audit-logs" element={<StaffProtectedRoute><AdminControlCenterPage section="audit-logs" /></StaffProtectedRoute>} />
+            <Route path="/admin/security" element={<StaffProtectedRoute><AdminControlCenterPage section="security" /></StaffProtectedRoute>} />
+            <Route path="/admin/security/sessions" element={<StaffProtectedRoute><AdminControlCenterPage section="sessions" /></StaffProtectedRoute>} />
+            <Route path="/admin/security/mfa" element={<StaffProtectedRoute><AdminControlCenterPage section="mfa" /></StaffProtectedRoute>} />
+            <Route path="/admin/backups" element={<StaffProtectedRoute><AdminControlCenterPage section="backups" /></StaffProtectedRoute>} />
+            <Route path="/admin/backups/history" element={<StaffProtectedRoute><AdminControlCenterPage section="backups-history" /></StaffProtectedRoute>} />
+            <Route path="/admin/health" element={<StaffProtectedRoute><AdminControlCenterPage section="health" /></StaffProtectedRoute>} />
+            <Route path="/admin/reports" element={<StaffProtectedRoute><AdminControlCenterPage section="reports" /></StaffProtectedRoute>} />
+            <Route path="/admin/settings" element={<StaffProtectedRoute><AdminControlCenterPage section="settings" /></StaffProtectedRoute>} />
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
 

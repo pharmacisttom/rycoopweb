@@ -530,6 +530,7 @@ class SpaApiController extends Controller
             'role_slug' => $roleSlug,
             'department' => $user['department'] ?? '',
             'permissions' => \App\Services\AccessService::permissions((int)$user['id']),
+            'effective_permissions' => \App\Services\AdminControlCenterService::effectivePermissions((int)$user['id']),
             'role_name' => $user['role_name'] ?? match($roleSlug) {
                 'super_admin' => 'ผู้ดูแลระบบสูงสุด',
                 'staff' => 'เจ้าหน้าที่สินเชื่อ/การเงิน',
