@@ -80,3 +80,5 @@ admin sidebar expanded/collapsed and mobile drawer in both themes. Keep previous
 backend/frontend targets for rollback; if necessary restore those targets using the
 existing release runbook. No schema, migration, environment/key, session, storage,
 Production Nginx, account, or restore-execution policy change is needed or performed.
+
+Clean-source reproduction: git archive of commit 39d30fe extracted into an empty temporary directory; npm ci, npm run build and BrandingTest.mjs all passed. No .env, node_modules or manually copied public/app files were supplied. Complete source/build logs remain under ignored storage/tmp/branding-clean-*.log.
