@@ -57,12 +57,65 @@ CREATE TABLE users (
     status TEXT,
     two_factor_enabled INTEGER DEFAULT 0,
     two_factor_secret TEXT,
-    two_factor_recovery_codes TEXT,
     two_factor_confirmed_at TEXT,
     last_login_at TEXT,
     locked_until TEXT,
     created_at TEXT,
     deleted_at TEXT
+);
+CREATE TABLE user_mfa_recovery_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    code_hash TEXT NOT NULL,
+    used_at TEXT NULL,
+    created_at TEXT NULL
+);
+CREATE TABLE member_profile_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_no TEXT,
+    member_id INTEGER,
+    status TEXT,
+    created_at TEXT
+);
+CREATE TABLE public_content_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    section TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'draft',
+    effective_on TEXT NULL,
+    note TEXT NULL,
+    created_at TEXT NULL
+);
+CREATE TABLE led_check_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_no TEXT,
+    status TEXT,
+    reviewed_at TEXT NULL
+);
+CREATE TABLE approval_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_no TEXT NOT NULL UNIQUE,
+    module TEXT NOT NULL,
+    action_key TEXT NOT NULL,
+    target_type TEXT NULL,
+    target_id TEXT NULL,
+    payload_json TEXT NULL,
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    requested_by INTEGER NOT NULL,
+    reviewed_by INTEGER NULL,
+    reviewed_at TEXT NULL,
+    review_note TEXT NULL,
+    expires_at TEXT NULL,
+    executed_at TEXT NULL,
+    created_at TEXT NULL,
+    updated_at TEXT NULL
+);
+CREATE TABLE admin_dashboard_preferences (
+    user_id INTEGER PRIMARY KEY,
+    sidebar_collapsed INTEGER NOT NULL DEFAULT 0,
+    default_date_range TEXT NOT NULL DEFAULT '30d',
+    pinned_widgets_json TEXT NULL,
+    updated_at TEXT NULL
 );
 CREATE TABLE roles (
     id INTEGER PRIMARY KEY,
@@ -122,10 +175,31 @@ INSERT INTO roles VALUES
     (4, 'ผู้ดูแลระบบสูงสุด', 'super_admin', 'Super administrator', '2026-10-01 00:00:00');
 
 INSERT INTO users VALUES
-    (1, 'member01', 'Member User', 'member@example.invalid', 'รพ.ระยอง', 'active', 0, NULL, NULL, NULL, '2026-10-28 08:00:00', NULL, '2026-01-01 00:00:00', NULL),
-    (2, 'editor01', 'Custom Editor', 'editor@example.invalid', 'สสจ.ระยอง', 'active', 1, 'ENCRYPTED_TOTP_SECRET_DO_NOT_LEAK', '[\"HASH_CODE_1\",\"HASH_CODE_2\"]', '2026-10-10 09:00:00', '2026-10-28 09:00:00', NULL, '2026-02-01 00:00:00', NULL),
-    (3, 'auditor01', 'Internal Auditor', 'auditor@example.invalid', 'คณะกรรมการตรวจสอบ', 'active', 1, 'ENCRYPTED_TOTP_SECRET_2', '[\"HASH_CODE_A\"]', '2026-10-12 10:00:00', '2026-10-28 10:00:00', NULL, '2026-03-01 00:00:00', NULL),
-    (4, 'superadmin', 'Super Admin', 'admin@example.invalid', 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง', 'active', 1, 'ENCRYPTED_TOTP_SECRET_3', '[\"HASH_1\",\"HASH_2\",\"HASH_3\"]', '2026-10-01 10:00:00', '2026-10-28 11:00:00', NULL, '2026-01-01 00:00:00', NULL);
+    (1, 'member01', 'Member User', 'member@example.invalid', 'รพ.ระยอง', 'active', 0, NULL, NULL, '2026-10-28 08:00:00', NULL, '2026-01-01 00:00:00', NULL),
+    (2, 'editor01', 'Custom Editor', 'editor@example.invalid', 'สสจ.ระยอง', 'active', 1, 'ENCRYPTED_TOTP_SECRET_DO_NOT_LEAK', '2026-10-10 09:00:00', '2026-10-28 09:00:00', NULL, '2026-02-01 00:00:00', NULL),
+    (3, 'auditor01', 'Internal Auditor', 'auditor@example.invalid', 'คณะกรรมการตรวจสอบ', 'active', 1, 'ENCRYPTED_TOTP_SECRET_2', '2026-10-12 10:00:00', '2026-10-28 10:00:00', NULL, '2026-03-01 00:00:00', NULL),
+    (4, 'superadmin', 'Super Admin', 'admin@example.invalid', 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง', 'active', 1, 'ENCRYPTED_TOTP_SECRET_3', '2026-10-01 10:00:00', '2026-10-28 11:00:00', NULL, '2026-01-01 00:00:00', NULL);
+
+INSERT INTO user_mfa_recovery_codes (user_id, code_hash, used_at) VALUES
+    (2, 'HASH_CODE_1', NULL),
+    (2, 'HASH_CODE_2', NULL),
+    (2, 'HASH_CODE_USED', '2026-10-20 09:00:00'),
+    (3, 'HASH_CODE_A', NULL),
+    (4, 'HASH_1', NULL),
+    (4, 'HASH_2', NULL),
+    (4, 'HASH_3', NULL);
+
+INSERT INTO member_profile_requests (request_no, member_id, status, created_at) VALUES
+    ('MPR-20261028-001', 1, 'submitted', '2026-10-28 09:30:00');
+
+INSERT INTO public_content_revisions (section, state, effective_on, note, created_at) VALUES
+    ('interest_rates', 'draft', '2026-11-01', 'Draft interest rate revision', '2026-10-28 10:00:00');
+
+INSERT INTO led_check_results (member_no, status, reviewed_at) VALUES
+    ('00001', 'REVIEW_REQUIRED', NULL);
+
+INSERT INTO approval_requests (request_no, module, action_key, target_type, target_id, reason, status, requested_by, created_at) VALUES
+    ('APR-20261028-0001', 'backup', 'backup.restore.request', 'backup_archive', 'rycoop_20261028.sql.gz', 'Quarterly DR drill verification', 'pending', 2, '2026-10-28 10:30:00');
 
 INSERT INTO user_roles VALUES (1, 1), (2, 2), (3, 3), (4, 4);
 INSERT INTO permissions VALUES (1, 'news', 'view'), (2, 'news', 'update');
@@ -232,6 +306,18 @@ try {
     assertAcc(($kpiByKey['total_users']['value'] ?? null) === 4, 'KPI total_users matches exact DB count (4)');
     assertAcc(($kpiByKey['active_staff']['value'] ?? null) === 3, 'KPI active_staff matches exact non-member count (3)');
     assertAcc(($kpiByKey['active_members']['value'] ?? null) === 2, 'KPI active_members matches exact active member count (2)');
+
+    // 9. Verify Operations Overview aligns with MySQL 8.0 schema (010, 018, 023, 025)
+    $opsRes = callEndpoint('operations');
+    assertAcc($opsRes->status === 200, 'Super Admin permitted (200) on operations');
+    $opsSummary = $opsRes->body['data']['summary'] ?? [];
+    $opsQueues = $opsRes->body['data']['queues'] ?? [];
+    assertAcc(($opsSummary['member_requests'] ?? 0) === 1, 'Operations overview counts submitted member_profile_requests (1)');
+    assertAcc(($opsSummary['public_content_drafts'] ?? 0) === 1, 'Operations overview counts draft public_content_revisions (1)');
+    assertAcc(($opsSummary['led_reviews'] ?? 0) === 1, 'Operations overview counts unreviewed REVIEW_REQUIRED led_check_results (1)');
+    assertAcc(($opsSummary['approval_requests'] ?? 0) === 1, 'Operations overview counts pending Dual-Control approval_requests (1)');
+    assertAcc(($opsQueues['public_content_drafts'][0]['section_key'] ?? '') === 'interest_rates', 'Operations overview maps public_content_revisions.section to section_key');
+    assertAcc(($opsQueues['approval_requests'][0]['request_no'] ?? '') === 'APR-20261028-0001', 'Operations overview returns pending approval_requests queue');
 
     $results[] = "Admin Control Center test suite: {$passed} checks passed.";
 } finally {

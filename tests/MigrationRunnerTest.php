@@ -645,4 +645,41 @@ assertTrue(!file_exists($incidentFile), '15.10 Incident marker file automaticall
 @rmdir($incidentDir);
 
 echo "=========================================================================\n";
+// --------------------------------------------------------------------------
+// 16. Migration 025 (Admin Control Center) Safety, Lab Dry-Run & 019/020 Gate Verification
+// --------------------------------------------------------------------------
+$mig025Path = $migrationsDir . '/025_create_admin_control_center_tables.sql';
+assertTrue(file_exists($mig025Path), '16.1 Migration 025 file exists in database/migrations/');
+
+$labPdo025 = MigrationLabTestHarness::createMockLabPdo('rycoopweb_migration_lab', 'rycoop_lab');
+$labRunner025 = new MigrationRunner($labPdo025, $migrationsDir, 'rycoopweb_migration_lab');
+
+$sql025 = (string) file_get_contents($mig025Path);
+$analysis025 = $labRunner025->analyzeSql($sql025);
+assertTrue($analysis025['is_destructive'] === false, '16.2 Migration 025 is strictly non-destructive');
+assertTrue($analysis025['is_financial'] === false, '16.3 Migration 025 is strictly non-financial');
+assertTrue(str_contains($sql025, 'CREATE TABLE IF NOT EXISTS approval_requests'), '16.4 Migration 025 creates approval_requests table idempotently');
+assertTrue(str_contains($sql025, 'CREATE TABLE IF NOT EXISTS admin_dashboard_preferences'), '16.5 Migration 025 creates admin_dashboard_preferences table idempotently');
+assertTrue(str_contains($sql025, 'backup.restore'), '16.6 Migration 025 seeds Dual-Control backup.restore permissions');
+assertTrue(str_contains($sql025, 'analytics.visitors'), '16.7 Migration 025 seeds Visitor Analytics permissions');
+assertTrue(!preg_match('/\b(UPDATE|DELETE\s+FROM|TRUNCATE|DROP)\s+`?(users|user_roles|user_mfa_recovery_codes|member_dividends|interest_rates)`?/i', $sql025), '16.8 Migration 025 never mutates users, user_roles, MFA tables, or financial data');
+
+$labRunner025->setDryRun(true);
+
+$preflight025 = $labRunner025->getPreflightInfo('025_create_admin_control_center_tables.sql');
+assertTrue($preflight025['active_database'] === 'rycoopweb_migration_lab', '16.9 Preflight targets isolated rycoopweb_migration_lab database');
+assertTrue($preflight025['database_identity_ok'] === true, '16.10 Preflight confirms database identity match for rycoopweb_migration_lab');
+
+$dryRun025 = $labRunner025->runSingle('025_create_admin_control_center_tables.sql');
+assertTrue($dryRun025['status'] === 'dry_run_passed', '16.11 Migration 025 passes dry-run in isolated rycoopweb_migration_lab');
+
+// Verify 019 and 020 remain strictly blocked in live mode without --confirm-financial
+$liveLabRunner = new MigrationRunner($labPdo025, $migrationsDir, 'rycoopweb_migration_lab');
+assertThrows(function () use ($liveLabRunner) {
+    $liveLabRunner->runSingle('019_cleanup_legacy_interest_rates.sql');
+}, 'Financial migration safety gate triggered', '16.12 Migration 019 remains strictly blocked without financial confirmation');
+assertThrows(function () use ($liveLabRunner) {
+    $liveLabRunner->runSingle('020_sync_deposit_rates.sql');
+}, 'Financial migration safety gate triggered', '16.13 Migration 020 remains strictly blocked without financial confirmation');
+
 echo "All MigrationRunner Unit, Safety & Security tests PASSED successfully!\n";

@@ -968,9 +968,7 @@ class AdminControlCenterService
         $enrolledCount = 0;
         try {
             $rows = Database::query(
-                "SELECT u.id, u.name, u.username, u.email, u.status, u.department,
-                        u.two_factor_enabled, u.two_factor_confirmed_at, u.two_factor_recovery_codes,
-                        r.slug AS role_slug, r.name AS role_name
+                "SELECT u.*, r.slug AS role_slug, r.name AS role_name
                  FROM users u
                  JOIN user_roles ur ON u.id = ur.user_id
                  JOIN roles r ON ur.role_id = r.id
@@ -1494,7 +1492,7 @@ class AdminControlCenterService
                 "SELECT r.id, r.member_id, r.status, r.created_at, m.member_no, m.first_name, m.last_name
                  FROM member_profile_requests r
                  LEFT JOIN members m ON r.member_id = m.id
-                 WHERE r.status = 'pending'
+                 WHERE r.status IN ('submitted', 'in_progress', 'pending')
                  ORDER BY r.id DESC LIMIT 10"
             );
         } catch (\Throwable $e) {
@@ -1528,13 +1526,25 @@ class AdminControlCenterService
         $draftRevisions = [];
         try {
             $draftRevisions = Database::query(
-                "SELECT id, section_key, state, effective_on, note, created_at
+                "SELECT id, section, section AS section_key, state, effective_on, note, created_at
                  FROM public_content_revisions
                  WHERE state = 'draft'
                  ORDER BY id DESC LIMIT 10"
             );
         } catch (\Throwable $e) {
             $draftRevisions = [];
+        }
+
+        $pendingApprovals = [];
+        try {
+            $pendingApprovals = Database::query(
+                "SELECT id, request_no, module, action_key, target_type, target_id, reason, status, requested_by, created_at
+                 FROM approval_requests
+                 WHERE status = 'pending'
+                 ORDER BY id DESC LIMIT 10"
+            );
+        } catch (\Throwable $e) {
+            $pendingApprovals = [];
         }
 
         return [
@@ -1545,6 +1555,7 @@ class AdminControlCenterService
                 'open_complaints' => $recentComplaints,
                 'news_drafts' => $draftNews,
                 'public_content_drafts' => $draftRevisions,
+                'approval_requests' => $pendingApprovals,
             ],
         ];
     }
@@ -1686,15 +1697,16 @@ class AdminControlCenterService
 
     private static function getPendingTasksBreakdown(): array
     {
-        $memberRequests = self::safeCount("SELECT COUNT(*) FROM member_profile_requests WHERE status = 'pending'") ?? 0;
+        $memberRequests = self::safeCount("SELECT COUNT(*) FROM member_profile_requests WHERE status IN ('submitted', 'in_progress', 'pending')") ?? 0;
         $complaints = self::safeCount("SELECT COUNT(*) FROM complaints WHERE status IN ('received', 'under_review', 'assigned', 'in_progress')") ?? 0;
         $newsDrafts = self::safeCount("SELECT COUNT(*) FROM news WHERE deleted_at IS NULL AND workflow_status IN ('draft', 'submitted', 'under_review')") ?? 0;
         $publicDrafts = self::safeCount("SELECT COUNT(*) FROM public_content_revisions WHERE state = 'draft'") ?? 0;
-        $ledReviews = self::safeCount("SELECT COUNT(*) FROM led_check_results WHERE verification_status = 'PENDING_REVIEW'") ?? 0;
+        $ledReviews = self::safeCount("SELECT COUNT(*) FROM led_check_results WHERE status IN ('POSSIBLE_MATCH', 'MULTIPLE_MATCH', 'REVIEW_REQUIRED') AND reviewed_at IS NULL") ?? 0;
         $pendingInvitations = self::safeCount("SELECT COUNT(*) FROM staff_invitations WHERE status = 'pending' AND expires_at > NOW()") ?? 0;
+        $approvalRequests = self::safeCount("SELECT COUNT(*) FROM approval_requests WHERE status = 'pending'") ?? 0;
 
         $contentDrafts = $newsDrafts + $publicDrafts;
-        $total = $memberRequests + $complaints + $contentDrafts + $ledReviews;
+        $total = $memberRequests + $complaints + $contentDrafts + $ledReviews + $approvalRequests;
 
         return [
             'total' => $total,
@@ -1705,6 +1717,7 @@ class AdminControlCenterService
             'content_drafts' => $contentDrafts,
             'led_reviews' => $ledReviews,
             'pending_invitations' => $pendingInvitations,
+            'approval_requests' => $approvalRequests,
         ];
     }
 
