@@ -17,7 +17,9 @@ class MfaController extends Controller
 {
     private function challenge(bool $enrollment): ?array
     {
-        header('Cache-Control: no-store, private');
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+        }
         $user = Auth::user();
         $valid = $user && (int) Session::get('session_version', 1) === (int) ($user['session_version'] ?? 1)
             && time() - (int) Session::get('mfa_started_at', 0) <= 600;
@@ -33,7 +35,9 @@ class MfaController extends Controller
      */
     public function status(): void
     {
-        header('Cache-Control: no-store, private');
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+        }
         if (!Auth::check() && !$this->challenge(Auth::checkPendingMfaEnrollment())) return;
         $userId = Auth::id();
         if (!$userId) {
@@ -57,6 +61,13 @@ class MfaController extends Controller
         $isPendingEnrollment = Auth::checkPendingMfaEnrollment();
         $isPendingVerification = Auth::checkPending2FA();
 
+        $now = time();
+        $startedAt = (int) Session::get('mfa_started_at', 0);
+        $expiresAt = ($isPendingEnrollment || $isPendingVerification) && $startedAt > 0
+            ? $startedAt + 600
+            : null;
+        $remainingSeconds = $expiresAt !== null ? max(0, $expiresAt - $now) : null;
+
         $this->response->json([
             'success' => true,
             'enrolled' => $hasMfa,
@@ -65,6 +76,10 @@ class MfaController extends Controller
             'mandatory' => (bool) config('google.staff_mfa_required', true),
             'pending_enrollment' => $isPendingEnrollment,
             'pending_verification' => $isPendingVerification,
+            'challenge_started_at' => $startedAt > 0 ? $startedAt : null,
+            'challenge_expires_at' => $expiresAt,
+            'remaining_seconds' => $remainingSeconds,
+            'server_time' => $now,
             'user' => [
                 'id' => (int) $user['id'],
                 'name' => $user['name'],

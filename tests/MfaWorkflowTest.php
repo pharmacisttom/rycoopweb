@@ -9,7 +9,7 @@ try {
  workflowCheck(!Auth::check(),'anonymous is denied');
  workflowCheck(callMfa('enroll')->status===401,'anonymous cannot enroll');
  workflowLogin(1,true);workflowCheck(callMfa('enroll')->status===401,'completed session cannot replace MFA');
- workflowLogin(1,false,true);$r=callMfa('status');workflowCheck($r->data['pending_enrollment']===true,'partial session reaches enrollment status');
+ workflowLogin(1,false,true);$r=callMfa('status');workflowCheck($r->data['pending_enrollment']===true&&is_int($r->data['remaining_seconds']??null)&&$r->data['remaining_seconds']>0&&$r->data['remaining_seconds']<=600&&is_int($r->data['challenge_expires_at']??null),'partial session reaches enrollment status with authoritative server expiry');
  $r=callMfa('enroll');workflowCheck($r->status===200&&strlen($r->data['secret'])===32,'enrollment issues a 160-bit secret');
  $secret=$r->data['secret'];$calculate=new ReflectionMethod(Mfa::class,'calculateCode');$code=$calculate->invoke(null,$secret,(int)floor(time()/30));
  $r=callMfa('confirm',['code'=>$code]);workflowCheck($r->status===200&&Auth::check(),'confirmed enrollment completes the session');workflowCheck(count($r->data['recovery_codes'])===8,'enrollment returns recovery codes once');$recovery=$r->data['recovery_codes'][0];
