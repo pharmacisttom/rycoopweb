@@ -174,6 +174,13 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->get('/audit-logs/center','Admin\\ControlCenterApiController@auditLogs');
     $r->get('/backups','Admin\\ControlCenterApiController@backups');
     $r->get('/backups/health','Admin\\ControlCenterApiController@backupsHealth');
+    $r->post('/backups/restore-request','Admin\\ControlCenterApiController@createRestoreRequest',[CsrfMiddleware::class]);
+    $r->post('/backups/restore-execute','Admin\\ControlCenterApiController@executeRestore',[CsrfMiddleware::class]);
+    $r->get('/approvals','Admin\\ControlCenterApiController@approvalsList');
+    $r->post('/approvals','Admin\\ControlCenterApiController@createApprovalRequest',[CsrfMiddleware::class]);
+    $r->post('/approvals/{id}/approve','Admin\\ControlCenterApiController@approveRequest',[CsrfMiddleware::class]);
+    $r->post('/approvals/{id}/reject','Admin\\ControlCenterApiController@rejectRequest',[CsrfMiddleware::class]);
+    $r->post('/approvals/{id}/cancel','Admin\\ControlCenterApiController@cancelRequest',[CsrfMiddleware::class]);
     $r->get('/system/health','Admin\\ControlCenterApiController@systemHealth');
     $r->get('/access/permissions','Admin\\ControlCenterApiController@accessPermissions');
     $r->get('/departments','Admin\\ControlCenterApiController@departments');
@@ -246,6 +253,7 @@ $router->post('/api/auth/mfa/enroll', 'Admin\\MfaController@enroll', [CsrfMiddle
 $router->post('/api/auth/mfa/confirm', 'Admin\\MfaController@confirm', [CsrfMiddleware::class]);
 $router->post('/api/auth/mfa/verify', 'Admin\\MfaController@verify', [CsrfMiddleware::class]);
 $router->post('/api/auth/mfa/recovery', 'Admin\\MfaController@recovery', [CsrfMiddleware::class]);
+$router->post('/api/auth/mfa/step-up', 'Admin\\MfaController@stepUp', [AuthMiddleware::class, CsrfMiddleware::class]);
 
 /*
 |--------------------------------------------------------------------------

@@ -46,6 +46,12 @@ return [
             'decay_seconds' => 300,
         ],
     ],
+    'dual_control' => [
+        'step_up_ttl_seconds' => (int) env('MFA_STEP_UP_TTL_SECONDS', 300),
+        'approval_ttl_seconds' => (int) env('DUAL_CONTROL_APPROVAL_TTL_SECONDS', 3600),
+        'execution_window_seconds' => (int) env('DUAL_CONTROL_EXECUTION_WINDOW_SECONDS', 1800),
+        'backup_restore_execution_enabled' => filter_var(env('BACKUP_RESTORE_EXECUTION_ENABLED', false), FILTER_VALIDATE_BOOL),
+    ],
     'upload' => [
         'max_size' => 20 * 1024 * 1024, // 20 MB
         'allowed_images' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],

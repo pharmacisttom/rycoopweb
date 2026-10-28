@@ -147,13 +147,63 @@ class StaffManagementController extends Controller
     }
 
     /**
+     * Enforce backend RBAC permission and fresh Server-Side Step-Up MFA for critical staff security mutations.
+     */
+    private function requireCriticalGate(string $permission, string $scope): bool
+    {
+        $correlationId = \App\Services\AdminControlCenterService::correlationId();
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+            header('X-Correlation-Id: ' . $correlationId);
+        }
+
+        try {
+            if (!Auth::check() || !Auth::user()) {
+                throw new \App\Exceptions\SecurityGateException('กรุณาเข้าสู่ระบบและยืนยันตัวตนก่อนดำเนินการ', 401, 'UNAUTHORIZED');
+            }
+            $actorId = (int) Auth::id();
+            if (!\App\Services\DualControlSecurityService::hasExecutePermission($actorId, $permission)) {
+                throw new \App\Exceptions\SecurityGateException('คุณไม่มีสิทธิ์ดำเนินการด้านความปลอดภัยนี้', 403, 'PERMISSION_DENIED');
+            }
+            $inlineTotp = $this->request->input('totp_code') !== null
+                ? (string) $this->request->input('totp_code')
+                : ($this->request->input('step_up_code') !== null ? (string) $this->request->input('step_up_code') : null);
+            \App\Services\DualControlSecurityService::requireFreshStepUpMfa(
+                $actorId,
+                $inlineTotp,
+                $scope,
+                true,
+                $this->request->ip()
+            );
+            return true;
+        } catch (\App\Exceptions\SecurityGateException $e) {
+            $this->response->json([
+                'success' => false,
+                'code' => $e->getErrorCode(),
+                'correlation_id' => $correlationId,
+                'message' => $e->getMessage(),
+                'context' => $e->getContext(),
+            ], $e->getHttpStatus());
+            return false;
+        }
+    }
+
+    /**
      * Suspend staff account.
      * POST /api/admin/staff/{id}/suspend
      */
     public function suspend(string $id): void
     {
+        if (!$this->requireCriticalGate('users.suspend', 'staff.suspend')) {
+            return;
+        }
         $userId = (int) $id;
-        $this->protectFinalSuperAdmin($userId, 'ระงับการใช้งาน');
+        try {
+            $this->protectFinalSuperAdmin($userId, 'ระงับการใช้งาน');
+        } catch (\InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return;
+        }
 
         if ($userId === (int) Auth::id()) {
             $this->response->json(['success' => false, 'message' => 'ไม่สามารถระงับบัญชีของตนเองได้'], 400);
@@ -166,6 +216,7 @@ class StaffManagementController extends Controller
 
         AuditService::log('staff_management', 'suspend_account', (string) $userId, null, [
             'suspended_by' => Auth::id(),
+            'correlation_id' => \App\Services\AdminControlCenterService::correlationId(),
         ]);
 
         $this->response->json(['success' => true, 'message' => 'ระงับการใช้งานบัญชีเจ้าหน้าที่เรียบร้อยแล้ว']);
@@ -177,11 +228,15 @@ class StaffManagementController extends Controller
      */
     public function activate(string $id): void
     {
+        if (!$this->requireCriticalGate('users.update', 'staff.activate')) {
+            return;
+        }
         $userId = (int) $id;
         Database::execute("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?", [$userId]);
 
         AuditService::log('staff_management', 'activate_account', (string) $userId, null, [
             'activated_by' => Auth::id(),
+            'correlation_id' => \App\Services\AdminControlCenterService::correlationId(),
         ]);
 
         $this->response->json(['success' => true, 'message' => 'เปิดใช้งานบัญชีเจ้าหน้าที่เรียบร้อยแล้ว']);
@@ -193,6 +248,9 @@ class StaffManagementController extends Controller
      */
     public function updateRole(string $id): void
     {
+        if (!$this->requireCriticalGate('roles.manage', 'staff.role.update')) {
+            return;
+        }
         $userId = (int) $id;
         $roleId = (int) $this->request->input('role_id');
         $department = trim((string) $this->request->input('department'));
@@ -209,7 +267,12 @@ class StaffManagementController extends Controller
             [$userId]
         );
         if ($currentRole === 'super_admin' && $role['slug'] !== 'super_admin') {
-            $this->protectFinalSuperAdmin($userId, 'เปลี่ยนบทบาทของผู้ดูแลระบบสูงสุดคนสุดท้าย');
+            try {
+                $this->protectFinalSuperAdmin($userId, 'เปลี่ยนบทบาทของผู้ดูแลระบบสูงสุดคนสุดท้าย');
+            } catch (\InvalidArgumentException $e) {
+                $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+                return;
+            }
         }
 
         Database::transaction(function () use ($userId, $roleId, $department, $role) {
@@ -226,6 +289,7 @@ class StaffManagementController extends Controller
             'new_role_name' => $role['name'],
             'department' => $department,
             'updated_by' => Auth::id(),
+            'correlation_id' => \App\Services\AdminControlCenterService::correlationId(),
         ]);
 
         $this->response->json(['success' => true, 'message' => 'อัปเดตบทบาทและแผนกเรียบร้อยแล้ว']);
@@ -237,11 +301,15 @@ class StaffManagementController extends Controller
      */
     public function revokeSessions(string $id): void
     {
+        if (!$this->requireCriticalGate('security.sessions.revoke', 'security.sessions.revoke')) {
+            return;
+        }
         $userId = (int) $id;
         Auth::revokeAllSessions($userId);
 
         AuditService::log('staff_management', 'revoke_sessions', (string) $userId, null, [
             'revoked_by' => Auth::id(),
+            'correlation_id' => \App\Services\AdminControlCenterService::correlationId(),
         ]);
 
         $this->response->json(['success' => true, 'message' => 'ยกเลิกเซสชันการใช้งานทั้งหมดของบัญชีนี้เรียบร้อยแล้ว']);
@@ -253,6 +321,9 @@ class StaffManagementController extends Controller
      */
     public function relink(string $id): void
     {
+        if (!$this->requireCriticalGate('security.mfa.manage', 'staff.google.relink')) {
+            return;
+        }
         $userId = (int) $id;
         $googleAuth = new GoogleAuthService();
         $googleAuth->unlinkUser($userId);
@@ -262,6 +333,7 @@ class StaffManagementController extends Controller
 
         AuditService::log('staff_management', 'reset_google_link', (string) $userId, null, [
             'reset_by' => Auth::id(),
+            'correlation_id' => \App\Services\AdminControlCenterService::correlationId(),
         ]);
 
         $this->response->json(['success' => true, 'message' => 'รีเซ็ตการเชื่อมต่อ Google สำเร็จ ผู้ใช้สามารถผูกบัญชีใหม่เมื่อเข้าสู่ระบบ']);

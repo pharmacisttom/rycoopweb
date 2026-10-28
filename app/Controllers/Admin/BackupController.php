@@ -8,7 +8,10 @@ use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Session;
+use App\Exceptions\SecurityGateException;
+use App\Services\AdminControlCenterService;
 use App\Services\AuditService;
+use App\Services\DualControlSecurityService;
 use App\Services\Logger;
 use PDO;
 use ZipArchive;
@@ -29,6 +32,11 @@ class BackupController extends Controller
         }
     }
 
+    public function setBackupDir(string $backupDir): void
+    {
+        $this->backupDir = $backupDir;
+    }
+
     public function index(): void
     {
         $backups = [];
@@ -37,12 +45,12 @@ class BackupController extends Controller
 
         if (is_dir($this->backupDir)) {
             $files = glob($this->backupDir . '/*.*');
-            $validFiles = array_filter($files, function($f) {
+            $validFiles = array_filter($files, function ($f) {
                 return preg_match('/\.(sql|zip)$/i', $f);
             });
 
             // Sort newest first
-            usort($validFiles, function($a, $b) {
+            usort($validFiles, function ($a, $b) {
                 return filemtime($b) - filemtime($a);
             });
 
@@ -102,7 +110,7 @@ class BackupController extends Controller
             'totalSize' => $totalSize,
             'lastBackupTime' => $lastBackupTime ? date('Y-m-d H:i:s', $lastBackupTime) : null,
             'tableCount' => count($tables),
-            'dbSize' => (int)($dbStats['db_size'] ?? 0),
+            'dbSize' => (int) ($dbStats['db_size'] ?? 0),
         ], 'layouts.admin');
     }
 
@@ -209,9 +217,9 @@ class BackupController extends Controller
         $filePath = realpath($this->backupDir . '/' . $filename);
         $realBackupDir = realpath($this->backupDir);
 
-        if ($filePath && file_exists($filePath) && str_starts_with($filePath, $realBackupDir)) {
+        if ($filePath && file_exists($filePath) && $realBackupDir && str_starts_with($filePath, $realBackupDir)) {
             AuditService::log('backups', 'download', $filename);
-            
+
             $mimeType = str_ends_with($filename, '.zip') ? 'application/zip' : 'application/sql';
             header('Content-Type: ' . $mimeType);
             header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
@@ -226,72 +234,134 @@ class BackupController extends Controller
         $this->redirect(url('admin/backups'));
     }
 
+    /**
+     * Restore Database from Backup — Strictly Enforces Dual-Control Approval,
+     * Server-Side Step-Up MFA, Target/Integrity Binding, and Policy Kill-Switch.
+     */
     public function restoreBackup(): void
     {
-        $filename = basename((string)$this->request->input('filename'));
-
-        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.sql$/i', $filename)) {
-            Session::flash('error', 'สามารถกู้คืนได้เฉพาะไฟล์ฐานข้อมูล (.sql) เท่านั้น');
-            $this->redirect(url('admin/backups'));
-            return;
-        }
-
-        $filePath = realpath($this->backupDir . '/' . $filename);
-        $realBackupDir = realpath($this->backupDir);
-
-        if (!$filePath || !file_exists($filePath) || !str_starts_with($filePath, $realBackupDir)) {
-            Session::flash('error', 'ไม่พบไฟล์สำรองข้อมูลสำหรับกู้คืน');
-            $this->redirect(url('admin/backups'));
-            return;
-        }
+        $correlationId = AdminControlCenterService::correlationId();
+        $filename = basename((string) ($this->request->input('filename') ?? $this->request->input('file') ?? ''));
+        $approvalRequestId = (int) ($this->request->input('approval_request_id') ?? $this->request->input('approval_id') ?? 0);
+        $stepUpCode = $this->request->input('step_up_code') !== null
+            ? (string) $this->request->input('step_up_code')
+            : ($this->request->input('totp_code') !== null ? (string) $this->request->input('totp_code') : null);
 
         try {
-            $sqlContent = file_get_contents($filePath);
-            if ($sqlContent === false || empty(trim($sqlContent))) {
-                throw new \Exception("ไฟล์สำรองว่างเปล่าหรือไม่สามารถอ่านได้");
+            $result = DualControlSecurityService::executeApprovedRestore(
+                $approvalRequestId,
+                (int) (Auth::id() ?? 0),
+                $filename,
+                $stepUpCode,
+                $this->backupDir,
+                null,
+                $this->request->ip()
+            );
+
+            if ($this->request->isAjax()) {
+                $this->response->json([
+                    'success' => true,
+                    'correlation_id' => $correlationId,
+                    'message' => "กู้คืนฐานข้อมูลจากไฟล์ {$filename} สำเร็จเรียบร้อยแล้ว",
+                    'data' => $result,
+                ]);
+                return;
             }
 
-            $pdo = Database::connect();
-            $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, 0);
-            $pdo->exec("SET FOREIGN_KEY_CHECKS=0;");
-
-            // Execute raw SQL dump
-            $pdo->exec($sqlContent);
-
-            $pdo->exec("SET FOREIGN_KEY_CHECKS=1;");
-
-            AuditService::log('backups', 'restore', $filename);
-            Logger::info("Database successfully restored from backup: {$filename}");
-
             Session::flash('success', "กู้คืนฐานข้อมูลจากไฟล์ {$filename} สำเร็จเรียบร้อยแล้ว");
+        } catch (SecurityGateException $e) {
+            if ($this->request->isAjax()) {
+                $this->response->json([
+                    'success' => false,
+                    'code' => $e->getErrorCode(),
+                    'correlation_id' => $correlationId,
+                    'message' => $e->getMessage(),
+                ], $e->getHttpStatus());
+                return;
+            }
+            Session::flash('error', $e->getMessage());
         } catch (\Throwable $e) {
-            Logger::error("Database restore failed: " . $e->getMessage());
-            Session::flash('error', "เกิดข้อผิดพลาดในการกู้คืนฐานข้อมูล: " . $e->getMessage());
+            Logger::error("Database restore failed [{$correlationId}]: " . $e->getMessage());
+            if ($this->request->isAjax()) {
+                $this->response->json([
+                    'success' => false,
+                    'code' => 'RESTORE_EXECUTION_FAILED',
+                    'correlation_id' => $correlationId,
+                    'message' => 'เกิดข้อผิดพลาดในการกู้คืนฐานข้อมูล',
+                ], 500);
+                return;
+            }
+            Session::flash('error', 'เกิดข้อผิดพลาดในการกู้คืนฐานข้อมูล');
         }
 
         $this->redirect(url('admin/backups'));
     }
 
+    /**
+     * Delete Backup File — Requires Backend RBAC Permission + Fresh Step-Up MFA.
+     */
     public function deleteBackup(): void
     {
-        $filename = basename((string)$this->request->input('filename'));
+        $correlationId = AdminControlCenterService::correlationId();
+        $filename = basename((string) $this->request->input('filename'));
+        $stepUpCode = $this->request->input('step_up_code') !== null
+            ? (string) $this->request->input('step_up_code')
+            : null;
 
-        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(sql|zip)$/i', $filename)) {
-            Session::flash('error', 'ชื่อไฟล์ไม่ถูกต้อง');
-            $this->redirect(url('admin/backups'));
-            return;
-        }
+        try {
+            $userId = (int) (Auth::id() ?? 0);
+            if (!DualControlSecurityService::hasExecutePermission($userId, 'backup.delete')) {
+                throw new SecurityGateException(
+                    'คุณไม่มีสิทธิ์ลบไฟล์สำรองข้อมูล (Permission Denied)',
+                    403,
+                    'BACKUP_DELETE_PERMISSION_DENIED'
+                );
+            }
 
-        $filePath = realpath($this->backupDir . '/' . $filename);
-        $realBackupDir = realpath($this->backupDir);
+            DualControlSecurityService::requireFreshStepUpMfa(
+                $userId,
+                $stepUpCode,
+                'backup_delete',
+                true,
+                $this->request->ip()
+            );
 
-        if ($filePath && file_exists($filePath) && str_starts_with($filePath, $realBackupDir)) {
-            @unlink($filePath);
-            AuditService::log('backups', 'delete', $filename);
-            Logger::info("Backup file deleted: {$filename}");
-            Session::flash('success', "ลบไฟล์สำรอง {$filename} เรียบร้อยแล้ว");
-        } else {
-            Session::flash('error', 'ไม่พบไฟล์สำรองข้อมูลที่ต้องการลบ');
+            if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(sql|zip)$/i', $filename)) {
+                throw new SecurityGateException('ชื่อไฟล์ไม่ถูกต้อง', 422, 'INVALID_BACKUP_FILENAME');
+            }
+
+            $filePath = realpath($this->backupDir . '/' . $filename);
+            $realBackupDir = realpath($this->backupDir);
+
+            if ($filePath && file_exists($filePath) && $realBackupDir && str_starts_with($filePath, $realBackupDir)) {
+                @unlink($filePath);
+                DualControlSecurityService::logSecurityAudit('backups', 'delete', $filename, [
+                    'deleted_by' => $userId,
+                ]);
+                Logger::info("Backup file deleted [{$correlationId}]: {$filename}");
+                if ($this->request->isAjax()) {
+                    $this->response->json([
+                        'success' => true,
+                        'correlation_id' => $correlationId,
+                        'message' => "ลบไฟล์สำรอง {$filename} เรียบร้อยแล้ว",
+                    ]);
+                    return;
+                }
+                Session::flash('success', "ลบไฟล์สำรอง {$filename} เรียบร้อยแล้ว");
+            } else {
+                throw new SecurityGateException('ไม่พบไฟล์สำรองข้อมูลที่ต้องการลบ', 404, 'BACKUP_FILE_NOT_FOUND');
+            }
+        } catch (SecurityGateException $e) {
+            if ($this->request->isAjax()) {
+                $this->response->json([
+                    'success' => false,
+                    'code' => $e->getErrorCode(),
+                    'correlation_id' => $correlationId,
+                    'message' => $e->getMessage(),
+                ], $e->getHttpStatus());
+                return;
+            }
+            Session::flash('error', $e->getMessage());
         }
 
         $this->redirect(url('admin/backups'));
@@ -323,8 +393,8 @@ class BackupController extends Controller
             if (!empty($rows)) {
                 $dump .= "-- Dumping data for table `{$table}`\n";
                 foreach ($rows as $row) {
-                    $fields = array_map(function($val) use ($pdo) {
-                        return $val === null ? 'NULL' : $pdo->quote((string)$val);
+                    $fields = array_map(function ($val) use ($pdo) {
+                        return $val === null ? 'NULL' : $pdo->quote((string) $val);
                     }, array_values($row));
                     $dump .= "INSERT INTO `{$table}` VALUES (" . implode(', ', $fields) . ");\n";
                 }

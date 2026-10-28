@@ -435,4 +435,66 @@ class MfaController extends Controller
     {
         MfaRateLimiter::clear($userId, $ip);
     }
+
+    /**
+     * Server-Side Step-Up MFA Verification for critical administrative actions.
+     * Verifies a fresh 6-digit TOTP code against the active authenticated session
+     * and records freshness in server session (never relies solely on login-time MFA).
+     * POST /api/auth/mfa/step-up
+     */
+    public function stepUp(): void
+    {
+        $correlationId = \App\Services\AdminControlCenterService::correlationId();
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+            header('X-Correlation-Id: ' . $correlationId);
+        }
+
+        if (!Auth::check() || !Auth::user()) {
+            $this->response->json([
+                'success' => false,
+                'code' => 'UNAUTHORIZED',
+                'correlation_id' => $correlationId,
+                'message' => 'เซสชันหมดอายุหรือยังไม่ได้ยืนยันตัวตน กรุณาเข้าสู่ระบบใหม่',
+            ], 401);
+            return;
+        }
+
+        $userId = (int) Auth::id();
+        $code = (string) ($this->request->input('code') ?? $this->request->input('totp_code') ?? '');
+        $scope = trim((string) $this->request->input('scope', 'general')) ?: 'general';
+
+        try {
+            $result = \App\Services\DualControlSecurityService::verifyAndRecordStepUpMfa(
+                $userId,
+                $code,
+                $scope,
+                $this->request->ip()
+            );
+
+            $this->response->json([
+                'success' => true,
+                'code' => 'STEP_UP_MFA_VERIFIED',
+                'correlation_id' => $correlationId,
+                'message' => 'ยืนยันตัวตนขั้นสูง (Step-Up MFA) สำเร็จ',
+                'data' => $result,
+            ], 200);
+        } catch (\App\Exceptions\SecurityGateException $e) {
+            $this->response->json([
+                'success' => false,
+                'code' => $e->getErrorCode(),
+                'correlation_id' => $correlationId,
+                'message' => $e->getMessage(),
+                'context' => $e->getContext(),
+            ], $e->getHttpStatus());
+        } catch (\Throwable $e) {
+            Logger::error('Step-Up MFA Error [' . $correlationId . ']: ' . $e->getMessage());
+            $this->response->json([
+                'success' => false,
+                'code' => 'INTERNAL_ERROR',
+                'correlation_id' => $correlationId,
+                'message' => 'ไม่สามารถตรวจสอบรหัส Step-Up MFA ได้ในขณะนี้',
+            ], 500);
+        }
+    }
 }

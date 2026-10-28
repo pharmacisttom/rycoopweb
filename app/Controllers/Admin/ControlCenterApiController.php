@@ -68,6 +68,14 @@ class ControlCenterApiController extends Controller
                 'correlation_id' => $correlationId,
                 'data' => $payload,
             ]);
+        } catch (\App\Exceptions\SecurityGateException $e) {
+            $this->response->json([
+                'success' => false,
+                'code' => $e->getErrorCode(),
+                'correlation_id' => $correlationId,
+                'message' => $e->getMessage(),
+                'context' => $e->getContext(),
+            ], $e->getHttpStatus());
         } catch (\InvalidArgumentException $e) {
             $this->response->json([
                 'success' => false,
@@ -82,6 +90,72 @@ class ControlCenterApiController extends Controller
                 'code' => 'INTERNAL_ERROR',
                 'correlation_id' => $correlationId,
                 'message' => 'ไม่สามารถประมวลผลข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง',
+            ], 500);
+        }
+    }
+
+    /**
+     * Execute a Dual-Control / Security Gate action with standard authentication,
+     * non-member role guard, correlation ID header, and SecurityGateException mapping.
+     */
+    private function executeSecurityAction(callable $callback): void
+    {
+        $correlationId = AdminControlCenterService::correlationId();
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private');
+            header('X-Correlation-Id: ' . $correlationId);
+        }
+
+        if (!Auth::check() || !Auth::user()) {
+            $this->response->json([
+                'success' => false,
+                'code' => 'UNAUTHORIZED',
+                'correlation_id' => $correlationId,
+                'message' => 'เซสชันหมดอายุหรือยังไม่ได้ยืนยันตัวตน กรุณาเข้าสู่ระบบใหม่',
+            ], 401);
+            return;
+        }
+
+        $roleSlug = (string) (Auth::user()['role_slug'] ?? '');
+        if ($roleSlug === '' || $roleSlug === 'member') {
+            $this->response->json([
+                'success' => false,
+                'code' => 'FORBIDDEN',
+                'correlation_id' => $correlationId,
+                'message' => 'บัญชีสมาชิกไม่สามารถเข้าถึงศูนย์ควบคุมผู้ดูแลระบบได้',
+            ], 403);
+            return;
+        }
+
+        try {
+            $payload = $callback();
+            $this->response->json([
+                'success' => true,
+                'correlation_id' => $correlationId,
+                'data' => $payload,
+            ]);
+        } catch (\App\Exceptions\SecurityGateException $e) {
+            $this->response->json([
+                'success' => false,
+                'code' => $e->getErrorCode(),
+                'correlation_id' => $correlationId,
+                'message' => $e->getMessage(),
+                'context' => $e->getContext(),
+            ], $e->getHttpStatus());
+        } catch (\InvalidArgumentException $e) {
+            $this->response->json([
+                'success' => false,
+                'code' => 'VALIDATION_ERROR',
+                'correlation_id' => $correlationId,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Throwable $e) {
+            \App\Core\Logger::error('DualControl Security Gate Error [' . $correlationId . ']: ' . $e->getMessage());
+            $this->response->json([
+                'success' => false,
+                'code' => 'INTERNAL_ERROR',
+                'correlation_id' => $correlationId,
+                'message' => 'ไม่สามารถประมวลผลคำสั่งด้านความปลอดภัยได้ในขณะนี้',
             ], 500);
         }
     }
@@ -361,5 +435,181 @@ class ControlCenterApiController extends Controller
                 ];
             }
         );
+    }
+
+    /**
+     * GET /api/admin/approvals
+     * List Dual-Control approval requests with redacted metadata and policy status.
+     */
+    public function approvalsList(): void
+    {
+        $this->authorizeAndRespond(
+            ['backup.view', 'backup.restore.request', 'backup.restore.approve', 'security.view', 'audit.view', 'operations.view', 'dashboard.view'],
+            function () {
+                $status = (string) $this->request->query('status', 'all');
+                $module = (string) $this->request->query('module', '');
+                $limit = max(1, min(100, (int) $this->request->query('limit', 50)));
+                $requests = \App\Services\DualControlSecurityService::listRequests($status, $module, $limit);
+                return [
+                    'generated_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
+                    'restore_execution_enabled' => \App\Services\DualControlSecurityService::isRestoreExecutionEnabled(),
+                    'requests' => $requests,
+                ];
+            }
+        );
+    }
+
+    /**
+     * POST /api/admin/approvals
+     * Create a new Dual-Control approval request (Maker action).
+     */
+    public function createApprovalRequest(): void
+    {
+        $this->executeSecurityAction(function () {
+            $userId = (int) Auth::id();
+            $actionKey = trim((string) $this->request->input('action_key', ''));
+            $reason = trim((string) $this->request->input('reason', ''));
+            $targetType = $this->request->input('target_type') !== null
+                ? trim((string) $this->request->input('target_type'))
+                : null;
+            $targetId = $this->request->input('target_id') !== null
+                ? trim((string) $this->request->input('target_id'))
+                : null;
+            $payload = is_array($this->request->input('payload')) ? $this->request->input('payload') : [];
+
+            return \App\Services\DualControlSecurityService::createRequest(
+                $userId,
+                $actionKey,
+                $reason,
+                $targetType,
+                $targetId,
+                $payload
+            );
+        });
+    }
+
+    /**
+     * POST /api/admin/approvals/{id}/approve
+     * Approve a pending Dual-Control request (Checker action).
+     * Enforces: Checker permission, Maker != Checker (including super_admin),
+     * pending status, non-expired, and fresh Server-Side Step-Up MFA.
+     */
+    public function approveRequest(string $id): void
+    {
+        $this->executeSecurityAction(function () use ($id) {
+            $checkerUserId = (int) Auth::id();
+            $requestId = (int) $id;
+            $reviewNote = trim((string) $this->request->input('review_note', ''));
+            $inlineTotp = $this->request->input('totp_code') !== null
+                ? (string) $this->request->input('totp_code')
+                : ($this->request->input('code') !== null ? (string) $this->request->input('code') : null);
+            $expectedAction = $this->request->input('expected_action') !== null
+                ? trim((string) $this->request->input('expected_action'))
+                : null;
+            $expectedTarget = $this->request->input('expected_target') !== null
+                ? trim((string) $this->request->input('expected_target'))
+                : null;
+
+            return \App\Services\DualControlSecurityService::approveRequest(
+                $requestId,
+                $checkerUserId,
+                $reviewNote,
+                $inlineTotp,
+                $expectedAction,
+                $expectedTarget,
+                $this->request->ip()
+            );
+        });
+    }
+
+    /**
+     * POST /api/admin/approvals/{id}/reject
+     * Reject a pending Dual-Control request (Checker action).
+     */
+    public function rejectRequest(string $id): void
+    {
+        $this->executeSecurityAction(function () use ($id) {
+            $checkerUserId = (int) Auth::id();
+            $requestId = (int) $id;
+            $reviewNote = trim((string) $this->request->input('review_note', ''));
+
+            return \App\Services\DualControlSecurityService::rejectRequest(
+                $requestId,
+                $checkerUserId,
+                $reviewNote
+            );
+        });
+    }
+
+    /**
+     * POST /api/admin/approvals/{id}/cancel
+     * Cancel a pending Dual-Control request (Maker action).
+     */
+    public function cancelRequest(string $id): void
+    {
+        $this->executeSecurityAction(function () use ($id) {
+            $userId = (int) Auth::id();
+            $requestId = (int) $id;
+            $note = trim((string) $this->request->input('reason', ''));
+
+            return \App\Services\DualControlSecurityService::cancelRequest(
+                $requestId,
+                $userId,
+                $note
+            );
+        });
+    }
+
+    /**
+     * POST /api/admin/backups/restore-request
+     * Maker endpoint to submit a Dual-Control Backup Restore Request with SHA-256 file pinning.
+     */
+    public function createRestoreRequest(): void
+    {
+        $this->executeSecurityAction(function () {
+            $userId = (int) Auth::id();
+            $filename = basename(trim((string) ($this->request->input('file') ?? $this->request->input('target_id') ?? '')));
+            $reason = trim((string) $this->request->input('reason', ''));
+
+            return \App\Services\DualControlSecurityService::createRequest(
+                $userId,
+                'backup.restore.request',
+                $reason,
+                'backup_archive',
+                $filename,
+                ['requested_via' => 'api/admin/backups/restore-request']
+            );
+        });
+    }
+
+    /**
+     * POST /api/admin/backups/restore-execute
+     * Two-Phase Non-Transactional Restore Execution Gate.
+     * Requires:
+     * 1. Valid Dual-Control approved request (Maker != Checker).
+     * 2. Exact filename & SHA-256 integrity match.
+     * 3. Fresh Server-Side Step-Up MFA.
+     * 4. BACKUP_RESTORE_EXECUTION_ENABLED=true (defaults to false -> 423 Locked).
+     */
+    public function executeRestore(): void
+    {
+        $this->executeSecurityAction(function () {
+            $userId = (int) Auth::id();
+            $approvalId = (int) ($this->request->input('approval_request_id') ?? $this->request->input('approval_id') ?? 0);
+            $filename = basename(trim((string) ($this->request->input('file') ?? $this->request->input('target_id') ?? '')));
+            $inlineTotp = $this->request->input('totp_code') !== null
+                ? (string) $this->request->input('totp_code')
+                : ($this->request->input('code') !== null ? (string) $this->request->input('code') : null);
+
+            return \App\Services\DualControlSecurityService::executeApprovedRestore(
+                $approvalId,
+                $userId,
+                $filename,
+                $inlineTotp,
+                null,
+                null,
+                $this->request->ip()
+            );
+        });
     }
 }
