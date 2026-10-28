@@ -14,7 +14,8 @@ CREATE TABLE roles(id INTEGER PRIMARY KEY,name TEXT,slug TEXT);CREATE TABLE user
 CREATE TABLE permissions(id INTEGER PRIMARY KEY,module TEXT,action TEXT);CREATE TABLE role_permissions(role_id INTEGER,permission_id INTEGER);
 CREATE TABLE audit_logs(id INTEGER PRIMARY KEY,user_id INTEGER,module TEXT,action TEXT,record_id TEXT,old_values TEXT,new_values TEXT,ip_address TEXT,user_agent TEXT,created_at TEXT);
 CREATE TABLE user_mfa_recovery_codes(id INTEGER PRIMARY KEY,user_id INTEGER,code_hash TEXT,created_at TEXT,used_at TEXT);
-CREATE TABLE rate_limit_attempts(`key` TEXT PRIMARY KEY,attempts INTEGER,expires_at TEXT);
+CREATE TABLE rate_limit_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT,rate_key TEXT NOT NULL,ip_address TEXT NOT NULL,window_started_at TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL,UNIQUE(rate_key,ip_address));
+CREATE TABLE IF NOT EXISTS login_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,email TEXT,status TEXT,failure_reason TEXT,ip_address TEXT,user_agent TEXT,created_at TEXT);
 INSERT INTO users(id,name,email,status) VALUES(1,'Fixture administrator','admin@example.invalid','active'),(2,'Fixture editor','editor@example.invalid','active'),(3,'Fixture publisher','publisher@example.invalid','active'),(4,'Fixture member','member@example.invalid','active');
 INSERT INTO roles VALUES(1,'Admin','super_admin'),(2,'Editor','custom_editor'),(3,'Publisher','custom_publisher'),(4,'Member','member');
 INSERT INTO user_roles VALUES(1,1),(2,2),(3,3),(4,4);");

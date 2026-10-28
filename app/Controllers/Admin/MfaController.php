@@ -10,6 +10,7 @@ use App\Core\Database;
 use App\Core\Logger;
 use App\Core\Session;
 use App\Services\AuditService;
+use App\Services\MfaRateLimiter;
 use App\Services\TwoFactorService;
 
 class MfaController extends Controller
@@ -178,6 +179,7 @@ class MfaController extends Controller
         // Mark 2FA verified in active session
         Auth::verify2FA();
         Session::regenerate();
+        $this->clearRateLimit($userId, $this->request->ip());
 
         AuditService::log('mfa', 'enroll_confirmed', (string) $userId, null, [
             'method' => 'totp',
@@ -398,23 +400,12 @@ class MfaController extends Controller
 
     private function isRateLimited(int $userId, string $ip): bool
     {
-        $key = "mfa_rate:{$userId}";
-        $attempts = (int) Database::value(
-            "SELECT attempts FROM rate_limit_attempts WHERE `key` = ? AND expires_at > NOW() LIMIT 1",
-            [$key]
-        );
-        return $attempts >= 5;
+        return MfaRateLimiter::isRateLimited($userId, $ip);
     }
 
     private function recordFailedAttempt(int $userId, string $email, string $reason, string $ip, string $ua): void
     {
-        $key = "mfa_rate:{$userId}";
-        Database::execute(
-            "INSERT INTO rate_limit_attempts (`key`, attempts, expires_at)
-             VALUES (?, 1, DATE_ADD(NOW(), INTERVAL 5 MINUTE))
-             ON DUPLICATE KEY UPDATE attempts = IF(expires_at <= NOW(), 1, attempts + 1), expires_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE)",
-            [$key]
-        );
+        MfaRateLimiter::recordFailedAttempt($userId, $ip);
 
         try {
             Database::execute(
@@ -427,7 +418,6 @@ class MfaController extends Controller
 
     private function clearRateLimit(int $userId, string $ip): void
     {
-        $key = "mfa_rate:{$userId}";
-        Database::execute("DELETE FROM rate_limit_attempts WHERE `key` = ?", [$key]);
+        MfaRateLimiter::clear($userId, $ip);
     }
 }
