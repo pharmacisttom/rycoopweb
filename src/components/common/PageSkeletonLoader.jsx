@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import React from 'react';
 
 export default function PageSkeletonLoader() {
@@ -6,12 +7,7 @@ export default function PageSkeletonLoader() {
       <div className="coop-logo-spinner" aria-hidden="true">
         <span className="coop-logo-spinner__ring" />
         <span className="coop-logo-spinner__halo" />
-        <img
-          className="coop-logo-spinner__logo"
-          src="/assets/img/logo.webp"
-          alt=""
-          onError={(event) => { event.currentTarget.src = '/img/logo.webp'; }}
-        />
+        <CoopBrandLogo variant="emblem" size={76} />
       </div>
       <p className="coop-page-loader__text">กำลังโหลดข้อมูล</p>
       <span className="coop-page-loader__dots" aria-hidden="true">•••</span>

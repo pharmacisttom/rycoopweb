@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import React, { useState } from 'react';
 import { Clock, Moon, ShieldCheck, Sun } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -53,19 +54,9 @@ export default function MfaAuthShell({
     <div className="mfa-auth-viewport" data-theme={activeTheme}>
       {/* Top Cooperative Brand Header */}
       <header className="mfa-auth-topbar">
-        <div className="mfa-auth-brand">
-          <img
-            src="/assets/img/logo.webp"
-            alt="ตราสัญลักษณ์สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด"
-            className="mfa-auth-logo"
-            onError={(e) => {
-              e.currentTarget.src = '/img/logo.webp';
-            }}
-          />
-          <div className="mfa-auth-brand-text">
-            <span className="mfa-auth-coop-name">สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด</span>
-            <span className="mfa-auth-system-tag">RYCOOPWEB Secure Login</span>
-          </div>
+        <div className="mfa-auth-brand" style={{flexDirection:"column",alignItems:"flex-start",gap:4}}>
+          <CoopBrandLogo variant="compact" showEstablished />
+          <span className="mfa-auth-system-tag">RYCOOPWEB Secure Login</span>
         </div>
 
         <button

@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, Upload, Activity, KeyRound, LogOut, ShieldCheck, ArrowLeft, Sun, Moon } from 'lucide-react';
@@ -25,7 +26,7 @@ export default function AdminMemberShell({ title, description, children }) {
   }
   return <div className="member-admin-layout">
     <aside className="member-admin-sidebar" aria-label="เมนูระบบสมาชิก">
-      <Link to="/admin/members/dashboard" className="member-admin-brand"><ShieldCheck size={32} /><span>ระบบสมาชิก<strong>สหกรณ์ สธ.ระยอง</strong></span></Link>
+      <Link to="/admin/members/dashboard" className="member-admin-brand"><CoopBrandLogo variant="sidebar" /></Link>
       <div className="member-admin-identity"><strong>{user?.name || 'ผู้ดูแลระบบสมาชิก'}</strong><span>{user?.role === 'super_admin' ? 'ผู้ดูแลระบบหลัก' : 'ผู้ดูแลสมาชิกและปันผล'}</span></div>
       <nav>{menu.map(([path, label, Icon]) => <NavLink key={path} end to={path}><Icon size={19} /><span>{label}</span></NavLink>)}</nav>
       <div className="member-admin-sidebar-footer">

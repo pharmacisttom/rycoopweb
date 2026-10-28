@@ -160,7 +160,7 @@ try {
   const verifyHtml = renderToStaticMarkup(
     React.createElement(StaticRouter, { location: '/admin/mfa/verify' }, React.createElement(MfaPage, { mode: 'verify' }))
   );
-  assert.ok(verifyHtml.includes('/assets/img/logo.webp'), 'Official cooperative logo rendered');
+  assert.ok(verifyHtml.includes('coop-brand-logo') && verifyHtml.includes('coop-logo.webp'), 'Official cooperative logo rendered');
   assert.ok(verifyHtml.includes('สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด'), 'Cooperative Thai name rendered');
   assert.ok(verifyHtml.includes('RYCOOPWEB Secure Login'), 'RYCOOPWEB Secure Login header tag rendered');
   assert.ok(verifyHtml.includes('ยืนยันตัวตนสองขั้นตอน'), 'Verify Thai title rendered');

@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -331,20 +332,7 @@ export default function AdminControlCenterShell({
       >
         <div className="acc-sidebar-header">
           <Link to="/admin/dashboard" className="acc-brand" title="ศูนย์ควบคุมผู้ดูแลระบบ สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด">
-            <img
-              src="/assets/images/logo.png"
-              alt="ตราสัญลักษณ์สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด"
-              className="acc-brand-logo"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            {!collapsed && (
-              <div className="acc-brand-text">
-                <span className="acc-brand-title">RYCOOP ADMIN 3.0</span>
-                <span className="acc-brand-subtitle">สหกรณ์ออมทรัพย์สาธารณสุขระยอง</span>
-              </div>
-            )}
+            <CoopBrandLogo variant={collapsed ? 'emblem' : 'sidebar'} tone="dark" showEstablished size={collapsed ? 38 : 44} />
           </Link>
 
           <button
@@ -490,6 +478,7 @@ export default function AdminControlCenterShell({
       <div className="acc-main-wrapper">
         <header className="acc-topbar">
           <div className="acc-topbar-left">
+            <CoopBrandLogo variant="emblem" size={32} />
             <button
               type="button"
               className="acc-mobile-toggle"

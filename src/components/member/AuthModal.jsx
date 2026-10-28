@@ -1,3 +1,4 @@
+import CoopBrandLogo from '../branding/CoopBrandLogo';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Lock, User, KeyRound, ShieldAlert, Eye, EyeOff } from 'lucide-react';
@@ -128,12 +129,7 @@ export default function AuthModal() {
               boxShadow: 'var(--shadow-md)'
             }}
           >
-            <img
-              src="/assets/img/logo.webp"
-              alt="Logo"
-              style={{ width: '32px', height: '32px', objectFit: 'contain' }}
-              onError={(e) => { e.target.src = '/img/logo.webp'; }}
-            />
+            <CoopBrandLogo variant="emblem" size={32} />
           </div>
 
           <h3 style={{ color: '#fff', fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.2rem 0' }}>
