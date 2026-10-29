@@ -33,5 +33,11 @@ try {
         $matched=array_values(array_filter($routes,fn($route)=>$route['method']==='GET'&&preg_match($route['regex'],$uri)));
         workflowCheck(count($matched)===1&&str_ends_with($matched[0]['handler'],$method),'group index has one canonical match: '.$uri);
     }
+    foreach(['AdminControlCenterPage.jsx','AdminAccessPage.jsx'] as $page){
+        $source=file_get_contents(__DIR__.'/../src/pages/'.$page);
+        preg_match_all("#memberAdminApi\\('(/api/admin/staff/)'#",$source,$matches);
+        workflowCheck(count($matches[1])===1,'frontend staff list uses trailing slash: '.$page);
+        foreach($matches[1] as $url){$_SERVER=['REQUEST_METHOD'=>'GET','REQUEST_URI'=>$url,'SCRIPT_NAME'=>'/index.php'];$normalized=(new Request())->uri();$matched=array_values(array_filter($routes,fn($route)=>$route['method']==='GET'&&preg_match($route['regex'],$normalized)));workflowCheck(count($matched)===1&&str_ends_with($matched[0]['handler'],'StaffManagementController@index'),'frontend URL reaches actual registered staff handler: '.$page);}
+    }
     $called=false;$root=new Router();$root->get('/',function($request,$response)use(&$called){$called=true;});staffDispatch($root,'/');workflowCheck($called,'root route remains reachable');
 } finally {workflowFinish();}

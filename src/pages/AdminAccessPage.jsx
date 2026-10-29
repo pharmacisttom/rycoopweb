@@ -16,7 +16,7 @@ export default function AdminAccessPage(){
       .then(([roles,users])=>{if(!controller.signal.aborted){setCatalog(roles);setAccounts(users);}}).catch(exception=>{if(exception.name!=='AbortError')setError(exception.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[query,page,refresh]);
-  useEffect(()=>{const controller=new AbortController();setMfaError('');memberAdminApi('/api/admin/staff',{signal:controller.signal}).then(result=>setDirectory(result.staff||[])).catch(exception=>{if(exception.name!=='AbortError'){setDirectory([]);setMfaError('สถานะ MFA ไม่พร้อมใช้งาน');}});return()=>controller.abort();},[refresh]);
+  useEffect(()=>{const controller=new AbortController();setMfaError('');memberAdminApi('/api/admin/staff/',{signal:controller.signal}).then(result=>setDirectory(result.staff||[])).catch(exception=>{if(exception.name!=='AbortError'){setDirectory([]);setMfaError('สถานะ MFA ไม่พร้อมใช้งาน');}});return()=>controller.abort();},[refresh]);
   async function mutate(path,data,label,scope,onSuccess,confirmation){
     setError('');setMessage('');
     try{await run(signal=>memberAdminApi(path,{data,signal}),{label,scope,confirm:confirmation});onSuccess?.();setMessage('บันทึกสำเร็จ ระบบเก็บประวัติการเปลี่ยนแปลงแล้ว');setRefresh(value=>value+1);}

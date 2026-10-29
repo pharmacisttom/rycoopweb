@@ -278,6 +278,24 @@ jobs:
           sudo apt-get install -y fonts-noto-core
       - name: Verify admin UI and critical action contracts
         run: node tests/AdminUIBrowserTest.mjs
+      - name: Set up PHP for real staff-session integration
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, mbstring, openssl, fileinfo
+          tools: composer:v2
+      - name: Install PHP dependencies for staff HTTP fixture
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress
+      - name: Verify authorized staff page against real PHP routing
+        run: node tests/StaffPageIntegrationTest.mjs
+      - name: Upload staff-session integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staff-session-integration-qa
+          path: storage/tmp/staff-page-integration/*.png
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload synthetic presentation evidence
         if: always()
         uses: actions/upload-artifact@v4
