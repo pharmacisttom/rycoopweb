@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import CoopBrandLogo from '../branding/CoopBrandLogo';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -30,6 +31,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ChangePasswordModal from '../common/ChangePasswordModal';
 import './AdminControlCenter.css';
+import './AdminUI.css';
+import { AdminBreadcrumb } from './AdminUI';
+const ShellContext=createContext(false);
 
 export const ADMIN_SIDEBAR_GROUPS = [
   {
@@ -64,8 +68,8 @@ export const ADMIN_SIDEBAR_GROUPS = [
     icon: Users,
     items: [
       { label: 'ภาพรวมสมาชิก', to: '/admin/members/dashboard', permissions: ['members.view'] },
-      { label: 'ค้นหาและจัดการสมาชิก', to: '/admin/members', permissions: ['members.view', 'members.update'] },
-      { label: 'ข้อมูลปันผล & นำเข้าข้อมูล', to: '/admin/dividends/import', permissions: ['dividends.import', 'members.import'] },
+      { label: 'ค้นหาและจัดการสมาชิก', to: '/admin/members', permissions: ['members.view'] },
+      { label: 'ข้อมูลปันผล & นำเข้าข้อมูล', to: '/admin/dividends/import', permissions: ['dividends.import'] },
       { label: 'สถานะการตรวจสอบข้อมูล', to: '/admin/members/health', permissions: ['members.view'] },
       { label: 'ตรวจสอบบุคคลล้มละลาย (LED)', to: '/admin/led/dashboard', permissions: ['members.view', 'operations.view'] },
     ],
@@ -77,8 +81,8 @@ export const ADMIN_SIDEBAR_GROUPS = [
     icon: FileSpreadsheet,
     items: [
       { label: 'รายงานการเงิน', to: '/admin/reports?category=finance', permissions: ['finance.view', 'rates.view', 'products.view', 'dividends.import'] },
-      { label: 'ข้อมูลเงินฝาก & อัตราดอกเบี้ย', to: '/admin/public-content', permissions: ['rates.view', 'finance.view'] },
-      { label: 'ข้อมูลสินเชื่อ', to: '/admin/public-content?section=products', permissions: ['products.view', 'finance.view'] },
+      { label: 'ข้อมูลเงินฝาก & อัตราดอกเบี้ย', to: '/admin/public-content', permissions: ['rates.view'] },
+      { label: 'ข้อมูลสินเชื่อ', to: '/admin/public-content?section=products', permissions: ['products.view'] },
       { label: 'รายงานที่ได้รับอนุญาต', to: '/admin/reports', permissions: ['reports.view', 'finance.view', 'audit.view'] },
     ],
   },
@@ -88,8 +92,8 @@ export const ADMIN_SIDEBAR_GROUPS = [
     thaiLabel: 'จัดการเนื้อหาและข่าวสาร',
     icon: FileText,
     items: [
-      { label: 'ข่าวสาร & ประกาศ', to: '/admin/content?tab=news', permissions: ['news.view', 'content.create', 'content.publish'] },
-      { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view', 'content.create'] },
+      { label: 'ข่าวสาร & ประกาศ', to: '/admin/content?tab=news', permissions: ['news.view'] },
+      { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view'] },
       { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
       { label: 'เอกสารและการเผยแพร่เนื้อหา', to: '/admin/cms', roles: ['super_admin', 'admin', 'editor', 'pr_officer', 'document_officer'] },
     ],
@@ -166,51 +170,23 @@ export const ADMIN_SIDEBAR_GROUPS = [
       { label: 'Profile & Change Password', to: '/admin/settings?tab=profile', permissions: ['dashboard.view'] },
     ],
   },
-];
+  {id:'compliance',label:'Compliance & Dual-Control',thaiLabel:'การอนุมัติและแยกหน้าที่',icon:ShieldCheck,items:[{label:'คำขอ Maker / Checker',to:'/admin/approvals',permissions:['backup.view','backup.restore.request','backup.restore.approve','security.view','audit.view','operations.view','dashboard.view']}]},
+  {id:'reports',label:'Reports',thaiLabel:'รายงาน',icon:FileText,items:[{label:'รายงานที่ได้รับอนุญาต',to:'/admin/reports',permissions:['reports.view','finance.view','audit.view']}]},
+  {id:'tools',label:'Administrative Tools',thaiLabel:'เครื่องมือเจ้าหน้าที่',icon:FolderKanban,items:[{label:'พื้นที่ทำงานตามสิทธิ์',to:'/admin/workspace',permissions:['coop_info.view','people.view','rates.view','products.view','members.view','dividends.import','news.view','faqs.view','dashboard.view']} ]},
 
-const ROLE_DEFAULT_PERMS = {
-  super_admin: ['*'],
-  admin: [
-    'dashboard.view', 'analytics.view', 'analytics.visitors.view', 'analytics.visitors.export',
-    'operations.view', 'users.view', 'roles.view', 'departments.view',
-    'members.view', 'members.update', 'finance.view', 'news.view', 'faqs.view', 'coop_info.view', 'people.view',
-    'rates.view', 'products.view', 'audit.view', 'security.view', 'security.mfa.view', 'backup.view',
-    'backup.verify', 'health.view', 'reports.view', 'settings.view'
-  ],
-  it_admin: ['dashboard.view', 'analytics.view', 'analytics.visitors.view', 'analytics.visitors.export', 'operations.view', 'security.view', 'security.mfa.view', 'audit.view', 'backup.view', 'backup.verify', 'health.view', 'settings.view'],
-  auditor: ['dashboard.view', 'analytics.view', 'analytics.visitors.view', 'analytics.visitors.export', 'operations.view', 'users.view', 'roles.view', 'departments.view', 'members.view', 'finance.view', 'audit.view', 'audit.export', 'security.view', 'security.mfa.view', 'backup.view', 'health.view', 'reports.view'],
-  executive: ['dashboard.view', 'analytics.view', 'analytics.visitors.view', 'operations.view', 'finance.view', 'audit.view', 'health.view', 'reports.view'],
-  manager: ['dashboard.view', 'analytics.view', 'analytics.visitors.view', 'operations.view', 'members.view', 'finance.view', 'audit.view', 'reports.view'],
-  editor: ['dashboard.view', 'operations.view', 'news.view', 'faqs.view', 'coop_info.view', 'people.view'],
-  pr_officer: ['dashboard.view', 'operations.view', 'news.view', 'faqs.view', 'coop_info.view'],
-  loan_officer: ['dashboard.view', 'operations.view', 'members.view', 'finance.view', 'rates.view', 'products.view', 'reports.view'],
-  finance_officer: ['dashboard.view', 'operations.view', 'members.view', 'finance.view', 'dividends.import', 'rates.view', 'products.view', 'reports.view'],
-  finance: ['dashboard.view', 'operations.view', 'members.view', 'finance.view', 'dividends.import', 'rates.view', 'products.view', 'reports.view'],
-  member_service: ['dashboard.view', 'operations.view', 'members.view', 'members.update', 'reports.view'],
-  member_admin: ['dashboard.view', 'operations.view', 'members.view', 'members.update', 'dividends.import'],
-  staff: ['dashboard.view', 'operations.view', 'members.view', 'news.view', 'faqs.view'],
-};
+];
 
 export function hasControlCenterAccess(user, canFn, requiredPermissions = [], requiredRoles = []) {
   if (!user || user.role === 'member') return false;
   if (user.role === 'super_admin') return true;
-  if (requiredRoles.length > 0 && requiredRoles.includes(user.role)) return true;
-
-  const userPerms = new Set([
-    ...(user.permissions || []),
-    ...(user.effective_permissions || []),
-    ...(ROLE_DEFAULT_PERMS[user.role] || []),
-  ]);
-  if (userPerms.size > 0) {
-    userPerms.add('dashboard.view');
-  }
-  if (userPerms.has('*')) return true;
-  if (requiredPermissions.length === 0 && requiredRoles.length === 0) return true;
-
-  return requiredPermissions.some((perm) => userPerms.has(perm) || (typeof canFn === 'function' && canFn(perm)));
+  if (requiredRoles.length && !requiredRoles.includes(user.role)) return false;
+  if (!requiredPermissions.length) return requiredRoles.length > 0;
+  if (typeof canFn === 'function') return requiredPermissions.some(permission => canFn(permission));
+  const effective = new Set([...(user.permissions || []), ...(user.effective_permissions || [])]);
+  return effective.has('*') || requiredPermissions.some(permission => effective.has(permission));
 }
 
-export default function AdminControlCenterShell({
+function FullAdminControlCenterShell({
   title,
   subtitle,
   eyebrow = 'RYCOOPWEB 3.0 • Enterprise Admin Control Center',
@@ -252,6 +228,9 @@ export default function AdminControlCenterShell({
     }
   });
 
+  const mobileDialog=useRef(null);
+  const [isMobile,setIsMobile]=useState(false);
+  useEffect(()=>{const media=window.matchMedia("(max-width:920px)");const update=()=>{setIsMobile(media.matches);if(!media.matches)setMobileOpen(false);};update();media.addEventListener("change",update);return()=>media.removeEventListener("change",update);},[]);
   const [navSearch, setNavSearch] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -275,6 +254,18 @@ export default function AdminControlCenterShell({
     setMobileOpen(false);
   }, [location.pathname, location.search]);
 
+  useEffect(() => {
+    if(!mobileOpen)return undefined;
+    const panel=mobileDialog.current,previous=document.activeElement;
+    const focusable=()=>[...panel.querySelectorAll('a[href],button:not(:disabled),input:not(:disabled)')].filter(node=>node.offsetParent!==null);
+    focusable()[0]?.focus();
+    const key=event=>{
+      if(event.key==='Escape'){event.preventDefault();setMobileOpen(false);}
+      if(event.key==='Tab'){const nodes=focusable();const first=nodes[0],last=nodes[nodes.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
+    };
+    const overflow=document.body.style.overflow;document.body.style.overflow='hidden';document.addEventListener('keydown',key);
+    return()=>{document.body.style.overflow=overflow;document.removeEventListener('keydown',key);previous?.focus();};
+  },[mobileOpen]);
   const currentFullUrl = `${location.pathname}${location.search || ''}`;
 
   const visibleGroups = useMemo(() => {
@@ -326,25 +317,15 @@ export default function AdminControlCenterShell({
       />
 
       <aside
+        inert={isMobile&&!mobileOpen?"":undefined} aria-hidden={isMobile&&!mobileOpen?true:undefined}
+        ref={mobileDialog} role={mobileOpen?"dialog":undefined} aria-modal={mobileOpen?true:undefined}
         className={`acc-sidebar ${mobileOpen ? 'is-mobile-open' : ''}`}
         aria-label="เมนูศูนย์ควบคุมผู้ดูแลระบบ"
       >
         <div className="acc-sidebar-header">
-          <Link to="/admin/dashboard" className="acc-brand" title="ศูนย์ควบคุมผู้ดูแลระบบ สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด">
-            <img
-              src="/assets/images/logo.png"
-              alt="ตราสัญลักษณ์สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด"
-              className="acc-brand-logo"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            {!collapsed && (
-              <div className="acc-brand-text">
-                <span className="acc-brand-title">RYCOOP ADMIN 3.0</span>
-                <span className="acc-brand-subtitle">สหกรณ์ออมทรัพย์สาธารณสุขระยอง</span>
-              </div>
-            )}
+          {mobileOpen&&<button type="button" className="acc-icon-btn" onClick={()=>setMobileOpen(false)} aria-label="ปิดเมนูผู้ดูแลระบบ"><X size={18}/></button>}
+          <Link to={hasControlCenterAccess(user,can,['dashboard.view','analytics.view'])?'/admin/dashboard':'/admin/workspace'} className="acc-brand" title="ศูนย์ควบคุมผู้ดูแลระบบ สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด">
+            <CoopBrandLogo variant={collapsed ? 'emblem' : 'sidebar'} tone="dark" showEstablished size={collapsed ? 38 : 44} />
           </Link>
 
           <button
@@ -421,6 +402,7 @@ export default function AdminControlCenterShell({
                         <Link
                           key={item.to + item.label}
                           to={item.to}
+                          aria-current={active?'page':undefined}
                           className={`acc-nav-link ${active ? 'is-active' : ''}`}
                         >
                           <span>{item.label}</span>
@@ -461,7 +443,7 @@ export default function AdminControlCenterShell({
             <button
               type="button"
               className="acc-footer-btn"
-              onClick={() => setPasswordModalOpen(true)}
+              onClick={() => {setMobileOpen(false);setPasswordModalOpen(true);}}
               title="เปลี่ยนรหัสผ่านของฉัน"
             >
               <Lock size={14} />
@@ -487,20 +469,21 @@ export default function AdminControlCenterShell({
         </div>
       </aside>
 
-      <div className="acc-main-wrapper">
+      <div className="acc-main-wrapper" inert={mobileOpen?"":undefined}>
         <header className="acc-topbar">
           <div className="acc-topbar-left">
+            <CoopBrandLogo variant="emblem" size={32} />
             <button
               type="button"
               className="acc-mobile-toggle"
-              onClick={() => setMobileOpen(true)}
+              onClick={() => {setCollapsed(false);setMobileOpen(true);}}
               aria-label="เปิดเมนูผู้ดูแลระบบ"
             >
               <Menu size={20} />
             </button>
 
             <nav className="acc-breadcrumbs" aria-label="Breadcrumb">
-              <Link to="/admin/dashboard">Admin Control Center</Link>
+              <Link to={hasControlCenterAccess(user,can,['dashboard.view','analytics.view'])?'/admin/dashboard':'/admin/workspace'}>Admin Control Center</Link>
               {breadcrumbs.map((crumb, idx) => (
                 <React.Fragment key={crumb.label + idx}>
                   <span aria-hidden="true">/</span>
@@ -511,9 +494,9 @@ export default function AdminControlCenterShell({
           </div>
 
           <div className="acc-topbar-right">
-            <span className="acc-badge-pill success" title="การป้องกัน CSRF, RBAC และ Mandatory MFA ทำงานปกติ">
+            <span className="acc-badge-pill success" title="คำสั่งสำคัญต้องผ่านการตรวจสิทธิ์และ MFA ฝั่งเซิร์ฟเวอร์">
               <ShieldCheck size={14} />
-              <span>RBAC + MFA Enforced</span>
+              <span>พื้นที่ผู้ดูแลระบบ</span>
             </span>
             <span className="acc-badge-pill">
               <span>บทบาท: {user?.roleName || user?.role || 'Staff'}</span>
@@ -521,15 +504,15 @@ export default function AdminControlCenterShell({
           </div>
         </header>
 
-        <div className="acc-content" role="region" aria-label={title}>
-          <div className="acc-page-header">
+        <div className="acc-content" role="region" aria-label={title||"พื้นที่ทำงานผู้ดูแลระบบ"}>
+          {title&&<div className="acc-page-header">
             <div>
               <div className="acc-page-eyebrow">{eyebrow}</div>
               <h1 className="acc-page-title">{title}</h1>
               {subtitle && <p className="acc-page-desc">{subtitle}</p>}
             </div>
             {actions && <div className="acc-page-actions">{actions}</div>}
-          </div>
+          </div>}
 
           {children}
         </div>
@@ -540,3 +523,10 @@ export default function AdminControlCenterShell({
   );
 }
 
+
+// Every protected route uses one shell; module-specific shells contribute their header only.
+export default function AdminControlCenterShell(props) {
+  const nested=useContext(ShellContext);
+  if(nested)return <section className="admin-module">{props.breadcrumbs?.length>0&&<AdminBreadcrumb items={props.breadcrumbs}/>}<header className="acc-page-header"><div><h1 className="acc-page-title">{props.title}</h1>{props.subtitle&&<p className="acc-page-desc">{props.subtitle}</p>}</div>{props.actions&&<div className="acc-page-actions">{props.actions}</div>}</header>{props.children}</section>;
+  return <ShellContext.Provider value={true}><FullAdminControlCenterShell {...props}/></ShellContext.Provider>;
+}

@@ -7,13 +7,14 @@ import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 const mockPlugin={name:'workflow-test-contexts',enforce:'pre',load(id){
  const path=id.replaceAll('\\','/');
+ if(path.endsWith('/src/context/ThemeContext.jsx'))return 'export const useTheme=()=>({theme:"light",toggleTheme:()=>{}});';
  if(path.endsWith('/src/context/AuthContext.jsx'))return 'export const useAuth=()=>globalThis.__workflowAuth;';
  if(path.endsWith('/src/context/ToastContext.jsx'))return 'export const useToast=()=>({toast:{},confirmDialog:async()=>false});';
  if(path.endsWith('/src/hooks/useInactivityTimeout.js'))return 'export const useInactivityTimeout=()=>({});';
  if(path.endsWith('/src/hooks/useVisitorTracker.js'))return 'export const useVisitorTracker=()=>{};';
  if(path.includes('/src/components/layout/')||/\/src\/components\/(?:common\/(?:AIChatWidget|CookieConsent|CampaignModal|SessionTimeoutModal|ChangePasswordModal|RichTextEditor)|member\/AuthModal)\.jsx$/.test(path))return 'export default function Fixture(){return null;}';
  }};
-const server=await createServer({configFile:false,plugins:[mockPlugin,react()],resolve:{alias:{'react-router-dom':'react-router'}},optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true},appType:'custom'});
+const server=await createServer({configFile:false,cacheDir:'storage/tmp/vite-workflow-tests',plugins:[mockPlugin,react()],resolve:{alias:{'react-router-dom':'react-router'}},optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true},appType:'custom'});
 function render(element){return new Promise((resolve,reject)=>{let html='';const output=new Writable({write(chunk,encoding,done){html+=chunk.toString();done();}});output.on('finish',()=>resolve(html));const stream=renderToPipeableStream(element,{onAllReady(){stream.pipe(output);},onError:reject});});}
 try{
  const {StaticRouter}=await server.ssrLoadModule('react-router');

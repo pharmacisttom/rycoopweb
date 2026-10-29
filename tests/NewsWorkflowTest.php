@@ -4,7 +4,7 @@ require __DIR__.'/WorkflowFixture.php';
 use App\Core\Database;
 use App\Services\NewsWorkflowService as News;
 $pdo->exec("CREATE TABLE news_categories(id INTEGER PRIMARY KEY,name TEXT,status TEXT);INSERT INTO news_categories VALUES(1,'ข่าวประชาสัมพันธ์','active');
-CREATE TABLE news(id INTEGER PRIMARY KEY,category_id INTEGER,title TEXT,slug TEXT,summary TEXT,content TEXT,cover_image TEXT,workflow_status TEXT,author_id INTEGER,created_by INTEGER,updated_by INTEGER,publish_at TEXT,created_at TEXT,updated_at TEXT,deleted_at TEXT);
+CREATE TABLE news(id INTEGER PRIMARY KEY,category_id INTEGER,title TEXT,slug TEXT,summary TEXT,content TEXT,cover_image TEXT,gallery_images TEXT,workflow_status TEXT,author_id INTEGER,created_by INTEGER,updated_by INTEGER,publish_at TEXT,created_at TEXT,updated_at TEXT,deleted_at TEXT);
 INSERT INTO permissions VALUES(1,'news','view'),(2,'news','create'),(3,'news','update'),(4,'news','publish');INSERT INTO role_permissions VALUES(2,1),(2,2),(2,3),(3,1),(3,4);");
 $input=['title'=>'Synthetic news','excerpt'=>'Fixture','content'=>'<p>Fixture news only</p>','category'=>'ข่าวประชาสัมพันธ์'];
 try {

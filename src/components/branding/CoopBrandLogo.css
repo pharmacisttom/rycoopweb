@@ -1,0 +1,13 @@
+.coop-brand{display:inline-flex;align-items:center;gap:14px;min-width:0;max-width:100%;color:var(--primary-800,#102443);text-align:left;vertical-align:middle;line-height:1.35;--coop-logo-size:56px}
+.coop-brand .coop-brand-logo{width:var(--coop-logo-size);height:var(--coop-logo-size);min-width:var(--coop-logo-size);max-width:none;object-fit:contain;flex:0 0 var(--coop-logo-size);display:block;border-radius:0;padding:0;background:transparent;opacity:1;visibility:visible}
+.coop-brand .coop-brand-text{min-width:0;display:flex;flex-direction:column;gap:3px}
+.coop-brand .coop-brand-name{font-size:.95rem;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:break-word}
+.coop-brand-name-line{display:block}
+.coop-brand .coop-brand-caption,.coop-brand .coop-brand-english{font-size:.74rem;font-weight:400;line-height:1.4;color:var(--text-muted,#52627b);white-space:normal}
+.coop-brand--dark{color:#fff}.coop-brand--dark .coop-brand-caption,.coop-brand--dark .coop-brand-english{color:#c3d1e4}
+[data-theme="dark"] .coop-brand--light{color:#e8efff}
+.coop-brand--compact,.coop-brand--sidebar{gap:10px;--coop-logo-size:44px}
+.coop-brand--sidebar .coop-brand-name{font-size:.78rem}.coop-brand--sidebar .coop-brand-caption{font-size:.68rem}
+.coop-brand--emblem{gap:0}
+@media(max-width:600px){.coop-brand{gap:9px;--coop-logo-size:44px}.coop-brand .coop-brand-name{font-size:.79rem}.coop-brand .coop-brand-english{display:none}.coop-brand--sidebar{--coop-logo-size:40px}.coop-brand--mobile{--coop-logo-size:38px}}
+@media print{.coop-brand .coop-brand-logo{print-color-adjust:exact}.coop-brand{break-inside:avoid}}

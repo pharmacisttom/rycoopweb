@@ -52,7 +52,7 @@ class SpaApiController extends Controller
         } catch (\Throwable $e) {}
 
         try {
-            $latestNews = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.content, n.cover_image, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT 6");
+            $latestNews = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.content, n.cover_image, n.gallery_images, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT 6");
             $latestNews = array_map($this->withPublicNewsImageUrl(...), $latestNews);
         } catch (\Throwable $e) {}
 
@@ -156,10 +156,12 @@ class SpaApiController extends Controller
         $news = [];
         $total = 0;
         try {
-            $news = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.content, n.cover_image, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT {$perPage} OFFSET {$offset}");
+            $news = Database::query("SELECT n.id, n.title, n.slug, n.summary AS excerpt, n.content, n.cover_image, n.gallery_images, n.publish_at, n.is_pinned, c.name as category_name FROM news n JOIN news_categories c ON n.category_id = c.id WHERE n.deleted_at IS NULL AND n.workflow_status = 'published' AND (n.publish_at IS NULL OR n.publish_at <= NOW()) ORDER BY n.is_pinned DESC, n.publish_at DESC LIMIT {$perPage} OFFSET {$offset}");
             $news = array_map($this->withPublicNewsImageUrl(...), $news);
             $total = (int)Database::value("SELECT COUNT(*) FROM news WHERE deleted_at IS NULL AND workflow_status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())");
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            $this->json(['success'=>false,'message'=>'โหลดข่าวและกิจกรรมไม่สำเร็จ กรุณาลองใหม่'],503); return;
+        }
 
         $this->json(['success' => true, 'data' => $news, 'meta' => ['page' => $page, 'per_page' => $perPage, 'total' => $total]]);
     }
@@ -790,7 +792,9 @@ class SpaApiController extends Controller
     public function createAdminNews(?string $editingId = null): void
     {
         try {
-            $image=$this->storeNewsCoverImage($this->request->input('image'));
+            $rawImage=$this->request->input('image');
+            // Existing cover paths are preserved by the workflow; only data URLs are uploads.
+            $image=is_string($rawImage)&&str_starts_with($rawImage,'data:')?$rawImage:null;
             $item=\App\Services\NewsWorkflowService::save($this->request->all(),$image,$editingId===null?null:(int)$editingId);
             $this->json(['success'=>true,'data'=>$item,'message'=>'บันทึกร่าง / ส่งตรวจแล้ว ยังไม่เผยแพร่'], $editingId===null?201:200);
         } catch (\Throwable $e) {
@@ -848,40 +852,6 @@ class SpaApiController extends Controller
         $this->json(['success' => true, 'message' => 'ลบข่าวสารเรียบร้อยแล้ว']);
     }
 
-    private function storeNewsCoverImage(mixed $image): ?string
-    {
-        if (!is_string($image) || $image === '') {
-            return null;
-        }
-
-        if (!preg_match('/^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+\/=\s]+)$/i', $image, $matches)) {
-            throw new \InvalidArgumentException('รูปภาพต้องเป็นไฟล์ PNG, JPEG หรือ WEBP ที่ถูกต้อง');
-        }
-
-        $binary = base64_decode($matches[2], true);
-        if ($binary === false || strlen($binary) > 5 * 1024 * 1024) {
-            throw new \InvalidArgumentException('รูปภาพต้องมีขนาดไม่เกิน 5 MB');
-        }
-
-        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary);
-        $extensions = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
-        if (!isset($extensions[$mime])) {
-            throw new \InvalidArgumentException('รองรับเฉพาะรูปภาพ PNG, JPEG และ WEBP');
-        }
-
-        $directory = storage_upload_path('news');
-        if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-            throw new \RuntimeException('ไม่สามารถเตรียมพื้นที่จัดเก็บรูปภาพได้');
-        }
-
-        $filename = 'news-' . bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
-        if (file_put_contents($directory . '/' . $filename, $binary) === false) {
-            throw new \RuntimeException('ไม่สามารถบันทึกรูปภาพได้');
-        }
-
-        return '/storage/uploads/news/' . $filename;
-    }
-
     /** Convert a stored relative image path into the public application URL. */
     private function withPublicNewsImageUrl(array $item): array
     {
@@ -891,15 +861,11 @@ class SpaApiController extends Controller
         $item[$key] = resolve_media_url($image);
 
         if (array_key_exists('gallery_images', $item)) {
-            $gallery = is_string($item['gallery_images'])
-                ? json_decode($item['gallery_images'], true)
-                : $item['gallery_images'];
-            if (is_array($gallery)) {
-                $item['gallery_images'] = array_values(array_filter(array_map(
-                    static fn (mixed $value): ?string => resolve_media_url($value),
-                    $gallery
-                )));
-            }
+            $item['gallery_images'] = array_map(static function(array $image): array {
+                $image['src'] = resolve_media_url($image['src']);
+                $image['thumbnail'] = resolve_media_url($image['thumbnail']);
+                return $image;
+            }, \App\Services\NewsGalleryService::decode($item['gallery_images']));
         }
 
         return $item;

@@ -29,6 +29,9 @@ export default function HomePage() {
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
   const [activeNewsSlide, setActiveNewsSlide] = useState(0);
+  const [newsAutoPlay, setNewsAutoPlay] = useState(false);
+  const [reduceNewsMotion, setReduceNewsMotion] = useState(true);
+  useEffect(() => { const media = window.matchMedia('(prefers-reduced-motion: reduce)'); const update = () => {setReduceNewsMotion(media.matches);if(media.matches)setNewsAutoPlay(false);}; update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update); }, []);
   const [isNewsSlideshowPaused, setIsNewsSlideshowPaused] = useState(false);
   const [isNewsSlideDragging, setIsNewsSlideDragging] = useState(false);
   const newsSlideDragStartRef = useRef(null);
@@ -99,18 +102,19 @@ export default function HomePage() {
   }, [newsList.length]);
 
   useEffect(() => {
-    if (activeNewsTab !== 'news' || isNewsSlideshowPaused || newsList.length < 2) return undefined;
+    if (!newsAutoPlay || reduceNewsMotion || activeNewsTab !== 'news' || isNewsSlideshowPaused || newsList.length < 2) return undefined;
 
     const timer = window.setInterval(() => {
       setActiveNewsSlide((currentSlide) => (currentSlide + 1) % newsList.length);
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [activeNewsTab, isNewsSlideshowPaused, newsList.length]);
+  }, [newsAutoPlay, reduceNewsMotion, activeNewsTab, isNewsSlideshowPaused, newsList.length]);
 
   const handleNewsSlidePointerDown = (event) => {
-    if (newsList.length < 2 || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    if (event.target.closest('button,a') || newsList.length < 2 || (event.pointerType === 'mouse' && event.button !== 0)) return;
 
+    setNewsAutoPlay(false);
     newsSlideDragStartRef.current = { pointerId: event.pointerId, x: event.clientX };
     newsSlideWasDraggedRef.current = false;
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -380,10 +384,11 @@ export default function HomePage() {
                       {newsList.length > 1 && (
                         <>
                           <div className="hero-news-slide-actions">
-                            <button type="button" onClick={() => setActiveNewsSlide((activeNewsSlide - 1 + newsList.length) % newsList.length)} aria-label="ข่าวก่อนหน้า">
+                            <button type="button" disabled={reduceNewsMotion} onClick={() => setNewsAutoPlay(value=>!value)} aria-label={newsAutoPlay?'หยุดสไลด์ข่าว':'เล่นสไลด์ข่าว'}>{newsAutoPlay?'หยุด':'เล่น'}</button>
+                            <button type="button" onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide((activeNewsSlide - 1 + newsList.length) % newsList.length);}} aria-label="ข่าวก่อนหน้า">
                               <ChevronLeft aria-hidden="true" size={18} />
                             </button>
-                            <button type="button" onClick={() => setActiveNewsSlide((activeNewsSlide + 1) % newsList.length)} aria-label="ข่าวถัดไป">
+                            <button type="button" onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide((activeNewsSlide + 1) % newsList.length);}} aria-label="ข่าวถัดไป">
                               <ChevronRight aria-hidden="true" size={18} />
                             </button>
                           </div>
@@ -395,7 +400,7 @@ export default function HomePage() {
                                 className={index === activeNewsSlide ? 'is-active' : ''}
                                 aria-label={`แสดงข่าว ${index + 1}: ${item.title}`}
                                 aria-pressed={index === activeNewsSlide}
-                                onClick={() => setActiveNewsSlide(index)}
+                                onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide(index);}}
                               />
                             ))}
                           </div>

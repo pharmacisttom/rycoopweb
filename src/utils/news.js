@@ -15,9 +15,17 @@ export const formatNewsDate = (value) => {
   }).format(date);
 };
 
+export function normalizeGallery(value) {
+  if (typeof value === 'string') { try { value = JSON.parse(value); } catch { return []; } }
+  if (!Array.isArray(value)) return [];
+  return value.map(item => typeof item === 'string' ? { src: item } : item).filter(item => item && typeof item.src === 'string' && !/^\s*(?:javascript|data|vbscript):/i.test(item.src))
+    .map(item => ({ src: resolveMediaUrl(item.src), thumbnail: resolveMediaUrl(item.thumbnail || item.src), alt: String(item.alt || ''), caption: String(item.caption || '') }));
+}
+
 /** Normalizes PHP API and admin payloads to the public news-card shape. */
 export const normalizeNewsItem = (item) => ({
   ...item,
+  gallery_images: normalizeGallery(item.gallery_images),
   category: item.category || item.category_name || 'ข่าวสาร',
   date: formatNewsDate(item.date || item.publish_at),
   excerpt: item.excerpt || item.summary || '',

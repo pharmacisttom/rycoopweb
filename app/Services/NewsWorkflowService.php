@@ -24,9 +24,9 @@ class NewsWorkflowService
     }
     public static function listing(): array {
         self::permission('view');
-        return array_map(function($row){$row['version']=self::version($row);$row['excerpt']=$row['summary'];$row['image']=$row['cover_image'];$row['category']=Database::value('SELECT name FROM news_categories WHERE id=?',[$row['category_id']]);return $row;},Database::query('SELECT * FROM news WHERE deleted_at IS NULL ORDER BY id DESC'));
+        return array_map(function($row){$row['version']=self::version($row);$row['gallery_images']=NewsGalleryService::decode($row['gallery_images']??null);$row['excerpt']=$row['summary'];$row['image']=$row['cover_image'];$row['category']=Database::value('SELECT name FROM news_categories WHERE id=?',[$row['category_id']]);return $row;},Database::query('SELECT * FROM news WHERE deleted_at IS NULL ORDER BY id DESC'));
     }
-    public static function save(array $input,string $image,?int $id=null): array {
+    public static function save(array $input,?string $image,?int $id=null): array {
         self::permission($id?'update':'create');
         $title=trim((string)($input['title']??''));$summary=trim((string)($input['excerpt']??''));$content=RichTextService::clean((string)($input['content']??''));
         if($title===''||mb_strlen($title)>255||RichTextService::text($content)===''||strlen($content)>200000||mb_strlen($summary)>5000)throw new \InvalidArgumentException('กรุณากรอกหัวข้อและเนื้อหาข่าวให้ครบถ้วน');
@@ -34,12 +34,23 @@ class NewsWorkflowService
         if(!in_array($status,['draft','submitted'],true))throw new \InvalidArgumentException('บันทึกได้เฉพาะร่างหรือส่งตรวจ ให้เผยแพร่จากขั้นตอนอนุมัติ');
         $category=Database::value("SELECT id FROM news_categories WHERE name=? AND status='active'",[(string)($input['category']??'ข่าวประชาสัมพันธ์')]);
         if(!$category)throw new \InvalidArgumentException('ไม่พบหมวดหมู่ข่าว');
-        return Database::transaction(function()use($input,$image,$id,$title,$summary,$content,$status,$category){
+        $created=[];
+        try { return Database::transaction(function()use($input,$image,$id,$title,$summary,$content,$status,$category,&$created){
             $old=null;
+            if(is_string($image) && str_starts_with($image,'data:')) {
+                $coverUpload=NewsGalleryService::prepare([['src'=>$image,'alt'=>$title]],[],$created);
+                $image=$coverUpload[0]['src'];
+            }
             if($id){$old=self::row($id,true);self::checkVersion($old,$input);Database::execute('UPDATE news SET category_id=?,title=?,summary=?,content=?,cover_image=?,workflow_status=?,publish_at=NULL,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$category,$title,$summary,$content,$image,$status,Auth::id(),$id]);}
             else $id=(int)Database::insert('INSERT INTO news(category_id,title,slug,summary,content,cover_image,workflow_status,author_id,created_by,publish_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,NULL,CURRENT_TIMESTAMP)',[$category,$title,str_slug($title).'-'.bin2hex(random_bytes(6)),$summary,$content,$image,$status,Auth::id(),Auth::id()]);
+            $existing=NewsGalleryService::decode($old['gallery_images']??null);
+            $gallery=array_key_exists('gallery_images',$input)?NewsGalleryService::prepare($input['gallery_images'],$existing,$created):$existing;
+            if(array_key_exists('gallery_images',$input)) {
+                $cover=$gallery[0]['src']??($existing ? null : ($image ?: ($old['cover_image']??null)));
+                Database::execute('UPDATE news SET gallery_images=?,cover_image=? WHERE id=?',[json_encode($gallery,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$cover,$id]);
+            } elseif($old && !$image) Database::execute('UPDATE news SET cover_image=? WHERE id=?',[$old['cover_image'],$id]);
             $row=self::row($id);self::audit($old?'update':'create',$id,$old,$row);$row['version']=self::version($row);return $row;
-        });
+        }); } catch(\Throwable $e) { NewsGalleryService::cleanup($created); throw $e; }
     }
     public static function publish(int $id,array $input):void {
         self::permission('publish');

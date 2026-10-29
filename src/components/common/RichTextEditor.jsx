@@ -19,7 +19,8 @@ export default function RichTextEditor({ value = '', onChange, label = 'คำ�
   const [preview, setPreview] = useState(false), [length, setLength] = useState(0);
   const id = useId(); callback.current = onChange;
   useEffect(() => {
-    const node = document.createElement('div'); host.current.appendChild(node);
+    const mount = host.current;
+    const node = document.createElement('div'); mount.appendChild(node);
     const quill = new Quill(node, {
       theme: 'snow', placeholder: `พิมพ์${label}...`,
       formats: plainText ? [] : ['header','bold','italic','underline','strike','blockquote','list','link'],
@@ -38,7 +39,7 @@ export default function RichTextEditor({ value = '', onChange, label = 'คำ�
     const selected = range => { if(range)selectionRef.current={index:range.index,length:range.length}; };
     quill.on('selection-change',selected);
     host.current.querySelectorAll('.ql-toolbar button').forEach(button => { button.type='button'; const kind=[...button.classList].find(c=>c.startsWith('ql-')); const names={'ql-bold':'ตัวหนา','ql-italic':'ตัวเอียง','ql-underline':'ขีดเส้นใต้','ql-strike':'ขีดฆ่า','ql-list':button.value==='ordered'?'รายการลำดับเลข':'รายการหัวข้อ','ql-blockquote':'ข้อความอ้างอิง','ql-link':'เพิ่มลิงก์','ql-clean':'ล้างรูปแบบ'}; button.setAttribute('aria-label',names[kind] || 'จัดรูปแบบ'); });
-    return () => {quill.off('text-change',changed);quill.off('selection-change',selected);selectionRef.current=null;editor.current=null;host.current.replaceChildren();};
+    return () => {quill.off('text-change',changed);quill.off('selection-change',selected);selectionRef.current=null;editor.current=null;mount.replaceChildren();};
   }, [plainText]);
   useEffect(() => { editor.current?.enable(!disabled); }, [disabled]);
   useEffect(() => {

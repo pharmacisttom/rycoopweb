@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {createServer} from 'vite';
+import react from '@vitejs/plugin-react';
+import {mergeServerIdentity,hasEffectivePermission} from '../src/utils/identity.js';
+const identity=mergeServerIdentity(null,{id:7,role:'custom_editor',effective_permissions:['news.view']});
+assert.equal(identity.id,7);assert.equal(mergeServerIdentity({id:99,permissions:['news.delete']},{id:7,role:'custom_editor'}).id,7);assert.deepEqual(mergeServerIdentity({permissions:['news.delete']},{id:7,role:'custom_editor'}).permissions,[]);assert.equal(mergeServerIdentity(null,{role:'custom_editor'}),null);assert.equal(hasEffectivePermission(identity,'news.view'),true);assert.equal(hasEffectivePermission(identity,'news.delete'),false);
+const server=await createServer({configFile:false,cacheDir:'storage/tmp/vite-admin-components',plugins:[react()],resolve:{alias:{'react-router-dom':'react-router'}},optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true},appType:'custom'});
+try{
+  const{hasControlCenterAccess,ADMIN_SIDEBAR_GROUPS}=await server.ssrLoadModule('/src/components/admin/AdminControlCenterShell.jsx');
+  assert.equal(ADMIN_SIDEBAR_GROUPS.length,14);
+  assert.equal(hasControlCenterAccess({role:'it_admin'},()=>false,['settings.view']),false,'role name alone cannot grant navigation');
+  assert.equal(hasControlCenterAccess({role:'custom_editor'},permission=>permission==='news.view',['news.view']),true);
+  assert.equal(hasControlCenterAccess({role:'member'},()=>true,['news.view']),false);
+  assert.equal(hasControlCenterAccess({role:'custom_editor',permissions:['news.view']},()=>false,['news.view']),false,'effective permission function wins over stale props');
+  const{canReviewApproval,approvalIsExpired}=await server.ssrLoadModule('/src/components/admin/AdminApprovalWorkflow.jsx');
+  const pending={status:'pending',action_key:'backup.restore.request',requested_by:1,expires_at:'2099-01-01 00:00:00'};
+  assert.equal(canReviewApproval(pending,{},()=>true),false,'unknown actor identity cannot approve');
+  assert.equal(canReviewApproval(pending,{id:1,role:'super_admin'},()=>true),false,'super admin cannot approve self');
+  assert.equal(canReviewApproval(pending,{id:2},()=>false),false);
+  assert.equal(canReviewApproval(pending,{id:2},permission=>permission==='backup.restore.approve'),true);
+  assert.equal(canReviewApproval({...pending,status:'approved'},{id:2},()=>true),false);
+  assert.equal(approvalIsExpired({...pending,expires_at:'2000-01-01 00:00:00'}),true);
+  assert.equal(canReviewApproval({...pending,action_key:'unknown.action'},{id:2},()=>true),false,'unknown action stays read-only');
+  const UI=await server.ssrLoadModule('/src/components/admin/AdminUI.jsx');
+  const matrix=renderToStaticMarkup(React.createElement(UI.AdminPermissionMatrix,{catalog:{news:['view'],backup:['restore']},modules:{news:'News',backup:'Backup'},actions:{view:'View',restore:'Restore'},value:['news.view'],onChange:()=>{}}));
+  assert.equal((matrix.match(/type="checkbox"/g)||[]).length,2,'unsupported permissions are not invented');
+  assert.ok(matrix.includes('checked=""'));assert.ok(matrix.includes('สิทธิ์สำคัญ'));assert.ok(matrix.includes('scope="row"'));
+  const table=renderToStaticMarkup(React.createElement(UI.AdminDataTable,{label:'Fixture table',columns:[{key:'name',label:'Name'},{key:'count',label:'Count',numeric:true}],rows:[{id:1,name:'<script>fixture</script>',count:2}]}));
+  assert.ok(table.includes('&lt;script&gt;'));assert.ok(!table.includes('<script>'));assert.ok(table.includes('scope="col"'));assert.ok(table.includes('admin-numeric'));assert.ok(table.includes('role="region"'));
+  const empty=renderToStaticMarkup(React.createElement(UI.AdminDataTable,{label:'Empty',columns:[{key:'name',label:'Name'}],rows:[]}));assert.ok(empty.includes('ยังไม่มีข้อมูล'));
+  console.log('PASS: 14 navigation groups, effective permissions/default deny, self-approval/expiry guards, supported permission matrix, semantic table, escaping and empty state');
+}finally{await server.close();}
