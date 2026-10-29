@@ -65,7 +65,7 @@ All personal/financial endpoints, exports and documents must enforce the current
 
 ## Phases and acceptance gates
 
-1. **Audit / compatibility gate:** owner confirms legacy source/revision, shared-vs-separate database, schema-only metadata, verifier contract, OTP workflow and approved notice. No auth code or migration before this gate.
+1. **Audit / compatibility gate:** owner confirms deployed source revision (local D:/rycoopmember source identity is confirmed), shared-vs-separate database, schema-only metadata, verifier contract, OTP workflow and approved notice. No auth code or migration before this gate.
 2. **Reconciliation dry-run:** adapter validates schema/types/collation/FKs without writes; duplicate IDs/member numbers/user bindings reported as opaque cases. Compare totals/as-of references without changing balances. Reviewer approves mapping.
 3. **Implementation behind disabled flags:** separate member controller/service, challenge/recovery flow, notice/consent middleware, accessible Thai UI and account-administration screens. Reuse existing PHP session, RBAC, CSRF, rate limiter and required audit. Preserve PR Google/MFA and reviewed dependencies #10–#12/CRUD recovery.
 4. **Developer/disposable MySQL 8 QA:** actual routes/controllers and MySQL constraints, concurrent activation/acknowledgment, audit rollback, no duplicate account creation, OTP failure/expiry/replay, reset/revocation, optional consent decline/withdraw, stale notice, IDOR across two synthetic members, 401/403/419, lockout, uploads/documents and failure states. Fixtures/mock UI alone do not certify readiness.

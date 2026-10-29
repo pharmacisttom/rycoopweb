@@ -7,7 +7,7 @@ Date: 2026-10-29. Branch: `codex/tomvis-member-auth-integration`, based on remot
 - Public read-only HTTP: `https://rayongcoop.tomvisolution.tech/` returned 200 text/html. Its HTML references `/app/assets/index-BqriTz-o.js`, `/app/assets/index-CdW7mtv8.css` and the known logo asset. Similar asset layout is not proof of deployed PHP revision, database compatibility or identity ownership.
 - `https://test.rayongcoop.org/` returned 401 at the gateway. No Basic Auth bypass, login attempt, account lookup, financial read or security scan was performed.
 - PRs #10/#11/#12 remain OPEN; Test does not contain PR Officer commit `f9eaf8e`. PR #12 and CRUD recovery are separate dependencies requiring review, not automatically merged into this branch.
-- Local `D:/rycoopmember` is repository `pharmacisttom/rycoopmember`, a Next.js/Prisma project. Its member-auth service delegates to `LegacyApiClient`, which calls the configured PHP backend `/csrf-token`, `/login`, `/api/auth/me`, `/api/member/profile`. The sync adapter file defines a type and an unconfigured-adapter exception, not an implemented Tomvis importer. No environment file or private database was read. Its association with the live Tomvis deployment remains unconfirmed.
+- Local `D:/rycoopmember` is repository `pharmacisttom/rycoopmember`, a Next.js/Prisma project. Its member-auth service delegates to `LegacyApiClient`, which calls the configured PHP backend `/csrf-token`, `/login`, `/api/auth/me`, `/api/member/profile`. The sync adapter file defines a type and an unconfigured-adapter exception, not an implemented Tomvis importer. No environment file or private database was read. The owner subsequently confirmed D:/rycoopmember is the source of the live legacy member system. The exact deployed commit and database schema are still unverified.
 - No authoritative Tomvis source deployment revision, schema, password storage details, API contract, contact verification policy, OTP provider or approved member Privacy Notice was supplied. These are explicit implementation gates. No migration may assume Tomvis table/column names.
 
 ## Authentication and member source audit
@@ -29,7 +29,7 @@ Date: 2026-10-29. Branch: `codex/tomvis-member-auth-integration`, based on remot
 
 ## Required information from the system owner
 
-1. Confirm which repository/release runs rayongcoop.tomvisolution.tech and whether D:/rycoopmember is involved. Provide read-only source access or a sanitized source archive; no .env or credentials in chat.
+1. D:/rycoopmember is confirmed by the owner as the legacy member source; identify its deployed commit and configured PHP authority. Provide read-only source access or a sanitized source archive; no .env or credentials in chat.
 2. Schema-only export/metadata: tables, column types, indexes, FKs, enum values, character set/collation and stable identifiers for accounts/members/financial data. Do not send real member rows or password hashes.
 3. Password verifier/algorithm and legacy initialization/forced-change rules, not passwords. Confirm whether Tomvis and RYCOOP currently share users/members or use separate databases.
 4. Supported read-only API/auth/sync contract, version, TLS/authentication requirements, rate limits and financial as-of/reconciliation identifiers.
