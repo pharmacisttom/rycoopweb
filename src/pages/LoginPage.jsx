@@ -71,7 +71,7 @@ export default function LoginPage() {
             <p className="member-entry-subtitle">{staffLogin ? 'ใช้บัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์จากสหกรณ์' : 'ยินดีต้อนรับสู่บริการสมาชิกออนไลน์'}</p>
             {location.state?.sessionRequired && <p role="status" className="member-entry-notice">กรุณาเข้าสู่ระบบเพื่อดูข้อมูลของคุณ หากเซสชันหมดอายุให้เข้าสู่ระบบอีกครั้ง</p>}
             {error && <p role="alert" className="member-entry-error">{error}</p>}
-            {staffLogin&&googleEnabled&&<a className="btn btn-outline" href="/auth/google/start">เข้าสู่ระบบด้วย Google ของสหกรณ์</a>}
+            {staffLogin&&googleEnabled&&<a className="btn btn-outline" href={'/auth/google/start' + (new URLSearchParams(window.location.search).has('invitation') ? '?invitation=' + encodeURIComponent(new URLSearchParams(window.location.search).get('invitation')) : '')}>เข้าสู่ระบบด้วย Google ของสหกรณ์</a>}
             <form onSubmit={handleSubmit} noValidate>
               <label htmlFor="login-username">{staffLogin ? 'ชื่อผู้ใช้งาน / อีเมล' : 'เลขบัตรประชาชน'}</label>
               <div className="member-entry-input"><User size={18} aria-hidden="true" /><input id="login-username" type="text" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck="false" disabled={loading} placeholder={staffLogin ? 'กรอกชื่อผู้ใช้งาน' : 'กรอกเลขบัตรประชาชน 13 หลัก'} autoFocus /></div>

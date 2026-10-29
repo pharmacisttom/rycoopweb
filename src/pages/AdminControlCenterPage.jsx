@@ -1,3 +1,4 @@
+import PrOfficerInvitations from '../components/admin/PrOfficerInvitations';
 import AdminStaffDirectory from '../components/admin/AdminStaffDirectory';
 import AdminApprovalWorkflow from '../components/admin/AdminApprovalWorkflow';
 import { useAdminAction } from '../components/admin/AdminActionProvider';
@@ -1037,7 +1038,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
         </>
       )}
 
-      {!loading&&!error&&section==='users'&&(user?.role==='super_admin'?(staffDirData&&<AdminStaffDirectory staff={staffDirData.staff} onRefresh={()=>setRefreshTick(value=>value+1)}/>):<AdminEmptyState>API ทะเบียนเจ้าหน้าที่แบบละเอียดจำกัดเฉพาะผู้ดูแลระบบสูงสุด โปรดใช้สิทธิ์ที่ได้รับอนุมัติ</AdminEmptyState>)}
+      {!loading&&!error&&section==='users'&&(user?.role==='super_admin'?(staffDirData&&<><PrOfficerInvitations roles={staffDirData.roles} invitations={staffDirData.invitations} onRefresh={()=>setRefreshTick(value=>value+1)}/><AdminStaffDirectory staff={staffDirData.staff} onRefresh={()=>setRefreshTick(value=>value+1)}/></>):<AdminEmptyState>API ทะเบียนเจ้าหน้าที่แบบละเอียดจำกัดเฉพาะผู้ดูแลระบบสูงสุด โปรดใช้สิทธิ์ที่ได้รับอนุมัติ</AdminEmptyState>)}
       {['approvals','operations','backups','backups-history','security'].includes(section)&&<AdminApprovalWorkflow backups={backupData?.recent_history||[]}/>}
 
       {/* ===================================================================

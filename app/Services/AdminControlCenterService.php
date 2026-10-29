@@ -331,7 +331,7 @@ class AdminControlCenterService
             $combined[] = 'dashboard.view';
         }
 
-        return $combined;
+        return PrOfficerPolicy::restrict($slug, $combined);
     }
 
     /**

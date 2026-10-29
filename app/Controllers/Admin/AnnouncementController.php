@@ -15,6 +15,7 @@ class AnnouncementController extends Controller
 {
     public function index(): void
     {
+        if (!headers_sent()) { header('Cache-Control: no-store, private'); }
         $status = $this->request->query('status');
         $priority = $this->request->query('priority');
 
@@ -39,6 +40,7 @@ class AnnouncementController extends Controller
             $params
         );
 
+        if ($this->request->isAjax()) { $this->json(['success'=>true,'data'=>$announcements]); return; }
         $this->render('admin.announcements.index', [
             'title' => 'จัดการประกาศสำคัญ (Important Announcements)',
             'announcements' => $announcements,
@@ -56,6 +58,7 @@ class AnnouncementController extends Controller
 
     public function store(): void
     {
+        if (!$this->validateContentPolicy()) { return; }
         $data = $this->validate([
             'title' => 'required',
             'content' => 'required',
@@ -85,7 +88,7 @@ class AnnouncementController extends Controller
         $id = Database::insert($sql, [
             $data['title'],
             $slug,
-            $data['content'],
+            \App\Services\RichTextService::clean($data['content']),
             $this->request->input('summary'),
             $attachmentPath,
             $attachmentName,
@@ -95,12 +98,13 @@ class AnnouncementController extends Controller
             $this->request->input('priority', 'general'),
             $this->request->input('resolution_no'),
             $this->request->input('related_link'),
-            $this->request->input('status', 'published'),
+            $this->request->input('status', 'draft'),
             (int)($this->request->input('is_pinned') ? 1 : 0),
             Auth::id()
         ]);
 
         AuditService::log('important_announcements', 'create', (string)$id, null, ['title' => $data['title']]);
+        if ($this->request->isAjax()) { $this->json(['success'=>true,'id'=>(int)$id],201); return; }
         Session::flash('success', 'สร้างประกาศสำคัญเรียบร้อยแล้ว');
         $this->redirect(url('admin/announcements'));
     }
@@ -108,6 +112,7 @@ class AnnouncementController extends Controller
     public function edit(string $id): void
     {
         $announcement = Database::first("SELECT * FROM important_announcements WHERE id = ? AND deleted_at IS NULL LIMIT 1", [(int)$id]);
+        if (!$announcement && $this->request->isAjax()) { $this->json(['success'=>false,'message'=>'ไม่พบประกาศ'],404); return; }
         if (!$announcement) {
             Session::flash('error', 'ไม่พบประกาศที่ระบุ');
             $this->redirect(url('admin/announcements'));
@@ -123,12 +128,14 @@ class AnnouncementController extends Controller
     public function update(string $id): void
     {
         $announcement = Database::first("SELECT * FROM important_announcements WHERE id = ? AND deleted_at IS NULL LIMIT 1", [(int)$id]);
+        if (!$announcement && $this->request->isAjax()) { $this->json(['success'=>false,'message'=>'ไม่พบประกาศ'],404); return; }
         if (!$announcement) {
             Session::flash('error', 'ไม่พบประกาศที่ระบุ');
             $this->redirect(url('admin/announcements'));
             return;
         }
 
+        if (!$this->validateContentPolicy()) { return; }
         $data = $this->validate([
             'title' => 'required',
             'content' => 'required',
@@ -156,7 +163,7 @@ class AnnouncementController extends Controller
 
         Database::execute($sql, [
             $data['title'],
-            $data['content'],
+            \App\Services\RichTextService::clean($data['content']),
             $this->request->input('summary'),
             $attachmentPath,
             $attachmentName,
@@ -166,13 +173,14 @@ class AnnouncementController extends Controller
             $this->request->input('priority', 'general'),
             $this->request->input('resolution_no'),
             $this->request->input('related_link'),
-            $this->request->input('status', 'published'),
+            $this->request->input('status', 'draft'),
             (int)($this->request->input('is_pinned') ? 1 : 0),
             Auth::id(),
             (int)$id
         ]);
 
         AuditService::log('important_announcements', 'update', (string)$id, $announcement, $data);
+        if ($this->request->isAjax()) { $this->json(['success'=>true]); return; }
         Session::flash('success', 'บันทึกการแก้ไขประกาศสำคัญเรียบร้อยแล้ว');
         $this->redirect(url('admin/announcements'));
     }
@@ -192,4 +200,21 @@ class AnnouncementController extends Controller
             $this->redirect(url('admin/announcements'));
         }
     }
+    private function validateContentPolicy(): bool
+    {
+        $status = (string) $this->request->input('status', 'draft');
+        $date = (string) $this->request->input('publication_date', '');
+        $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        $content = (string) $this->request->input('content', '');
+        $link = trim((string) $this->request->input('related_link', ''));
+        if ($link !== '' && (!filter_var($link,FILTER_VALIDATE_URL) || !in_array(strtolower((string)parse_url($link,PHP_URL_SCHEME)),['http','https'],true))) { $this->json(['success'=>false,'message'=>'ลิงก์ต้องเป็น HTTP หรือ HTTPS'],422); return false; }
+        if (!in_array($status, ['draft','published','archived'], true) || !$parsed || $parsed->format('Y-m-d') !== $date || mb_strlen((string)$this->request->input('title','')) > 255 || strlen($content) > 60000 || \App\Services\RichTextService::text(\App\Services\RichTextService::clean($content)) === '') {
+            $this->json(['success'=>false,'message'=>'กรุณาตรวจชื่อ เนื้อหา วันที่ และสถานะประกาศ'],422); return false;
+        }
+        if ($status === 'published' && !Auth::hasPermission('announcements','publish')) {
+            $this->json(['success'=>false,'message'=>'ไม่มีสิทธิ์เผยแพร่ประกาศ'],403); return false;
+        }
+        return true;
+    }
+
 }

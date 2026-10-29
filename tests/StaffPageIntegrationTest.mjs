@@ -26,12 +26,12 @@ try{
   await page.goto('http://127.0.0.1:5199/admin/users');await page.getByText('Fixture administrator',{exact:true}).last().waitFor();await page.getByText('Fixture editor',{exact:true}).waitFor();
   assert.ok(paths.length>0&&paths.every(url=>url==='/api/admin/staff/'),'real page uses exact trailing-slash list URL');
   assert.equal(await page.getByRole('table',{name:'ทะเบียนเจ้าหน้าที่และ MFA'}).count(),1);
-  await page.screenshot({path:`${out}/authorized-staff.png`,fullPage:true});
+  await page.screenshot({path:`${out}/authorized-staff.png`,fullPage:true,animations:'disabled',timeout:60000});
   for(const [status,payload] of [[404,{success:false,message:'Fixture staff API 404'}],[503,{success:false,message:'Fixture staff API unavailable'}],[200,{success:true,staff:null,invitations:[],roles:[]}]]){
     await page.route('**/api/admin/staff/',route=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(payload)}));
     await page.reload();await page.getByRole('alert').filter({hasText:status===200?'รายชื่อเจ้าหน้าที่ไม่ครบถ้วน':payload.message}).waitFor();
     assert.equal(await page.getByRole('table',{name:'ทะเบียนเจ้าหน้าที่และ MFA'}).count(),0,'failure must not render an empty staff table');
-    await page.screenshot({path:`${out}/staff-error-${status}.png`,fullPage:true});await page.unroute('**/api/admin/staff/');
+    await page.screenshot({path:`${out}/staff-error-${status}.png`,fullPage:true,animations:'disabled',timeout:60000});await page.unroute('**/api/admin/staff/');
   }
   await page.reload();await page.getByText('Fixture editor',{exact:true}).waitFor();assert.deepEqual(errors,[]);
   console.log('PASS: real PHP-session guest/MFA/member guards, authorized /admin/users staff data, trailing-slash URL, unchanged contract and 404/503/malformed error states');

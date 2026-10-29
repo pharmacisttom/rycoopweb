@@ -93,9 +93,10 @@ export const ADMIN_SIDEBAR_GROUPS = [
     icon: FileText,
     items: [
       { label: 'ข่าวสาร & ประกาศ', to: '/admin/content?tab=news', permissions: ['news.view'] },
+      { label: 'ประกาศสำคัญ', to: '/admin/workspace', permissions: ['announcements.view'] },
       { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view'] },
       { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
-      { label: 'เอกสารและการเผยแพร่เนื้อหา', to: '/admin/cms', roles: ['super_admin', 'admin', 'editor', 'pr_officer', 'document_officer'] },
+      { label: 'เอกสารและการเผยแพร่เนื้อหา', to: '/admin/cms', roles: ['super_admin', 'admin', 'editor', 'document_officer'] },
     ],
   },
   {

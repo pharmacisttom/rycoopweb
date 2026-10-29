@@ -127,7 +127,7 @@ const profileRoutes = ['/member/profile', '/profile', '/settings', '/edit-profil
 const adminRoutes = ['/admin', '/admin/dashboard'];
 const staffRoles = [
   'staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer',
-  'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin'
+  'document_officer', 'complaint_officer', 'auditor', 'it_admin'
 ];
 
 function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {

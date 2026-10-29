@@ -145,6 +145,8 @@ class AuthController extends Controller
             return;
         }
 
+        if ($roleSlug === 'pr_officer') { $this->response->json(['success'=>false,'message'=>'เจ้าหน้าที่ประชาสัมพันธ์ต้องเข้าสู่ระบบด้วย Google'],403); return; }
+
         if ($roleSlug !== 'member' && config('google.enabled',false) && (new \App\Services\GoogleAuthService())->isConfigured() && config('google.staff_google_login_required',false)) {
             $this->response->json(['success'=>false,'message'=>'บัญชีเจ้าหน้าที่นี้ต้องเข้าสู่ระบบด้วย Google ของสหกรณ์'],403);return;
         }

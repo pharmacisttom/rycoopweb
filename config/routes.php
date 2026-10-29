@@ -12,7 +12,7 @@ use App\Middlewares\RoleMiddleware;
 use App\Middlewares\PermissionMiddleware;
 
 $staffRoles = ['staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer', 'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin'];
-$backofficeRoles = ['super_admin', ...$staffRoles];
+$backofficeRoles = ['super_admin', ...array_values(array_diff($staffRoles, ['pr_officer']))];
 
 /*
 |--------------------------------------------------------------------------
@@ -185,6 +185,9 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->get('/access/permissions','Admin\\ControlCenterApiController@accessPermissions');
     $r->get('/departments','Admin\\ControlCenterApiController@departments');
     $r->get('/reports/catalog','Admin\\ControlCenterApiController@reportsCatalog');
+    $r->get('/announcements','Admin\\AnnouncementController@index',[new PermissionMiddleware('announcements','view')]);
+    $r->post('/announcements','Admin\\AnnouncementController@store',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','create'),CsrfMiddleware::class]);
+    $r->post('/announcements/{id}/update','Admin\\AnnouncementController@update',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','edit'),CsrfMiddleware::class]);
     $r->get('/news','Api\\SpaApiController@adminNews',[new PermissionMiddleware('news','view')]);
     $r->post('/news','Api\\SpaApiController@createAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','create'),CsrfMiddleware::class]);
     $r->post('/news/{id}/update','Api\\SpaApiController@updateAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
@@ -351,7 +354,7 @@ $router->group(['prefix' => 'member', 'middleware' => [new FeatureFlagMiddleware
 | Protected Staff Operations Routes
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware($staffRoles)]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(array_values(array_diff($staffRoles, ['pr_officer']))) ]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Staff\\StaffController@dashboard');
     $r->get('/members', 'Staff\\StaffController@members', [new FeatureFlagMiddleware('member_portal')]);
     $r->get('/members/detail', 'Staff\\StaffController@memberDetail', [new FeatureFlagMiddleware('member_portal')]);

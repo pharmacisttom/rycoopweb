@@ -165,6 +165,12 @@ class Auth
             return true; // Super admin has all permissions
         }
 
+        if (($user['role_slug'] ?? '') === 'pr_officer') {
+            $rows = Database::query('SELECT DISTINCT p.module,p.action FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id JOIN permissions p ON p.id=rp.permission_id WHERE ur.user_id=?', [$user['id']]);
+            $keys = array_map(static fn(array $row): string => $row['module'].'.'.$row['action'], $rows);
+            return in_array("$module.$action", \App\Services\PrOfficerPolicy::restrict('pr_officer', $keys), true);
+        }
+
         // Check in role_permissions table
         $sql = "SELECT COUNT(*) FROM role_permissions rp
                 JOIN permissions p ON rp.permission_id = p.id

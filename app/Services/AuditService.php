@@ -10,7 +10,7 @@ use App\Core\Logger;
 
 class AuditService
 {
-    public static function log(string $module, string $action, ?string $recordId = null, mixed $oldValues = null, mixed $newValues = null): void
+    public static function log(string $module, string $action, ?string $recordId = null, mixed $oldValues = null, mixed $newValues = null, bool $required = false): void
     {
         $userId = Auth::id();
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
@@ -37,6 +37,7 @@ class AuditService
             Logger::log('audit', "Audit Action: [{$module}] [{$action}] Record: {$recordId} by User: {$userId}");
         } catch (\Throwable $e) {
             Logger::error("Audit Log Failure: " . $e->getMessage());
+            if ($required) { throw $e; }
         }
     }
 }

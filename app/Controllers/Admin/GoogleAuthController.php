@@ -204,7 +204,7 @@ class GoogleAuthController extends Controller
         if ($invitationToken !== '') {
             $invitation = StaffInvitationService::findValidByToken($invitationToken);
         }
-        if (!$invitation) {
+        if (!$invitation && $invitationToken === '') {
             $invitation = StaffInvitationService::findValidByEmail($email);
         }
 
@@ -281,7 +281,7 @@ class GoogleAuthController extends Controller
         $userId = (int) $identity['user_id'];
         $roleSlug = (string) ($identity['role_slug'] ?? 'staff');
         $hasMfa = (int) ($identity['two_factor_enabled'] ?? 0) === 1 && !empty($identity['two_factor_confirmed_at']);
-        $mfaRequired = (bool) config('google.staff_mfa_required', true);
+        $mfaRequired = \App\Services\PrOfficerPolicy::requiresMfa($roleSlug);
 
         // Update login stats
         Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$ip, $userId]);

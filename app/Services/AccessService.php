@@ -14,7 +14,7 @@ class AccessService
         $user=Database::first("SELECT u.id,r.slug FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE u.id=? AND u.status='active' AND u.deleted_at IS NULL",[$id]);
         if(!$user)return [];
         if($user['slug']==='super_admin')return self::keys();
-        return array_values(array_intersect(self::keys(),array_column(Database::query('SELECT DISTINCT CONCAT(p.module,\'.\',p.action) AS permission FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id JOIN permissions p ON p.id=rp.permission_id WHERE ur.user_id=?',[$id]),'permission')));
+        return PrOfficerPolicy::restrict($user['slug'], array_values(array_intersect(self::keys(),array_column(Database::query('SELECT DISTINCT CONCAT(p.module,\'.\',p.action) AS permission FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id JOIN permissions p ON p.id=rp.permission_id WHERE ur.user_id=?',[$id]),'permission'))));
     }
     public static function version(array $record): string {return hash('sha256',json_encode($record,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));}
     public static function role(int $id): array {
