@@ -119,6 +119,7 @@ jobs:
           php tests/QrCodeGeneratorTest.php
           php tests/TwoFactorServiceTest.php
           php tests/NewsWorkflowTest.php
+          php tests/StaffRouteDispatchTest.php
           php tests/NewsGalleryTest.php
           php tests/PasswordWorkflowTest.php
           php tests/MigrationRunnerTest.php

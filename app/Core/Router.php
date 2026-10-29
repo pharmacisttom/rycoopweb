@@ -57,7 +57,9 @@ class Router
     private function addRoute(string $method, string $path, string|array|callable $handler, array $middlewares = []): void
     {
         $fullPath = rtrim($this->currentGroupPrefix, '/') . '/' . ltrim($path, '/');
-        $fullPath = $fullPath === '' ? '/' : $fullPath;
+        // Request::parseUri removes trailing slashes; group index routes must
+        // use the same canonical path or /api/admin/staff can never match.
+        $fullPath = rtrim($fullPath, '/') ?: '/';
 
         $allMiddlewares = array_merge($this->currentGroupMiddlewares, $middlewares);
 
