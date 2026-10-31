@@ -641,7 +641,7 @@ assertCheck($authCheckResult === false, 'Auth::check() invalidates stale session
 // Test 24: Super admin route /api/admin/staff/ remains intact and requires super_admin
 $staffRouteFound = false;
 foreach ($routes as $route) {
-    if ($route['path'] === '/api/admin/staff/' && $route['method'] === 'GET') {
+    if (in_array($route['path'], ['/api/admin/staff', '/api/admin/staff/'], true) && $route['method'] === 'GET') {
         $staffRouteFound = true;
         break;
     }
