@@ -503,7 +503,7 @@ class LegacyMemberMigrationService
 
             $insertRunStmt = $pdo->prepare("
                 INSERT INTO member_import_runs (user_id, year, source_name, record_count, created_count, updated_count, unchanged_count, net_total, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
+                VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)
             ");
 
             // A. Process USERS & USER_ROLES (Rule 7: status = 'inactive')
