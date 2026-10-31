@@ -177,6 +177,9 @@ $mockTargetPdo->exec("
     );
 ");
 
+// Provision disposable in-memory ledger before starting zero-mutation dry run.
+LegacyMemberMigrationService::ensureMappingTable($mockTargetPdo);
+
 // 9. Dry Run Verification
 $dryRunResult = LegacyMemberMigrationService::executeMigration([
     'source_path' => $dumpPath,
