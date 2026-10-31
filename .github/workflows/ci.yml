@@ -119,6 +119,8 @@ jobs:
           php tests/QrCodeGeneratorTest.php
           php tests/TwoFactorServiceTest.php
           php tests/NewsWorkflowTest.php
+          php tests/StaffRouteDispatchTest.php
+          php tests/PrOfficerWorkflowTest.php
           php tests/NewsGalleryTest.php
           php tests/PasswordWorkflowTest.php
           php tests/MigrationRunnerTest.php
@@ -158,6 +160,11 @@ jobs:
         run: |
           php bin/console db:seed
           php bin/console db:seed
+
+      - name: Real MySQL 8 admin CRUD and concurrency
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/AdminCrudMySqlTest.php
 
       - name: Start PHP API smoke-test server
         run: |
@@ -277,6 +284,28 @@ jobs:
           sudo apt-get install -y fonts-noto-core
       - name: Verify admin UI and critical action contracts
         run: node tests/AdminUIBrowserTest.mjs
+      - name: Set up PHP for real staff-session integration
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, mbstring, openssl, fileinfo
+          tools: composer:v2
+      - name: Install PHP dependencies for staff HTTP fixture
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress
+      - name: Verify authorized staff page against real PHP routing
+        run: node tests/StaffPageIntegrationTest.mjs
+      - name: PR officer presentation regression
+        run: node tests/PrOfficerBrowserTest.mjs
+      - name: Stored admin CRUD browser contracts
+        run: node tests/AdminCrudBrowserTest.mjs
+      - name: Upload staff-session integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staff-session-integration-qa
+          path: storage/tmp/staff-page-integration/*.png
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload synthetic presentation evidence
         if: always()
         uses: actions/upload-artifact@v4

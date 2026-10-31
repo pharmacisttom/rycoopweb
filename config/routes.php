@@ -9,10 +9,11 @@ use App\Middlewares\CsrfMiddleware;
 use App\Middlewares\FeatureFlagMiddleware;
 use App\Middlewares\RateLimitMiddleware;
 use App\Middlewares\RoleMiddleware;
+use App\Middlewares\MemberMiddleware;
 use App\Middlewares\PermissionMiddleware;
 
 $staffRoles = ['staff', 'manager', 'executive', 'finance', 'loan_officer', 'welfare_officer', 'pr_officer', 'document_officer', 'complaint_officer', 'auditor', 'it_admin'];
-$backofficeRoles = ['super_admin', ...$staffRoles];
+$backofficeRoles = ['super_admin', ...array_values(array_diff($staffRoles, ['pr_officer']))];
 
 /*
 |--------------------------------------------------------------------------
@@ -110,9 +111,9 @@ $router->get('/api/public/visitors/analytics', 'Api\\SpaApiController@visitorAna
 |--------------------------------------------------------------------------
 */
 $router->get('/api/auth/me', 'Api\\SpaApiController@me');
-$router->get('/api/member/dividends', 'Member\\DividendController@index', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
-$router->get('/api/member/requests', 'Api\\SpaApiController@memberGetRequests', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
-$router->post('/api/member/requests/profile-change', 'Api\\SpaApiController@memberSubmitProfileRequest', [AuthMiddleware::class, new RoleMiddleware(['member']), CsrfMiddleware::class]);
+$router->get('/api/member/dividends', 'Member\\DividendController@index', [AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class]);
+$router->get('/api/member/requests', 'Api\\SpaApiController@memberGetRequests', [AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class]);
+$router->post('/api/member/requests/profile-change', 'Api\\SpaApiController@memberSubmitProfileRequest', [AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class, CsrfMiddleware::class]);
 $router->post('/api/admin/dividends/preview', 'Admin\\DividendImportController@preview', [AuthMiddleware::class, new PermissionMiddleware('dividends','import'), CsrfMiddleware::class]);
 $router->post('/api/admin/dividends/confirm', 'Admin\\DividendImportController@confirm', [AuthMiddleware::class, new PermissionMiddleware('dividends','import'), CsrfMiddleware::class]);
 $router->get('/api/admin/members', 'Admin\\MemberManagementController@index', [AuthMiddleware::class, new PermissionMiddleware('members','view')]);
@@ -132,7 +133,7 @@ $router->group(['prefix'=>'api/admin/members','middleware'=>[AuthMiddleware::cla
 | SPA REST API — Member Data (auth + member role required)
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'api/member', 'middleware' => [new FeatureFlagMiddleware('member_portal'), AuthMiddleware::class, new RoleMiddleware(['member'])]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'api/member', 'middleware' => [new FeatureFlagMiddleware('member_portal'), AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Api\\SpaApiController@memberDashboard');
     $r->get('/profile', 'Api\\SpaApiController@memberProfile');
     $r->get('/shares', 'Api\\SpaApiController@memberShares');
@@ -185,11 +186,21 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->get('/access/permissions','Admin\\ControlCenterApiController@accessPermissions');
     $r->get('/departments','Admin\\ControlCenterApiController@departments');
     $r->get('/reports/catalog','Admin\\ControlCenterApiController@reportsCatalog');
+    $r->get('/announcements','Admin\\AnnouncementController@index',[new PermissionMiddleware('announcements','view')]);
+    $r->post('/announcements','Admin\\AnnouncementController@store',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','create'),CsrfMiddleware::class]);
+    $r->post('/announcements/{id}/update','Admin\\AnnouncementController@update',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','edit'),CsrfMiddleware::class]);
     $r->get('/news','Api\\SpaApiController@adminNews',[new PermissionMiddleware('news','view')]);
     $r->post('/news','Api\\SpaApiController@createAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','create'),CsrfMiddleware::class]);
     $r->post('/news/{id}/update','Api\\SpaApiController@updateAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
     $r->post('/news/{id}/publish','Admin\\NewsWorkflowController@publish',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
     $r->post('/news/{id}/delete','Api\\SpaApiController@deleteAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','delete'),CsrfMiddleware::class]);
+    $r->get('/faqs','Api\\SpaApiController@adminFaqs',[new PermissionMiddleware('faqs','view')]);
+    $r->get('/documents','Admin\\DocumentController@index',[new PermissionMiddleware('documents','view')]);
+    $r->post('/documents','Admin\\DocumentController@store',[new PermissionMiddleware('documents','create'),CsrfMiddleware::class]);
+    $r->post('/documents/{id}/update','Admin\\DocumentController@update',[new PermissionMiddleware('documents','edit'),CsrfMiddleware::class]);
+    $r->post('/documents/{id}/delete','Admin\\DocumentController@destroy',[new PermissionMiddleware('documents','delete'),CsrfMiddleware::class]);
+    $r->get('/settings/content','Admin\\SettingController@index',[new PermissionMiddleware('settings','view')]);
+    $r->post('/settings/content','Admin\\SettingController@update',[CsrfMiddleware::class]);
     $r->post('/faqs','Api\\SpaApiController@createAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','create'),CsrfMiddleware::class]);
     $r->post('/faqs/{id}/update','Api\\SpaApiController@updateAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','update'),CsrfMiddleware::class]);
     $r->post('/faqs/{id}/delete','Api\\SpaApiController@deleteAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','delete'),CsrfMiddleware::class]);
@@ -303,7 +314,7 @@ $router->get('/verify-receipt/{token}', 'PublicReceiptController@verify');
 | Protected Member Portal Routes
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'member', 'middleware' => [new FeatureFlagMiddleware('member_portal'), AuthMiddleware::class, new RoleMiddleware(['member'])]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'member', 'middleware' => [new FeatureFlagMiddleware('member_portal'), AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Member\\MemberPortalController@dashboard');
     $r->get('/profile', 'Member\\MemberPortalController@profile');
     $r->post('/profile/update', 'Member\\MemberPortalController@updateProfile', [CsrfMiddleware::class]);
@@ -337,7 +348,7 @@ $router->group(['prefix' => 'member', 'middleware' => [new FeatureFlagMiddleware
     $r->post('/suggestions/store', 'Member\\SuggestionController@store', [CsrfMiddleware::class]);
 
     $r->get('/notifications', 'Member\\MemberPortalController@notifications');
-    $r->post('/notifications/read-all', 'Member\\MemberPortalController@markAllNotificationsRead');
+    $r->post('/notifications/read-all', 'Member\\MemberPortalController@markAllNotificationsRead', [CsrfMiddleware::class]);
     $r->get('/online-services', 'Member\\MemberPortalController@onlineServices');
     $r->get('/financial-summary', 'Member\\MemberPortalController@financialSummary');
     $r->get('/settings', 'Member\\MemberPortalController@settings');
@@ -351,7 +362,7 @@ $router->group(['prefix' => 'member', 'middleware' => [new FeatureFlagMiddleware
 | Protected Staff Operations Routes
 |--------------------------------------------------------------------------
 */
-$router->group(['prefix' => 'staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware($staffRoles)]], function (\App\Core\Router $r) {
+$router->group(['prefix' => 'staff', 'middleware' => [AuthMiddleware::class, new RoleMiddleware(array_values(array_diff($staffRoles, ['pr_officer']))) ]], function (\App\Core\Router $r) {
     $r->get('/dashboard', 'Staff\\StaffController@dashboard');
     $r->get('/members', 'Staff\\StaffController@members', [new FeatureFlagMiddleware('member_portal')]);
     $r->get('/members/detail', 'Staff\\StaffController@memberDetail', [new FeatureFlagMiddleware('member_portal')]);

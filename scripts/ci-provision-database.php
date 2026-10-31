@@ -96,7 +96,7 @@ try {
         $userHost = sprintf("`%s`@`%s`", str_replace('`', '``', $migratorUser), str_replace('`', '``', $h));
         $pdo->exec("CREATE USER IF NOT EXISTS {$userHost} IDENTIFIED BY {$quotedMigratorPass};");
         $pdo->exec("ALTER USER {$userHost} IDENTIFIED BY {$quotedMigratorPass};");
-        $pdo->exec("GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, INDEX, REFERENCES, CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE ON `{$database}`.* TO {$userHost};");
+        $pdo->exec("GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, INDEX, REFERENCES, CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, TRIGGER ON `{$database}`.* TO {$userHost};");
     }
     echo "✓ Provisioned dedicated migration account `{$migratorUser}` with database-scoped DDL/DML privileges.\n";
 

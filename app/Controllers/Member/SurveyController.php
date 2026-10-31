@@ -15,15 +15,16 @@ use App\Services\MemberPortalService;
 class SurveyController extends Controller
 {
     private ?array $member = null;
-    private int $memberId;
+    private int $memberId = 0;
 
     public function __construct(Request $request, Response $response)
     {
         parent::__construct($request, $response);
         
-        $this->member = MemberPortalService::getMemberByUserId(Auth::id());
+        $this->member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if ($this->member === null) {
-            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
+            $this->memberId = 0;
+            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เปิดใช้งานหรือเชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
             $this->redirect(url('login'));
             return;
         }
@@ -35,6 +36,10 @@ class SurveyController extends Controller
      */
     public function index(): void
     {
+        if ($this->member === null || $this->memberId <= 0) {
+            $this->redirect(url('login'));
+            return;
+        }
         $surveys = Database::query(
             "SELECT s.*, 
                     (SELECT COUNT(*) FROM survey_responses r WHERE r.survey_id = s.id AND r.member_id = ?) as has_responded
@@ -59,6 +64,10 @@ class SurveyController extends Controller
      */
     public function show(string $idOrSlug): void
     {
+        if ($this->member === null || $this->memberId <= 0) {
+            $this->redirect(url('login'));
+            return;
+        }
         $survey = Database::first(
             "SELECT * FROM surveys WHERE (id = ? OR slug = ?) AND status = 'active' AND deleted_at IS NULL",
             [is_numeric($idOrSlug) ? (int)$idOrSlug : 0, $idOrSlug]
@@ -113,6 +122,14 @@ class SurveyController extends Controller
      */
     public function submit(string $idOrSlug): void
     {
+        if ($this->member === null || $this->memberId <= 0) {
+            if ($this->request && $this->request->isAjax()) {
+                $this->response->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก'], 403);
+                return;
+            }
+            $this->redirect(url('login'));
+            return;
+        }
         $survey = Database::first(
             "SELECT * FROM surveys WHERE (id = ? OR slug = ?) AND status = 'active' AND deleted_at IS NULL",
             [is_numeric($idOrSlug) ? (int)$idOrSlug : 0, $idOrSlug]

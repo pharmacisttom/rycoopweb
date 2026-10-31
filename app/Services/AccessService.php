@@ -14,7 +14,7 @@ class AccessService
         $user=Database::first("SELECT u.id,r.slug FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE u.id=? AND u.status='active' AND u.deleted_at IS NULL",[$id]);
         if(!$user)return [];
         if($user['slug']==='super_admin')return self::keys();
-        return array_values(array_intersect(self::keys(),array_column(Database::query('SELECT DISTINCT CONCAT(p.module,\'.\',p.action) AS permission FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id JOIN permissions p ON p.id=rp.permission_id WHERE ur.user_id=?',[$id]),'permission')));
+        return PrOfficerPolicy::restrict($user['slug'], array_values(array_intersect(self::keys(),array_column(Database::query('SELECT DISTINCT CONCAT(p.module,\'.\',p.action) AS permission FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id JOIN permissions p ON p.id=rp.permission_id WHERE ur.user_id=?',[$id]),'permission'))));
     }
     public static function version(array $record): string {return hash('sha256',json_encode($record,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));}
     public static function role(int $id): array {
@@ -24,7 +24,7 @@ class AccessService
         $r['builtin']=isset(config('permissions.roles',[])[$r['slug']]) || in_array($r['slug'],['super_admin','member','staff'],true);$r['protected']=in_array($r['slug'],['super_admin','member'],true);$r['version']=self::version($r);return $r;
     }
     private static function transaction(callable $work): mixed {Database::beginTransaction();try{$r=$work();Database::commit();return $r;}catch(\Throwable $e){Database::rollBack();throw $e;}}
-    private static function assertVersion(array $r,array $data): void {if(!isset($data['version']) || !hash_equals($r['version'],(string)$data['version']))throw new \InvalidArgumentException('ข้อมูลเปลี่ยนแปลงแล้ว กรุณาโหลดล่าสุดก่อนแก้ไข');}
+    private static function assertVersion(array $r,array $data): void {if(!isset($data['version']) || !hash_equals($r['version'],(string)$data['version']))throw new \App\Exceptions\SecurityGateException('ข้อมูลเปลี่ยนแปลงแล้ว กรุณาโหลดล่าสุดก่อนแก้ไข',409,'STALE_VERSION');}
     public static function saveRole(array $data,?int $id=null): array {
         $name=trim((string)($data['name']??''));$slug=trim((string)($data['slug']??''));$description=trim((string)($data['description']??''));
         if($name==='' || mb_strlen($name)>50 || strlen($slug)>50 || !preg_match('/^[a-z][a-z0-9_]*$/D',$slug) || mb_strlen($description)>255)throw new \InvalidArgumentException('กรอกชื่อ Role และรหัสภาษาอังกฤษให้ถูกต้อง');
@@ -32,18 +32,18 @@ class AccessService
         foreach(['news','faqs','coop_info','people','rates','products'] as $m)if(array_intersect(["$m.create","$m.update","$m.delete","$m.publish"],$permissions) && !in_array("$m.view",$permissions,true))throw new \InvalidArgumentException('สิทธิ์เพิ่ม/แก้ไข/ลบต้องเลือกสิทธิ์ดูข้อมูลด้วย');
         if(array_intersect(['members.update','dividends.update','dividends.import'],$permissions) && !in_array('members.view',$permissions,true))throw new \InvalidArgumentException('การดูแลสมาชิก/ปันผลต้องมีสิทธิ์ดูสมาชิก');
         return self::transaction(function()use($data,$id,$name,$slug,$description,$permissions){
-            if($id){Database::first('SELECT id FROM roles WHERE id=? FOR UPDATE',[$id]);$old=self::role($id);self::assertVersion($old,$data);if($old['protected'])throw new \InvalidArgumentException('Role หลักนี้สงวนไว้สำหรับระบบ');if($slug!==$old['slug'])throw new \InvalidArgumentException('ไม่สามารถเปลี่ยนรหัส Role ที่มีอยู่แล้ว');Database::execute('UPDATE roles SET name=?,description=?,updated_at=NOW() WHERE id=?',[$name,$description,$id]);}
+            if($id){Database::first('SELECT id FROM roles WHERE id=?'.AdminCrudService::lock(),[$id]);$old=self::role($id);self::assertVersion($old,$data);if($old['protected'])throw new \InvalidArgumentException('Role หลักนี้สงวนไว้สำหรับระบบ');if($slug!==$old['slug'])throw new \InvalidArgumentException('ไม่สามารถเปลี่ยนรหัส Role ที่มีอยู่แล้ว');Database::execute('UPDATE roles SET name=?,description=?,updated_at=NOW() WHERE id=?',[$name,$description,$id]);}
             else{if(isset(config('permissions.roles',[])[$slug]) || in_array($slug,['super_admin','member','staff'],true))throw new \InvalidArgumentException('รหัส Role นี้สงวนไว้');$id=(int)Database::insert('INSERT INTO roles(name,slug,description) VALUES(?,?,?)',[$name,$slug,$description]);}
             foreach(self::keys() as $key){[$m,$a]=explode('.',$key);$permission=Database::value('SELECT id FROM permissions WHERE module=? AND action=?',[$m,$a]);if(!$permission)throw new \InvalidArgumentException('กรุณาอัปเดตฐานข้อมูลสิทธิ์ก่อน');Database::execute('DELETE FROM role_permissions WHERE role_id=? AND permission_id=?',[$id,$permission]);if(in_array($key,$permissions,true))Database::execute('INSERT INTO role_permissions(role_id,permission_id) VALUES(?,?)',[$id,$permission]);}
-            AuditService::log('roles',isset($old)?'update':'create',(string)$id,$old??null,['name'=>$name,'permissions'=>$permissions]);return self::role($id);
+            AuditService::log('roles',isset($old)?'update':'create',(string)$id,$old??null,['name'=>$name,'permissions'=>$permissions],required:true);return self::role($id);
         });
     }
-    public static function deleteRole(int $id,array $data): void {self::transaction(function()use($id,$data){Database::first('SELECT id FROM roles WHERE id=? FOR UPDATE',[$id]);$r=self::role($id);self::assertVersion($r,$data);if($r['builtin'] || $r['users'])throw new \InvalidArgumentException('ลบได้เฉพาะ Role ที่สร้างเองและยังไม่มีผู้ใช้งาน');Database::execute('DELETE FROM roles WHERE id=?',[$id]);AuditService::log('roles','delete',(string)$id,$r,null);});}
+    public static function deleteRole(int $id,array $data): void {self::transaction(function()use($id,$data){Database::first('SELECT id FROM roles WHERE id=?'.AdminCrudService::lock(),[$id]);$r=self::role($id);self::assertVersion($r,$data);if($r['builtin'] || $r['users'])throw new \InvalidArgumentException('ลบได้เฉพาะ Role ที่สร้างเองและยังไม่มีผู้ใช้งาน');Database::execute('DELETE FROM roles WHERE id=?',[$id]);AuditService::log('roles','delete',(string)$id,$r,null,required:true);});}
     public static function account(int $id): array {
-        $u=Database::first('SELECT id,name,username,email,status,updated_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',[$id]);if(!$u)throw new \InvalidArgumentException('ไม่พบผู้ใช้งาน');
+        $u=Database::first('SELECT id,name,username,email,status,department,updated_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',[$id]);if(!$u)throw new \InvalidArgumentException('ไม่พบผู้ใช้งาน');
         $u['roles']=Database::query('SELECT r.id,r.slug,r.name FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? ORDER BY r.id',[$id]);$u['is_member']=(bool)Database::value('SELECT COUNT(*) FROM members WHERE user_id=?',[$id]);$u['version']=self::version($u);return $u;
     }
-    private static function lockAdministrators(): void {Database::query("SELECT u.id FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE r.slug='super_admin' ORDER BY u.id FOR UPDATE");}
+    private static function lockAdministrators(): void {Database::query("SELECT u.id FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE r.slug='super_admin' ORDER BY u.id".AdminCrudService::lock());}
     private static function protectAdministrator(array $old,bool $removing): void {
         if(!$removing)return;
         if((int)$old['id']===(int)Auth::id())throw new \InvalidArgumentException('ไม่สามารถลบ ระงับ หรือเปลี่ยน Role ของตนเอง');
@@ -55,17 +55,47 @@ class AccessService
     public static function saveAccount(array $data,?int $id=null): array {
         $name=trim((string)($data['name']??''));$username=trim((string)($data['username']??''));$email=trim((string)($data['email']??''));$status=(string)($data['status']??'active');$roleId=(int)($data['role_id']??0);
         if($name==='' || mb_strlen($name)>100 || !preg_match('/^[A-Za-z][A-Za-z0-9_.-]{2,49}$/D',$username) || !filter_var($email,FILTER_VALIDATE_EMAIL) || strlen($email)>100 || !in_array($status,['active','inactive','suspended'],true))throw new \InvalidArgumentException('กรอกชื่อ ชื่อผู้ใช้ อีเมล และสถานะให้ถูกต้อง');
+        $department=trim((string)($data['department']??''));if(mb_strlen($department)>100)throw new \InvalidArgumentException('หน่วยงานต้องไม่เกิน 100 ตัวอักษร');
         $password=(string)($data['password']??'');if(!$id && (strlen($password)<12 || strlen($password)>200))throw new \InvalidArgumentException('บัญชีใหม่ต้องมีรหัสผ่าน 12–200 ตัวอักษร');
-        return self::transaction(function()use($data,$id,$name,$username,$email,$status,$roleId,$password){
-            self::lockAdministrators();Database::first('SELECT id FROM roles WHERE id=? FOR UPDATE',[$roleId]);$role=self::role($roleId);
+        return self::transaction(function()use($data,$id,$name,$username,$email,$status,$roleId,$password,$department){
+            self::lockAdministrators();Database::first('SELECT id FROM roles WHERE id=?'.AdminCrudService::lock(),[$roleId]);$role=self::role($roleId);
             if($role['slug']==='member')throw new \InvalidArgumentException('บัญชีสมาชิกให้จัดการผ่านระบบสมาชิก');
-            if($id){Database::first('SELECT id FROM users WHERE id=? FOR UPDATE',[$id]);$old=self::account($id);self::assertVersion($old,$data);if($old['is_member'])throw new \InvalidArgumentException('บัญชีนี้เชื่อมกับสมาชิก ให้แก้ไขผ่านระบบสมาชิก');
+            if(!$id&&($role['slug']==='pr_officer'||(config('google.enabled',false)&&config('google.staff_google_login_required',true))))throw new \InvalidArgumentException('บัญชีเจ้าหน้าที่ Google ให้สร้างผ่านคำเชิญ ไม่ใช้บัญชีรหัสผ่านเริ่มต้น');
+            if($id){Database::first('SELECT id FROM users WHERE id=?'.AdminCrudService::lock(),[$id]);$old=self::account($id);self::assertVersion($old,$data);if($old['is_member'])throw new \InvalidArgumentException('บัญชีนี้เชื่อมกับสมาชิก ให้แก้ไขผ่านระบบสมาชิก');
                 self::protectAdministrator($old,$status!=='active' || count($old['roles'])!==1 || (int)$old['roles'][0]['id']!==$roleId);
-                Database::execute('UPDATE users SET name=?,username=?,email=?,status=?,updated_at=NOW() WHERE id=?',[$name,$username,$email,$status,$id]);
+                Database::execute('UPDATE users SET name=?,username=?,email=?,status=?,department=?,updated_at=NOW() WHERE id=?',[$name,$username,$email,$status,array_key_exists('department',$data)?$department:($old['department']??null),$id]);
                 Database::execute('DELETE FROM user_roles WHERE user_id=?',[$id]);
             }else{$id=(int)Database::insert('INSERT INTO users(uuid,name,username,email,password,status) VALUES(?,?,?,?,?,?)',[bin2hex(random_bytes(16)),$name,$username,$email,password_hash($password,PASSWORD_ARGON2ID),$status]);}
-            Database::execute('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)',[$id,$roleId]);AuditService::log('users',isset($old)?'update':'create',(string)$id,isset($old)?['name'=>$old['name'],'status'=>$old['status'],'roles'=>$old['roles']]:null,['name'=>$name,'status'=>$status,'role_id'=>$roleId]);return self::account($id);
+            Database::execute('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)',[$id,$roleId]);if(isset($old)&&($old['status']!==$status||$old['email']!==$email||array_column($old['roles'],'id')!==[$roleId]))Auth::revokeAllSessions($id);AuditService::log('users',isset($old)?'update':'create',(string)$id,isset($old)?['name'=>$old['name'],'status'=>$old['status'],'roles'=>$old['roles']]:null,['name'=>$name,'status'=>$status,'role_id'=>$roleId],required:true);return self::account($id);
         });
     }
-    public static function deleteAccount(int $id,array $data): void {self::transaction(function()use($id,$data){self::lockAdministrators();Database::first('SELECT id FROM users WHERE id=? FOR UPDATE',[$id]);$u=self::account($id);self::assertVersion($u,$data);if($u['is_member'])throw new \InvalidArgumentException('บัญชีสมาชิกให้จัดการผ่านระบบสมาชิก');self::protectAdministrator($u,true);Database::execute("UPDATE users SET status='inactive',deleted_at=NOW() WHERE id=?",[$id]);AuditService::log('users','delete',(string)$id,['name'=>$u['name']],null);});}
+    public static function deleteAccount(int $id,array $data): void {self::transaction(function()use($id,$data){self::lockAdministrators();Database::first('SELECT id FROM users WHERE id=?'.AdminCrudService::lock(),[$id]);$u=self::account($id);self::assertVersion($u,$data);if($u['is_member'])throw new \InvalidArgumentException('บัญชีสมาชิกให้จัดการผ่านระบบสมาชิก');self::protectAdministrator($u,true);Database::execute("UPDATE users SET status='inactive',deleted_at=NOW() WHERE id=?",[$id]);AuditService::log('users','delete',(string)$id,['name'=>$u['name']],null,required:true);});}
+    public static function staffState(int $id, bool $lock=false): array {
+        $suffix=$lock&&Database::pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME)==='mysql'?''.AdminCrudService::lock():'';
+        $state=Database::first('SELECT id,status,department,session_version FROM users WHERE id=? AND deleted_at IS NULL'.$suffix,[$id]);
+        if(!$state)throw new \App\Exceptions\SecurityGateException('ไม่พบบัญชีเจ้าหน้าที่',404,'STAFF_NOT_FOUND');
+        $state['roles']=Database::query('SELECT r.id,r.slug FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? ORDER BY r.id',[$id]);
+        $state['version']=self::version($state);return $state;
+    }
+    public static function mutateStaff(int $id,array $input,string $action): void {
+        self::transaction(function()use($id,$input,$action){
+            self::lockAdministrators();$old=self::staffState($id,true);self::assertVersion($old,$input);
+            if(in_array('member',array_column($old['roles'],'slug'),true))throw new \InvalidArgumentException('บัญชีสมาชิกต้องจัดการผ่านระบบสมาชิก');
+            if($action==='role'){
+                $role=Database::first('SELECT id,slug FROM roles WHERE id=?',[(int)($input['role_id']??0)]);
+                if(!$role||$role['slug']==='member')throw new \InvalidArgumentException('บทบาทไม่ถูกต้อง');
+                $department=trim((string)($input['department']??''));if(mb_strlen($department)>100)throw new \InvalidArgumentException('ชื่อหน่วยงานยาวเกินกำหนด');
+                self::protectAdministrator($old,count($old['roles'])!==1||(int)$old['roles'][0]['id']!==(int)$role['id']);
+                Database::execute('UPDATE users SET department=?,updated_at=NOW() WHERE id=?',[$department,$id]);
+                Database::execute('DELETE FROM user_roles WHERE user_id=?',[$id]);Database::execute('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)',[$id,$role['id']]);
+            }else{
+                $status=match($action){'suspend'=>'suspended','activate'=>'active',default=>throw new \InvalidArgumentException('คำสั่งไม่ถูกต้อง')};
+                self::protectAdministrator($old,$status!=='active');
+                Database::execute('UPDATE users SET status=?,updated_at=NOW() WHERE id=?',[$status,$id]);
+            }
+            Auth::revokeAllSessions($id);
+            AuditService::log('staff_management',$action,(string)$id,$old,self::staffState($id),required:true);
+        });
+    }
+
 }

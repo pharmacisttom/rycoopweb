@@ -20,9 +20,10 @@ class MemberPortalController extends Controller
     {
         parent::__construct($request, $response);
         
-        $this->member = MemberPortalService::getMemberByUserId(Auth::id());
+        $this->member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if ($this->member === null) {
-            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
+            $this->memberId = 0;
+            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เปิดใช้งานหรือเชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
             $this->redirect(url('login'));
             return;
         }
@@ -30,10 +31,34 @@ class MemberPortalController extends Controller
     }
 
     /**
+     * Stop controller execution immediately if member is not authenticated or not linked.
+     */
+    private function assertMemberAuthorized(): bool
+    {
+        if ($this->member === null || $this->memberId <= 0) {
+            if ($this->request && $this->request->isAjax()) {
+                $this->response->json([
+                    'success' => false,
+                    'code' => 'MEMBER_NOT_LINKED',
+                    'message' => 'ไม่พบข้อมูลสมาชิกที่เปิดใช้งานหรือเชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่'
+                ], 403);
+                return false;
+            }
+            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เปิดใช้งานหรือเชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
+            $this->redirect(url('login'));
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * 1. Member Dashboard
      */
     public function dashboard(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $summary = MemberPortalService::getDashboardSummary($this->memberId);
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
@@ -50,6 +75,9 @@ class MemberPortalController extends Controller
      */
     public function profile(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
         $this->render('member.profile', [
@@ -64,6 +92,10 @@ class MemberPortalController extends Controller
      */
     public function updateProfile(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
+
         $phone = trim((string)$this->request->input('phone'));
         $email = trim((string)$this->request->input('email'));
         $address = trim((string)$this->request->input('address'));
@@ -74,14 +106,42 @@ class MemberPortalController extends Controller
             return;
         }
 
+        // Validate Thai phone number (9-10 digits, starting with 0)
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        if (!preg_match('/^0[0-9]{8,9}$/', $cleanPhone)) {
+            Session::flash('error', 'หมายเลขโทรศัพท์ไม่ถูกต้อง (กรุณากรอกหมายเลขโทรศัพท์ 9-10 หลัก)');
+            $this->redirect(url('member/profile'));
+            return;
+        }
+
+        // Validate email format and length
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100) {
+            Session::flash('error', 'รูปแบบอีเมลไม่ถูกต้อง');
+            $this->redirect(url('member/profile'));
+            return;
+        }
+
+        // Validate address length
+        if (mb_strlen($address) < 5 || mb_strlen($address) > 500) {
+            Session::flash('error', 'ที่อยู่ต้องมีความยาวระหว่าง 5 ถึง 500 ตัวอักษร');
+            $this->redirect(url('member/profile'));
+            return;
+        }
+
         Database::execute(
             "UPDATE members SET phone = ?, email = ?, address = ?, updated_at = NOW() WHERE id = ?",
-            [$phone, $email, $address, $this->memberId]
+            [$cleanPhone, $email, $address, $this->memberId]
         );
 
+        // Mask PII in audit log payload to prevent sensitive data exposure
+        $maskedPhone = substr($cleanPhone, 0, 3) . 'XXXX' . substr($cleanPhone, -3);
+        $emailParts = explode('@', $email);
+        $maskedEmail = substr($emailParts[0], 0, 2) . '***@' . ($emailParts[1] ?? 'domain.com');
+
         AuditService::log('member', 'update_profile', (string)$this->memberId, null, [
-            'phone' => $phone,
-            'email' => $email
+            'phone' => $maskedPhone,
+            'email' => $maskedEmail,
+            'address_updated' => true,
         ]);
 
         Session::flash('success', 'บันทึกการเปลี่ยนแปลงข้อมูลส่วนตัวเรียบร้อยแล้ว');
@@ -93,6 +153,9 @@ class MemberPortalController extends Controller
      */
     public function shares(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $summary = MemberPortalService::getDashboardSummary($this->memberId);
         $requests = Database::query("SELECT * FROM share_change_requests WHERE member_id = ? ORDER BY created_at DESC", [$this->memberId]);
         $notifications = MemberPortalService::getNotifications($this->memberId);
@@ -111,6 +174,9 @@ class MemberPortalController extends Controller
      */
     public function submitShareChange(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $requestedAmount = (float)$this->request->input('requested_monthly');
         $changeType = $this->request->input('change_type') ?? 'increase';
         $reason = trim((string)$this->request->input('reason'));
@@ -153,6 +219,9 @@ class MemberPortalController extends Controller
      */
     public function deposits(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $accountNo = $this->request->query('account');
         $typeFilter = $this->request->query('type');
         $depositData = MemberPortalService::getDepositDetails($this->memberId, $accountNo, $typeFilter);
@@ -174,6 +243,9 @@ class MemberPortalController extends Controller
      */
     public function loans(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $contractNo = $this->request->query('contract');
         $loanData = MemberPortalService::getLoanDetails($this->memberId, $contractNo);
         $notifications = MemberPortalService::getNotifications($this->memberId);
@@ -193,6 +265,9 @@ class MemberPortalController extends Controller
      */
     public function loanApplication(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $eligibilityOrdinary = MemberPortalService::calculateLoanEligibility($this->memberId, 'ordinary', 35000);
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
@@ -209,6 +284,9 @@ class MemberPortalController extends Controller
      */
     public function submitLoanApplication(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $data = $this->request->all();
         $files = $_FILES ?? [];
         $res = MemberPortalService::submitLoanApplication($this->memberId, $data, $files);
@@ -232,6 +310,9 @@ class MemberPortalController extends Controller
      */
     public function welfare(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $types = Database::query("SELECT * FROM welfare_types WHERE status = 'active' ORDER BY id ASC");
         $applications = Database::query("SELECT a.*, t.name as welfare_name FROM welfare_applications a JOIN welfare_types t ON a.welfare_type_id = t.id WHERE a.member_id = ? ORDER BY a.created_at DESC", [$this->memberId]);
         $notifications = MemberPortalService::getNotifications($this->memberId);
@@ -250,6 +331,9 @@ class MemberPortalController extends Controller
      */
     public function submitWelfareClaim(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $typeId = (int)$this->request->input('welfare_type_id');
         $claimAmount = (float)$this->request->input('claim_amount');
         $desc = trim((string)$this->request->input('description'));
@@ -283,6 +367,9 @@ class MemberPortalController extends Controller
      */
     public function beneficiaries(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $data = MemberPortalService::getBeneficiaries($this->memberId);
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
@@ -298,6 +385,9 @@ class MemberPortalController extends Controller
 
     public function saveBeneficiary(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $res = MemberPortalService::saveBeneficiary($this->memberId, $this->request->all());
         Session::flash('success', $res['message']);
         $this->redirect(url('member/beneficiaries'));
@@ -308,6 +398,9 @@ class MemberPortalController extends Controller
      */
     public function receipts(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $year = (int)$this->request->query('year', (string)date('Y'));
         $month = $this->request->query('month') ? (int)$this->request->query('month') : null;
 
@@ -338,6 +431,9 @@ class MemberPortalController extends Controller
      */
     public function printReceipt(string $receiptNo): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $receipt = \App\Services\ReceiptService::getReceiptDetails($receiptNo);
         $user = \App\Core\Auth::user();
         $isStaffOrAdmin = $user && in_array($user['role_slug'] ?? '', ['super_admin', 'staff', 'admin']);
@@ -359,6 +455,9 @@ class MemberPortalController extends Controller
      */
     public function notifications(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
         $this->render('member.notifications', [
@@ -371,6 +470,9 @@ class MemberPortalController extends Controller
 
     public function markAllNotificationsRead(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         MemberPortalService::markNotificationRead($this->memberId);
         if ($this->request->isAjax()) {
             $this->response->json(['success' => true]);
@@ -384,6 +486,9 @@ class MemberPortalController extends Controller
      */
     public function onlineServices(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $requests = Database::query("SELECT * FROM online_requests WHERE member_id = ? ORDER BY created_at DESC", [$this->memberId]);
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
@@ -400,6 +505,9 @@ class MemberPortalController extends Controller
      */
     public function financialSummary(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $summary = MemberPortalService::getDashboardSummary($this->memberId);
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
@@ -416,7 +524,10 @@ class MemberPortalController extends Controller
      */
     public function settings(): void
     {
-        $userId = Auth::id() ?? 1;
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
+        $userId = (int)Auth::id();
         $loginHistory = Database::query("SELECT * FROM login_activities WHERE user_id = ? ORDER BY created_at DESC LIMIT 10", [$userId]);
         $lineConn = Database::first("SELECT * FROM line_connections WHERE member_id = ?", [$this->memberId]);
         $notifications = MemberPortalService::getNotifications($this->memberId);
@@ -435,6 +546,9 @@ class MemberPortalController extends Controller
      */
     public function changePassword(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $currentPass = (string)$this->request->input('current_password');
         $newPass = (string)$this->request->input('new_password');
         $confirmPass = (string)$this->request->input('confirm_password');
@@ -460,7 +574,7 @@ class MemberPortalController extends Controller
             return;
         }
 
-        $userId = Auth::id() ?? 1;
+        $userId = (int)Auth::id();
         $user = Database::first("SELECT password FROM users WHERE id = ? LIMIT 1", [$userId]);
 
         if ($user && !empty($user['password']) && !empty($currentPass)) {
@@ -495,6 +609,9 @@ class MemberPortalController extends Controller
      */
     public function toggleLine(): void
     {
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
         $action = $this->request->input('action') ?? 'connect';
         if ($action === 'connect') {
             Database::execute(
@@ -516,7 +633,17 @@ class MemberPortalController extends Controller
      */
     public function revokeSessions(): void
     {
-        $userId = Auth::id() ?? 1;
+        if (!$this->assertMemberAuthorized()) {
+            return;
+        }
+        $userId = (int)Auth::id();
+        if ($userId <= 0) {
+            $this->redirect(url('login'));
+            return;
+        }
+
+        Auth::revokeAllSessions($userId);
+
         AuditService::log('security', 'revoke_sessions', (string)$userId, null, [
             'ip' => $this->request->ip(),
             'user_agent' => $this->request->userAgent(),

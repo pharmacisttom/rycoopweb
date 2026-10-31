@@ -13,7 +13,7 @@ class StaffInvitationService
     private const TOKEN_EXPIRY_DAYS = 7;
 
     /**
-     * Create a new secure, expiring staff invitation.
+     * Create an audited invitation; duplicate-email checks are serialized on MySQL.
      */
     public static function createInvitation(
         string $name,
@@ -22,78 +22,74 @@ class StaffInvitationService
         ?string $department,
         int $invitedBy
     ): array {
-        $cleanEmail = strtolower(trim($email));
-        $cleanName = trim($name);
-        $cleanDept = trim((string) $department);
+        return Database::transaction(function () use ($name, $email, $roleId, $department, $invitedBy) {
+            if (Database::pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
+                Database::first('SELECT id FROM roles ORDER BY id LIMIT 1 FOR UPDATE');
+            }
+            $cleanEmail = strtolower(trim($email));
+            $cleanName = trim($name);
+            $cleanDept = trim((string) $department);
 
-        if ($cleanName === '' || mb_strlen($cleanName) > 100) {
-            throw new \InvalidArgumentException('กรุณากรอกชื่อ-นามสกุลของเจ้าหน้าที่ให้ถูกต้อง');
-        }
+            if ($cleanName === '' || mb_strlen($cleanName) > 100) {
+                throw new \InvalidArgumentException('กรุณากรอกชื่อ-นามสกุลของเจ้าหน้าที่ให้ถูกต้อง');
+            }
 
-        if (!filter_var($cleanEmail, FILTER_VALIDATE_EMAIL) || strlen($cleanEmail) > 100) {
-            throw new \InvalidArgumentException('กรุณากรอกอีเมล Google Account ที่ถูกต้อง');
-        }
+            if (!filter_var($cleanEmail, FILTER_VALIDATE_EMAIL) || strlen($cleanEmail) > 100) {
+                throw new \InvalidArgumentException('กรุณากรอกอีเมล Google Account ที่ถูกต้อง');
+            }
 
-        // Verify role exists and is an administrative/staff role
-        $role = Database::first("SELECT id, slug, name FROM roles WHERE id = ? LIMIT 1", [$roleId]);
-        if (!$role) {
-            throw new \InvalidArgumentException('ไม่พบบทบาท (Role) ที่เลือก');
-        }
-        if ($role['slug'] === 'member') {
-            throw new \InvalidArgumentException('ไม่สามารถเชิญบัญชีสมาชิกผ่านระบบเจ้าหน้าที่ได้');
-        }
+            // Verify role exists and is an administrative/staff role
+            $role = Database::first("SELECT id, slug, name FROM roles WHERE id = ? LIMIT 1", [$roleId]);
+            if (!$role) {
+                throw new \InvalidArgumentException('ไม่พบบทบาท (Role) ที่เลือก');
+            }
+            if ($role['slug'] === 'member') {
+                throw new \InvalidArgumentException('ไม่สามารถเชิญบัญชีสมาชิกผ่านระบบเจ้าหน้าที่ได้');
+            }
 
-        // Check if an active staff account already exists with this email
-        $existingUser = Database::first(
-            "SELECT u.id FROM users u
-             JOIN user_roles ur ON u.id = ur.user_id
-             JOIN roles r ON ur.role_id = r.id
-             WHERE u.email = ? AND u.deleted_at IS NULL AND r.slug != 'member'
-             LIMIT 1",
-            [$cleanEmail]
-        );
-        if ($existingUser) {
-            throw new \InvalidArgumentException('มีบัญชีเจ้าหน้าที่ที่ใช้อีเมลนี้อยู่ในระบบแล้ว');
-        }
+            if (mb_strlen($cleanDept) > 100) {
+                throw new \InvalidArgumentException('ชื่อหน่วยงานต้องไม่เกิน 100 ตัวอักษร');
+            }
+            // Invitations provision new accounts only; never silently reactivate or replace existing roles.
+            if (Database::first("SELECT id FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL LIMIT 1", [$cleanEmail])) {
+                throw new \InvalidArgumentException('มีบัญชีที่ใช้อีเมลนี้อยู่แล้ว กรุณาจัดการผ่านทะเบียนเจ้าหน้าที่');
+            }
+            if (Database::first("SELECT id FROM staff_invitations WHERE LOWER(email) = ? AND status = 'pending' AND expires_at > NOW() LIMIT 1", [$cleanEmail])) {
+                throw new \InvalidArgumentException('มีคำเชิญรอยืนยันสำหรับอีเมลนี้แล้ว กรุณาใช้คำสั่งต่ออายุหรือยกเลิก');
+            }
 
-        // Check if there is already a pending invitation for this email; if so, revoke it first
-        Database::execute(
-            "UPDATE staff_invitations SET status = 'revoked', revoked_at = NOW(), updated_at = NOW()
-             WHERE email = ? AND status = 'pending'",
-            [$cleanEmail]
-        );
+            // Generate cryptographically secure 64-hex-char token
+            $rawToken = bin2hex(random_bytes(32));
+            $tokenHash = hash('sha256', $rawToken);
+            $expiresAt = date('Y-m-d H:i:s', time() + (self::TOKEN_EXPIRY_DAYS * 86400));
 
-        // Generate cryptographically secure 64-hex-char token
-        $rawToken = bin2hex(random_bytes(32));
-        $tokenHash = hash('sha256', $rawToken);
-        $expiresAt = date('Y-m-d H:i:s', time() + (self::TOKEN_EXPIRY_DAYS * 86400));
+            $invitationId = (int) Database::insert(
+                "INSERT INTO staff_invitations (email, name, department, intended_role_id, invited_by, token_hash, expires_at, status, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())",
+                [$cleanEmail, $cleanName, $cleanDept !== '' ? $cleanDept : null, $roleId, $invitedBy, $tokenHash, $expiresAt]
+            );
 
-        $invitationId = (int) Database::insert(
-            "INSERT INTO staff_invitations (email, name, department, intended_role_id, invited_by, token_hash, expires_at, status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())",
-            [$cleanEmail, $cleanName, $cleanDept !== '' ? $cleanDept : null, $roleId, $invitedBy, $tokenHash, $expiresAt]
-        );
+            AuditService::log('staff_invitation', 'create', (string) $invitationId, null, [
+                'email' => $cleanEmail,
+                'name' => $cleanName,
+                'role' => $role['name'],
+                'department' => $cleanDept,
+                'invited_by' => $invitedBy,
+                'expires_at' => $expiresAt,
+            ], required: true);
 
-        AuditService::log('staff_invitation', 'create', (string) $invitationId, null, [
-            'email' => $cleanEmail,
-            'name' => $cleanName,
-            'role' => $role['name'],
-            'department' => $cleanDept,
-            'invited_by' => $invitedBy,
-            'expires_at' => $expiresAt,
-        ]);
-
-        return [
-            'id' => $invitationId,
-            'email' => $cleanEmail,
-            'name' => $cleanName,
-            'department' => $cleanDept,
-            'role_id' => $roleId,
-            'role_name' => $role['name'],
-            'token' => $rawToken,
-            'invitation_url' => url("admin/login?invitation={$rawToken}"),
-            'expires_at' => $expiresAt,
-        ];
+            return [
+                'id' => $invitationId,
+                'email' => $cleanEmail,
+                'name' => $cleanName,
+                'department' => $cleanDept,
+                'role_id' => $roleId,
+                'role_name' => $role['name'],
+                'token' => $rawToken,
+                'invitation_url' => url("admin/login?invitation={$rawToken}"),
+                'expires_at' => $expiresAt,
+            ];
+        });
     }
 
     /**
@@ -130,7 +126,7 @@ class StaffInvitationService
     }
 
     /**
-     * Accept a pending invitation, provision or bind the staff user, and link their Google identity.
+     * Accept a pending invitation, provision a new staff user, and link their Google identity.
      */
     public static function acceptInvitation(int $invitationId, string $googleSub, string $googleEmail, string $displayName): array
     {
@@ -138,7 +134,7 @@ class StaffInvitationService
 
         return Database::transaction(function () use ($invitationId, $googleSub, $cleanEmail, $displayName) {
             $invitation = Database::first(
-                "SELECT * FROM staff_invitations WHERE id = ? AND status = 'pending' AND expires_at > NOW() FOR UPDATE",
+                "SELECT * FROM staff_invitations WHERE id = ? AND status = 'pending' AND expires_at > NOW()" . (Database::pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : ''),
                 [$invitationId]
             );
 
@@ -154,16 +150,7 @@ class StaffInvitationService
             $user = Database::first("SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1", [$cleanEmail]);
 
             if ($user) {
-                $userId = (int) $user['id'];
-                // Update name / department if needed
-                Database::execute(
-                    "UPDATE users SET name = ?, department = COALESCE(?, department), status = 'active', updated_at = NOW() WHERE id = ?",
-                    [$displayName ?: $invitation['name'], $invitation['department'], $userId]
-                );
-
-                // Ensure role is assigned
-                Database::execute("DELETE FROM user_roles WHERE user_id = ?", [$userId]);
-                Database::execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", [$userId, $invitation['intended_role_id']]);
+                throw new \InvalidArgumentException('อีเมลนี้มีบัญชีอยู่แล้ว คำเชิญไม่สามารถเปลี่ยนบทบาทหรือเปิดใช้บัญชีเดิมได้');
             } else {
                 // Generate a unique username derived from email or name
                 $baseUsername = strtolower(explode('@', $cleanEmail)[0]);
@@ -195,11 +182,10 @@ class StaffInvitationService
                 );
             }
 
-            // Bind Google identity
+            // A Google subject is unique: never reassign an existing identity to another account.
             Database::execute(
                 "INSERT INTO user_google_identities (user_id, google_sub, google_email, email_verified, linked_at, last_login_at, created_at, updated_at)
-                 VALUES (?, ?, ?, 1, NOW(), NOW(), NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), google_email = VALUES(google_email), last_login_at = NOW(), updated_at = NOW()",
+                 VALUES (?, ?, ?, 1, NOW(), NOW(), NOW(), NOW())",
                 [$userId, $googleSub, $cleanEmail]
             );
 
@@ -214,7 +200,7 @@ class StaffInvitationService
                 'email' => $cleanEmail,
                 'google_sub' => $googleSub,
                 'role_id' => $invitation['intended_role_id'],
-            ]);
+            ], required: true);
 
             return [
                 'user_id' => $userId,
@@ -229,24 +215,26 @@ class StaffInvitationService
      */
     public static function revokeInvitation(int $invitationId, int $revokedBy): void
     {
-        $invitation = Database::first("SELECT * FROM staff_invitations WHERE id = ? LIMIT 1", [$invitationId]);
-        if (!$invitation) {
-            throw new \InvalidArgumentException('ไม่พบคำเชิญ');
-        }
+        Database::transaction(function () use ($invitationId, $revokedBy) {
+            $invitation = Database::first("SELECT * FROM staff_invitations WHERE id = ? LIMIT 1" . (Database::pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : ''), [$invitationId]);
+            if (!$invitation) {
+                throw new \InvalidArgumentException('ไม่พบคำเชิญ');
+            }
 
-        if ($invitation['status'] !== 'pending') {
-            throw new \InvalidArgumentException('ไม่สามารถยกเลิกคำเชิญที่ไม่ได้อยู่ในสถานะรอยืนยัน');
-        }
+            if ($invitation['status'] !== 'pending') {
+                throw new \InvalidArgumentException('ไม่สามารถยกเลิกคำเชิญที่ไม่ได้อยู่ในสถานะรอยืนยัน');
+            }
 
-        Database::execute(
-            "UPDATE staff_invitations SET status = 'revoked', revoked_at = NOW(), updated_at = NOW() WHERE id = ?",
-            [$invitationId]
-        );
+            Database::execute(
+                "UPDATE staff_invitations SET status = 'revoked', revoked_at = NOW(), updated_at = NOW() WHERE id = ?",
+                [$invitationId]
+            );
 
-        AuditService::log('staff_invitation', 'revoke', (string) $invitationId, null, [
-            'email' => $invitation['email'],
-            'revoked_by' => $revokedBy,
-        ]);
+            AuditService::log('staff_invitation', 'revoke', (string) $invitationId, null, [
+                'email' => $invitation['email'],
+                'revoked_by' => $revokedBy,
+            ], required: true);
+        });
     }
 
     /**
@@ -254,33 +242,45 @@ class StaffInvitationService
      */
     public static function resendInvitation(int $invitationId, int $renewedBy): array
     {
-        $invitation = Database::first("SELECT * FROM staff_invitations WHERE id = ? LIMIT 1", [$invitationId]);
-        if (!$invitation) {
-            throw new \InvalidArgumentException('ไม่พบคำเชิญ');
-        }
+        return Database::transaction(function () use ($invitationId, $renewedBy) {
+            if (Database::pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
+                Database::first('SELECT id FROM roles ORDER BY id LIMIT 1 FOR UPDATE');
+            }
+            $invitation = Database::first("SELECT * FROM staff_invitations WHERE id = ? LIMIT 1" . (Database::pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : ''), [$invitationId]);
+            if (!$invitation) {
+                throw new \InvalidArgumentException('ไม่พบคำเชิญ');
+            }
 
-        $rawToken = bin2hex(random_bytes(32));
-        $tokenHash = hash('sha256', $rawToken);
-        $expiresAt = date('Y-m-d H:i:s', time() + (self::TOKEN_EXPIRY_DAYS * 86400));
+            if ($invitation['status'] === 'accepted') {
+                throw new \InvalidArgumentException('คำเชิญที่ยอมรับแล้วไม่สามารถนำกลับมาใช้ใหม่ได้');
+            }
+            if (Database::first("SELECT id FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL LIMIT 1", [strtolower($invitation['email'])]) || Database::first("SELECT id FROM staff_invitations WHERE LOWER(email) = ? AND id != ? AND status = 'pending' AND expires_at > NOW() LIMIT 1", [strtolower($invitation['email']), $invitationId])) {
+                throw new \InvalidArgumentException('อีเมลนี้มีบัญชีหรือคำเชิญที่ยังใช้งานได้อยู่แล้ว');
+            }
 
-        Database::execute(
-            "UPDATE staff_invitations SET token_hash = ?, expires_at = ?, status = 'pending', revoked_at = NULL, updated_at = NOW() WHERE id = ?",
-            [$tokenHash, $expiresAt, $invitationId]
-        );
+            $rawToken = bin2hex(random_bytes(32));
+            $tokenHash = hash('sha256', $rawToken);
+            $expiresAt = date('Y-m-d H:i:s', time() + (self::TOKEN_EXPIRY_DAYS * 86400));
 
-        AuditService::log('staff_invitation', 'resend', (string) $invitationId, null, [
-            'email' => $invitation['email'],
-            'renewed_by' => $renewedBy,
-            'expires_at' => $expiresAt,
-        ]);
+            Database::execute(
+                "UPDATE staff_invitations SET token_hash = ?, expires_at = ?, status = 'pending', revoked_at = NULL, updated_at = NOW() WHERE id = ?",
+                [$tokenHash, $expiresAt, $invitationId]
+            );
 
-        return [
-            'id' => $invitationId,
-            'email' => $invitation['email'],
-            'token' => $rawToken,
-            'invitation_url' => url("admin/login?invitation={$rawToken}"),
-            'expires_at' => $expiresAt,
-        ];
+            AuditService::log('staff_invitation', 'resend', (string) $invitationId, null, [
+                'email' => $invitation['email'],
+                'renewed_by' => $renewedBy,
+                'expires_at' => $expiresAt,
+            ], required: true);
+
+            return [
+                'id' => $invitationId,
+                'email' => $invitation['email'],
+                'token' => $rawToken,
+                'invitation_url' => url("admin/login?invitation={$rawToken}"),
+                'expires_at' => $expiresAt,
+            ];
+        });
     }
 
     /**

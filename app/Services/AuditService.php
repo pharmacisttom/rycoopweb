@@ -10,7 +10,15 @@ use App\Core\Logger;
 
 class AuditService
 {
-    public static function log(string $module, string $action, ?string $recordId = null, mixed $oldValues = null, mixed $newValues = null): void
+    /** @var (\Closure(string, string, ?string, mixed, mixed, bool): void)|null */
+    private static ?\Closure $testFaultInjector = null;
+
+    public static function setTestFaultInjector(?\Closure $injector): void
+    {
+        self::$testFaultInjector = $injector;
+    }
+
+    public static function log(string $module, string $action, ?string $recordId = null, mixed $oldValues = null, mixed $newValues = null, bool $required = false): void
     {
         $userId = Auth::id();
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
@@ -23,6 +31,10 @@ class AuditService
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
         try {
+            if (self::$testFaultInjector !== null) {
+                (self::$testFaultInjector)($module, $action, $recordId, $oldValues, $newValues, $required);
+            }
+
             Database::execute($sql, [
                 $userId,
                 $module,
@@ -37,6 +49,7 @@ class AuditService
             Logger::log('audit', "Audit Action: [{$module}] [{$action}] Record: {$recordId} by User: {$userId}");
         } catch (\Throwable $e) {
             Logger::error("Audit Log Failure: " . $e->getMessage());
+            if ($required) { throw $e; }
         }
     }
 }

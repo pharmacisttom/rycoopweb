@@ -9,7 +9,7 @@ import '../../src/index.css';
 import '../../src/styles/mobile-responsive.css';
 const params=new URLSearchParams(location.search),kind=params.get('kind')||'access';
 localStorage.setItem('coop_theme',params.get('theme')||'light');
-const pages={access:lazy(()=>import('../../src/pages/AdminAccessPage')),workspace:lazy(()=>import('../../src/pages/AdminWorkspacePage')),
+const pages={documents:lazy(()=>import('../../src/pages/AdminStoredContentPage')),settingsContent:lazy(()=>import('../../src/pages/AdminStoredContentPage').then(module=>({default:()=>React.createElement(module.default,{kind:'settings'})}))),access:lazy(()=>import('../../src/pages/AdminAccessPage')),workspace:lazy(()=>import('../../src/pages/AdminWorkspacePage')),
   content:lazy(()=>import('../../src/pages/ContentAdminPage')),publicContent:lazy(()=>import('../../src/pages/PublicContentAdminPage')),
   cms:lazy(()=>import('../../src/pages/AdminDashboardPage')),membersDashboard:lazy(()=>import('../../src/pages/AdminMembersDashboardPage')),
   members:lazy(()=>import('../../src/pages/AdminMembersPage')),memberDetail:lazy(()=>import('../../src/pages/AdminMemberDetailPage')),

@@ -26,7 +26,7 @@ import SectionHeader from '../components/dashboard/SectionHeader';
 import StatusBadge from '../components/dashboard/StatusBadge';
 import EmptyState from '../components/dashboard/EmptyState';
 
-export default function AdminDashboardPage() {
+export function LegacyAdminDashboardPage() {
   const { user, isLoggedIn, logout, setShowAuthModal } = useAuth();
   const { toast, confirmDialog } = useToast();
   const [activeTab, setActiveTab] = useState('announcements');
@@ -2020,3 +2020,10 @@ const modalHeaderStyle = {
   borderBottom: '1px solid var(--border-subtle)',
   paddingBottom: '0.75rem'
 };
+
+// Legacy prototype retained for reference; routes use the database-backed workspace below.
+export default function AdminDashboardPage(){
+ const{can}=useAuth();
+ const links=[['news.view','/admin/content?tab=news','ข่าว / อัลบั้ม / สไลด์โชว์'],['announcements.view','/admin/workspace','ประกาศสำคัญ'],['faqs.view','/admin/content?tab=faqs','คำถามที่พบบ่อย'],['documents.view','/admin/documents','ศูนย์เอกสาร'],['coop_info.view','/admin/public-content','ข้อมูลสหกรณ์'],['people.view','/admin/public-content','กรรมการและเจ้าหน้าที่'],['rates.view','/admin/public-content','อัตราดอกเบี้ย'],['products.view','/admin/public-content','ผลิตภัณฑ์'],['settings.view','/admin/settings/content','ข้อมูลเว็บไซต์']];
+ return <section className="admin-module"><AdminPageHeader title="ระบบจัดการเนื้อหาส่วนกลาง" description="ใช้ข้อมูลจริงจาก API และฐานข้อมูล ไม่มีการบันทึกเฉพาะเบราว์เซอร์"/><div className="grid-3">{links.filter(([permission])=>can(permission)).map(([permission,to,label])=><Link key={permission} className="surface-card" style={{padding:24}} to={to}>{label}</Link>)}</div><p>Hero และ Popup แบบเดิมเป็นต้นแบบในเบราว์เซอร์ จึงยังไม่เปิดปุ่มบันทึกส่วนกลางจนกว่าจะเชื่อม API และผ่าน UAT</p></section>;
+}

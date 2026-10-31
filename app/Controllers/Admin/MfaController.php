@@ -73,7 +73,7 @@ class MfaController extends Controller
             'enrolled' => $hasMfa,
             'confirmed_at' => $user['two_factor_confirmed_at'],
             'recovery_codes_remaining' => $remainingCodes,
-            'mandatory' => (bool) config('google.staff_mfa_required', true),
+            'mandatory' => \App\Services\PrOfficerPolicy::requiresMfa((string) (Auth::user()['role_slug'] ?? '')),
             'pending_enrollment' => $isPendingEnrollment,
             'pending_verification' => $isPendingVerification,
             'challenge_started_at' => $startedAt > 0 ? $startedAt : null,

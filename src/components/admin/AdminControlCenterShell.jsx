@@ -93,9 +93,10 @@ export const ADMIN_SIDEBAR_GROUPS = [
     icon: FileText,
     items: [
       { label: 'ข่าวสาร & ประกาศ', to: '/admin/content?tab=news', permissions: ['news.view'] },
+      { label: 'ประกาศสำคัญ', to: '/admin/workspace', permissions: ['announcements.view'] },
       { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view'] },
       { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
-      { label: 'เอกสารและการเผยแพร่เนื้อหา', to: '/admin/cms', roles: ['super_admin', 'admin', 'editor', 'pr_officer', 'document_officer'] },
+      { label: 'ศูนย์เอกสาร', to: '/admin/documents', permissions: ['documents.view'] },
     ],
   },
   {
@@ -165,7 +166,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
     thaiLabel: 'ตั้งค่าระบบและบัญชี',
     icon: Settings,
     items: [
-      { label: 'General & System Configuration', to: '/admin/settings', permissions: ['settings.view', 'dashboard.view'] },
+      { label: 'ข้อมูลเว็บไซต์ที่อนุญาตให้แก้ไข', to: '/admin/settings/content', permissions: ['settings.view'] },
       { label: 'Notification & Security Policy', to: '/admin/settings?tab=security', permissions: ['settings.view', 'security.view', 'dashboard.view'] },
       { label: 'Profile & Change Password', to: '/admin/settings?tab=profile', permissions: ['dashboard.view'] },
     ],

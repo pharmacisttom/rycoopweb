@@ -1,3 +1,4 @@
+import PrOfficerWorkspace from '../components/admin/PrOfficerWorkspace';
 import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -22,15 +23,16 @@ export default function AdminWorkspacePage() {
   const links = destinations.filter(([permission]) => can(permission));
   return <section className="admin-module">
     <AdminPageHeader title="พื้นที่ทำงานเจ้าหน้าที่" description={`${user?.name||''} · ${user?.role_name||user?.role||''}`}/>
-    <div className="grid-3" style={{ margin: '1.5rem 0' }}>
+    {(user?.role === 'pr_officer'||can('announcements.view')) && <PrOfficerWorkspace/>}
+    {user?.role !== 'pr_officer' && <div className="grid-3" style={{ margin: '1.5rem 0' }}>
       {links.map(([permission, path, label]) => <Link className="surface-card" style={{ padding: '1.5rem' }} key={permission} to={path}>{label}</Link>)}
       {user?.role === 'super_admin' && <Link className="btn btn-outline" to="/admin/access">จัดการผู้ใช้งานและสิทธิ์</Link>}
-    </div>
+    </div>}
     {!links.length && user?.role !== 'super_admin' && <p role="status">ยังไม่มีสิทธิ์ในโมดูลเหล่านี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {error && <AdminErrorState message={error}/>}
     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-      <Link className="btn btn-primary" to="/admin/dashboard">ศูนย์ควบคุมผู้ดูแลระบบ 3.0</Link>
-      <button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่านของฉัน</button>
+      {user?.role !== 'pr_officer' && <Link className="btn btn-primary" to="/admin/dashboard">ศูนย์ควบคุมผู้ดูแลระบบ 3.0</Link>}
+      {user?.role !== 'pr_officer' && <button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่านของฉัน</button>}
       <button className="btn btn-outline" onClick={async () => { try { await logout(); } catch { setError('ออกจากระบบไม่สำเร็จ กรุณาลองใหม่'); } }}>ออกจากระบบ</button>
       <Link className="btn btn-outline" to="/">กลับเว็บไซต์สหกรณ์</Link>
     </div>

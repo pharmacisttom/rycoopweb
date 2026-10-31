@@ -804,53 +804,13 @@ class SpaApiController extends Controller
     }
 
     /** POST /api/admin/news/{id}/delete */
-    public function updateAdminFaq(string $id): void { $this->createAdminFaq($id); }
-
-    public function createAdminFaq(?string $editingId = null): void
-    {
-        $question=trim((string)$this->request->input('question',''));
-        $answer=\App\Services\RichTextService::clean((string)$this->request->input('answer',''));
-        if($question==='' || mb_strlen($question)>255 || \App\Services\RichTextService::text($answer)==='' || strlen($answer)>60000){
-            $this->json(['success'=>false,'message'=>'กรุณากรอกคำถามและคำตอบให้ครบถ้วน'],422);return;
-        }
-        try {
-            if($editingId!==null){
-                $old=Database::first("SELECT id,question FROM faqs WHERE id=? AND status='active'",[(int)$editingId]);
-                if(!$old){$this->json(['success'=>false,'message'=>'ไม่พบคำถาม'],404);return;}
-                Database::execute('UPDATE faqs SET question=?,answer=?,updated_at=NOW() WHERE id=?',[$question,$answer,(int)$editingId]);$id=(int)$editingId;
-            }else{$id=Database::insert("INSERT INTO faqs (category,question,answer,status,created_at) VALUES ('general',?,?,'active',NOW())",[$question,$answer]);}
-            AuditService::log('faqs',$editingId===null?'create':'update',(string)$id,$old??null,['question'=>$question]);
-            $this->json(['success'=>true,'data'=>['id'=>$id,'question'=>$question,'answer'=>$answer]],201);
-        } catch(\Throwable $e){$this->json(['success'=>false,'message'=>'บันทึกคำถามไม่สำเร็จ'],500);}
+    public function adminFaqs():void {\App\Services\AdminCrudService::respond($this->response,fn()=>['data'=>\App\Services\AdminCrudService::listing('faqs')]);}
+    public function updateAdminFaq(string $id): void {$this->createAdminFaq($id);}
+    public function createAdminFaq(?string $editingId=null):void {
+        \App\Services\AdminCrudService::respond($this->response,fn()=>['data'=>\App\Services\AdminCrudService::save('faqs',$this->request->all(),$editingId===null?null:(int)$editingId)],$editingId===null?201:200);
     }
-
-    public function deleteAdminFaq(string $id): void
-    {
-        $faq=Database::first('SELECT id,question FROM faqs WHERE id=?',[(int)$id]);
-        if(!$faq){$this->json(['success'=>false,'message'=>'ไม่พบคำถาม'],404);return;}
-        Database::execute("UPDATE faqs SET status='inactive' WHERE id=?",[(int)$id]);
-        AuditService::log('faqs','delete',(string)$id,$faq,null);
-        $this->json(['success'=>true]);
-    }
-
-    public function deleteAdminNews(string $id): void
-    {
-        $news = Database::first('SELECT id, title FROM news WHERE id = ? AND deleted_at IS NULL LIMIT 1', [(int) $id]);
-        if (!$news) {
-            $this->json(['success' => false, 'message' => 'ไม่พบข่าวสารที่ต้องการลบ'], 404);
-            return;
-        }
-
-        try {
-            Database::execute('UPDATE news SET deleted_at = NOW(), updated_by = ? WHERE id = ?', [Auth::id(), (int) $id]);
-            AuditService::log('news', 'delete', (string) $id, $news, ['deleted_at' => date('Y-m-d H:i:s')]);
-        } catch (\Throwable $e) {
-            $this->json(['success' => false, 'message' => 'ไม่สามารถลบข่าวสารได้'], 500);
-            return;
-        }
-
-        $this->json(['success' => true, 'message' => 'ลบข่าวสารเรียบร้อยแล้ว']);
-    }
+    public function deleteAdminFaq(string $id):void {\App\Services\AdminCrudService::respond($this->response,function()use($id){\App\Services\AdminCrudService::disable('faqs',(int)$id,$this->request->all());return [];});}
+    public function deleteAdminNews(string $id):void {\App\Services\AdminCrudService::respond($this->response,function()use($id){\App\Services\AdminCrudService::disable('news',(int)$id,$this->request->all());return [];});}
 
     /** Convert a stored relative image path into the public application URL. */
     private function withPublicNewsImageUrl(array $item): array
@@ -896,9 +856,15 @@ class SpaApiController extends Controller
             return null;
         }
 
-        $member = MemberPortalService::getMemberByUserId(Auth::id());
+        $user = Auth::user();
+        if (($user['role_slug'] ?? '') !== 'member' || ($user['status'] ?? '') !== 'active') {
+            $this->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+            return null;
+        }
+
+        $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if (!$member) {
-            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก'], 404);
+            $this->json(['success' => false, 'code' => 'MEMBER_NOT_LINKED', 'message' => 'ไม่พบข้อมูลสมาชิก'], 404);
             return null;
         }
 

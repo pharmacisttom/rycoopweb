@@ -806,6 +806,7 @@ try {
     // StaffManagementController@updateRole WITH fresh Step-Up MFA -> 200 OK
     $sa1StaffRoleCode = issueFreshTotpCode(1);
     $staffRoleReqWithStepUp = makeGateRequest('POST', '/api/admin/staff/6/role', [
+        'version' => \App\Services\AccessService::staffState(6)['version'],
         'role_id' => $roleIdsBySlug['auditor'],
         'department' => 'Audit Dept',
         'totp_code' => $sa1StaffRoleCode,
