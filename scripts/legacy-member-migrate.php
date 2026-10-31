@@ -38,6 +38,9 @@ if ($rollbackBatch !== null) {
 }
 
 try {
+    if ($sourcePath === null || $sourcePath === '') {
+        throw new InvalidArgumentException('Explicit --source=/secure/path/rayongcoop_db.sql is required.');
+    }
     $resolvedSource = LegacyMemberMigrationService::resolveDumpPath($sourcePath);
 } catch (\Throwable $e) {
     fwrite(STDERR, "✗ Configuration error: " . $e->getMessage() . "\n");
