@@ -342,8 +342,14 @@ class LegacyMemberMigrationService
             }
         }
 
+        // Safety bypass is permitted only for explicitly isolated test harnesses.
+        $bypass = (bool) ($options['bypass_safety_flags'] ?? false);
+        if ($bypass && !($driver === 'sqlite' && $targetPdo instanceof PDO)
+            && !(getenv('CRUD_DISPOSABLE_MYSQL') === '1' && $activeDb === 'rayongcoop_ci')) {
+            throw new RuntimeException('Safety flag bypass refused outside disposable tests.');
+        }
         // Rule 4: Verify Safety Flags from Configuration
-        if (!($options['bypass_safety_flags'] ?? false)) {
+        if (!$bypass) {
             $memberPortalEnabled = config('features.member_portal', false);
             $memberLoginEnabled = config('features.member_login', false);
             $backupRestoreEnabled = config('security.backup_restore_execution_enabled', false);
