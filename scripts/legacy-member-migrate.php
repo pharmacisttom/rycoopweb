@@ -6,17 +6,17 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Services\LegacyMemberMigrationService;
-use App\Services\MigrationConnectionFactory;
 
 echo "====================================================================\n";
 echo "RYCOOPWEB 3.0 — Legacy Member Migration & Dividend Recovery CLI\n";
 echo "====================================================================\n\n";
 
 $isDryRun = in_array('--dry-run', $argv, true) || !in_array('--commit', $argv, true);
-$sourcePath = 'C:/Users/ACER/Downloads/rayongcoop_db.sql';
+$sourcePath = null;
 $batchTag = 'MIG-' . date('Ymd-His');
 $rollbackBatch = null;
 $years = [2567, 2568];
+$enforceTestDb = !in_array('--no-enforce-test-db', $argv, true);
 
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--source=')) {
@@ -31,27 +31,38 @@ foreach ($argv as $arg) {
 }
 
 if ($rollbackBatch !== null) {
-    echo "Initiating batch rollback for: {$rollbackBatch}...\n";
+    echo "Initiating surgical batch rollback for: {$rollbackBatch}...\n";
     $result = LegacyMemberMigrationService::rollbackBatch($rollbackBatch);
     echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
-    exit(0);
+    exit($result['success'] ? 0 : 1);
 }
 
-echo "Source Dump: {$sourcePath}\n";
+try {
+    $resolvedSource = LegacyMemberMigrationService::resolveDumpPath($sourcePath);
+} catch (\Throwable $e) {
+    fwrite(STDERR, "✗ Configuration error: " . $e->getMessage() . "\n");
+    exit(1);
+}
+
+echo "Source Dump: {$resolvedSource}\n";
 echo "Target Years: " . implode(', ', $years) . "\n";
 echo "Batch Tag: {$batchTag}\n";
+echo "Enforce rycoopweb_test: " . ($enforceTestDb ? "YES" : "NO (Bypassed)") . "\n";
 echo "Execution Mode: " . ($isDryRun ? "DRY-RUN (Simulate only, zero DB writes)" : "COMMITTED (Live DB writes)") . "\n";
 echo "--------------------------------------------------------------------\n\n";
 
 try {
     $result = LegacyMemberMigrationService::executeMigration([
-        'source_path' => $sourcePath,
+        'source_path' => $resolvedSource,
         'dry_run' => $isDryRun,
         'batch_tag' => $batchTag,
         'years' => $years,
+        'enforce_test_db' => $enforceTestDb,
     ]);
 
-    echo "Status: " . $result['status'] . "\n\n";
+    echo "Status: " . $result['status'] . "\n";
+    echo "Database: " . $result['database'] . "\n\n";
+
     echo "=== RECONCILIATION TOTALS ===\n";
     foreach ($result['source_reconciliation'] as $y => $stat) {
         echo "Year {$y}:\n";
