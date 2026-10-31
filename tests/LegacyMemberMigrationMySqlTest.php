@@ -59,13 +59,13 @@ $migrator = new PDO(
 );
 LegacyMemberMigrationService::ensureMappingTable($migrator);
 
-// Clean up previous test migration data in disposable CI DB
-$pdo->exec("DELETE FROM legacy_member_mappings");
-$pdo->exec("DELETE FROM member_dividends");
-$pdo->exec("DELETE FROM member_import_runs");
-$pdo->exec("DELETE FROM user_roles WHERE user_id NOT IN (1, 2)");
-$pdo->exec("DELETE FROM members");
-$pdo->exec("DELETE FROM users WHERE id NOT IN (1, 2)");
+// CI's earlier tests may have already seeded users and FK-dependent rows.
+// Fail closed if member test tables are dirty; never blanket-delete other fixtures.
+$baselineMembers = (int) Database::value("SELECT COUNT(*) FROM members");
+$baselineDividends = (int) Database::value("SELECT COUNT(*) FROM member_dividends");
+$baselineMappings = (int) Database::value("SELECT COUNT(*) FROM legacy_member_mappings");
+mysqlTestAssert($baselineMembers === 0 && $baselineDividends === 0 && $baselineMappings === 0,
+    'Fresh CI member/dividend/ledger state required; no destructive clean-up');
 
 // Ensure 'member' role exists
 $roleExists = Database::value("SELECT id FROM roles WHERE slug = 'member'");
@@ -154,8 +154,12 @@ $staffCheck = Database::first("SELECT u.username, r.slug AS role_slug FROM users
 mysqlTestAssert($staffCheck['role_slug'] === 'pr_officer', "Staff user role is securely retained");
 
 // 6. Test Surgical Batch Rollback
-// Insert an unrelated dividend for another member/batch
-$pdo->exec("INSERT INTO member_dividends (member_id, year, details_json, imported_at) VALUES (9999, 2560, '{\"year\":2560,\"net\":100.00}', NOW())");
+// Add a valid unrelated member and dividend in the SAME year; old blanket
+// DELETE WHERE year IN (...) must not pass this regression.
+$pdo->exec("INSERT INTO members (uuid, member_no, id_card, first_name, last_name, status, created_at, updated_at) VALUES ('ci-unrelated-member-uuid', 'CI-UNRELATED', '0000000000000', 'Unrelated', 'Fixture', 'active', NOW(), NOW())");
+$unrelatedMemberId = (int) $pdo->lastInsertId();
+$unrelatedStmt = $pdo->prepare("INSERT INTO member_dividends (member_id, year, details_json, imported_at) VALUES (?, 2567, ?, NOW())");
+$unrelatedStmt->execute([$unrelatedMemberId, '{"year":2567,"net":100.00}']);
 $unrelatedDivId = (int) $pdo->lastInsertId();
 
 $rollback = LegacyMemberMigrationService::rollbackBatch('CI-BATCH-02', $pdo);
@@ -167,9 +171,9 @@ mysqlTestAssert((int) $unrelatedStillExists === $unrelatedDivId, "Surgical rollb
 
 // 7. Test Satang-Level Financial Reconciliation on MySQL 8
 $calcNet = (string) Database::value("
-    SELECT ROUND(SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(details_json, '$.net_dividend')) AS DECIMAL(15,2))), 2)
+    SELECT ROUND(SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(details_json, '$.net')) AS DECIMAL(15,2))), 2)
     FROM member_dividends
-    WHERE member_id != 9999
+    WHERE id != {$unrelatedDivId}
 ");
 mysqlTestAssert(bccomp($calcNet, '0.00', 2) > 0, "MySQL 8 JSON financial aggregation succeeded (Total: {$calcNet} THB)");
 
