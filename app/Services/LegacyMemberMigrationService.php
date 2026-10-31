@@ -561,6 +561,10 @@ class LegacyMemberMigrationService
                 $findUserRoleStmt->execute([$targetUserId, $memberRoleId]);
                 if (!$findUserRoleStmt->fetchColumn()) {
                     $insertUserRoleStmt->execute([$targetUserId, $memberRoleId, $now]);
+                    $insertMappingStmt->execute([
+                        $batchTag, 'user_role', $legacyUserId,
+                        (int) $pdo->lastInsertId(), 'created', null, $now
+                    ]);
                 }
             }
 
@@ -840,7 +844,7 @@ class LegacyMemberMigrationService
                 WHERE id = ?
             ");
 
-            $deleteUserRoleStmt = $pdo->prepare("DELETE FROM user_roles WHERE user_id = ?");
+            $deleteUserRoleStmt = $pdo->prepare("DELETE FROM user_roles WHERE id = ?");
             $deleteUserStmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
             $restoreUserStmt = $pdo->prepare("
                 UPDATE users SET name = ?, department = ?, email = ? WHERE id = ?
@@ -880,9 +884,12 @@ class LegacyMemberMigrationService
                         ]);
                         $restoredMembers++;
                     }
-                } elseif ($type === 'user') {
+                } elseif ($type === 'user_role') {
                     if ($action === 'created') {
                         $deleteUserRoleStmt->execute([$targetId]);
+                    }
+                } elseif ($type === 'user') {
+                    if ($action === 'created') {
                         $deleteUserStmt->execute([$targetId]);
                         $deletedUsers++;
                     } elseif ($action === 'updated' && is_array($before)) {
