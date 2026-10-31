@@ -10,6 +10,7 @@
 /storage/logs/*.log
 /storage/backups/*.sql
 /storage/backups/*.sha256
+/storage/staging/
 /storage/uploads/*
 !/storage/uploads/.gitkeep
 /storage/cache/*
