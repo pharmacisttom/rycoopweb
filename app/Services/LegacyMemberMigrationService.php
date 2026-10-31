@@ -509,6 +509,11 @@ class LegacyMemberMigrationService
                 $existingUser = $findUserStmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($existingUser) {
+                    // Username alone never authorizes adoption of an existing account.
+                    if (!hash_equals(strtolower((string)$existingUser['uuid']), strtolower((string)$u['uuid']))
+                        || strcasecmp((string)$existingUser['email'], (string)$u['email']) !== 0) {
+                        throw new RuntimeException('Existing username has a different UUID/email identity. Manual mapping required.');
+                    }
                     $targetUserId = (int) $existingUser['id'];
                     $beforeJson = json_encode($existingUser, JSON_UNESCAPED_UNICODE);
                     $updateUserStmt->execute([$u['name'], $u['department'], $u['email'], $now, $targetUserId]);
@@ -597,6 +602,9 @@ class LegacyMemberMigrationService
                 $existing = $mByNo ?: $mById;
 
                 if ($existing) {
+                    if ($existing['user_id'] !== null && (int)$existing['user_id'] !== (int)$targetUserId) {
+                        throw new RuntimeException('Existing member is linked to a different user account. Manual identity review required.');
+                    }
                     $targetMemberId = (int) $existing['id'];
                     $beforeJson = json_encode($existing, JSON_UNESCAPED_UNICODE);
                     $updateMemberStmt->execute([
