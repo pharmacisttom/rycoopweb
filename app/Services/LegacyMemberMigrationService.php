@@ -321,7 +321,7 @@ class LegacyMemberMigrationService
         $targetYears = $options['years'] ?? [2567, 2568];
         $targetPdo = $options['pdo'] ?? null;
         $operatorId = $options['operator_id'] ?? null;
-        $enforceTestDb = (bool) ($options['enforce_test_db'] ?? true);
+        $enforceTestDb = true; // fail closed: no caller may disable target DB guard
 
         // 1. Connect to target database
         $pdo = $targetPdo instanceof PDO ? $targetPdo : Database::connect();
@@ -333,7 +333,9 @@ class LegacyMemberMigrationService
             $stmt = $pdo->query('SELECT DATABASE()');
             $activeDb = (string) ($stmt ? $stmt->fetchColumn() : '');
 
-            if ($enforceTestDb && !in_array($activeDb, self::ALLOWED_TEST_DATABASES, true)) {
+            $allowed = $activeDb === 'rycoopweb_test' ||
+                ($activeDb === 'rayongcoop_ci' && getenv('CRUD_DISPOSABLE_MYSQL') === '1');
+            if (!$allowed) {
                 throw new RuntimeException(
                     "Safety violation: Target database must be strictly 'rycoopweb_test' in TEST mode. Connected database is '{$activeDb}'. Migration halted immediately."
                 );
@@ -344,7 +346,7 @@ class LegacyMemberMigrationService
         if (!($options['bypass_safety_flags'] ?? false)) {
             $memberPortalEnabled = config('features.member_portal', false);
             $memberLoginEnabled = config('features.member_login', false);
-            $backupRestoreEnabled = config('features.backup_restore_execution_enabled', false);
+            $backupRestoreEnabled = config('security.backup_restore_execution_enabled', false);
 
             if ($memberPortalEnabled === true) {
                 throw new RuntimeException("Safety violation: features.member_portal must be false during migration.");
@@ -357,11 +359,27 @@ class LegacyMemberMigrationService
             }
         }
 
-        // Ensure mapping provenance table exists
-        self::ensureMappingTable($pdo);
+        // Never issue DDL as part of --dry-run or application-level migration.
+        // The mapping table must be provisioned separately by an approved DBA step.
+        $pdo->query('SELECT 1 FROM legacy_member_mappings LIMIT 0');
 
         // 2. Parse dump safely in memory
         $parsed = self::parseDump($sourcePath);
+
+        // Refuse partial/ambiguous parsing before any transaction can write data.
+        foreach ($parsed['anomalies'] as $kind => $rows) {
+            if ($rows !== []) {
+                throw new RuntimeException("Unsafe legacy source: {$kind} has " . count($rows) . " anomalies.");
+            }
+        }
+        if (count($parsed['users']) !== count($parsed['members'])) {
+            throw new RuntimeException('Legacy user/member count mismatch; manual identity review required.');
+        }
+        foreach ($parsed['members'] as $member) {
+            if (!isset($parsed['users'][$member['legacy_user_id'] ?? -1])) {
+                throw new RuntimeException('Legacy member has no permitted linked user; review required.');
+            }
+        }
 
         // 3. Compute source reconciliation figures
         $sourceReconciliation = self::reconcileDividends($parsed['dividends']);
@@ -459,7 +477,7 @@ class LegacyMemberMigrationService
                 WHERE id = ?
             ");
 
-            $findDivStmt = $pdo->prepare("SELECT id, details_json FROM member_dividends WHERE member_id = ? AND year = ? LIMIT 1");
+            $findDivStmt = $pdo->prepare("SELECT id, details_json, imported_at FROM member_dividends WHERE member_id = ? AND year = ? LIMIT 1");
             $insertDivStmt = $pdo->prepare("
                 INSERT INTO member_dividends (member_id, year, details_json, imported_at)
                 VALUES (?, ?, ?, ?)
@@ -638,7 +656,10 @@ class LegacyMemberMigrationService
 
                 if ($existingDiv) {
                     $targetDivId = (int) $existingDiv['id'];
-                    $beforeJson = $existingDiv['details_json'];
+                    $beforeJson = json_encode([
+                        'details_json' => $existingDiv['details_json'],
+                        'imported_at' => $existingDiv['imported_at'],
+                    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
                     $updateDivStmt->execute([$detailsJson, $now, $targetDivId]);
                     $action = 'updated';
                     $updatedDividends++;
@@ -753,7 +774,14 @@ class LegacyMemberMigrationService
     {
         $pdo = $targetPdo instanceof PDO ? $targetPdo : Database::connect();
 
-        self::ensureMappingTable($pdo);
+        $driver = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'mysql') {
+            $dbName = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+            if ($dbName !== 'rycoopweb_test' && !($dbName === 'rayongcoop_ci' && getenv('CRUD_DISPOSABLE_MYSQL') === '1')) {
+                throw new RuntimeException('Rollback refused outside approved TEST or disposable CI database.');
+            }
+        }
+        $pdo->query('SELECT 1 FROM legacy_member_mappings LIMIT 0');
 
         // Fetch mappings for this batch
         $fetchStmt = $pdo->prepare("
@@ -779,12 +807,25 @@ class LegacyMemberMigrationService
         $deletedUsers = 0;
         $restoredUsers = 0;
 
+        // Refuse out-of-order rollback: a later batch may have edited the same target rows.
+        // Roll back subsequent batches first to avoid clobbering newer changes.
+        $laterStmt = $pdo->prepare("
+            SELECT COUNT(*) FROM legacy_member_mappings newer
+            JOIN legacy_member_mappings current
+              ON newer.entity_type = current.entity_type AND newer.target_id = current.target_id
+            WHERE current.batch_tag = ? AND newer.id > current.id AND newer.batch_tag <> current.batch_tag
+        ");
+        $laterStmt->execute([$batchTag]);
+        if ((int) $laterStmt->fetchColumn() > 0) {
+            throw new RuntimeException('Rollback refused: newer batches have modified the same targets. Roll back newer batches first.');
+        }
+
         $pdo->beginTransaction();
 
         try {
             // Prepared statements for rollback
             $deleteDivStmt = $pdo->prepare("DELETE FROM member_dividends WHERE id = ?");
-            $restoreDivStmt = $pdo->prepare("UPDATE member_dividends SET details_json = ? WHERE id = ?");
+            $restoreDivStmt = $pdo->prepare("UPDATE member_dividends SET details_json = ?, imported_at = ? WHERE id = ?");
 
             $deleteMemberStmt = $pdo->prepare("DELETE FROM members WHERE id = ?");
             $restoreMemberStmt = $pdo->prepare("
@@ -811,7 +852,11 @@ class LegacyMemberMigrationService
                         $deleteDivStmt->execute([$targetId]);
                         $deletedDividends++;
                     } elseif ($action === 'updated' && $m['before_json'] !== null) {
-                        $restoreDivStmt->execute([$m['before_json'], $targetId]);
+                        $restoreDivStmt->execute([
+                            $before['details_json'] ?? '',
+                            $before['imported_at'] ?? null,
+                            $targetId
+                        ]);
                         $restoredDividends++;
                     }
                 } elseif ($type === 'member') {
