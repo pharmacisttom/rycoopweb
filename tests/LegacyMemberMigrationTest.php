@@ -27,7 +27,7 @@ function testAssert(bool $condition, string $description): void
 }
 
 // 1. Relative path resolution test
-$dumpPath = LegacyMemberMigrationService::resolveDumpPath();
+$dumpPath = LegacyMemberMigrationService::resolveDumpPath(__DIR__ . '/fixtures/legacy_dump_fixture.sql');
 testAssert(file_exists($dumpPath) && is_readable($dumpPath), "Dump path resolved successfully via relative path cascade: {$dumpPath}");
 $isFullDump = filesize($dumpPath) > 5000000;
 
