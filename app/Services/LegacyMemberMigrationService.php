@@ -37,7 +37,10 @@ class LegacyMemberMigrationService
      */
     public static function resolveDumpPath(?string $customPath = null): string
     {
-        if ($customPath !== null && file_exists($customPath) && is_readable($customPath)) {
+        if ($customPath !== null) {
+            if (!is_file($customPath) || !is_readable($customPath)) {
+                throw new InvalidArgumentException('Explicit legacy dump source is missing or unreadable; no fallback allowed.');
+            }
             return $customPath;
         }
 
@@ -47,8 +50,8 @@ class LegacyMemberMigrationService
             $baseDir . '/storage/staging/rayongcoop_db.sql',
             $baseDir . '/storage/legacy/rayongcoop_db.sql',
             $baseDir . '/storage/backups/rayongcoop_db.sql',
-            'C:/Users/ACER/Downloads/rayongcoop_db.sql',
-            $baseDir . '/tests/fixtures/legacy_dump_fixture.sql',
+            // Never silently import a small test fixture on a TEST or production VPS.
+            ...(getenv('CRUD_DISPOSABLE_MYSQL') === '1' ? [$baseDir . '/tests/fixtures/legacy_dump_fixture.sql'] : []),
         ];
 
         foreach ($candidates as $candidate) {
