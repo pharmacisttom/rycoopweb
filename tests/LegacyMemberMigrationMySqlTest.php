@@ -49,7 +49,15 @@ echo "Connected Database: {$actualDb} | Server: {$serverVersion}\n";
 echo "=========================================================================\n";
 
 // 1. Prepare disposable tables
-LegacyMemberMigrationService::ensureMappingTable($pdo);
+// CI app account is least-privileged (no CREATE). Provision provenance via
+// the dedicated disposable CI migrator, then use the app PDO for DML.
+$migrator = new PDO(
+    sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', getenv('DB_HOST') ?: '127.0.0.1', getenv('DB_PORT') ?: '3306', 'rayongcoop_ci'),
+    getenv('CI_MIGRATOR_USER') ?: '',
+    getenv('CI_MIGRATOR_PASSWORD') ?: '',
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+);
+LegacyMemberMigrationService::ensureMappingTable($migrator);
 
 // Clean up previous test migration data in disposable CI DB
 $pdo->exec("DELETE FROM legacy_member_mappings");
