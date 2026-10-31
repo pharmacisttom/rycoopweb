@@ -9,16 +9,40 @@ use App\Core\Logger;
 
 class MemberPortalService
 {
+    private static ?array $currentMember = null;
+
+    public static function setCurrentMember(?array $member): void
+    {
+        self::$currentMember = $member;
+    }
+
+    public static function getCurrentMember(): ?array
+    {
+        return self::$currentMember;
+    }
+
     /**
      * Get the member record linked to the authenticated user.
      */
     public static function getMemberByUserId(?int $userId): ?array
     {
-        if (!$userId) {
+        if (!$userId || $userId <= 0) {
             return null;
         }
 
         return Database::first("SELECT * FROM members WHERE user_id = ? LIMIT 1", [$userId]);
+    }
+
+    /**
+     * Get the active member record linked to the authenticated user.
+     */
+    public static function getActiveMemberByUserId(?int $userId): ?array
+    {
+        if (!$userId || $userId <= 0) {
+            return null;
+        }
+
+        return Database::first("SELECT * FROM members WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
     }
 
     /**
