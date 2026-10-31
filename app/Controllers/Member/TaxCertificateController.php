@@ -15,15 +15,16 @@ use App\Services\TaxCertificateService;
 class TaxCertificateController extends Controller
 {
     private ?array $member = null;
-    private int $memberId;
+    private int $memberId = 0;
 
     public function __construct(Request $request, Response $response)
     {
         parent::__construct($request, $response);
         
-        $this->member = MemberPortalService::getMemberByUserId(Auth::id());
+        $this->member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if ($this->member === null) {
-            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
+            $this->memberId = 0;
+            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เปิดใช้งานหรือเชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
             $this->redirect(url('login'));
             return;
         }
@@ -35,6 +36,10 @@ class TaxCertificateController extends Controller
      */
     public function index(): void
     {
+        if ($this->member === null || $this->memberId <= 0) {
+            $this->redirect(url('login'));
+            return;
+        }
         $certificates = TaxCertificateService::getMemberTaxCertificates($this->memberId);
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
@@ -51,6 +56,10 @@ class TaxCertificateController extends Controller
      */
     public function print(string $id): void
     {
+        if ($this->member === null || $this->memberId <= 0) {
+            $this->redirect(url('login'));
+            return;
+        }
         $cert = TaxCertificateService::getCertificateById((int)$id, $this->memberId);
 
         if (!$cert) {

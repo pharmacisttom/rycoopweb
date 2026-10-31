@@ -896,9 +896,15 @@ class SpaApiController extends Controller
             return null;
         }
 
-        $member = MemberPortalService::getMemberByUserId(Auth::id());
+        $user = Auth::user();
+        if (($user['role_slug'] ?? '') !== 'member' || ($user['status'] ?? '') !== 'active') {
+            $this->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+            return null;
+        }
+
+        $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if (!$member) {
-            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก'], 404);
+            $this->json(['success' => false, 'code' => 'MEMBER_NOT_LINKED', 'message' => 'ไม่พบข้อมูลสมาชิก'], 404);
             return null;
         }
 

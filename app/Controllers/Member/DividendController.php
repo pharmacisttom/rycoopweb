@@ -4,15 +4,20 @@ namespace App\Controllers\Member;
 use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Database;
+use App\Services\MemberPortalService;
 
 class DividendController extends Controller
 {
     public function index(): void
     {
         header('Cache-Control: no-store, private');
-        $member = Database::first('SELECT id, member_no, prefix, first_name, last_name FROM members WHERE user_id = ? AND status = ? LIMIT 1', [Auth::id(), 'active']);
+        if (!Auth::check() || (Auth::user()['role_slug'] ?? '') !== 'member' || (Auth::user()['status'] ?? '') !== 'active') {
+            $this->response->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+            return;
+        }
+        $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if (!$member) {
-            $this->response->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก กรุณาติดต่อสหกรณ์'], 404);
+            $this->response->json(['success' => false, 'code' => 'MEMBER_NOT_LINKED', 'message' => 'ไม่พบข้อมูลสมาชิก กรุณาติดต่อสหกรณ์'], 404);
             return;
         }
         $rows = Database::query('SELECT year, details_json, imported_at FROM member_dividends WHERE member_id = ? ORDER BY year DESC', [$member['id']]);

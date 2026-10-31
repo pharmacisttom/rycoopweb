@@ -13,15 +13,16 @@ use App\Services\SuggestionService;
 class SuggestionController extends Controller
 {
     private ?array $member = null;
-    private int $memberId;
+    private int $memberId = 0;
 
     public function __construct($request = null, $response = null)
     {
         parent::__construct($request, $response);
         
-        $this->member = MemberPortalService::getMemberByUserId(Auth::id());
+        $this->member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if ($this->member === null) {
-            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
+            $this->memberId = 0;
+            Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เปิดใช้งานหรือเชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
             $this->redirect(url('login'));
             return;
         }
@@ -33,6 +34,10 @@ class SuggestionController extends Controller
      */
     public function index(): void
     {
+        if ($this->member === null || $this->memberId <= 0) {
+            $this->redirect(url('login'));
+            return;
+        }
         $suggestions = SuggestionService::getMemberSuggestions($this->memberId);
         $categories = SuggestionService::getCategories();
         $statuses = SuggestionService::getStatuses();
@@ -53,6 +58,14 @@ class SuggestionController extends Controller
      */
     public function store(): void
     {
+        if ($this->member === null || $this->memberId <= 0) {
+            if ($this->request && $this->request->isAjax()) {
+                $this->response->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก'], 403);
+                return;
+            }
+            $this->redirect(url('login'));
+            return;
+        }
         $title = trim((string)$this->request->input('title', ''));
         $content = trim((string)$this->request->input('content', ''));
         $category = (string)$this->request->input('category', 'general');
