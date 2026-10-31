@@ -16,7 +16,7 @@ $sourcePath = null;
 $batchTag = 'MIG-' . date('Ymd-His');
 $rollbackBatch = null;
 $years = [2567, 2568];
-$enforceTestDb = !in_array('--no-enforce-test-db', $argv, true);
+$enforceTestDb = true;
 
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--source=')) {
@@ -47,7 +47,7 @@ try {
 echo "Source Dump: {$resolvedSource}\n";
 echo "Target Years: " . implode(', ', $years) . "\n";
 echo "Batch Tag: {$batchTag}\n";
-echo "Enforce rycoopweb_test: " . ($enforceTestDb ? "YES" : "NO (Bypassed)") . "\n";
+echo "Database allowlist enforcement: ENABLED (TEST or disposable CI only)\n";
 echo "Execution Mode: " . ($isDryRun ? "DRY-RUN (Simulate only, zero DB writes)" : "COMMITTED (Live DB writes)") . "\n";
 echo "--------------------------------------------------------------------\n\n";
 
