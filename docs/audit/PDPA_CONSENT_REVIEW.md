@@ -1,7 +1,7 @@
 # RYCOOPWEB 3.0 — PDPA Privacy Notice & Mandatory Consent Review
 
-Date: 2026-10-31  
-Regulation: Personal Data Protection Act B.E. 2562 (PDPA)  
+Date: 2026-10-31
+Regulation: Personal Data Protection Act B.E. 2562 (PDPA)
 Entity: Rayong Public Health Cooperative Limited (สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด)
 
 ---

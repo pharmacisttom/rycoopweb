@@ -1,7 +1,7 @@
 # Legacy Tomvis Member Portal Integration Audit & Technical Plan
 
-Date: 2026-10-31  
-Target System: Rayong Public Health Cooperative (RYCOOPWEB 3.0)  
+Date: 2026-10-31
+Target System: Rayong Public Health Cooperative (RYCOOPWEB 3.0)
 Reference System: Tomvis Legacy System (`https://rayongcoop.tomvisolution.tech/`)
 
 ---
@@ -11,8 +11,8 @@ Reference System: Tomvis Legacy System (`https://rayongcoop.tomvisolution.tech/`
 The legacy member portal at `https://rayongcoop.tomvisolution.tech/` served as the operational member database for checking member numbers, shares, deposits, loans, and annual dividend distributions.
 
 > [!WARNING]
-> **Direct Database & Source Code Access: BLOCKED**  
-> As of this audit, direct database connection strings, credentials, and raw application source code for `tomvisolution.tech` are not provisioned in the repository environment.  
+> **Direct Database & Source Code Access: BLOCKED**
+> As of this audit, direct database connection strings, credentials, and raw application source code for `tomvisolution.tech` are not provisioned in the repository environment.
 > In accordance with safety rules, no schema or internal password hashing mechanism for the Tomvis system is assumed or guessed.
 
 ---

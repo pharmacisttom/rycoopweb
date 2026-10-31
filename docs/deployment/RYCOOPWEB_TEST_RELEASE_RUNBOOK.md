@@ -1,8 +1,8 @@
 # RYCOOPWEB 3.0 — TEST Deployment & Staging Runbook
 
-Release Target: TEST Environment (`https://test.rayongcoop.org`)  
-Base Branch: `Test`  
-Approved Feature Branch: `codex/admin-crud-functional-recovery`  
+Release Target: TEST Environment (`https://test.rayongcoop.org`)
+Base Branch: `Test`
+Approved Feature Branch: `codex/admin-crud-functional-recovery`
 Operating Environment: Ubuntu 24.04 LTS, Nginx, PHP-FPM 8.3, MySQL 8.0
 
 ---
@@ -95,10 +95,10 @@ sha256sum "${BACKUP_FILE}" > "${BACKUP_FILE}.sha256"
 
 # Verify tables required for PR Officer, MFA and Control Center
 mysql -u root -p -e "
-SELECT TABLE_NAME, ENGINE, TABLE_ROWS 
-FROM information_schema.TABLES 
-WHERE TABLE_SCHEMA='rycoopweb_test' AND TABLE_NAME IN 
-('users', 'roles', 'permissions', 'role_permissions', 'user_roles', 
+SELECT TABLE_NAME, ENGINE, TABLE_ROWS
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA='rycoopweb_test' AND TABLE_NAME IN
+('users', 'roles', 'permissions', 'role_permissions', 'user_roles',
  'staff_invitations', 'user_google_identities', 'approval_requests');"
 ```
 

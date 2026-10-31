@@ -1,7 +1,7 @@
 # RYCOOPWEB 3.0 — Emergency Rollback & Recovery Plan
 
-Target Environment: TEST (`https://test.rayongcoop.org`)  
-Base Release Architecture: Atomic Symlinked Releases  
+Target Environment: TEST (`https://test.rayongcoop.org`)
+Base Release Architecture: Atomic Symlinked Releases
 Scope: Immediate recovery in case of critical defect or deployment failure
 
 ---

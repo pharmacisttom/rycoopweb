@@ -245,7 +245,7 @@ Generated with `php scripts/audit-crud-inventory.php`. Source registration is no
 - `src/pages/AdminDividendImportPage.jsx:35` <form onSubmit={e => { e.preventDefault(); submit(false); }}>
 - `src/pages/AdminLedBatchPage.jsx:128` <form onSubmit={handleStartBatch} className="space-y-6">
 - `src/pages/AdminLedSearchPage.jsx:105` <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
-- `src/pages/AdminMemberDetailPage.jsx:24` useEffect(() => { const c = new AbortController(); setData(null); setProfile(null); setDividend(null); setReason(''); memberAdminApi(`/api/admin/members/${id}`, { signal: c.signal 
+- `src/pages/AdminMemberDetailPage.jsx:24` useEffect(() => { const c = new AbortController(); setData(null); setProfile(null); setDividend(null); setReason(''); memberAdminApi(`/api/admin/members/${id}`, { signal: c.signal
 - `src/pages/AdminMemberDetailPage.jsx:30` const result = await memberAdminApi(path, { data: input }); setMessage(result.message); setRefresh(n => n + 1);
 - `src/pages/AdminMemberDetailPage.jsx:36` {tab === 'profile' && <form className="member-admin-card" onSubmit={e => save(e, false)}><fieldset disabled={busy || data.read_only}><div className="member-admin-fields">{Object.en
 - `src/pages/AdminMemberDetailPage.jsx:38` {dividend && <form onSubmit={e => save(e, true)}><fieldset disabled={busy || data.read_only}><h3>แก้ไขปี {dividend.record.year}</h3><div className="member-admin-field
@@ -254,13 +254,13 @@ Generated with `php scripts/audit-crud-inventory.php`. Source registration is no
 - `src/pages/AdminMembersHealthPage.jsx:9` memberAdminApi('/api/admin/members/health', { signal: controller.signal }).then(r => setData(r.health)).catch(e => { if (e.name !== 'AbortError') setError(e); });
 - `src/pages/AdminMembersPage.jsx:16` memberAdminApi(`/api/admin/members?${params}`, { signal: controller.signal }).then(setData).catch(e => { if (e.name !== 'AbortError') setError(e); });
 - `src/pages/AdminMembersPage.jsx:24` <section className="member-admin-card member-admin-search-card"><form className="member-admin-search" onSubmit={search}>
-- `src/pages/AdminMembersPage.jsx:37` <div className="member-admin-pagination"><button className="btn btn-outline" disabled={data.page <= 1} onClick={() => page(1)}>หน้าแรก</button><button className="btn 
+- `src/pages/AdminMembersPage.jsx:37` <div className="member-admin-pagination"><button className="btn btn-outline" disabled={data.page <= 1} onClick={() => page(1)}>หน้าแรก</button><button className="btn
 - `src/pages/ContentAdminPage.jsx:17` memberAdminApi(tab==='news'?'/api/admin/news':'/api/public/faqs',{signal:c.signal}).then(r=>setItems((r.data||[]).map(item=>tab==='news'?{...item,gallery_images:normalizeGallery(it
 - `src/pages/ContentAdminPage.jsx:20` await memberAdminApi(path,{data:edit});setEdit(null);setMessage(tab==='news'?'บันทึกร่าง / ส่งตรวจแล้ว ยังไม่เผยแพ�
 - `src/pages/ContentAdminPage.jsx:22` async function publish(item){if(!window.confirm('ตรวจสอบตัวอย่างข่าวแล้ว และยืนยันเผยแพร่สู่ห�
 - `src/pages/ContentAdminPage.jsx:27` {can(`${tab}.create`)&&<button className="btn btn-primary" disabled={busy||readingImages} onClick={()=>setEdit(tab==='news'?{...empty}:{question:'',answer:''})}>เพิ่ม{tab
 - `src/pages/ContentAdminPage.jsx:28` {edit&&<form onSubmit={save} style={{display:'grid',gap:12,margin:'24px 0'}}>
-- `src/pages/ContentAdminPage.jsx:35` <div><button className="btn btn-primary" disabled={busy||readingImages}>บันทึก</button><button type="button" className="btn btn-outline" disabled={busy||readingImages} 
+- `src/pages/ContentAdminPage.jsx:35` <div><button className="btn btn-primary" disabled={busy||readingImages}>บันทึก</button><button type="button" className="btn btn-outline" disabled={busy||readingImages}
 - `src/pages/ContentAdminPage.jsx:37` <div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th scope="col">หัวข้อ</th><th scope="col">สถานะ</th><th scope="col">ดำเนิ�
 - `src/pages/ContentAdminPage.jsx:38` {preview&&<article className="surface-card" style={{padding:24,marginTop:24}}><h2>{preview.title||preview.question}</h2>{tab==='news'&&<ActivitySlideshow images={preview.gallery_im
 - `src/pages/PublicContentAdminPage.jsx:43` useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{

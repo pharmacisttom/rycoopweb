@@ -258,7 +258,7 @@ $pdo->exec("
 
 // Populate roles
 $pdo->exec("
-    INSERT INTO roles (id, name, slug) VALUES 
+    INSERT INTO roles (id, name, slug) VALUES
     (1, 'Member', 'member'),
     (2, 'Staff', 'staff'),
     (3, 'Super Admin', 'super_admin');
