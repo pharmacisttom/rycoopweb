@@ -1,40 +1,25 @@
-# RYCOOPWEB 3.0 — Legacy Member Migration Rollback Plan
+# RYCOOPWEB 3.0 — TEST Legacy Migration Rollback Safety Plan
 
-**Environment:** TEST (`rycoopweb_test`)
+**NO-GO until rollback isolation is proven on MySQL 8 with existing data.** This runbook applies only to `rycoopweb_test`. Production is out of scope.
 
----
+The importer tracks `legacy_member_mappings` by batch, entity type, source key, target key and action. For updated records it records before-images. Rollback must never delete by year alone or truncate a shared table.
 
-## 1. Surgical Batch Rollback (Fix 1 & Fix 2)
+## Safe procedure
 
-If defects, data mismatches, or unexpected behavior are observed after migration, rollback is executed surgically at the batch level via the provenance tracking table `legacy_member_mappings`, without touching other batches, pre-existing records, staff, RBAC, settings, or audit logs:
+1. Record the batch tag, exact release SHA, TEST database name, source checksum, pre-import snapshot, and database row count/hash evidence.
+2. Query provenance for the batch and show an impact preview: created users/roles/members/dividends; updated items and their before-images; dependent rows from subsequent activity.
+3. Ensure no later batch has updated the same target IDs and no manual changes/dependent records would be overwritten. **If uncertain, stop; do not run automated rollback.**
+4. Restore/test from a verified snapshot in an isolated database first, checking Admin/Staff/PR Officer identities and unrelated years.
+5. After separate approval only, run `php scripts/legacy-member-migrate.php --rollback=<approved-batch-tag>` against TEST. Record all IDs impacted and reconcile post-rollback counts and balances.
+6. If automated rollback refuses or checks fail, preserve TEST and escalate for a DBA-reviewed recovery plan. **Do not blindly restore over a live database**; restoring a full snapshot discards all later authorized work.
 
-### Option A: CLI Surgical Batch Rollback
-Run the rollback command with the recorded `batch_tag`:
-```bash
-php scripts/legacy-member-migrate.php --rollback=MIG-TEST-20261031-1500
-```
-This triggers `LegacyMemberMigrationService::rollbackBatch`:
-1. Queries `legacy_member_mappings` for records matching `batch_tag`.
-2. For records where `action = 'created'`:
-   - Deletes only the exact created target records (`member_dividends`, `members`, `users`).
-3. For records where `action = 'updated'`:
-   - Restores the original state from `before_json`.
-4. Removes the `member_import_runs` tracking rows for this batch.
-5. Deletes the mapping entries for this batch tag.
-6. Logs the surgical rollback action to `audit_logs` under `member_import / legacy_rollback`.
-7. **Zero Cross-Batch Mutation**: Never runs `DELETE FROM member_dividends WHERE year IN (...)` or any blanket truncation.
+## Required rollback invariants
 
-### Option B: Database Snapshot Restore (Full Revert)
-If a complete database revert to the pre-migration state is desired:
-```bash
-mysql -u root -p rycoopweb_test < /var/backups/rycoopweb_test_pre_member_migration_<timestamp>.sql
-```
+- No deletion of existing Super Admin/Staff or their roles, sessions, MFA and audit trail.
+- No deletion or overwrite of data from other import batches or manually entered dividends.
+- Created member roles must be provenance-tracked and removed exactly; unrelated roles must remain.
+- Restored dividend `details_json` **and** `imported_at` must match before-images.
+- No rollback across later modifications of the same target identities.
+- Audit log writes should identify batch and counts without exposing national IDs, phone numbers or raw passwords.
 
----
-
-## 2. Safety Invariants During Rollback
-- Existing Super Admin account (ID 1) is never deleted.
-- Staff accounts and PR Officer accounts are never touched.
-- RBAC permissions table is never truncated.
-- System audit log history is preserved intact.
-- Unrelated batches or subsequent manual imports remain untouched.
+The TEST data migration and rollback remain **not executed** in this review cycle.
