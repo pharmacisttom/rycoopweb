@@ -103,15 +103,24 @@ try {
     crudActor('pr_officer');foreach(['/api/admin/staff/','/api/admin/documents','/api/admin/settings/content','/api/admin/members'] as $url)crudAssert(crudRequest('GET',$url)->status===403,'PR denied '.$url);
     Session::set('authenticated_at',time()-7201);crudAssert(crudRequest('GET','/api/admin/faqs')->status===401,'expired authenticated session denied');
     crudActor();$before=(int)Database::value('SELECT COUNT(*) FROM faqs');
-    $ddl=new PDO('mysql:host='.getenv('DB_HOST').';port='.getenv('DB_PORT').';dbname=rayongcoop_ci;charset=utf8mb4',getenv('CI_MIGRATOR_USER'),getenv('CI_MIGRATOR_PASSWORD'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
-    $trigger='crud_audit_'.$run;$ddl->exec("CREATE TRIGGER `$trigger` BEFORE INSERT ON audit_logs FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Synthetic audit failure'");
-    try{$r=crudRequest('POST','/api/admin/faqs',['question'=>'Must rollback','answer'=>'<p>Rollback</p>']);crudAssert($r->status===500&&(int)Database::value('SELECT COUNT(*) FROM faqs')===$before,'audit failure rolls back real MySQL transaction');}finally{$ddl->exec("DROP TRIGGER `$trigger`");$trigger=null;}
+    \App\Services\AuditService::setTestFaultInjector(function(string $module, string $action) {
+        if ($module === 'faqs' && $action === 'create') {
+            throw new \RuntimeException('Synthetic audit failure for transactional rollback test');
+        }
+    });
+    try {
+        $r=crudRequest('POST','/api/admin/faqs',['question'=>'Must rollback','answer'=>'<p>Rollback</p>']);
+        crudAssert($r->status===500&&(int)Database::value('SELECT COUNT(*) FROM faqs')===$before,'audit failure rolls back real MySQL transaction');
+    } finally {
+        \App\Services\AuditService::setTestFaultInjector(null);
+    }
     crudAssert((int)Database::value("SELECT COUNT(*) FROM audit_logs WHERE module='faqs'")>0,'successful mutations audited');
     $fk=new CrudResponse();AdminCrudService::respond($fk,fn()=>Database::transaction(function(){Database::execute('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)',[PHP_INT_MAX,PHP_INT_MAX]);return [];}));crudAssert($fk->status===409,'native MySQL foreign-key conflict maps to conflict without leaking SQL');
 
     $output=ob_get_clean();echo $output;echo "PASS: disposable MySQL CRUD suite complete; fixture database destroyed with CI service\n";
 }catch(\Throwable $failure){if(ob_get_level()){echo ob_get_clean();}throw $failure;}finally{
-    if($trigger&&isset($ddl))$ddl->exec("DROP TRIGGER `$trigger`");
+    \App\Services\AuditService::setTestFaultInjector(null);
+    if(!empty($trigger)&&isset($ddl)){try{$ddl->exec("DROP TRIGGER IF EXISTS `$trigger`");}catch(\Throwable $ignored){}}
     Auth::logout();if(ob_get_level())ob_end_clean();
     // No destructive cleanup against a shared database: the guarded CI service is disposable.
 }

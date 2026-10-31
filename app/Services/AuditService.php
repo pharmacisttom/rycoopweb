@@ -10,6 +10,14 @@ use App\Core\Logger;
 
 class AuditService
 {
+    /** @var (\Closure(string, string, ?string, mixed, mixed, bool): void)|null */
+    private static ?\Closure $testFaultInjector = null;
+
+    public static function setTestFaultInjector(?\Closure $injector): void
+    {
+        self::$testFaultInjector = $injector;
+    }
+
     public static function log(string $module, string $action, ?string $recordId = null, mixed $oldValues = null, mixed $newValues = null, bool $required = false): void
     {
         $userId = Auth::id();
@@ -23,6 +31,10 @@ class AuditService
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
         try {
+            if (self::$testFaultInjector !== null) {
+                (self::$testFaultInjector)($module, $action, $recordId, $oldValues, $newValues, $required);
+            }
+
             Database::execute($sql, [
                 $userId,
                 $module,
