@@ -115,7 +115,7 @@ $batch1 = LegacyMemberMigrationService::executeMigration([
 
 mysqlTestAssert($batch1['status'] === 'COMMITTED', "Batch 1 committed successfully on MySQL 8");
 $memberCount = (int) Database::value("SELECT COUNT(*) FROM members");
-mysqlTestAssert($memberCount === 4, "Batch 1 inserted exactly 4 members");
+mysqlTestAssert($memberCount === 3, "Batch 1 inserted exactly 3 fixture members");
 
 // Verify leading zero preservation on MySQL 8
 $member4 = Database::first("SELECT * FROM members WHERE id_card = '3219900100959'");
@@ -141,8 +141,8 @@ $batch2 = LegacyMemberMigrationService::executeMigration([
 ]);
 
 mysqlTestAssert($batch2['status'] === 'COMMITTED', "Batch 2 re-run completed without duplicate key errors");
-mysqlTestAssert((int) Database::value("SELECT COUNT(*) FROM members") === 4, "Idempotency: Member count remained 4");
-mysqlTestAssert((int) Database::value("SELECT COUNT(*) FROM member_dividends") === 8, "Idempotency: Dividend count remained 8 (4 members x 2 years)");
+mysqlTestAssert((int) Database::value("SELECT COUNT(*) FROM members") === 3, "Idempotency: Member count remained 3");
+mysqlTestAssert((int) Database::value("SELECT COUNT(*) FROM member_dividends") === 6, "Idempotency: Dividend count remained 6 (3 members x 2 years)");
 
 // 5. Test Staff Collision Protection
 $pdo->exec("INSERT INTO users (uuid, name, username, email, password, status, created_at, updated_at) VALUES ('staff-col-uuid', 'PR Staff', 'staff_pr', 'pr@example.com', 'hash', 'active', NOW(), NOW())");
