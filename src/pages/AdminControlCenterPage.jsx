@@ -388,7 +388,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
         if(user?.role==='super_admin') {
           setStaffDirData(null);
           const staffResult=await memberAdminApi('/api/admin/staff/',{signal});
-          if(!Array.isArray(staffResult.staff))throw new Error('เซิร์ฟเวอร์ส่งรายชื่อเจ้าหน้าที่ไม่ครบถ้วน');
+          if(!Array.isArray(staffResult.staff)||!Array.isArray(staffResult.invitations)||!Array.isArray(staffResult.roles))throw new Error('เซิร์ฟเวอร์ส่งรายชื่อเจ้าหน้าที่ไม่ครบถ้วน');
           setStaffDirData(staffResult);
         }
       } else if (section === 'roles' || section === 'permissions') {
@@ -1038,7 +1038,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
         </>
       )}
 
-      {!loading&&!error&&section==='users'&&(user?.role==='super_admin'?(staffDirData&&<><PrOfficerInvitations roles={staffDirData.roles} invitations={staffDirData.invitations} onRefresh={()=>setRefreshTick(value=>value+1)}/><AdminStaffDirectory staff={staffDirData.staff} onRefresh={()=>setRefreshTick(value=>value+1)}/></>):<AdminEmptyState>API ทะเบียนเจ้าหน้าที่แบบละเอียดจำกัดเฉพาะผู้ดูแลระบบสูงสุด โปรดใช้สิทธิ์ที่ได้รับอนุมัติ</AdminEmptyState>)}
+      {!loading&&!error&&section==='users'&&(user?.role==='super_admin'?(staffDirData&&<><PrOfficerInvitations allowRoleSelection roles={staffDirData.roles} invitations={staffDirData.invitations} onRefresh={()=>setRefreshTick(value=>value+1)}/><AdminStaffDirectory staff={staffDirData.staff} onRefresh={()=>setRefreshTick(value=>value+1)}/></>):<AdminEmptyState>API ทะเบียนเจ้าหน้าที่แบบละเอียดจำกัดเฉพาะผู้ดูแลระบบสูงสุด โปรดใช้สิทธิ์ที่ได้รับอนุมัติ</AdminEmptyState>)}
       {['approvals','operations','backups','backups-history','security'].includes(section)&&<AdminApprovalWorkflow backups={backupData?.recent_history||[]}/>}
 
       {/* ===================================================================

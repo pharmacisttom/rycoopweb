@@ -5,8 +5,8 @@ export async function memberAdminApi(path, { data, signal } = {}) {
     const csrf = await fetch('/csrf-token', { credentials: 'include', headers, signal, cache: 'no-store' });
     if (!csrf.ok) throw new Error('กรุณาเข้าสู่ระบบใหม่');
     const { token } = await csrf.json();
-    options.method = 'POST'; headers['Content-Type'] = 'application/json'; headers['X-CSRF-TOKEN'] = token;
-    options.body = JSON.stringify(data);
+    options.method = 'POST'; headers['X-CSRF-TOKEN'] = token;
+    if(data instanceof FormData){ options.body=data; }else{ headers['Content-Type']='application/json';options.body=JSON.stringify(data); }
   }
   let response;
   try { response = await fetch(path, options); }

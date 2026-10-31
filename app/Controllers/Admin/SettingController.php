@@ -17,16 +17,8 @@ class SettingController extends Controller
 {
     public function index(): void
     {
-        $settingsRaw = Database::query("SELECT * FROM site_settings");
-        $settings = [];
-        foreach ($settingsRaw as $s) {
-            $settings[$s['key']] = $s['value'];
-        }
-
-        $this->render('admin.settings.index', [
-            'title' => 'ตั้งค่าระบบและองค์กร (Site Settings)',
-            'settings' => $settings,
-        ], 'layouts.admin');
+        if(!$this->request->isAjax()){$this->redirect(url('admin/settings/content'));return;}
+        \App\Services\AdminCrudService::respond($this->response,fn()=>\App\Services\ApprovedSettingsService::read());
     }
 
     public function update(): void
@@ -49,24 +41,6 @@ class SettingController extends Controller
             return;
         }
 
-        $inputs = $this->request->all();
-        unset($inputs['_csrf_token'], $inputs['totp_code'], $inputs['step_up_code'], $inputs['mfa_code']);
-
-        foreach ($inputs as $k => $v) {
-            Database::execute(
-                "INSERT INTO site_settings (`key`, `value`, `group`, updated_at)
-                 VALUES (?, ?, 'general', NOW())
-                 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = NOW()",
-                [$k, $v]
-            );
-        }
-
-        $redactedInputs = AdminControlCenterService::redactMetadata($inputs);
-        AuditService::log('settings', 'update', null, null, [
-            'settings' => is_array($redactedInputs) ? $redactedInputs : [],
-            'correlation_id' => $correlationId,
-        ]);
-        Session::flash('success', 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว');
-        $this->redirect(url('admin/settings'));
+        \App\Services\AdminCrudService::respond($this->response,fn()=>\App\Services\ApprovedSettingsService::save($this->request->all()));
     }
 }

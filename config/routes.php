@@ -193,6 +193,13 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/news/{id}/update','Api\\SpaApiController@updateAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
     $r->post('/news/{id}/publish','Admin\\NewsWorkflowController@publish',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
     $r->post('/news/{id}/delete','Api\\SpaApiController@deleteAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','delete'),CsrfMiddleware::class]);
+    $r->get('/faqs','Api\\SpaApiController@adminFaqs',[new PermissionMiddleware('faqs','view')]);
+    $r->get('/documents','Admin\\DocumentController@index',[new PermissionMiddleware('documents','view')]);
+    $r->post('/documents','Admin\\DocumentController@store',[new PermissionMiddleware('documents','create'),CsrfMiddleware::class]);
+    $r->post('/documents/{id}/update','Admin\\DocumentController@update',[new PermissionMiddleware('documents','edit'),CsrfMiddleware::class]);
+    $r->post('/documents/{id}/delete','Admin\\DocumentController@destroy',[new PermissionMiddleware('documents','delete'),CsrfMiddleware::class]);
+    $r->get('/settings/content','Admin\\SettingController@index',[new PermissionMiddleware('settings','view')]);
+    $r->post('/settings/content','Admin\\SettingController@update',[CsrfMiddleware::class]);
     $r->post('/faqs','Api\\SpaApiController@createAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','create'),CsrfMiddleware::class]);
     $r->post('/faqs/{id}/update','Api\\SpaApiController@updateAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','update'),CsrfMiddleware::class]);
     $r->post('/faqs/{id}/delete','Api\\SpaApiController@deleteAdminFaq',[new PermissionMiddleware('faqs','view'),new PermissionMiddleware('faqs','delete'),CsrfMiddleware::class]);

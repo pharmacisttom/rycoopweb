@@ -73,7 +73,7 @@ try {
     workflowCheck(!str_contains((string)Database::value('SELECT content FROM important_announcements'),'script'),'announcement HTML sanitized');
     workflowCheck(prDispatch('GET','/api/admin/announcements')->status===200,'verified PR reads announcements');
     $announcementId=(int)Database::value('SELECT id FROM important_announcements');
-    workflowCheck(prDispatch('POST',"/api/admin/announcements/$announcementId/update",['title'=>'Updated PR','content'=>'<p>Updated</p>','publication_date'=>date('Y-m-d'),'status'=>'published'])->status===200,'PR edits and publishes through approved content grants');
+    workflowCheck(prDispatch('POST',"/api/admin/announcements/$announcementId/update",['version'=>\App\Services\AccessService::version(Database::first('SELECT * FROM important_announcements WHERE id=?',[$announcementId])),'title'=>'Updated PR','content'=>'<p>Updated</p>','publication_date'=>date('Y-m-d'),'status'=>'published'])->status===200,'PR edits and publishes through approved content grants');
     workflowCheck(prDispatch('POST',"/api/admin/announcements/$announcementId/update",['title'=>'CSRF denied'],false)->status===419,'announcement update requires CSRF');
     Database::execute("DELETE FROM role_permissions WHERE role_id=5 AND permission_id=(SELECT id FROM permissions WHERE module='content' AND action='publish')");
     workflowCheck(prDispatch('POST','/api/admin/announcements',['title'=>'Forbidden publish','content'=>'<p>Text</p>','publication_date'=>date('Y-m-d'),'status'=>'published'])->status===403,'content create cannot substitute for publish permission');

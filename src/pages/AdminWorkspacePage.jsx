@@ -23,7 +23,7 @@ export default function AdminWorkspacePage() {
   const links = destinations.filter(([permission]) => can(permission));
   return <section className="admin-module">
     <AdminPageHeader title="พื้นที่ทำงานเจ้าหน้าที่" description={`${user?.name||''} · ${user?.role_name||user?.role||''}`}/>
-    {user?.role === 'pr_officer' && <PrOfficerWorkspace/>}
+    {(user?.role === 'pr_officer'||can('announcements.view')) && <PrOfficerWorkspace/>}
     {user?.role !== 'pr_officer' && <div className="grid-3" style={{ margin: '1.5rem 0' }}>
       {links.map(([permission, path, label]) => <Link className="surface-card" style={{ padding: '1.5rem' }} key={permission} to={path}>{label}</Link>)}
       {user?.role === 'super_admin' && <Link className="btn btn-outline" to="/admin/access">จัดการผู้ใช้งานและสิทธิ์</Link>}

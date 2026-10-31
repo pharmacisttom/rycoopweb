@@ -13,25 +13,25 @@ class MediaService
     public static function upload(array $file, string $folder = 'general', ?string $altText = null): array
     {
         if (preg_match('/^[a-z0-9][a-z0-9_-]{0,49}$/', $folder) !== 1) {
-            throw new RuntimeException('Invalid media folder.');
+            throw new \InvalidArgumentException('Invalid media folder.');
         }
 
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            throw new RuntimeException('การอัปโหลดไฟล์ล้มเหลว (Error Code: ' . $file['error'] . ')');
+            throw new \InvalidArgumentException('การอัปโหลดไฟล์ล้มเหลว (Error Code: ' . $file['error'] . ')');
         }
 
         $config = config('security.upload');
         $maxSize = $config['max_size'] ?? (20 * 1024 * 1024);
 
         if ($file['size'] > $maxSize) {
-            throw new RuntimeException('ขนาดไฟล์เกินกำหนด (สูงสุด ' . number_format($maxSize / (1024 * 1024)) . ' MB)');
+            throw new \InvalidArgumentException('ขนาดไฟล์เกินกำหนด (สูงสุด ' . number_format($maxSize / (1024 * 1024)) . ' MB)');
         }
 
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $blocked = $config['blocked_extensions'] ?? [];
 
         if (in_array($ext, $blocked, true)) {
-            throw new RuntimeException('ไม่อนุญาตให้อัปโหลดไฟล์นามสกุลนี้เพื่อความปลอดภัย');
+            throw new \InvalidArgumentException('ไม่อนุญาตให้อัปโหลดไฟล์นามสกุลนี้เพื่อความปลอดภัย');
         }
 
         // Verify MIME type using finfo
@@ -44,7 +44,7 @@ class MediaService
         $allowed = array_merge($allowedImages, $allowedDocs);
 
         if (!in_array($mime, $allowed, true)) {
-            throw new RuntimeException('ประเภทไฟล์ไม่ได้รับอนุญาต (MIME: ' . $mime . ')');
+            throw new \InvalidArgumentException('ประเภทไฟล์ไม่ได้รับอนุญาต (MIME: ' . $mime . ')');
         }
 
 
@@ -57,10 +57,10 @@ class MediaService
             'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
         ];
         if (!isset($extensionMimes[$ext]) || !in_array($mime, $extensionMimes[$ext], true)) {
-            throw new RuntimeException('File extension does not match its content type.');
+            throw new \InvalidArgumentException('File extension does not match its content type.');
         }
         if (in_array($mime, $allowedImages, true) && @getimagesize($file['tmp_name']) === false) {
-            throw new RuntimeException('Invalid image content.');
+            throw new \InvalidArgumentException('Invalid image content.');
         }
 
         // Generate safe randomized filename

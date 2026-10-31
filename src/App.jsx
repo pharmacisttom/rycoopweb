@@ -1,3 +1,4 @@
+import AdminStoredContentPage from './pages/AdminStoredContentPage';
 import AdminActionProvider from './components/admin/AdminActionProvider';
 import AdminAppShell from './components/admin/AdminAppShell';
 import React, { lazy, Suspense, useCallback, useEffect } from 'react';
@@ -154,7 +155,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|led|control-center|approvals|login|2fa)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|login|2fa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -235,6 +236,8 @@ export default function App() {
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
 
             <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
+            <Route path="/admin/documents" element={<StaffProtectedRoute permission="documents.view"><AdminStoredContentPage/></StaffProtectedRoute>} />
+            <Route path="/admin/settings/content" element={<StaffProtectedRoute permission="settings.view"><AdminStoredContentPage kind="settings"/></StaffProtectedRoute>} />
             <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view','faqs.view']}><ContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/mfa/enroll" element={<MfaPage mode="enroll" />} />
             <Route path="/admin/mfa/verify" element={<MfaPage mode="verify" />} />

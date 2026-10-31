@@ -44,14 +44,15 @@ class AccessController extends \App\Core\Controller
             ], 422);
         } catch (\PDOException $e) {
             \App\Core\Logger::error('Access management [' . $correlationId . ']: ' . $e->getMessage());
+            $integrity=$e->getCode()==='23000';
             $this->json([
                 'success' => false,
-                'code' => 'DATABASE_ERROR',
+                'code' => $integrity?'CONFLICT':'DATABASE_ERROR',
                 'correlation_id' => $correlationId,
                 'message' => $e->getCode() === '23000'
-                    ? 'ชื่อผู้ใช้ อีเมล หรือรหัส Role ซ้ำ'
+                    ? 'ข้อมูลซ้ำหรือยังมีรายการอ้างอิง กรุณาตรวจสอบก่อนบันทึก'
                     : 'ฐานข้อมูลสิทธิ์ไม่พร้อม กรุณาตรวจ migration',
-            ], 422);
+            ], $integrity?409:500);
         } catch (\Throwable $e) {
             \App\Core\Logger::error('Access management [' . $correlationId . ']: ' . $e->getMessage());
             $this->json([
@@ -170,7 +171,7 @@ class AccessController extends \App\Core\Controller
     public function createUser(): void
     {
         $this->run(function () {
-            $this->assertStepUpGate('users.update', 'users.create');
+            $this->assertStepUpGate('users.create', 'users.create');
             return ['user' => AccessService::saveAccount($this->request->all())];
         });
     }
