@@ -86,6 +86,11 @@ if (!$staffExists) {
 $fixturePath = dirname(__DIR__) . '/tests/fixtures/legacy_dump_fixture.sql';
 mysqlTestAssert(file_exists($fixturePath), "Fixture legacy_dump_fixture.sql exists");
 
+// Capture the actual seeded administrative identity before migration.
+// CI fixture identity varies; never hardcode account credentials or display PII.
+$adminBaseline = Database::first("SELECT id, uuid, username, email, status, password FROM users WHERE id = 1");
+mysqlTestAssert($adminBaseline !== null, "Existing CI administrative account baseline present");
+
 // 2. Test Dry Run (Rule 7, Rule 8)
 $dryRun = LegacyMemberMigrationService::executeMigration([
     'source_path' => $fixturePath,
@@ -126,8 +131,8 @@ $user4 = Database::first("SELECT * FROM users WHERE username = '3219900100959'")
 mysqlTestAssert($user4 !== null && $user4['status'] === 'inactive', "Imported user account status is strictly 'inactive'");
 
 // Verify Super Admin and Staff accounts preserved
-$admin = Database::first("SELECT username, email FROM users WHERE id = 1");
-mysqlTestAssert($admin['username'] === 'admin' && $admin['email'] === 'pharmacisttom@gmail.com', "Super Admin account preserved untouched");
+$admin = Database::first("SELECT id, uuid, username, email, status, password FROM users WHERE id = 1");
+mysqlTestAssert($admin === $adminBaseline, "Existing CI administrative account preserved exactly");
 
 // 4. Test Idempotency (Batch 2 on same dataset)
 $batch2 = LegacyMemberMigrationService::executeMigration([
