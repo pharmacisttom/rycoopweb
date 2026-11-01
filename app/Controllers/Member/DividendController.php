@@ -18,7 +18,9 @@ class DividendController extends Controller
         }
 
         // Security gate: Require secure password setup before accessing financial dividends
-        if (Session::get('requires_password_change') === true) {
+        // Server-side database state check prevents session flag tampering
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)Auth::id())) {
+            Session::set('requires_password_change', true);
             $this->response->json([
                 'success' => false,
                 'code' => 'PASSWORD_CHANGE_REQUIRED',

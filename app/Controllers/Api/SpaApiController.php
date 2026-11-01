@@ -330,7 +330,8 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
-        if (\App\Core\Session::get('requires_password_change') === true) {
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
             $this->json([
                 'success' => false,
                 'code' => 'PASSWORD_CHANGE_REQUIRED',
@@ -376,6 +377,16 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $memberId = (int)$member['id'];
         $summary = MemberPortalService::getDashboardSummary($memberId);
         $requests = Database::query("SELECT * FROM share_change_requests WHERE member_id = ? ORDER BY created_at DESC", [$memberId]);
@@ -397,6 +408,16 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $accountNo = $this->request->query('account');
         $typeFilter = $this->request->query('type');
         $depositData = MemberPortalService::getDepositDetails((int)$member['id'], $accountNo, $typeFilter);
@@ -411,6 +432,16 @@ class SpaApiController extends Controller
     {
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
+
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
 
         $contractNo = $this->request->query('contract');
         $loanData = MemberPortalService::getLoanDetails((int)$member['id'], $contractNo);
@@ -438,6 +469,16 @@ class SpaApiController extends Controller
     {
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
+
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
 
         $memberId = (int)$member['id'];
         $year = (int)($this->request->query('year') ?? date('Y'));
@@ -484,7 +525,8 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
-        if (\App\Core\Session::get('requires_password_change') === true) {
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
             $this->json([
                 'success' => false,
                 'code' => 'PASSWORD_CHANGE_REQUIRED',

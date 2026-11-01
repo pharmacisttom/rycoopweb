@@ -51,6 +51,28 @@ class MemberPortalController extends Controller
         return true;
     }
 
+    private function assertFinancialAccessAllowed(): bool
+    {
+        if (!$this->assertMemberAuthorized()) {
+            return false;
+        }
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)Auth::id())) {
+            Session::set('requires_password_change', true);
+            if ($this->request && $this->request->isAjax()) {
+                $this->response->json([
+                    'success' => false,
+                    'code' => 'PASSWORD_CHANGE_REQUIRED',
+                    'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+                ], 403);
+                return false;
+            }
+            Session::flash('error', 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน');
+            $this->redirect(url('member/settings'));
+            return false;
+        }
+        return true;
+    }
+
     /**
      * 1. Member Dashboard
      */
@@ -153,7 +175,7 @@ class MemberPortalController extends Controller
      */
     public function shares(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $summary = MemberPortalService::getDashboardSummary($this->memberId);
@@ -174,7 +196,7 @@ class MemberPortalController extends Controller
      */
     public function submitShareChange(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $requestedAmount = (float)$this->request->input('requested_monthly');
@@ -219,7 +241,7 @@ class MemberPortalController extends Controller
      */
     public function deposits(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $accountNo = $this->request->query('account');
@@ -243,7 +265,7 @@ class MemberPortalController extends Controller
      */
     public function loans(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $contractNo = $this->request->query('contract');
@@ -265,7 +287,7 @@ class MemberPortalController extends Controller
      */
     public function loanApplication(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $eligibilityOrdinary = MemberPortalService::calculateLoanEligibility($this->memberId, 'ordinary', 35000);
@@ -284,7 +306,7 @@ class MemberPortalController extends Controller
      */
     public function submitLoanApplication(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $data = $this->request->all();
@@ -398,7 +420,7 @@ class MemberPortalController extends Controller
      */
     public function receipts(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $year = (int)$this->request->query('year', (string)date('Y'));
@@ -431,7 +453,7 @@ class MemberPortalController extends Controller
      */
     public function printReceipt(string $receiptNo): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $receipt = \App\Services\ReceiptService::getReceiptDetails($receiptNo);
@@ -505,7 +527,7 @@ class MemberPortalController extends Controller
      */
     public function financialSummary(): void
     {
-        if (!$this->assertMemberAuthorized()) {
+        if (!$this->assertFinancialAccessAllowed()) {
             return;
         }
         $summary = MemberPortalService::getDashboardSummary($this->memberId);
@@ -575,19 +597,19 @@ class MemberPortalController extends Controller
         }
 
         $userId = (int)Auth::id();
-        $memberRecord = Database::first('SELECT member_no, id_card FROM members WHERE user_id = ? LIMIT 1', [$userId]);
-        if ($memberRecord) {
-            $cleanMemberNo = ltrim((string)($memberRecord['member_no'] ?? ''), '0');
-            if ($newPass === ($memberRecord['member_no'] ?? '') || $newPass === $cleanMemberNo || $newPass === ($memberRecord['id_card'] ?? '') || $newPass === 'coop1234') {
-                if ($isAjax) {
-                    $this->json(['success' => false, 'message' => 'รหัสผ่านใหม่ต้องไม่ตรงกับเลขสมาชิกหรือเลขบัตรประชาชน'], 422);
-                    return;
-                }
-                Session::flash('error', 'รหัสผ่านใหม่ต้องไม่ตรงกับเลขสมาชิกหรือเลขบัตรประชาชน');
-                $this->redirect(url('member/settings'));
+
+        // Validate password security rules (length, member_no, id_card, default passwords)
+        $secError = \App\Services\MemberSecurityService::validatePasswordSecurity($newPass, $userId);
+        if ($secError !== null) {
+            if ($isAjax) {
+                $this->json(['success' => false, 'message' => $secError], 422);
                 return;
             }
+            Session::flash('error', $secError);
+            $this->redirect(url('member/settings'));
+            return;
         }
+
         $user = Database::first("SELECT password FROM users WHERE id = ? LIMIT 1", [$userId]);
 
         if ($user && !empty($user['password']) && !empty($currentPass)) {
@@ -605,9 +627,13 @@ class MemberPortalController extends Controller
         $pwConfig = config('security.password');
         $hash = password_hash($newPass, $pwConfig['algo'] ?? PASSWORD_DEFAULT, $pwConfig['options'] ?? []);
         Database::execute("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?", [$hash, $userId]);
-        Session::set('requires_password_change', false);
 
-        AuditService::log('auth', 'password_change', (string)$userId);
+        // Secure password setup complete: clear requirement flag only after successful persistence
+        \App\Services\MemberSecurityService::clearPasswordChangeRequired($userId);
+
+        try {
+            AuditService::log('auth', 'password_change', (string)$userId);
+        } catch (\Throwable $e) {}
 
         if ($isAjax) {
             $this->json(['success' => true, 'message' => 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว']);

@@ -56,10 +56,18 @@ class MemberAdminService
                 $user = Database::first('SELECT id,username,status FROM users WHERE id=?' . self::lockClause(), [$before['user_id']]);
                 if (Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>'member'", [$before['user_id']])) { throw new RuntimeException('บัญชีนี้มีสิทธิ์เจ้าหน้าที่ กรุณาจัดการผ่านระบบผู้ใช้งาน'); }
                 if (Database::first('SELECT id FROM users WHERE id<>? AND username=?', [$before['user_id'],$after['id_card']])) { throw new RuntimeException('ชื่อผู้ใช้ซ้ำกับบัญชีอื่น'); }
-                // Preserve inactive user status if user has not yet been verified & activated
-                $newStatus = ($user['status'] ?? 'inactive') === 'inactive'
-                    ? ($after['status'] === 'suspended' ? 'suspended' : 'inactive')
-                    : ($after['status'] === 'active' ? 'active' : 'suspended');
+                // Preserve account status consistency:
+                // - inactive user remains inactive pending verification
+                // - suspended user remains suspended (do not allow general profile update to silently reactivate)
+                // - active user becomes suspended if member itself is suspended/resigned, else remains active
+                $currentUserStatus = (string)($user['status'] ?? 'inactive');
+                if ($currentUserStatus === 'suspended') {
+                    $newStatus = 'suspended';
+                } elseif ($currentUserStatus === 'inactive') {
+                    $newStatus = ($after['status'] === 'suspended' || $after['status'] === 'resigned') ? 'suspended' : 'inactive';
+                } else {
+                    $newStatus = ($after['status'] === 'suspended' || $after['status'] === 'resigned') ? 'suspended' : 'active';
+                }
                 Database::execute('UPDATE users SET name=?,username=?,status=?,updated_at=NOW() WHERE id=?', [trim($after['prefix'].$after['first_name'].' '.$after['last_name']), $after['id_card'], $newStatus, $before['user_id']]);
             }
             Database::execute('UPDATE members SET member_no=?,id_card=?,prefix=?,first_name=?,last_name=?,department=?,phone=?,email=?,address=?,status=?,updated_at=NOW() WHERE id=?', [$after['member_no'],$after['id_card'],$after['prefix'],$after['first_name'],$after['last_name'],$after['department'],$after['phone'],$after['email'],$after['address'],$after['status'],$id]);
@@ -71,9 +79,9 @@ class MemberAdminService
     public static function activateAccount(int $memberId, array $input): array
     {
         $verificationMethod = trim((string)($input['verification_method'] ?? ''));
-        $allowedMethods = ['in_person', 'official_document', 'call_verification', 'branch_visit', 'identity_verified'];
+        $allowedMethods = ['in_person', 'official_document', 'call_verification', 'branch_visit'];
         if (!in_array($verificationMethod, $allowedMethods, true)) {
-            throw new RuntimeException('กรุณาระบุวิธีการยืนยันตัวตนที่ถูกต้อง (in_person, official_document, call_verification, branch_visit, identity_verified)');
+            throw new RuntimeException('กรุณาระบุวิธีการยืนยันตัวตนที่ถูกต้อง (in_person, official_document, call_verification, branch_visit)');
         }
 
         $reason = trim((string)($input['reason'] ?? $input['notes'] ?? ''));
@@ -99,7 +107,16 @@ class MemberAdminService
                 throw new RuntimeException('ไม่พบบัญชีผู้ใช้ในระบบ');
             }
 
-            // Verify user is a member role (never activate staff accounts here)
+            // Verify user has the member role
+            $hasMemberRole = (bool)Database::first(
+                "SELECT ur.id FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ? AND r.slug = 'member'",
+                [$userId]
+            );
+            if (!$hasMemberRole) {
+                throw new RuntimeException('บัญชีผู้ใช้นี้ไม่มีสิทธิ์สมาชิก');
+            }
+
+            // Verify user does not have any staff role (never activate staff accounts here)
             $isStaff = (bool)Database::first(
                 "SELECT ur.id FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ? AND r.slug <> 'member'",
                 [$userId]
@@ -114,8 +131,20 @@ class MemberAdminService
                 return ['success' => true, 'already_active' => true, 'message' => 'บัญชีผู้ใช้นี้เปิดใช้งานอยู่แล้ว'];
             }
 
-            // Update user status to active
-            Database::execute("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?", [$userId]);
+            if ($beforeStatus === 'suspended') {
+                throw new RuntimeException('ไม่สามารถเปิดใช้งานบัญชีที่ถูกระงับได้ กรุณาใช้กระบวนการปลดระงับบัญชีโดยเฉพาะ');
+            }
+
+            if ($beforeStatus !== 'inactive') {
+                throw new RuntimeException('สามารถเปิดใช้งานได้เฉพาะบัญชีที่รอการเปิดใช้งาน (inactive) เท่านั้น');
+            }
+
+            // Update user status to active and mark password change required
+            if (MemberSecurityService::hasMustChangePasswordColumn()) {
+                Database::execute("UPDATE users SET status = 'active', must_change_password = 1, updated_at = NOW() WHERE id = ?", [$userId]);
+            } else {
+                Database::execute("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?", [$userId]);
+            }
 
             $staffId = PHP_SAPI === 'cli' ? null : Auth::id();
 
@@ -128,7 +157,7 @@ class MemberAdminService
                 ['user_id' => $userId, 'status' => 'active', 'verification_method' => $verificationMethod, 'activated_by' => $staffId]
             );
 
-            // Record audit log
+            // Record audit log (strictly required = true so audit failure rolls back transaction)
             AuditService::log(
                 'member_management',
                 'activate_account',

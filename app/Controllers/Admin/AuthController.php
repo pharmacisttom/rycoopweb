@@ -222,23 +222,7 @@ class AuthController extends Controller
 
             // Require secure password setup before financial access if account was activated
             // and has not yet completed a secure password change
-            $requiresPwChange = false;
-            try {
-                $memberRecord = Database::first('SELECT id FROM members WHERE user_id = ? LIMIT 1', [$user['id']]);
-                if ($memberRecord) {
-                    $wasActivated = (bool)Database::first(
-                        "SELECT 1 FROM audit_logs WHERE module = 'member_management' AND action = 'activate_account' AND record_id = ? LIMIT 1",
-                        [(string)$memberRecord['id']]
-                    );
-                    if ($wasActivated) {
-                        $hasChangedPw = (bool)Database::first(
-                            "SELECT 1 FROM audit_logs WHERE user_id = ? AND action = 'password_change' LIMIT 1",
-                            [$user['id']]
-                        );
-                        $requiresPwChange = !$hasChangedPw;
-                    }
-                }
-            } catch (\Throwable $e) {}
+            $requiresPwChange = \App\Services\MemberSecurityService::isPasswordChangeRequired((int)$user['id']);
             Session::set('requires_password_change', $requiresPwChange);
         }
 
@@ -358,35 +342,29 @@ class AuthController extends Controller
             return;
         }
 
-        // Check if member user is attempting to set password to their member_no, id_card or default
-        $memberRecord = Database::first('SELECT member_no, id_card FROM members WHERE user_id = ? LIMIT 1', [$user['id']]);
-        if ($memberRecord) {
-            $cleanMemberNo = ltrim((string)($memberRecord['member_no'] ?? ''), '0');
-            if ($newPass === ($memberRecord['member_no'] ?? '') || $newPass === $cleanMemberNo || $newPass === ($memberRecord['id_card'] ?? '') || $newPass === 'coop1234') {
-                $msg = 'รหัสผ่านใหม่ต้องไม่ตรงกับเลขสมาชิกหรือเลขบัตรประชาชน';
-                if ($isAjax) {
-                    $this->response->json(['success' => false, 'message' => $msg], 422);
-                    return;
-                }
-                Session::flash('error', $msg);
-                $this->redirect($this->safeRefererUrl());
+        // Validate password security rules (length, member_no, id_card, default passwords)
+        $secError = \App\Services\MemberSecurityService::validatePasswordSecurity($newPass, (int)$user['id']);
+        if ($secError !== null) {
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'message' => $secError], 422);
                 return;
             }
+            Session::flash('error', $secError);
+            $this->redirect($this->safeRefererUrl());
+            return;
         }
 
         // Check current password against DB hash — never compare plaintext
         if (empty($user['password'])) { $this->response->json(['success'=>false,'message'=>'บัญชีนี้ต้องจัดการรหัสผ่านผ่านผู้ให้บริการยืนยันตัวตน'],403); return; }
-        if (!empty($user['password'])) {
-            if (!password_verify($currentPass, $user['password'])) {
-                $msg = 'รหัสผ่านปัจจุบันไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
-                if ($isAjax) {
-                    $this->response->json(['success' => false, 'message' => $msg], 400);
-                    return;
-                }
-                Session::flash('error', $msg);
-                $this->redirect($this->safeRefererUrl());
+        if (!password_verify($currentPass, $user['password'])) {
+            $msg = 'รหัสผ่านปัจจุบันไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'message' => $msg], 400);
                 return;
             }
+            Session::flash('error', $msg);
+            $this->redirect($this->safeRefererUrl());
+            return;
         }
 
         // Update password in DB using the configured hashing algorithm
@@ -394,11 +372,11 @@ class AuthController extends Controller
         $hash = password_hash($newPass, $pwConfig['algo'] ?? PASSWORD_DEFAULT, $pwConfig['options'] ?? []);
         Database::execute("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?", [$hash, $user['id']]);
 
-        // Secure password setup complete: clear requirement flag
-        Session::set('requires_password_change', false);
+        // Secure password setup complete: clear requirement flag only after successful persistence
+        \App\Services\MemberSecurityService::clearPasswordChangeRequired((int)$user['id']);
 
         try {
-            AuditService::log('auth', 'password_change', (string)$user['id'], null, ['username' => $user['username']]);
+            AuditService::log('auth', 'password_change', (string)$user['id']);
         } catch (\Throwable $e) {}
 
         $msg = 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว ท่านสามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้ทันที';
