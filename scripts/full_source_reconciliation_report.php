@@ -107,3 +107,4 @@ if (count($mismatches) > 0) {
     echo " All 4,855 source financial records match MySQL rycoopweb_test database 100%.\n";
     echo "================================================================================\n";
 }
+
