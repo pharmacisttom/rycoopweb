@@ -111,6 +111,8 @@ $router->get('/api/public/visitors/analytics', 'Api\\SpaApiController@visitorAna
 |--------------------------------------------------------------------------
 */
 $router->get('/api/auth/me', 'Api\\SpaApiController@me');
+$router->post('/api/member/activation/redeem', 'Member\\ActivationController@redeem', [CsrfMiddleware::class, new RateLimitMiddleware('member_activation_redeem', 6, 900)]);
+$router->post('/api/admin/member-activation/{id}/issue', 'Admin\\MemberActivationController@issue', [AuthMiddleware::class, new RoleMiddleware(['super_admin']), CsrfMiddleware::class, new RateLimitMiddleware('member_activation_issue', 10, 3600)]);
 $router->get('/api/member/privacy', 'Member\\PrivacyController@status', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
 $router->post('/api/member/privacy', 'Member\\PrivacyController@record', [AuthMiddleware::class, new RoleMiddleware(['member']), CsrfMiddleware::class]);
 $router->get('/api/member/dividends', 'Member\\DividendController@index', [AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class]);
