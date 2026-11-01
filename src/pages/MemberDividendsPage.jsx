@@ -104,7 +104,7 @@ export default function MemberDividendsPage() {
       <button type="button" className="btn btn-outline" disabled={privacyBusy || privacy.optional_choice !== 'accepted'}
         onClick={() => {setOptionalConsent(false); savePrivacy('optional_consent','withdrawn');}}>ถอนความยินยอม</button>
     </section>}
-    {privacyMessage && <p role="status">{privacyMessage}</p>
+    {privacyMessage && <p role="status">{privacyMessage}</p>}
     {loading && <p role="status">กำลังโหลดข้อมูลสมาชิก...</p>}
     {error && <div role="alert" className="dividend-error">{error} <Link to="/member/login">เข้าสู่ระบบ</Link> <button onClick={() => setAttempt(a => a + 1)}>ลองใหม่</button></div>}
     {data && <><p><strong>{data.member.name}</strong> · เลขทะเบียนสมาชิก {data.member.member_no}</p>
