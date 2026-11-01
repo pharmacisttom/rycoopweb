@@ -48,13 +48,16 @@ final class MemberPrivacyService
         ], true)) {
             throw new RuntimeException('INVALID_PRIVACY_EVENT');
         }
-        // No raw IP or User-Agent stored in consent ledger.
+        // Use keyed hashes, not reversible raw IP/User-Agent or unsalted
+        // hashes (which can be brute-forced for IPv4 addresses).
+        $auditKey = (string) env('APP_KEY', '');
+        $ipHash = $auditKey !== '' && $ip !== '' ? hash_hmac('sha256', 'ip:'.$ip, $auditKey) : null;
+        $agentHash = $auditKey !== '' && $agent !== '' ? hash_hmac('sha256', 'ua:'.$agent, $auditKey) : null;
         Database::execute(
             'INSERT INTO member_privacy_events (user_id,event_type,purpose,notice_version,choice,ip_hash,user_agent_hash,created_at)
              VALUES (?,?,?,?,?,?,?,NOW())',
             [$userId,$type,$purpose,$version,$choice,
-             $ip !== '' ? hash('sha256',$ip) : null,
-             $agent !== '' ? hash('sha256',$agent) : null]
+             $ipHash, $agentHash]
         );
     }
 }
