@@ -22,6 +22,7 @@ final class SecurityRegressionTest
         self::assertLoginKeepsCsrfProtection();
         self::assertAdminDashboardImportsLoanProducts();
         self::assertMemberPortalIsDenyByDefault();
+        self::assertMemberPrivacyGate();
         self::assertLegacyMigrationBackupRestoreGate();
 
         if (self::$failures === 0) {
@@ -38,6 +39,22 @@ final class SecurityRegressionTest
         $source = file_get_contents(__DIR__ . '/../app/Services/LegacyMemberMigrationService.php');
         self::assert($source !== false && str_contains($source, "config('security.dual_control.backup_restore_execution_enabled', false)"), 'migration checks actual nested backup restore safety flag');
         self::assert((bool)config('security.dual_control.backup_restore_execution_enabled', false) === filter_var(env('BACKUP_RESTORE_EXECUTION_ENABLED', false), FILTER_VALIDATE_BOOL), 'backup restore safety flag resolves through runtime configuration');
+    }
+
+    private static function assertMemberPrivacyGate(): void
+    {
+        $routes = file_get_contents(__DIR__ . '/../config/routes.php');
+        self::assert($routes !== false && str_contains($routes, "'/api/member/privacy'"), 'member privacy status and record routes exist');
+        self::assert($routes !== false && str_contains($routes, "PrivacyController@record', [AuthMiddleware::class, new RoleMiddleware(['member']), CsrfMiddleware::class]"), 'member PDPA writes require auth, member role and CSRF');
+        $gate = file_get_contents(__DIR__ . '/../app/Middlewares/MemberMiddleware.php');
+        self::assert($gate !== false && str_contains($gate, 'MemberPrivacyService::acknowledged'), 'member middleware enforces privacy notice acknowledgement');
+        $financial = file_get_contents(__DIR__ . '/../app/Controllers/Member/DividendController.php');
+        self::assert($financial !== false && str_contains($financial, 'MemberPrivacyService::acknowledged'), 'financial endpoint blocks access before notice acknowledgement');
+        $privacy = file_get_contents(__DIR__ . '/../app/Services/MemberPrivacyService.php');
+        self::assert($privacy !== false && str_contains($privacy, 'optional_cooperative_updates'), 'optional consent is purpose-specific and separate');
+        self::assert($privacy !== false && str_contains($privacy, "'withdrawn'"), 'optional consent can be withdrawn');
+        $page = file_get_contents(__DIR__ . '/../src/pages/MemberDividendsPage.jsx');
+        self::assert($page !== false && !str_contains($page, 'รหัสผ่านเริ่มต้นคือเลขสมาชิก'), 'member page never advertises a predictable initial password');
     }
 
     private static function assertNoAuthenticationBypass(): void
