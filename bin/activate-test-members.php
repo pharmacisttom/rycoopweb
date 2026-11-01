@@ -8,6 +8,12 @@ declare(strict_types=1);
  * Exclusively executes against TEST database (`rycoopweb_test`).
  * Activates 2,508 eligible imported member accounts for authorized UAT testing.
  *
+ * Rules:
+ * - Requires exact 'rycoopweb_test' database identity (zero bypass).
+ * - Fails transaction if mandatory audit logging or snapshot creation fails.
+ * - Protects staff/admin accounts and suspended accounts.
+ * - Idempotent execution.
+ *
  * Usage:
  *   php bin/activate-test-members.php --confirm-token=RYCOOP-SECURITY-APPROVAL-MEMBER-ACTIVATION-2026 --admin-id=1
  */
@@ -22,24 +28,23 @@ use App\Services\SecurityAuditService;
 
 echo "================================================================================\n";
 echo " RYCOOPWEB — CONTROLLED TEST MEMBER ACCOUNT ACTIVATION\n";
-echo " Environment: TEST ONLY | Target Database: rycoopweb_test\n";
+echo " Target Database: rycoopweb_test (Strictly Enforced)\n";
 echo "================================================================================\n\n";
 
-$options = getopt('', ['confirm-token:', 'admin-id:', 'dry-run', 'force-test']);
+$options = getopt('', ['confirm-token:', 'admin-id:', 'dry-run']);
 
 $pdo = Database::connect();
 
-// 1. Safety Gate: Database Environment Check
+// 1. Strict Database Identity Check: Must be EXACTLY 'rycoopweb_test' (No bypasses)
 $currentDb = (string)$pdo->query("SELECT DATABASE()")->fetchColumn();
 echo "[DIAGNOSTIC] Connected Database: {$currentDb}\n";
 
-$isTestDb = ($currentDb === 'rycoopweb_test') || isset($options['force-test']);
-if (!$isTestDb) {
+if ($currentDb !== 'rycoopweb_test') {
     echo "[ABORT] Safety Guardrail Active: Bulk member activation is strictly prohibited on database '{$currentDb}'.\n";
-    echo "        Target database must be 'rycoopweb_test' or pass --force-test explicitly.\n";
+    echo "        Target database must be exactly 'rycoopweb_test'. Refusing execution.\n";
     exit(1);
 }
-echo "[PASS] Database confirmed as isolated TEST database: {$currentDb}\n\n";
+echo "[PASS] Database confirmed as verified TEST database: rycoopweb_test\n\n";
 
 // 2. Pre-activation Eligibility Verification
 $candidateSql = "
@@ -74,7 +79,7 @@ if ($eligibleCount === 0) {
 
 // Dry-run check
 if (isset($options['dry-run'])) {
-    echo "  [DRY-RUN] {$eligibleCount} member accounts would be activated. Zero mutations applied.\n";
+    echo "  [DRY-RUN] {$eligibleCount} member accounts eligible. Zero mutations applied.\n";
     exit(0);
 }
 
@@ -88,23 +93,30 @@ if ($token !== MemberControlledActivationService::REQUIRED_APPROVAL_TOKEN) {
     exit(1);
 }
 
-// 4. Create Snapshot & Rollback State File
+// 4. Create Snapshot & Rollback State File (MANDATORY: Must fail if snapshot cannot be written)
 $backupDir = dirname(__DIR__) . '/storage/backups';
-if (!is_dir($backupDir)) {
-    mkdir($backupDir, 0750, true);
+if (!is_dir($backupDir) && !mkdir($backupDir, 0750, true) && !is_dir($backupDir)) {
+    echo "[FATAL ERROR] Cannot create backup directory {$backupDir}!\n";
+    exit(1);
 }
+
 $snapshotFile = "{$backupDir}/member_activation_pre_snapshot_" . date('Ymd_His') . ".json";
 $snapshotData = [
     'timestamp' => date('Y-m-d H:i:s'),
     'database' => $currentDb,
     'eligible_count' => $eligibleCount,
-    'user_ids' => array_column($candidates, 'user_id'),
+    'user_ids' => array_map('intval', array_column($candidates, 'user_id')),
 ];
-file_put_contents($snapshotFile, json_encode($snapshotData, JSON_PRETTY_PRINT));
-echo "[PASS] Pre-activation rollback snapshot saved to {$snapshotFile}\n\n";
 
-// 5. Execute Transaction-Bound Activation
-echo "[DIAGNOSTIC] Executing batch activation within a protected transaction...\n";
+$writtenBytes = file_put_contents($snapshotFile, json_encode($snapshotData, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
+if ($writtenBytes === false || $writtenBytes === 0) {
+    echo "[FATAL ERROR] Mandatory pre-activation snapshot creation failed at {$snapshotFile}! Activation aborted.\n";
+    exit(1);
+}
+echo "[PASS] Mandatory pre-activation rollback snapshot saved ({$writtenBytes} bytes): {$snapshotFile}\n\n";
+
+// 5. Execute Transaction-Bound Activation with Mandatory Fail-Closed Audit Logging
+echo "[DIAGNOSTIC] Executing batch activation within a protected database transaction...\n";
 $pdo->beginTransaction();
 
 try {
@@ -117,38 +129,42 @@ try {
 
         $updateStmt->execute([$uId]);
 
-        // Record provenance in member_data_changes if table exists
-        try {
-            MemberAdminService::recordChange(
-                $mId,
-                'controlled_account_activation',
-                'เปิดใช้งานบัญชีผ่านระบบควบคุมความปลอดภัยสำหรับการทดสอบ UAT (Authorized TEST activation)',
-                ['user_id' => $uId, 'status' => 'inactive'],
-                ['user_id' => $uId, 'status' => 'active', 'approved_by_admin_id' => $adminId],
-                $pdo
-            );
-        } catch (Throwable $ignore) {}
+        // Mandatory provenance logging in member_data_changes (Throws on failure)
+        MemberAdminService::recordChange(
+            $mId,
+            'controlled_account_activation',
+            'เปิดใช้งานบัญชีผ่านระบบควบคุมความปลอดภัยสำหรับการทดสอบ UAT (Authorized TEST activation)',
+            ['user_id' => $uId, 'status' => 'inactive'],
+            ['user_id' => $uId, 'status' => 'active', 'approved_by_admin_id' => $adminId],
+            $pdo
+        );
 
         $activated++;
     }
 
-    // Record executive audit in security_audit_logs if table exists
-    try {
-        $auditStmt = $pdo->prepare("
-            INSERT INTO security_audit_logs (
-                event_id, timestamp_utc, actor_user_id, actor_type, role,
-                event_type, target_resource, result, correlation_id,
-                session_fingerprint, ip_address, metadata
-            ) VALUES (?, UTC_TIMESTAMP(), ?, 'staff', 'super_admin', 'ADMIN_ACCOUNT_ACTIVATION', 'members:batch_activation', 'success', ?, ?, '127.0.0.1', ?)
-        ");
-        $auditStmt->execute([
-            bin2hex(random_bytes(16)),
-            $adminId,
-            bin2hex(random_bytes(16)),
-            hash('sha256', 'cli-batch-activation'),
-            json_encode(['activated_count' => $activated, 'approval_token_hash' => hash('sha256', $token)])
-        ]);
-    } catch (Throwable $ignore) {}
+    // Mandatory executive security audit logging in security_audit_logs (Throws on failure)
+    $auditStmt = $pdo->prepare("
+        INSERT INTO security_audit_logs (
+            event_id, timestamp_utc, actor_user_id, actor_type, role,
+            event_type, target_resource, result, correlation_id,
+            session_fingerprint, ip_address, metadata
+        ) VALUES (?, UTC_TIMESTAMP(), ?, 'staff', 'super_admin', 'ADMIN_ACCOUNT_ACTIVATION', 'members:batch_activation', 'success', ?, ?, '127.0.0.1', ?)
+    ");
+    $auditSuccess = $auditStmt->execute([
+        bin2hex(random_bytes(16)),
+        $adminId,
+        bin2hex(random_bytes(16)),
+        hash('sha256', 'cli-batch-activation'),
+        json_encode([
+            'activated_count' => $activated,
+            'approval_token_hash' => hash('sha256', $token),
+            'snapshot_file' => basename($snapshotFile)
+        ], JSON_THROW_ON_ERROR)
+    ]);
+
+    if (!$auditSuccess) {
+        throw new RuntimeException("Mandatory security audit logging in security_audit_logs failed.");
+    }
 
     $pdo->commit();
 
@@ -161,7 +177,6 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    echo "[FATAL ERROR] Activation failed and was rolled back: " . $e->getMessage() . "\n";
+    echo "[FATAL ERROR] Activation failed and was rolled back completely: " . $e->getMessage() . "\n";
     exit(1);
 }
-

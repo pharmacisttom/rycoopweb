@@ -16,62 +16,79 @@ SHARED_TEST_DIR="${BASE_DIR}/shared-test"
 TARGET_BACKEND="${RELEASES_DIR}/${TARGET_SHA}"
 TARGET_STATIC="${RELEASES_DIR}/${TARGET_SHA}-static"
 
+ACTIVE_BACKEND_LINK="${BASE_DIR}/test-v2"
+ACTIVE_STATIC_LINK="${BASE_DIR}/test-v2-static"
+
 echo "=============================================================================="
 echo " RYCOOPWEB STAGE TEST RELEASE: ${TARGET_SHA}"
 echo "=============================================================================="
 
 # ------------------------------------------------------------------------------
-# PHASE 1: DIAGNOSTIC PRECONDITION VERIFICATION (NO SILENT FAILURES)
+# PHASE 1: PRECONDITION & DIRECTORY LAYOUT VERIFICATION
 # ------------------------------------------------------------------------------
 echo "--- [PHASE 1] Precondition & Shared Storage Diagnostics ---"
 
-# 1. Base Releases Directory
+CURRENT_BACKEND=$(readlink -f "${ACTIVE_BACKEND_LINK}" 2>/dev/null || echo "NONE")
+CURRENT_STATIC=$(readlink -f "${ACTIVE_STATIC_LINK}" 2>/dev/null || echo "NONE")
+
+echo "[DIAGNOSTIC] Current Active Backend: ${CURRENT_BACKEND}"
+echo "[DIAGNOSTIC] Current Active Frontend: ${CURRENT_STATIC}"
+
+# RULE 1: Never checkout or modify the currently active TEST release
+if [ "${TARGET_BACKEND}" = "${CURRENT_BACKEND}" ]; then
+    echo "[ERROR] Precondition Failed: Target staging directory (${TARGET_BACKEND}) is currently active!" >&2
+    echo "       Refusing to checkout or mutate the running release in-place." >&2
+    exit 1
+fi
+echo "[PASS] Active release isolation verified (target differs from active release)."
+
+# Base Releases Directory
 if [ ! -d "${RELEASES_DIR}" ]; then
     echo "[DIAGNOSTIC] Releases directory missing at ${RELEASES_DIR}. Creating..."
     mkdir -p "${RELEASES_DIR}"
-    echo "[PASS] Created ${RELEASES_DIR}"
-else
-    echo "[PASS] Releases directory exists: ${RELEASES_DIR}"
 fi
+echo "[PASS] Releases directory exists: ${RELEASES_DIR}"
 
-# 2. Shared-Test Directory & Shared .env
+# RULE 2: Resolve shared-test/.env against existing verified TEST configuration without overwriting or exposing secrets
 if [ ! -d "${SHARED_TEST_DIR}" ]; then
-    echo "[DIAGNOSTIC] Shared-test directory missing at ${SHARED_TEST_DIR}. Creating..."
     mkdir -p "${SHARED_TEST_DIR}"
 fi
 
 SHARED_ENV="${SHARED_TEST_DIR}/.env"
 if [ ! -f "${SHARED_ENV}" ]; then
-    echo "[ERROR] Precondition Failed: Shared TEST .env missing at ${SHARED_ENV}" >&2
-    echo "       Refusing to continue without verified TEST environment configuration." >&2
-    exit 1
+    echo "[DIAGNOSTIC] shared-test/.env not found. Resolving from verified active TEST release..."
+    if [ "${CURRENT_BACKEND}" != "NONE" ] && [ -f "${CURRENT_BACKEND}/.env" ]; then
+        cp "${CURRENT_BACKEND}/.env" "${SHARED_ENV}"
+        chown www-data:www-data "${SHARED_ENV}" 2>/dev/null || true
+        chmod 640 "${SHARED_ENV}" 2>/dev/null || true
+        echo "[PASS] Successfully resolved shared-test/.env from active release without exposing secrets."
+    else
+        echo "[ERROR] Precondition Failed: Neither ${SHARED_ENV} nor active release .env found!" >&2
+        echo "       Cannot proceed without verified TEST environment configuration." >&2
+        exit 1
+    fi
+else
+    echo "[PASS] Verified existing shared-test/.env preserved intact: ${SHARED_ENV}"
 fi
-echo "[PASS] Shared TEST .env verified: ${SHARED_ENV}"
 
-# 3. Shared Storage Directories (uploads, logs, tmp)
+# RULE 3: Preserve shared-test/uploads, logs, tmp and avoid unsafe recursive permission changes
 for sub in uploads logs tmp; do
     DIR_PATH="${SHARED_TEST_DIR}/${sub}"
     if [ ! -d "${DIR_PATH}" ]; then
-        echo "[DIAGNOSTIC] ${sub} directory missing at ${DIR_PATH}. Creating with secure permissions..."
+        echo "[DIAGNOSTIC] ${sub} directory missing at ${DIR_PATH}. Creating..."
         mkdir -p "${DIR_PATH}"
-        chown -R www-data:www-data "${DIR_PATH}" || true
-        chmod -R 775 "${DIR_PATH}" || true
-        echo "[PASS] Created and secured: ${DIR_PATH}"
+        chown www-data:www-data "${DIR_PATH}" 2>/dev/null || true
+        chmod 775 "${DIR_PATH}" 2>/dev/null || true
+        echo "[PASS] Created: ${DIR_PATH}"
     else
-        echo "[PASS] Shared storage exists: ${DIR_PATH}"
+        # Only set ownership/permissions on the directory itself, NEVER recursively (-R) on existing files
+        chown www-data:www-data "${DIR_PATH}" 2>/dev/null || true
+        chmod 775 "${DIR_PATH}" 2>/dev/null || true
+        echo "[PASS] Preserved shared storage directory: ${DIR_PATH}"
     fi
 done
 
-# 4. Inspect Current Live Release Symlinks
-ACTIVE_BACKEND_LINK="${BASE_DIR}/test-v2"
-ACTIVE_STATIC_LINK="${BASE_DIR}/test-v2-static"
-
-CURRENT_BACKEND=$(readlink -f "${ACTIVE_BACKEND_LINK}" 2>/dev/null || echo "NONE")
-CURRENT_STATIC=$(readlink -f "${ACTIVE_STATIC_LINK}" 2>/dev/null || echo "NONE")
-
-echo "[DIAGNOSTIC] Current Active Backend Symlink: ${CURRENT_BACKEND}"
-echo "[DIAGNOSTIC] Current Active Frontend Symlink: ${CURRENT_STATIC}"
-
+# Record previous release targets for deployment reference
 if [ "${CURRENT_BACKEND}" != "NONE" ]; then
     echo "${CURRENT_BACKEND}" > "${SHARED_TEST_DIR}/last_active_backend.txt"
     echo "${CURRENT_STATIC}" > "${SHARED_TEST_DIR}/last_active_static.txt"
@@ -98,7 +115,7 @@ if [ -d "${TARGET_BACKEND}/.git" ]; then
         echo "[PASS] Repository is already at verified commit ${TARGET_SHA}"
     fi
 else
-    echo "[DIAGNOSTIC] Cloning repository into immutable release directory..."
+    echo "[DIAGNOSTIC] Cloning clean repository into immutable release directory..."
     git clone "${REPO_URL}" "${TARGET_BACKEND}"
     git -C "${TARGET_BACKEND}" checkout "${TARGET_SHA}"
     echo "[PASS] Checked out commit $(git -C "${TARGET_BACKEND}" rev-parse --short HEAD)"
@@ -126,10 +143,35 @@ npm ci --silent
 npm run build
 
 echo "[DIAGNOSTIC] Syncing compiled assets to immutable static release directory..."
+rm -rf "${TARGET_STATIC:?}"/*
 cp -r public/app/* "${TARGET_STATIC}/"
 
-# 3. Ownership & File Permissions
-echo "[DIAGNOSTIC] Setting strict least-privilege permissions..."
+# RULE 4: Validate correct backend and static release layouts
+echo "[DIAGNOSTIC] Validating release directory layout..."
+test -f "${TARGET_BACKEND}/public/index.php" || {
+    echo "[ERROR] Backend layout invalid: missing public/index.php" >&2
+    exit 1
+}
+test -f "${TARGET_BACKEND}/vendor/autoload.php" || {
+    echo "[ERROR] Backend layout invalid: missing vendor/autoload.php" >&2
+    exit 1
+}
+test -L "${TARGET_BACKEND}/.env" || {
+    echo "[ERROR] Backend layout invalid: missing .env symlink" >&2
+    exit 1
+}
+test -f "${TARGET_STATIC}/index.html" || {
+    echo "[ERROR] Static layout invalid: missing index.html" >&2
+    exit 1
+}
+test -d "${TARGET_STATIC}/assets" || {
+    echo "[ERROR] Static layout invalid: missing assets/ directory" >&2
+    exit 1
+}
+echo "[PASS] Release layouts verified (backend and static)."
+
+# 3. Ownership & File Permissions on Release Code
+echo "[DIAGNOSTIC] Setting strict least-privilege permissions on release code..."
 chown -R www-data:www-data "${TARGET_BACKEND}" "${TARGET_STATIC}"
 find "${TARGET_BACKEND}" -type d -exec chmod 755 {} \;
 find "${TARGET_BACKEND}" -type f -exec chmod 644 {} \;
@@ -151,4 +193,3 @@ echo "[PASS] PHP-FPM permission check verified."
 echo "=============================================================================="
 echo " STAGING COMPLETE: Release ${TARGET_SHA} is ready for deployment."
 echo "=============================================================================="
-
