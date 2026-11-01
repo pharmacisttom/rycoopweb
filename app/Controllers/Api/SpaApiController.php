@@ -341,6 +341,9 @@ class SpaApiController extends Controller
         }
 
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        if (!empty($summary['member']) && is_array($summary['member'])) {
+            $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
+        }
         $notifications = MemberPortalService::getNotifications((int)$member['id']);
 
         $this->json([
@@ -536,6 +539,9 @@ class SpaApiController extends Controller
         }
 
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        if (!empty($summary['member']) && is_array($summary['member'])) {
+            $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
+        }
 
         $this->json(['success' => true, 'data' => $summary]);
     }
@@ -656,13 +662,22 @@ class SpaApiController extends Controller
             if (!$isPdpaAcked) {
                 $userData['redirect'] = '/member/privacy-ack';
             }
+            // Enforce PII masking on member identity fields (never expose raw 13-digit citizen ID)
+            $userData['username'] = \App\Services\MemberPiiMaskingService::maskCitizenId($user['username'] ?? '');
+            $userData['name'] = \App\Services\MemberPiiMaskingService::maskFullName($user['name'] ?? '');
         } else {
             $userData['pdpa_ack_required'] = false;
         }
 
         if ($member && ($roleSlug !== 'member' || $isPdpaAcked)) {
-            $userData['member_no'] = $member['member_no'] ?? '';
-            $userData['phone'] = $member['phone'] ?? '';
+            if ($roleSlug === 'member') {
+                $userData['member_no'] = \App\Services\MemberPiiMaskingService::maskMemberNo((string)($member['member_no'] ?? ''));
+                $userData['memberId'] = $userData['member_no'];
+                $userData['phone'] = \App\Services\MemberPiiMaskingService::maskPhone((string)($member['phone'] ?? ''));
+            } else {
+                $userData['member_no'] = $member['member_no'] ?? '';
+                $userData['phone'] = $member['phone'] ?? '';
+            }
             $userData['department'] = $member['org_name'] ?? ($userData['department'] ?? '');
             $userData['position'] = $member['position'] ?? '';
         }
@@ -996,22 +1011,6 @@ class SpaApiController extends Controller
 
     private function sanitizeMember(array $member): array
     {
-        // Provide PDPA compliant masked identity before unsetting
-        $rawIdCard = $member['id_card'] ?? '';
-        $rawName = trim(($member['prefix'] ?? '') . ' ' . ($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? ''));
-        if ($rawName === '') {
-            $rawName = $member['name'] ?? '';
-        }
-
-        $member['id_card_pdpa'] = \App\Services\PdpaService::maskIdCard($rawIdCard);
-        $member['name_pdpa'] = \App\Services\PdpaService::maskName($rawName);
-
-        // Remove PII that should not be sent in raw form
-        unset($member['id_card']);
-        unset($member['password']);
-        if (array_key_exists('avatar', $member)) {
-            $member['avatar'] = resolve_media_url($member['avatar']);
-        }
-        return $member;
+        return \App\Services\MemberPiiMaskingService::sanitizeMemberData($member);
     }
 }

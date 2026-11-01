@@ -1,20 +1,17 @@
 import CoopBrandLogo from '../components/branding/CoopBrandLogo';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, Phone, ShieldCheck, User } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
 import './LoginPage.css';
 
 export default function LoginPage() {
-  const { login, verifyIdentity, user, sessionStatus } = useAuth();
+  const { login, user, sessionStatus } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [step, setStep] = useState('login'); // 'login' | 'verify_identity'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [maskedPhone, setMaskedPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,43 +55,14 @@ export default function LoginPage() {
         setError(result.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
         return;
       }
-      if (result.requiresIdentityVerification) {
-        setMaskedPhone(result.maskedPhone || '');
-        setStep('verify_identity');
-        return;
-      }
       if (result.requiresTwoFactor) {
         navigate(normalizeSameOriginRedirect(result.redirect, '/admin/mfa/verify'), { replace: true });
         return;
       }
-      const fallback = result.user.role === 'member'
+      const fallback = result.user?.role === 'member'
         ? (result.user.pdpa_ack_required ? '/member/privacy-ack' : '/member/dividends')
-        : result.user.role === 'member_admin' ? '/admin/members/dashboard' : result.user.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace';
+        : result.user?.role === 'member_admin' ? '/admin/members/dashboard' : result.user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace';
       navigate(normalizeSameOriginRedirect(result.redirect, fallback), { replace: true });
-    } catch {
-      setError('ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyPhone = async (event) => {
-    event.preventDefault();
-    setError('');
-    const cleanPhone = phone.trim();
-    if (!cleanPhone) {
-      setError('กรุณากรอกหมายเลขโทรศัพท์มือถือที่ลงทะเบียนไว้กับสหกรณ์');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await verifyIdentity(cleanPhone);
-      if (!result.success) {
-        setError(result.message || 'ยืนยันตัวตนไม่สำเร็จ กรุณาตรวจสอบหมายเลขโทรศัพท์อีกครั้ง');
-        return;
-      }
-      navigate('/member/privacy-ack', { replace: true });
     } catch {
       setError('ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
@@ -115,60 +83,22 @@ export default function LoginPage() {
             <span className="member-entry-caption">Rayong Public Health Savings and Credit Cooperative</span>
           </section>
           <section className="member-entry-form" aria-labelledby="member-login-title">
-            <div className="member-entry-icon">{step === 'verify_identity' ? <Phone size={25} /> : <User size={25} />}</div>
-            {step === 'verify_identity' ? (
-              <>
-                <h2 id="member-login-title">ยืนยันตัวตนเปิดใช้งานบัญชี</h2>
-                <p className="member-entry-subtitle">
-                  {maskedPhone ? <>หมายเลขโทรศัพท์ที่ลงทะเบียน: <strong>{maskedPhone}</strong></> : 'กรุณากรอกเบอร์โทรศัพท์มือถือที่ลงทะเบียนไว้กับสหกรณ์'}
-                </p>
-                {error && <p role="alert" className="member-entry-error">{error}</p>}
-                <form onSubmit={handleVerifyPhone} noValidate>
-                  <label htmlFor="verify-phone">หมายเลขโทรศัพท์มือถือ</label>
-                  <div className="member-entry-input">
-                    <Phone size={18} aria-hidden="true" />
-                    <input
-                      id="verify-phone"
-                      type="tel"
-                      value={phone}
-                      onChange={event => setPhone(event.target.value)}
-                      autoComplete="tel"
-                      disabled={loading}
-                      placeholder="กรอกหมายเลข 10 หลัก (เช่น 0812345678)"
-                      autoFocus
-                    />
-                  </div>
-                  <button className="member-entry-submit" type="submit" disabled={loading}>
-                    {loading ? <><LoaderCircle className="member-entry-spin" size={19} /> กำลังตรวจสอบ...</> : <><ShieldCheck size={19} /> ยืนยันและเปิดใช้งาน</>}
-                  </button>
-                  <button
-                    type="button"
-                    style={{ background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', marginTop: '12px', fontSize: '14px', textDecoration: 'underline' }}
-                    onClick={() => { setStep('login'); setError(''); }}
-                  >
-                    กลับไปหน้าเข้าสู่ระบบ
-                  </button>
-                </form>
-              </>
-            ) : (
-              <>
-                <h2 id="member-login-title">{staffLogin ? 'เข้าสู่ระบบเจ้าหน้าที่' : 'เข้าสู่ระบบสมาชิก'}</h2>
-                <p className="member-entry-subtitle">{staffLogin ? 'ใช้บัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์จากสหกรณ์' : 'ยินดีต้อนรับสู่บริการสมาชิกออนไลน์'}</p>
-                {location.state?.sessionRequired && <p role="status" className="member-entry-notice">กรุณาเข้าสู่ระบบเพื่อดูข้อมูลของคุณ หากเซสชันหมดอายุให้เข้าสู่ระบบอีกครั้ง</p>}
-                {error && <p role="alert" className="member-entry-error">{error}</p>}
-                {staffLogin && googleEnabled && <a className="btn btn-outline" href={'/auth/google/start' + (new URLSearchParams(window.location.search).has('invitation') ? '?invitation=' + encodeURIComponent(new URLSearchParams(window.location.search).get('invitation')) : '')}>เข้าสู่ระบบด้วย Google ของสหกรณ์</a>}
-                <form onSubmit={handleSubmit} noValidate>
-                  <label htmlFor="login-username">{staffLogin ? 'ชื่อผู้ใช้งาน / อีเมล' : 'เลขบัตรประชาชน'}</label>
-                  <div className="member-entry-input"><User size={18} aria-hidden="true" /><input id="login-username" type="text" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck="false" disabled={loading} placeholder={staffLogin ? 'กรอกชื่อผู้ใช้งาน' : 'กรอกเลขบัตรประชาชน 13 หลัก'} autoFocus /></div>
-                  <label htmlFor="login-password">รหัสผ่าน</label>
-                  <div className="member-entry-input"><KeyRound size={18} aria-hidden="true" /><input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" disabled={loading} placeholder={staffLogin ? 'กรอกรหัสผ่านของคุณ' : 'เลขสมาชิก 5 หลัก (เช่น 00025)'} /><button type="button" className="member-entry-eye" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div>
-                  <button className="member-entry-submit" type="submit" disabled={loading}>{loading ? <><LoaderCircle className="member-entry-spin" size={19} /> กำลังตรวจสอบ...</> : <><LockKeyhole size={19} /> เข้าสู่ระบบ{staffLogin ? '' : 'สมาชิก'}</>}</button>
-                </form>
-                <p className="member-entry-help">มีปัญหาในการเข้าสู่ระบบ? <Link to="/contact">ติดต่อสหกรณ์</Link></p>
-                <div className="member-entry-footer"><ShieldCheck size={15} /><span>กรุณาออกจากระบบทุกครั้ง เมื่อใช้เครื่องร่วมกับผู้อื่น</span></div>
-                {!staffLogin && <Link to="/admin/login" className="member-entry-staff">สำหรับเจ้าหน้าที่สหกรณ์</Link>}
-              </>
-            )}
+            <div className="member-entry-icon"><User size={25} /></div>
+            <h2 id="member-login-title">{staffLogin ? 'เข้าสู่ระบบเจ้าหน้าที่' : 'เข้าสู่ระบบสมาชิก'}</h2>
+            <p className="member-entry-subtitle">{staffLogin ? 'ใช้บัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์จากสหกรณ์' : 'ยินดีต้อนรับสู่บริการสมาชิกออนไลน์'}</p>
+            {location.state?.sessionRequired && <p role="status" className="member-entry-notice">กรุณาเข้าสู่ระบบเพื่อดูข้อมูลของคุณ หากเซสชันหมดอายุให้เข้าสู่ระบบอีกครั้ง</p>}
+            {error && <p role="alert" className="member-entry-error">{error}</p>}
+            {staffLogin && googleEnabled && <a className="btn btn-outline" href={'/auth/google/start' + (new URLSearchParams(window.location.search).has('invitation') ? '?invitation=' + encodeURIComponent(new URLSearchParams(window.location.search).get('invitation')) : '')}>เข้าสู่ระบบด้วย Google ของสหกรณ์</a>}
+            <form onSubmit={handleSubmit} noValidate>
+              <label htmlFor="login-username">{staffLogin ? 'ชื่อผู้ใช้งาน / อีเมล' : 'เลขบัตรประชาชน'}</label>
+              <div className="member-entry-input"><User size={18} aria-hidden="true" /><input id="login-username" type="text" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck="false" disabled={loading} placeholder={staffLogin ? 'กรอกชื่อผู้ใช้งาน' : 'กรอกเลขบัตรประชาชน 13 หลัก'} autoFocus /></div>
+              <label htmlFor="login-password">รหัสผ่าน</label>
+              <div className="member-entry-input"><KeyRound size={18} aria-hidden="true" /><input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" disabled={loading} placeholder={staffLogin ? 'กรอกรหัสผ่านของคุณ' : 'เลขสมาชิก 5 หลัก (เช่น 00025)'} /><button type="button" className="member-entry-eye" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div>
+              <button className="member-entry-submit" type="submit" disabled={loading}>{loading ? <><LoaderCircle className="member-entry-spin" size={19} /> กำลังตรวจสอบ...</> : <><LockKeyhole size={19} /> เข้าสู่ระบบ{staffLogin ? '' : 'สมาชิก'}</>}</button>
+            </form>
+            <p className="member-entry-help">มีปัญหาในการเข้าสู่ระบบ? <Link to="/contact">ติดต่อสหกรณ์</Link></p>
+            <div className="member-entry-footer"><ShieldCheck size={15} /><span>กรุณาออกจากระบบทุกครั้ง เมื่อใช้เครื่องร่วมกับผู้อื่น</span></div>
+            {!staffLogin && <Link to="/admin/login" className="member-entry-staff">สำหรับเจ้าหน้าที่สหกรณ์</Link>}
           </section>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { mergeServerIdentity, hasEffectivePermission } from '../utils/identity';
 import { fetchCurrentUser } from '../services/api';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
+import { maskCitizenId, maskMemberNo, maskName } from '../utils/pdpa';
 
 const AuthContext = createContext();
 
@@ -150,17 +151,7 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.requiresIdentityVerification) {
-          return {
-            success: true,
-            requiresIdentityVerification: true,
-            redirect: normalizeSameOriginRedirect(data.redirect, '/member/verify-identity'),
-            maskedPhone: data.masked_phone || '',
-            pendingToken: data.pending_token || '',
-            message: data.message || 'กรุณายืนยันหมายเลขโทรศัพท์มือถือที่ลงทะเบียนไว้กับสหกรณ์เพื่อเปิดใช้งานบัญชี',
-            user: null
-          };
-        }
+
         if (data.success && data.redirect && !data.user) {
           setUser(null); setSessionStatus('guest');
           return { success: true, requiresTwoFactor: true, redirect: normalizeSameOriginRedirect(data.redirect, '/admin/2fa'), user: null };
@@ -169,8 +160,8 @@ export function AuthProvider({ children }) {
               const roleSlug = data.user.role || data.user.role_slug || '';
               const authUser = {
                 id: data.user.id,
-                username: data.user.username || inputUsername,
-                name: data.user.name || inputUsername,
+                username: data.user.username || (roleSlug === 'member' ? maskCitizenId(inputUsername) : inputUsername),
+                name: data.user.name || (roleSlug === 'member' ? maskName(inputUsername) : inputUsername),
                 role: roleSlug,
                 permissions: data.user.permissions || [],
                 roleName: data.user.role_name || (roleSlug === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด' : roleSlug === 'staff' ? 'เจ้าหน้าที่สินเชื่อ/การเงิน' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
@@ -179,7 +170,7 @@ export function AuthProvider({ children }) {
                 position: data.user.position || '',
                 phone: data.user.phone || '',
                 avatar: data.user.avatar || '',
-                memberId: data.user.member_no || data.user.memberId || inputUsername,
+                memberId: data.user.member_no || (roleSlug === 'member' ? maskMemberNo(data.user.memberId || inputPassword) : (data.user.memberId || inputUsername)),
                 shares: data.user.shares_amount || data.user.shares || 0,
                 monthlyShare: data.user.monthly_share || 0,
                 savings: data.user.savings_balance || data.user.savings || 0,
@@ -234,77 +225,11 @@ export function AuthProvider({ children }) {
     };
   };
 
-  const verifyIdentity = async (phone) => {
-    const inputPhone = (phone || '').trim();
-    if (!inputPhone) {
-      return { success: false, message: 'กรุณากรอกหมายเลขโทรศัพท์มือถือ' };
-    }
-
-    try {
-      const csrfResponse = await fetch('/csrf-token', {
-        headers: { Accept: 'application/json' },
-        credentials: 'include'
-      });
-      if (!csrfResponse.ok) {
-        return { success: false, message: 'ไม่สามารถเริ่มต้นเซสชันที่ปลอดภัยได้ กรุณารีเฟรชหน้าและลองใหม่' };
-      }
-
-      const csrfData = await csrfResponse.json();
-      const formData = new FormData();
-      formData.append('phone', inputPhone);
-      formData.append('ajax', '1');
-      formData.append('_csrf_token', csrfData.token || '');
-
-      const response = await fetch('/api/auth/verify-identity', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          Accept: 'application/json'
-        },
-        credentials: 'include'
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data.success) {
-        if (data.user) {
-          const authUser = {
-            id: data.user.id,
-            username: data.user.username || '',
-            name: data.user.name || '',
-            role: 'member',
-            roleSlug: 'member',
-            permissions: data.user.permissions || [],
-            roleName: 'สมาชิกสหกรณ์',
-            roleBadge: 'สมาชิกสหกรณ์',
-            department: data.user.department || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
-            position: data.user.position || '',
-            phone: data.user.phone || '',
-            avatar: data.user.avatar || '',
-            pdpa_ack_required: true,
-          };
-          setUser(authUser);
-          setSessionStatus('online');
-        }
-        return {
-          success: true,
-          redirect: normalizeSameOriginRedirect(data.redirect, '/member/privacy-ack'),
-          user: data.user,
-          message: data.message
-        };
-      }
-
-      return {
-        success: false,
-        code: data.code,
-        message: data.message || 'ยืนยันตัวตนไม่สำเร็จ กรุณาตรวจสอบหมายเลขโทรศัพท์อีกครั้ง'
-      };
-    } catch (err) {
-      return {
-        success: false,
-        message: 'ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง'
-      };
-    }
+  const verifyIdentity = async () => {
+    return {
+      success: false,
+      message: 'ระบบการยืนยันตัวตนด้วยหมายเลขโทรศัพท์ถูกระงับเพื่อความปลอดภัย กรุณาติดต่อเจ้าหน้าที่สหกรณ์'
+    };
   };
 
   const updateProfile = ({ avatar, phone }) => {

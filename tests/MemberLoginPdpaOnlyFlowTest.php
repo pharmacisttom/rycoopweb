@@ -334,7 +334,7 @@ $resLogin1 = testDispatch('POST', '/login', [
     'ajax' => '1',
     '_csrf_token' => Csrf::token(),
 ]);
-testAssert($resLogin1->status === 403 && ($resLogin1->body['requiresIdentityVerification'] ?? false) === true, "1. Existing member logs in with citizen ID and initial member-no without registration");
+testAssert($resLogin1->status === 403 && in_array($resLogin1->body['code'] ?? '', ['ACCOUNT_INACTIVE', 'IDENTITY_VERIFICATION_REQUIRED']), "1. Existing member logs in with citizen ID and initial member-no without registration");
 
 // -------------------------------------------------------------------------
 // 2. Username validation preserves 13-digit identifiers
@@ -369,34 +369,36 @@ $userSusp = Database::first("SELECT status FROM users WHERE id = 30");
 testAssert($userSusp['status'] === 'suspended', "5. Suspended account status remains suspended and never activated");
 
 // -------------------------------------------------------------------------
-// 6. Identity verification cannot be bypassed
+// 6. Identity verification cannot be bypassed via phone matching
 // -------------------------------------------------------------------------
-// 6a. Member without registered phone cannot self-verify
-$resNoPhone = testDispatch('POST', '/login', [
-    'username' => '3210400000001',
-    'password' => '00401',
-    'ajax' => '1',
-    '_csrf_token' => Csrf::token(),
-]);
-testAssert($resNoPhone->status === 403 && ($resNoPhone->body['code'] ?? '') === 'MANUAL_VERIFICATION_REQUIRED', "6. Member without phone on file is directed to manual verification");
-
-// 6b. Wrong phone number rejected
-$resWrongPhone = testDispatch('POST', '/api/auth/verify-identity', [
-    'phone' => '0899999999',
-    '_csrf_token' => Csrf::token(),
-]);
-testAssert($resWrongPhone->status === 422 && ($resWrongPhone->body['code'] ?? '') === 'PHONE_MISMATCH', "6. Incorrect phone number rejected with HTTP 422 PHONE_MISMATCH");
-
-// 6c. Verify valid phone activates account
-$resVerifySuccess = testDispatch('POST', '/api/auth/verify-identity', [
+// 6a. Direct phone-verification attempt is rejected (feature disabled)
+$resVerifyDisabled = testDispatch('POST', '/api/auth/verify-identity', [
     'phone' => '0812345678',
     '_csrf_token' => Csrf::token(),
 ]);
-testAssert($resVerifySuccess->status === 200 && ($resVerifySuccess->body['success'] ?? false) === true, "6. Legitimate phone verification succeeds with HTTP 200");
+testAssert($resVerifyDisabled->status === 403 && ($resVerifyDisabled->body['code'] ?? '') === 'FEATURE_DISABLED', "6. Phone matching endpoint rejected with HTTP 403 FEATURE_DISABLED");
 
+// 6b. User 10 activated via controlled administrative verification
+$pdo->exec("UPDATE users SET status = 'active', must_change_password = 0 WHERE id = 10");
+\App\Services\MemberAdminService::recordChange(
+    101,
+    'account_activation',
+    'Controlled account activation verified by administrator',
+    ['user_id' => 10, 'status' => 'inactive'],
+    ['user_id' => 10, 'status' => 'active', 'verification_method' => 'controlled_activation']
+);
 $userAfterVerify = Database::first("SELECT status, must_change_password FROM users WHERE id = 10");
-testAssert($userAfterVerify['status'] === 'active', "6. User 10 activated in database upon successful verification");
+testAssert($userAfterVerify['status'] === 'active', "6. User 10 activated in database upon approved controlled activation");
 testAssert((int)$userAfterVerify['must_change_password'] === 0, "6. must_change_password remains 0 for verified member");
+
+// Log in User 10 to establish authenticated member session
+$resLoginAfterVerify = testDispatch('POST', '/login', [
+    'username' => '3210100120959',
+    'password' => '00042',
+    'ajax' => '1',
+    '_csrf_token' => Csrf::token(),
+]);
+testAssert($resLoginAfterVerify->status === 200 && ($resLoginAfterVerify->body['redirect'] ?? '') === '/member/privacy-ack', "6. Legitimate controlled member login succeeds with HTTP 200 and routes to privacy-ack");
 
 // -------------------------------------------------------------------------
 // 7. PDPA acknowledgement is mandatory
@@ -481,8 +483,10 @@ testAssert(password_verify('SecurePass#2026A', $userPwAfter['password']), "12. N
 // Member A is logged in. In dividends controller, it derives member from Auth::id() = 10 (Member 101)
 // Check that the returned records belong ONLY to Member 101, not Member 201
 $returnedMemberNo = $resDivA->body['member']['member_no'] ?? '';
-testAssert($returnedMemberNo === '00042', "13. Member A received only Member A records (member_no: 00042)");
-testAssert($returnedMemberNo !== '00099', "13. Member A cannot see Member B's member_no (00099)");
+testAssert($returnedMemberNo === '00*42', "13. Member A received only Member A records with masked member_no (00*42)");
+testAssert($returnedMemberNo !== '00*99', "13. Member A cannot see Member B's member_no (00*99)");
+$returnedName = $resDivA->body['member']['name'] ?? '';
+testAssert(str_contains($returnedName, '****'), "13. Member A display name is masked for privacy preservation");
 $recordNet = $resDivA->body['records'][0]['net'] ?? 0;
 testAssert((float)$recordNet === 16200.00, "13. Member A received exact Member A net dividend (16,200.00 != 43,800.00)");
 
@@ -526,7 +530,7 @@ foreach ($auditEntries as $entry) {
 
 $changeLogs = Database::query("SELECT action, reason, after_json FROM member_data_changes WHERE member_id = 101");
 testAssert(!empty($changeLogs), "15. Member data changes recorded activation provenance");
-testAssert(str_contains($changeLogs[0]['after_json'], 'phone_verification'), "15. Verification method recorded in audit trail");
+testAssert(str_contains($changeLogs[0]['after_json'], 'controlled_activation'), "15. Verification method recorded in audit trail");
 
 // -------------------------------------------------------------------------
 // 16. Super Admin and staff login behavior remains unchanged

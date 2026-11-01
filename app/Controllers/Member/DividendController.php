@@ -39,6 +39,8 @@ class DividendController extends Controller
             unset($data['id_card'], $data['name'], $data['department'], $data['member_no'], $data['source_row']);
             return $data;
         }, $rows);
-        $this->response->json(['success' => true, 'member' => ['member_no' => $member['member_no'], 'name' => trim(($member['prefix'] ?? '') . $member['first_name'] . ' ' . $member['last_name'])], 'records' => $records]);
+        $maskedMemberNo = \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']);
+        $maskedName = \App\Services\MemberPiiMaskingService::maskMemberName($member['prefix'] ?? '', $member['first_name'] ?? '', $member['last_name'] ?? '');
+        $this->response->json(['success' => true, 'member' => ['member_no' => $maskedMemberNo, 'name' => $maskedName], 'records' => $records]);
     }
 }
