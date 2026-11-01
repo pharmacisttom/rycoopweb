@@ -59,4 +59,3 @@ check($importMethod !== false && $importMethod !== '', 'Annual importer source a
 check(!preg_match('/INSERT\\s+INTO\\s+(?:users|members|user_roles)\\b/i', $importMethod), 'Annual financial importer cannot provision user/member/role records');
 check(str_contains($importMethod, 'ไม่พบสมาชิกที่ผูกบัญชีแล้ว'), 'Commit rejects absent Member Master mapping');
 check(str_contains($source, 'ไม่พบทะเบียนสมาชิก กรุณานำเข้าทะเบียนสมาชิกหลัก'), 'Preview rejects absent Member Master');
-
