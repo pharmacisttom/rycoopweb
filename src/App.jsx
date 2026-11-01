@@ -27,6 +27,7 @@ import LoginPage from './pages/LoginPage';
 // Lazy-Loaded Route Chunks (Performance & Code Splitting)
 const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
 const MemberDividendsPage = lazy(() => import('./pages/MemberDividendsPage'));
+const MemberPrivacyAckPage = lazy(() => import('./pages/MemberPrivacyAckPage'));
 const AdminDividendImportPage = lazy(() => import('./pages/AdminDividendImportPage'));
 const AdminMembersDashboardPage = lazy(() => import('./pages/AdminMembersDashboardPage'));
 const AdminMembersPage = lazy(() => import('./pages/AdminMembersPage'));
@@ -151,6 +152,23 @@ function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
   return <AdminActionProvider><AdminAppShell title={null}>{children}</AdminAppShell></AdminActionProvider>;
 }
 
+function MemberProtectedRoute({ children }) {
+  const { user, isLoggedIn, sessionStatus } = useAuth();
+  const location = useLocation();
+
+  if (sessionStatus === 'checking') return <PageSkeletonLoader />;
+  if (!isLoggedIn || !['online', 'offline'].includes(sessionStatus)) {
+    return <Navigate to="/member/login" replace state={{ sessionRequired: true }} />;
+  }
+  if (user?.role !== 'member') {
+    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'} replace />;
+  }
+  if (user?.pdpa_ack_required && location.pathname !== '/member/privacy-ack') {
+    return <Navigate to="/member/privacy-ack" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
@@ -208,8 +226,8 @@ export default function App() {
             <Route path="/verify-receipt" element={<VerifyReceiptPage />} />
             <Route path="/verify-receipt/:token" element={<VerifyReceiptPage />} />
 
-            {memberRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberDashboardPage /> : <ServiceUnavailablePage />} />)}
-            {profileRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <ProfilePage /> : <ServiceUnavailablePage />} />)}
+            {memberRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberProtectedRoute><MemberDashboardPage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />)}
+            {profileRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberProtectedRoute><ProfilePage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />)}
             <Route path="/service-unavailable" element={<ServiceUnavailablePage />} />
             <Route path="/staff" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
@@ -257,7 +275,8 @@ export default function App() {
 
             <Route path="/login" element={<LoginPage />} />
             <Route path="/member/login" element={<LoginPage />} />
-            <Route path="/member/dividends" element={<MemberDividendsPage />} />
+            <Route path="/member/privacy-ack" element={<MemberPrivacyAckPage />} />
+            <Route path="/member/dividends" element={<MemberProtectedRoute><MemberDividendsPage /></MemberProtectedRoute>} />
             <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFoundPage />} />

@@ -589,7 +589,18 @@ class SpaApiController extends Controller
             ],
         ];
 
-        if ($member) {
+        $isPdpaAcked = true;
+        if ($roleSlug === 'member') {
+            $isPdpaAcked = \App\Services\MemberPdpaService::isAcknowledged((int) $user['id']);
+            $userData['pdpa_ack_required'] = !$isPdpaAcked;
+            if (!$isPdpaAcked) {
+                $userData['redirect'] = '/member/privacy-ack';
+            }
+        } else {
+            $userData['pdpa_ack_required'] = false;
+        }
+
+        if ($member && ($roleSlug !== 'member' || $isPdpaAcked)) {
             $userData['member_no'] = $member['member_no'] ?? '';
             $userData['phone'] = $member['phone'] ?? '';
             $userData['department'] = $member['org_name'] ?? ($userData['department'] ?? '');

@@ -26,13 +26,15 @@ class AuthController extends Controller
         if (Auth::check()) {
             $roleSlug = (string) (Auth::user()['role_slug'] ?? '');
             if ($roleSlug === '' || ($roleSlug === 'member' && !config('features.member_login', false))) {
-                Auth::logout();
+                \App\Services\MemberPdpaService::revokeSessionAcknowledgement();
+        Auth::logout();
                 Session::flash('error', 'บัญชีนี้ไม่ได้รับอนุญาตให้เข้าสู่ระบบเจ้าหน้าที่');
                 $this->redirect(url('admin/login'));
                 return;
             }
             if ($roleSlug === 'member') {
-                $this->redirect(url('member/dividends'));
+                $acked = \App\Services\MemberPdpaService::isAcknowledged((int)Auth::id());
+                $this->redirect(url($acked ? 'member/dividends' : 'member/privacy-ack'));
             } elseif ($roleSlug === 'member_admin') {
                 $this->redirect(url('admin/members/dashboard'));
             } elseif ($roleSlug === 'super_admin') {
@@ -172,6 +174,11 @@ class AuthController extends Controller
         // Login success
         Auth::login($user, true);
 
+        if ($roleSlug === 'member') {
+            Session::regenerate();
+            \App\Services\MemberPdpaService::initMemberSession($user);
+        }
+
         try {
             Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$ip, $user['id']]);
             Database::execute("INSERT INTO login_logs (user_id, email, status, ip_address, user_agent, created_at) VALUES (?, ?, 'success', ?, ?, NOW())", [$user['id'], $inputUsername, $ip, $ua]);
@@ -181,7 +188,7 @@ class AuthController extends Controller
         Session::flash('success', 'เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ' . ($user['name'] ?? 'ผู้ใช้งาน'));
 
         $targetPath = match($roleSlug) {
-            'member' => '/member/dividends',
+            'member' => '/member/privacy-ack',
             'member_admin' => '/admin/members/dashboard',
             'super_admin' => '/admin/dashboard',
             default => '/admin/workspace'
@@ -330,6 +337,7 @@ class AuthController extends Controller
                 AuditService::log('auth', 'logout', (string)Auth::id());
             } catch (\Throwable $e) {}
         }
+        \App\Services\MemberPdpaService::revokeSessionAcknowledgement();
         Auth::logout();
         if ($isAjax) {
             $this->response->json(['success' => true, 'message' => 'ออกจากระบบเรียบร้อยแล้ว']);

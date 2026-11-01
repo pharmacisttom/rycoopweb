@@ -177,7 +177,8 @@ export function AuthProvider({ children }) {
                 loanRefundEstimated: data.user.loan_refund_estimated || 0,
                 accounts: data.user.accounts || [],
                 loans: data.user.loans || [],
-                recentReceipts: data.user.recent_receipts || []
+                recentReceipts: data.user.recent_receipts || [],
+                pdpa_ack_required: data.user.pdpa_ack_required ?? (roleSlug === 'member')
               };
 
               setUser(authUser);
@@ -187,7 +188,7 @@ export function AuthProvider({ children }) {
                 success: true,
                 redirect: normalizeSameOriginRedirect(
                   data.redirect,
-                  roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'
+                  roleSlug === 'member' ? (authUser.pdpa_ack_required ? '/member/privacy-ack' : '/member/dividends') : roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'
                 ),
                 user: authUser
               };

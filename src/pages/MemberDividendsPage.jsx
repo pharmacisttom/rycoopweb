@@ -27,6 +27,10 @@ export default function MemberDividendsPage() {
         }
         const result = await response.json();
         if (controller.signal.aborted) return;
+        if (result?.code === 'PDPA_ACK_REQUIRED') {
+          navigate('/member/privacy-ack', { replace: true });
+          return;
+        }
         if (!response.ok || !result.success) throw new Error(result.message || 'ไม่สามารถโหลดข้อมูลได้');
         setData(result); setYear(String(result.records[0]?.year || ''));
       }).catch(e => { if (e.name !== 'AbortError') setError(e.message); })
