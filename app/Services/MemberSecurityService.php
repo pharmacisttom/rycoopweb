@@ -49,30 +49,47 @@ class MemberSecurityService
 
     /**
      * Determine whether a user must change their initial password before accessing financial data.
-     * Enforces server-side database state and timestamp ordering.
+     * Enforces server-side database state, timestamp ordering, and fails closed on any invalid state or error.
      */
     public static function isPasswordChangeRequired(int $userId): bool
     {
+        // 1. Reject access if userId is invalid (fails closed)
         if ($userId <= 0) {
-            return false;
+            return true;
         }
 
-        if (self::hasMustChangePasswordColumn()) {
-            $user = Database::first("SELECT must_change_password, status FROM users WHERE id = ? LIMIT 1", [$userId]);
-            if (!$user) {
-                return false;
-            }
-            return (int)($user['must_change_password'] ?? 0) === 1;
-        }
-
-        // Fallback when column does not yet exist: check activation timestamp vs password change timestamp
         try {
-            $member = Database::first("SELECT id FROM members WHERE user_id = ? LIMIT 1", [$userId]);
-            if (!$member) {
-                return false;
+            $hasColumn = self::hasMustChangePasswordColumn();
+
+            // 2. Reject access if user record does not exist
+            $sql = $hasColumn
+                ? "SELECT id, status, must_change_password FROM users WHERE id = ? LIMIT 1"
+                : "SELECT id, status FROM users WHERE id = ? LIMIT 1";
+            $user = Database::first($sql, [$userId]);
+            if (!$user) {
+                return true;
             }
 
-            // Find latest activation
+            // 3. Reject access if user is not active
+            if (($user['status'] ?? '') !== 'active') {
+                return true;
+            }
+
+            // If must_change_password column is present, enforce it directly
+            if ($hasColumn) {
+                return (int)($user['must_change_password'] ?? 1) !== 0;
+            }
+
+            // 5. Fallback when column does not exist:
+            // Never treat a missing must_change_password column as permission to access financial APIs.
+            // Positive verification required via active member, activation audit record, and subsequent password change.
+            $member = Database::first("SELECT id, status FROM members WHERE user_id = ? LIMIT 1", [$userId]);
+            if (!$member || ($member['status'] ?? '') !== 'active') {
+                // Credential status cannot be verified -> reject access
+                return true;
+            }
+
+            // Find latest formal activation
             $activatedAt = Database::value(
                 "SELECT MAX(created_at) FROM member_data_changes WHERE member_id = ? AND action = 'account_activation'",
                 [$member['id']]
@@ -84,11 +101,12 @@ class MemberSecurityService
                 );
             }
 
+            // Without verifiable activation provenance, status cannot be verified -> fail closed
             if (!$activatedAt) {
-                return false;
+                return true;
             }
 
-            // Find latest password change
+            // Find latest password change AFTER activation
             $lastPwChangeAt = Database::value(
                 "SELECT MAX(created_at) FROM audit_logs WHERE user_id = ? AND action = 'password_change'",
                 [$userId]
@@ -98,10 +116,12 @@ class MemberSecurityService
                 return true;
             }
 
-            // An older password-change event does not count as password setup after activation
-            return strtotime($lastPwChangeAt) <= strtotime($activatedAt);
+            // An older password-change event does not count as password setup after activation.
+            // Access is only allowed if password was changed strictly after activation.
+            return strtotime((string)$lastPwChangeAt) <= strtotime((string)$activatedAt);
         } catch (\Throwable $e) {
-            return false;
+            // 4. Fail closed on all database exceptions
+            return true;
         }
     }
 
@@ -182,6 +202,14 @@ class MemberSecurityService
         }
 
         return null;
+    }
+
+    /**
+     * Override cached column check (for testing fallback mode).
+     */
+    public static function setCachedHasMustChangeColumn(?bool $hasCol): void
+    {
+        self::$cachedHasMustChangeCol = $hasCol;
     }
 
     /**

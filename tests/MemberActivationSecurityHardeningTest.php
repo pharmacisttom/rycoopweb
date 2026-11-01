@@ -779,6 +779,134 @@ $runHardeningTest('15. Existing super_admin access remains unchanged', function(
     }
 });
 
+// 16. Invalid userId rejects financial access (fails closed)
+$runHardeningTest('16. Invalid userId rejects financial access (fails closed)', function() {
+    $badIds = [0, -1, -99, -9999];
+    foreach ($badIds as $id) {
+        if (!MemberSecurityService::isPasswordChangeRequired($id)) {
+            throw new RuntimeException("Invalid userId {$id} unexpectedly permitted financial access");
+        }
+    }
+});
+
+// 17. Missing user record rejects financial access (fails closed)
+$runHardeningTest('17. Missing user record rejects financial access (fails closed)', function() {
+    $nonExistentIds = [999998, 999999];
+    foreach ($nonExistentIds as $id) {
+        if (!MemberSecurityService::isPasswordChangeRequired($id)) {
+            throw new RuntimeException("Non-existent user {$id} unexpectedly permitted financial access");
+        }
+    }
+});
+
+// 18. Inactive or suspended user rejects financial access even if flag is 0
+$runHardeningTest('18. Inactive or suspended user rejects financial access even if flag is 0', function() use ($pdo) {
+    $pdo->exec("
+        INSERT INTO users (id, uuid, name, username, email, password, status, must_change_password)
+        VALUES (301, 'uuid-m-301', 'ระงับแต่แฟล็กศูนย์', '1111111111301', 't301@rycoop.test', 'hash', 'suspended', 0);
+        INSERT INTO users (id, uuid, name, username, email, password, status, must_change_password)
+        VALUES (302, 'uuid-m-302', 'รอเปิดแต่แฟล็กศูนย์', '1111111111302', 't302@rycoop.test', 'hash', 'inactive', 0);
+    ");
+
+    if (!MemberSecurityService::isPasswordChangeRequired(301)) {
+        throw new RuntimeException('Suspended user with flag 0 unexpectedly permitted financial access');
+    }
+    if (!MemberSecurityService::isPasswordChangeRequired(302)) {
+        throw new RuntimeException('Inactive user with flag 0 unexpectedly permitted financial access');
+    }
+});
+
+// 19. Fail closed on database exceptions
+$runHardeningTest('19. Fail closed on database exceptions', function() use ($pdo) {
+    $prop = new ReflectionProperty(Database::class, 'instance');
+    $originalPdo = $prop->getValue();
+
+    try {
+        $badPdo = new class extends PDO {
+            public function __construct() {}
+            public function prepare(string $query, array $options = []): \PDOStatement|false {
+                throw new \PDOException('Simulated database connection loss');
+            }
+        };
+        $prop->setValue(null, $badPdo);
+
+        $blocked = MemberSecurityService::isPasswordChangeRequired(101);
+        if (!$blocked) {
+            throw new RuntimeException('isPasswordChangeRequired failed open on database exception!');
+        }
+    } finally {
+        $prop->setValue(null, $originalPdo);
+    }
+});
+
+// 20. Missing must_change_password column never grants access without verifiable activation & password change
+$runHardeningTest('20. Missing must_change_password column never grants access without verifiable activation & password change', function() use ($pdo) {
+    MemberSecurityService::setCachedHasMustChangeColumn(false);
+
+    try {
+        // Case A: Unactivated member (no activation record in member_data_changes or audit_logs)
+        $pdo->exec("
+            INSERT INTO users (id, uuid, name, username, email, password, status, must_change_password)
+            VALUES (303, 'uuid-m-303', 'สมาชิกไม่มีประวัติเปิดใช้งาน', '1111111111303', 't303@rycoop.test', 'hash', 'active', 0);
+            INSERT INTO user_roles (user_id, role_id) VALUES (303, 3);
+            INSERT INTO members (id, uuid, user_id, member_no, id_card, prefix, first_name, last_name, status)
+            VALUES (303, 'uuid-mem-303', 303, '00303', '1111111111303', 'นาย', 'ไม่มี', 'ประวัติ', 'active');
+        ");
+
+        if (!MemberSecurityService::isPasswordChangeRequired(303)) {
+            throw new RuntimeException('Missing column allowed unverified member without activation record to access financial data!');
+        }
+
+        // Case B: Activated member but never changed password after activation
+        $pdo->exec("
+            INSERT INTO users (id, uuid, name, username, email, password, status, must_change_password)
+            VALUES (304, 'uuid-m-304', 'เปิดใช้งานแต่ยังไม่เปลี่ยนรหัส', '1111111111304', 't304@rycoop.test', 'hash', 'active', 0);
+            INSERT INTO user_roles (user_id, role_id) VALUES (304, 3);
+            INSERT INTO members (id, uuid, user_id, member_no, id_card, prefix, first_name, last_name, status)
+            VALUES (304, 'uuid-mem-304', 304, '00304', '1111111111304', 'นาย', 'เปิดแล้ว', 'ไม่เปลี่ยนรหัส', 'active');
+            INSERT INTO member_data_changes (member_id, user_id, action, reason, after_json, created_at)
+            VALUES (304, 1, 'account_activation', 'เปิดใช้งาน', '{}', '2026-11-01 10:00:00');
+        ");
+
+        if (!MemberSecurityService::isPasswordChangeRequired(304)) {
+            throw new RuntimeException('Missing column allowed activated member with no password change to access financial data!');
+        }
+
+        // Case C: Activated member who completed password change AFTER activation
+        $pdo->exec("
+            INSERT INTO audit_logs (user_id, module, action, created_at)
+            VALUES ('304', 'auth', 'password_change', '2026-11-01 10:05:00');
+        ");
+
+        if (MemberSecurityService::isPasswordChangeRequired(304)) {
+            throw new RuntimeException('Missing column incorrectly blocked member who completed post-activation password setup');
+        }
+    } finally {
+        MemberSecurityService::resetSchemaCache();
+    }
+});
+
+// 21. Admin authentication and password change remain intact and unbroken
+$runHardeningTest('21. Admin authentication and password change remain intact and unbroken', function() use ($pdo) {
+    $admin = Database::first('SELECT * FROM users WHERE id = 1');
+    $admin['role_slug'] = 'super_admin';
+    Auth::login($admin, true);
+
+    // Validate password change for admin
+    $err = MemberSecurityService::validatePasswordSecurity('AdminNewPass@2026!', 1);
+    if ($err !== null) {
+        throw new RuntimeException("validatePasswordSecurity rejected valid admin password: {$err}");
+    }
+
+    // Changing admin password clears requirement flag safely
+    MemberSecurityService::clearPasswordChangeRequired(1);
+
+    $u = Database::first('SELECT must_change_password FROM users WHERE id = 1');
+    if ((int)$u['must_change_password'] !== 0) {
+        throw new RuntimeException('Admin must_change_password was altered unexpectedly');
+    }
+});
+
 echo "\n=======================================================\n";
 echo "SUMMARY: {$totalPassed} PASSED, {$totalFailed} FAILED (TOTAL " . ($totalPassed + $totalFailed) . ")\n";
 echo "=======================================================\n";

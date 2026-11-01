@@ -5,10 +5,10 @@
 -- =========================================================================
 
 SET @col_exists := (
-    SELECT COUNT(*) 
-    FROM information_schema.COLUMNS 
-    WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'users' 
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'users'
       AND COLUMN_NAME = 'must_change_password'
 );
 
@@ -24,10 +24,10 @@ DEALLOCATE PREPARE stmt_add;
 
 -- Create an index to quickly filter/query users requiring credential setup
 SET @idx_exists := (
-    SELECT COUNT(*) 
-    FROM information_schema.STATISTICS 
-    WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'users' 
+    SELECT COUNT(*)
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'users'
       AND INDEX_NAME = 'idx_users_must_change_pw'
 );
 
