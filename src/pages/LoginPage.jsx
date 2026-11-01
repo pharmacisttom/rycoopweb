@@ -79,7 +79,7 @@ export default function LoginPage() {
               <div className="member-entry-input"><KeyRound size={18} aria-hidden="true" /><input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" disabled={loading} placeholder="กรอกรหัสผ่านของคุณ" /><button type="button" className="member-entry-eye" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div>
               <button className="member-entry-submit" type="submit" disabled={loading}>{loading ? <><LoaderCircle className="member-entry-spin" size={19} /> กำลังตรวจสอบ...</> : <><LockKeyhole size={19} /> เข้าสู่ระบบ{staffLogin ? '' : 'สมาชิก'}</>}</button>
             </form>
-            <p className="member-entry-help">มีปัญหาในการเข้าสู่ระบบ? <Link to="/contact">ติดต่อสหกรณ์</Link></p>
+            <p className="member-entry-help">มีปัญหาในการเข้าสู่ระบบ? <Link to="/contact">ติดต่อสหกรณ์</Link>{!staffLogin && <> · <Link to="/member/activate">เปิดบัญชีสมาชิกครั้งแรก</Link></>}</p>
             <div className="member-entry-footer"><ShieldCheck size={15} /><span>กรุณาออกจากระบบทุกครั้ง เมื่อใช้เครื่องร่วมกับผู้อื่น</span></div>
             {!staffLogin && <Link to="/admin/login" className="member-entry-staff">สำหรับเจ้าหน้าที่สหกรณ์</Link>}
           </section>

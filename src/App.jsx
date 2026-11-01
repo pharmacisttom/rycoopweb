@@ -23,6 +23,7 @@ import SessionTimeoutModal from './components/common/SessionTimeoutModal';
 // Synchronous Fast-Entry Pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import MemberActivationPage from './pages/MemberActivationPage';
 
 // Lazy-Loaded Route Chunks (Performance & Code Splitting)
 const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
@@ -257,6 +258,7 @@ export default function App() {
 
             <Route path="/login" element={<LoginPage />} />
             <Route path="/member/login" element={<LoginPage />} />
+             <Route path="/member/activate" element={<MemberActivationPage />} />
             <Route path="/member/dividends" element={<MemberDividendsPage />} />
             <Route path="/admin/login" element={<LoginPage />} />
 
