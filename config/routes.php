@@ -159,7 +159,7 @@ $router->group(['prefix' => 'api/admin', 'middleware' => [AuthMiddleware::class,
     $r->get('/dashboard', 'Api\\SpaApiController@adminDashboard');
     $r->get('/users', 'Api\\SpaApiController@adminUsers');
     $r->get('/complaints', 'Api\\SpaApiController@adminComplaints');
-    $r->get('/audit-logs', 'Api\\SpaApiController@adminAuditLogs');
+    $r->get('/audit-logs', 'Admin\\AuditLogController@index');
     $r->get('/rates', 'Api\\SpaApiController@adminRates');
     $r->post('/rates/{id}', 'Api\\SpaApiController@updateAdminRate', [CsrfMiddleware::class]);
     $r->post('/loan-products/{id}', 'Api\\SpaApiController@updateAdminLoanProduct', [CsrfMiddleware::class]);
@@ -177,6 +177,9 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->get('/security/sessions','Admin\\ControlCenterApiController@securitySessions');
     $r->get('/security/mfa','Admin\\ControlCenterApiController@securityMfa');
     $r->get('/audit-logs/center','Admin\\ControlCenterApiController@auditLogs');
+    $r->get('/audit-logs/stats','Admin\\AuditLogController@stats');
+    $r->get('/audit-logs/export','Admin\\AuditLogController@export');
+    $r->post('/audit-logs/export','Admin\\AuditLogController@export',[CsrfMiddleware::class]);
     $r->get('/backups','Admin\\ControlCenterApiController@backups');
     $r->get('/backups/health','Admin\\ControlCenterApiController@backupsHealth');
     $r->post('/backups/restore-request','Admin\\ControlCenterApiController@createRestoreRequest',[CsrfMiddleware::class]);
