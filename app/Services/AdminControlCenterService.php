@@ -1054,12 +1054,7 @@ class AdminControlCenterService
             return self::getLegacyAuditLogs($filters);
         }
 
-        try {
-            return self::getSecurityAuditLogs($filters);
-        } catch (\Throwable $e) {
-            // Graceful fallback to legacy logs if security_audit_logs is not ready
-            return self::getLegacyAuditLogs($filters);
-        }
+        return self::getSecurityAuditLogs();
     }
 
     /**

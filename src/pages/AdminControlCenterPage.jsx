@@ -444,6 +444,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
     } catch (err) {
       if (err?.name !== 'AbortError') {
         setError(err?.message || 'ไม่สามารถโหลดข้อมูลได้');
+        if (section === 'audit-logs') {
+          setAuditData(null);
+        }
       }
     } finally {
       if (!signal?.aborted) {
@@ -463,21 +466,34 @@ export default function AdminControlCenterPage({ section: propSection }) {
     setMfaExportError('');
     setMfaExportLoading(true);
     try {
-      const params = new URLSearchParams({
-        totp_code: mfaExportCode.trim(),
-        actor_type: auditActorType,
-        result: auditResult,
-        from: auditDateFrom,
-        to: auditDateTo,
-        category: auditCategory,
-        q: auditQuery.trim(),
+      // 1. Fetch fresh CSRF token
+      const csrfRes = await fetch('/csrf-token', {
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
       });
-      const res = await fetch(`/api/admin/audit-logs/export?${params.toString()}`, {
-        method: 'GET',
+      const csrfData = csrfRes.ok ? await csrfRes.json() : {};
+      const csrfToken = csrfData.token || '';
+
+      // 2. Submit privileged export via POST body only (prohibit TOTP in URL)
+      const res = await fetch('/api/admin/audit-logs/export', {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Accept: 'text/csv',
           'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
         },
+        credentials: 'include',
+        body: JSON.stringify({
+          totp_code: mfaExportCode.trim(),
+          _csrf_token: csrfToken,
+          actor_type: auditActorType,
+          result: auditResult,
+          from: auditDateFrom,
+          to: auditDateTo,
+          category: auditCategory,
+          q: auditQuery.trim(),
+        }),
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
@@ -1136,6 +1152,12 @@ export default function AdminControlCenterPage({ section: propSection }) {
       {/* ===================================================================
           5. AUDIT & ACTIVITY LOGS (/admin/audit-logs)
          =================================================================== */}
+      {!loading && section === 'audit-logs' && error && !auditData && (
+        <AdminErrorState
+          message={error}
+          onRetry={() => setRefreshTick((v) => v + 1)}
+        />
+      )}
       {!loading && section === 'audit-logs' && auditData && (
         <>
           {/* Administrative Audit Dashboard KPIs */}

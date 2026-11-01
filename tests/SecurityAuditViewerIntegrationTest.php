@@ -233,7 +233,7 @@ $pdo->exec("
 ");
 
 $passed = 0;
-$totalTests = 11;
+$totalTests = 13;
 
 function assertTest(bool $condition, string $title): void
 {
@@ -477,51 +477,72 @@ foreach ($resMask->body['records'] ?? [] as $rec) {
 assertTest($piiProtected, "Test 9: Member PII (full name, citizen ID, IP address) strictly masked in responses");
 
 // --------------------------------------------------------------------------
-// TEST 10: Step-Up MFA Protected Export (fail-closed without/invalid TOTP, succeeds with valid code)
+// TEST 10: Prohibit TOTP in URL & Enforce POST-Only Privileged Export
 // --------------------------------------------------------------------------
-// 10.1 Without Step-Up MFA code -> blocks with 403
-$reqExportNoMfa = new Request();
-$resExportNoMfa = new TestAuditResponseCapture();
-$ctrlExportNoMfa = new AuditLogController($reqExportNoMfa, $resExportNoMfa);
-$ctrlExportNoMfa->export();
+// 10.1 GET request attempting export is rejected with HTTP 405 Method Not Allowed
+$_SERVER['REQUEST_METHOD'] = 'GET';
+$reqGetExport = new Request();
+$resGetExport = new TestAuditResponseCapture();
+$ctrlGetExport = new AuditLogController($reqGetExport, $resGetExport);
+$ctrlGetExport->export();
 
-$blockedWithoutMfa = $resExportNoMfa->status === 403 && ($resExportNoMfa->body['requires_step_up_mfa'] ?? false) === true;
+$rejectedGet = $resGetExport->status === 405 && ($resGetExport->body['code'] ?? '') === 'METHOD_NOT_ALLOWED';
 
-// 10.2 With invalid TOTP code -> blocks with 403
-$_GET['totp_code'] = '000000';
-$reqExportBadMfa = new Request();
-$resExportBadMfa = new TestAuditResponseCapture();
-$ctrlExportBadMfa = new AuditLogController($reqExportBadMfa, $resExportBadMfa);
-$ctrlExportBadMfa->export();
+// 10.2 TOTP code in Query String is rejected with HTTP 400 CREDENTIAL_IN_URL_PROHIBITED
+$_SERVER['REQUEST_METHOD'] = 'POST';
+$_GET['totp_code'] = '123456';
+$reqUrlTotp = new Request();
+$resUrlTotp = new TestAuditResponseCapture();
+$ctrlUrlTotp = new AuditLogController($reqUrlTotp, $resUrlTotp);
+$ctrlUrlTotp->export();
+unset($_GET['totp_code']);
 
-$blockedBadMfa = $resExportBadMfa->status === 403;
+$rejectedUrlTotp = $resUrlTotp->status === 400 && ($resUrlTotp->body['code'] ?? '') === 'CREDENTIAL_IN_URL_PROHIBITED';
 
-// 10.3 With valid TOTP code
+// 10.3 POST request without Step-Up MFA code returns HTTP 403
+$_POST = [];
+$reqNoMfa = new Request();
+$resNoMfa = new TestAuditResponseCapture();
+$ctrlNoMfa = new AuditLogController($reqNoMfa, $resNoMfa);
+$ctrlNoMfa->export();
+
+$blockedNoMfa = $resNoMfa->status === 403 && ($resNoMfa->body['requires_step_up_mfa'] ?? false) === true;
+
+// 10.4 POST request with invalid TOTP code returns HTTP 403
+$_POST['totp_code'] = '000000';
+$reqBadMfa = new Request();
+$resBadMfa = new TestAuditResponseCapture();
+$ctrlBadMfa = new AuditLogController($reqBadMfa, $resBadMfa);
+$ctrlBadMfa->export();
+
+$blockedBadMfa = $resBadMfa->status === 403;
+
+// 10.5 POST request with valid TOTP code in body succeeds
 $timeSlice = (int) floor(time() / 30);
 $calcCodeMethod = new ReflectionMethod(TwoFactorService::class, 'calculateCode');
 $validTotp = $calcCodeMethod->invoke(null, $adminSecret, $timeSlice);
 
-$_GET['totp_code'] = $validTotp;
+$_POST['totp_code'] = $validTotp;
 $exportExportCountBefore = (int) Database::value("SELECT COUNT(*) FROM security_audit_logs WHERE event_type = 'ADMIN_FINANCIAL_EXPORT'");
 
-$reqExportValid = new Request();
-$resExportValid = new TestAuditResponseCapture();
-$ctrlExportValid = new AuditLogController($reqExportValid, $resExportValid);
+$reqValidPost = new Request();
+$resValidPost = new TestAuditResponseCapture();
+$ctrlValidPost = new AuditLogController($reqValidPost, $resValidPost);
 
-// Output buffering to capture CSV output
 ob_start();
 try {
-    $ctrlExportValid->export();
+    $ctrlValidPost->export();
 } catch (\Throwable $e) {}
 $csvOutput = ob_get_clean();
-unset($_GET['totp_code']);
+$_POST = [];
+$_SERVER['REQUEST_METHOD'] = 'GET';
 
 $exportExportCountAfter = (int) Database::value("SELECT COUNT(*) FROM security_audit_logs WHERE event_type = 'ADMIN_FINANCIAL_EXPORT'");
 $validExportSuccess = str_contains($csvOutput, 'Event ID') && str_contains($csvOutput, 'Correlation ID') && $exportExportCountAfter > $exportExportCountBefore;
 
 assertTest(
-    $blockedWithoutMfa && $blockedBadMfa && $validExportSuccess,
-    "Test 10: Export enforces Step-Up MFA (blocks missing/invalid code, exports minimized CSV with valid TOTP)"
+    $rejectedGet && $rejectedUrlTotp && $blockedNoMfa && $blockedBadMfa && $validExportSuccess,
+    "Test 10: Prohibits TOTP in URL (400), rejects GET export (405), and accepts fresh MFA strictly via POST body"
 );
 
 // --------------------------------------------------------------------------
@@ -538,6 +559,45 @@ $legacyUsesLegacy = !empty($legacyLogs['records'])
 assertTest(
     $defaultUsesSecurity && $legacyUsesLegacy,
     "Test 11: AdminControlCenterService::getAuditLogs queries security_audit_logs by default and preserves legacy audit_logs"
+);
+
+// --------------------------------------------------------------------------
+// TEST 12: Audit Query Failure Must Fail Closed (HTTP 500 & AUDIT_QUERY_FAILED)
+// --------------------------------------------------------------------------
+// Simulate database failure by dropping the audit table
+$pdo->exec("DROP TABLE security_audit_logs;");
+
+$reqFailQuery = new Request();
+$resFailQuery = new TestAuditResponseCapture();
+$ctrlFailQuery = new AuditLogController($reqFailQuery, $resFailQuery);
+$ctrlFailQuery->index();
+
+$queryFailureFailedClosed = $resFailQuery->status === 500
+    && ($resFailQuery->body['success'] ?? true) === false
+    && ($resFailQuery->body['code'] ?? '') === 'AUDIT_QUERY_FAILED'
+    && !str_contains(json_encode($resFailQuery->body), 'PDOException')
+    && !str_contains(json_encode($resFailQuery->body), 'no such table');
+
+assertTest(
+    $queryFailureFailedClosed,
+    "Test 12: Database query failure fails closed with HTTP 500 and AUDIT_QUERY_FAILED without leaking SQL details"
+);
+
+// --------------------------------------------------------------------------
+// TEST 13: Stats Endpoint Fails Closed on Database Failure
+// --------------------------------------------------------------------------
+$reqFailStats = new Request();
+$resFailStats = new TestAuditResponseCapture();
+$ctrlFailStats = new AuditLogController($reqFailStats, $resFailStats);
+$ctrlFailStats->stats();
+
+$statsFailedClosed = $resFailStats->status === 500
+    && ($resFailStats->body['success'] ?? true) === false
+    && ($resFailStats->body['code'] ?? '') === 'AUDIT_QUERY_FAILED';
+
+assertTest(
+    $statsFailedClosed,
+    "Test 13: Stats endpoint fails closed with HTTP 500 on database failure"
 );
 
 echo "\n========================================================================\n";

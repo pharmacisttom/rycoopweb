@@ -153,7 +153,7 @@ class AuditLogController extends Controller
 
         $total = 0;
         $records = [];
-        $stats = $this->calculateStats();
+        $stats = [];
 
         try {
             $countSql = "SELECT COUNT(*) FROM security_audit_logs s LEFT JOIN users u ON s.actor_user_id = u.id WHERE {$whereSql}";
@@ -210,13 +210,19 @@ class AuditLogController extends Controller
                     'metadata' => $maskedMeta,
                 ];
             }
+
+            $stats = $this->calculateStats();
+            // Available distinct event types for filter dropdown
+            $eventTypes = $this->getAvailableEventTypes();
         } catch (Throwable $e) {
             Logger::error("AuditLogController::index query failed: " . $e->getMessage());
-            $records = [];
+            $this->response->json([
+                'success' => false,
+                'code' => 'AUDIT_QUERY_FAILED',
+                'message' => 'เกิดข้อผิดพลาดในการดึงข้อมูลบันทึกการตรวจสอบความปลอดภัย',
+            ], 500);
+            return;
         }
-
-        // Available distinct event types for filter dropdown
-        $eventTypes = $this->getAvailableEventTypes();
 
         $responsePayload = [
             'success' => true,
@@ -266,20 +272,30 @@ class AuditLogController extends Controller
         if (!$this->assertAuditAccess('view')) {
             return;
         }
-        $stats = $this->calculateStats();
 
-        $this->response->json([
-            'success' => true,
-            'stats' => $stats,
-        ]);
+        try {
+            $stats = $this->calculateStats();
+            $this->response->json([
+                'success' => true,
+                'stats' => $stats,
+            ]);
+        } catch (Throwable $e) {
+            Logger::error("AuditLogController::stats query failed: " . $e->getMessage());
+            $this->response->json([
+                'success' => false,
+                'code' => 'AUDIT_QUERY_FAILED',
+                'message' => 'เกิดข้อผิดพลาดในการดึงข้อมูลบันทึกการตรวจสอบความปลอดภัย',
+            ], 500);
+            return;
+        }
     }
 
     /**
      * POST /api/admin/audit-logs/export
-     * GET  /api/admin/audit-logs/export
      *
      * Privileged Audit Export requiring fresh Step-Up MFA.
-     * Exports only authorized, minimized fields without sensitive secrets or raw citizen IDs.
+     * Enforces POST method, CSRF, and POST body-only Step-Up verification.
+     * Prohibits TOTP/Step-Up codes in URL Query String.
      */
     public function export(): void
     {
@@ -287,15 +303,37 @@ class AuditLogController extends Controller
             return;
         }
 
+        // Reject GET requests attempting privileged export
+        if ($this->request->method() !== 'POST') {
+            $this->response->json([
+                'success' => false,
+                'code' => 'METHOD_NOT_ALLOWED',
+                'message' => 'การส่งออกข้อมูลที่มีสิทธิ์สูงต้องกระทำผ่านคำขอ POST เท่านั้น (Prohibited in GET)',
+            ], 405);
+            return;
+        }
+
+        // Prohibit TOTP / Step-Up codes in URL Query String (fail-closed)
+        if ($this->request->query('totp_code') !== null
+            || $this->request->query('step_up_code') !== null
+            || isset($_GET['totp_code'])
+            || isset($_GET['step_up_code'])
+        ) {
+            $this->response->json([
+                'success' => false,
+                'code' => 'CREDENTIAL_IN_URL_PROHIBITED',
+                'message' => 'ห้ามระบุรหัสยืนยันตัวตน TOTP/Step-Up ทาง URL Query Parameters โดยเด็ดขาด',
+            ], 400);
+            return;
+        }
+
         $userId = (int) Auth::id();
         $ip = $this->request->ip();
 
-        // Step-Up MFA Verification
+        // Accept Step-Up MFA code ONLY from POST Body (never from query string)
         $inlineCode = trim((string) (
             $this->request->input('totp_code')
             ?? $this->request->input('step_up_code')
-            ?? $this->request->query('step_up_code')
-            ?? $this->request->query('totp_code')
             ?? ''
         ));
 
@@ -317,12 +355,12 @@ class AuditLogController extends Controller
             return;
         }
 
-        // Filters for export
-        $actorType = strtolower(trim((string) ($this->request->input('actor_type') ?? $this->request->query('actor_type', 'all'))));
-        $eventType = trim((string) ($this->request->input('event_type') ?? $this->request->query('event_type', '')));
-        $result = strtolower(trim((string) ($this->request->input('result') ?? $this->request->query('result', 'all'))));
-        $dateFrom = trim((string) ($this->request->input('from') ?? $this->request->query('from', '')));
-        $dateTo = trim((string) ($this->request->input('to') ?? $this->request->query('to', '')));
+        // Filters for export (strictly from POST body)
+        $actorType = strtolower(trim((string) ($this->request->input('actor_type') ?? 'all')));
+        $eventType = trim((string) ($this->request->input('event_type') ?? ''));
+        $result = strtolower(trim((string) ($this->request->input('result') ?? 'all')));
+        $dateFrom = trim((string) ($this->request->input('from') ?? ''));
+        $dateTo = trim((string) ($this->request->input('to') ?? ''));
 
         $where = ['1=1'];
         $params = [];
@@ -354,14 +392,24 @@ class AuditLogController extends Controller
 
         $whereSql = implode(' AND ', $where);
 
-        $sql = "SELECT s.event_id, s.timestamp_utc, s.actor_type, s.role, s.event_type,
-                       s.target_resource, s.result, s.correlation_id, s.ip_address
-                FROM security_audit_logs s
-                WHERE {$whereSql}
-                ORDER BY s.id DESC
-                LIMIT 5000";
+        try {
+            $sql = "SELECT s.event_id, s.timestamp_utc, s.actor_type, s.role, s.event_type,
+                           s.target_resource, s.result, s.correlation_id, s.ip_address
+                    FROM security_audit_logs s
+                    WHERE {$whereSql}
+                    ORDER BY s.id DESC
+                    LIMIT 5000";
 
-        $rows = Database::query($sql, $params);
+            $rows = Database::query($sql, $params);
+        } catch (Throwable $e) {
+            Logger::error("AuditLogController::export query failed: " . $e->getMessage());
+            $this->response->json([
+                'success' => false,
+                'code' => 'AUDIT_QUERY_FAILED',
+                'message' => 'เกิดข้อผิดพลาดในการดึงข้อมูลสำหรับการส่งออก',
+            ], 500);
+            return;
+        }
 
         // Record audit event for privileged export
         SecurityAuditService::recordAdminFinancialExport(
@@ -420,6 +468,7 @@ class AuditLogController extends Controller
 
     /**
      * Compute dashboard activity KPI statistics.
+     * Throws on security_audit_logs query failure to ensure fail-closed behavior.
      */
     private function calculateStats(): array
     {
@@ -433,44 +482,44 @@ class AuditLogController extends Controller
             'legacy_total' => 0,
         ];
 
+        $row = Database::first("
+            SELECT
+                COUNT(*) AS total_events,
+                SUM(CASE WHEN actor_type = 'member' THEN 1 ELSE 0 END) AS member_events,
+                SUM(CASE WHEN actor_type = 'staff' THEN 1 ELSE 0 END) AS staff_events,
+                SUM(CASE WHEN result = 'failure' THEN 1 ELSE 0 END) AS failed_events,
+                SUM(CASE WHEN result = 'denied' THEN 1 ELSE 0 END) AS denied_events,
+                SUM(CASE WHEN result = 'success' THEN 1 ELSE 0 END) AS success_events
+            FROM security_audit_logs
+        ");
+
+        if ($row) {
+            $defaultStats['total_events'] = (int) ($row['total_events'] ?? 0);
+            $defaultStats['member_events'] = (int) ($row['member_events'] ?? 0);
+            $defaultStats['staff_events'] = (int) ($row['staff_events'] ?? 0);
+            $defaultStats['failed_events'] = (int) ($row['failed_events'] ?? 0);
+            $defaultStats['denied_events'] = (int) ($row['denied_events'] ?? 0);
+            $defaultStats['success_events'] = (int) ($row['success_events'] ?? 0);
+        }
+
+        // Preserved legacy history count (if legacy table exists)
         try {
-            $row = Database::first("
-                SELECT
-                    COUNT(*) AS total_events,
-                    SUM(CASE WHEN actor_type = 'member' THEN 1 ELSE 0 END) AS member_events,
-                    SUM(CASE WHEN actor_type = 'staff' THEN 1 ELSE 0 END) AS staff_events,
-                    SUM(CASE WHEN result = 'failure' THEN 1 ELSE 0 END) AS failed_events,
-                    SUM(CASE WHEN result = 'denied' THEN 1 ELSE 0 END) AS denied_events,
-                    SUM(CASE WHEN result = 'success' THEN 1 ELSE 0 END) AS success_events
-                FROM security_audit_logs
-            ");
-
-            if ($row) {
-                $defaultStats['total_events'] = (int) ($row['total_events'] ?? 0);
-                $defaultStats['member_events'] = (int) ($row['member_events'] ?? 0);
-                $defaultStats['staff_events'] = (int) ($row['staff_events'] ?? 0);
-                $defaultStats['failed_events'] = (int) ($row['failed_events'] ?? 0);
-                $defaultStats['denied_events'] = (int) ($row['denied_events'] ?? 0);
-                $defaultStats['success_events'] = (int) ($row['success_events'] ?? 0);
-            }
-
-            // Preserved legacy history count
             $legacyCount = (int) Database::value("SELECT COUNT(*) FROM audit_logs");
             $defaultStats['legacy_total'] = $legacyCount;
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+            // If legacy table does not exist in testing environment, keep legacy_total 0
+        }
 
         return $defaultStats;
     }
 
     private function getAvailableEventTypes(): array
     {
-        try {
-            $rows = Database::query("SELECT DISTINCT event_type FROM security_audit_logs ORDER BY event_type ASC");
-            $types = array_column($rows, 'event_type');
-            if (!empty($types)) {
-                return $types;
-            }
-        } catch (Throwable $e) {}
+        $rows = Database::query("SELECT DISTINCT event_type FROM security_audit_logs ORDER BY event_type ASC");
+        $types = array_column($rows, 'event_type');
+        if (!empty($types)) {
+            return $types;
+        }
 
         return [
             SecurityAuditService::MEMBER_LOGIN_SUCCESS,
