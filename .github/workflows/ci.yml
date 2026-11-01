@@ -124,6 +124,7 @@ jobs:
           php tests/NewsGalleryTest.php
           php tests/PasswordWorkflowTest.php
           php tests/MigrationRunnerTest.php
+          php tests/LegacyMemberMigrationTest.php
 
       - name: Validate release guard without deploying
         run: |
@@ -165,6 +166,11 @@ jobs:
         env:
           CRUD_DISPOSABLE_MYSQL: "1"
         run: php tests/AdminCrudMySqlTest.php
+
+      - name: Real MySQL 8 legacy member migration and rollback
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/LegacyMemberMigrationMySqlTest.php
 
       - name: Start PHP API smoke-test server
         run: |
