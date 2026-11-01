@@ -58,6 +58,7 @@ export default function MemberDividendsPage() {
         if (!statusResponse.ok || !status.success) throw new Error(status.message || 'ไม่สามารถตรวจสอบการรับทราบ PDPA');
         if (controller.signal.aborted) return;
         setPrivacy(status);
+        setOptionalConsent(status.optional_choice === 'accepted');
         if (!status.acknowledged) return;
         const response = await fetch('/api/member/dividends', { credentials: 'include', cache: 'no-store',
           headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, signal: controller.signal });
