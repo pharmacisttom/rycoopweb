@@ -166,11 +166,6 @@ class DividendImportService
         foreach($records as $i=>$record) {
             try {
                 $snapshot=self::snapshot($record);$old=$snapshot['record'];
-                if($updateProfiles && $snapshot['member']) {
-                    $member=$snapshot['member'];
-                    if(Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>'member'",[$member['user_id']]))throw new RuntimeException('ไม่สามารถแก้ชื่อบัญชีเจ้าหน้าที่ผ่านไฟล์สมาชิก');
-                    if(($member['prefix']??'')!=='' || $member['first_name']!==$record['name'] || ($member['last_name']??'')!=='' || ($member['department']??'')!==$record['department'])$counts['profile_updates']++;
-                }
                 $action=$old===null?'created':(self::sameFinancialRecord($old,$record)?'unchanged':'updated');
                 $counts[$action]++;
                 $snapshots[$record['year'].':'.$record['id_card']]=MemberAdminService::version($snapshot);
@@ -222,14 +217,6 @@ class DividendImportService
                 }
                 if (Database::first('SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>\'member\'', [$userId])) {
                     throw new RuntimeException('ไม่อนุญาตให้นำเข้าปันผลให้บัญชีเจ้าหน้าที่');
-                }
-                if(!empty($options['update_profiles']) && $member) {
-                    if(Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>'member'",[$userId]))throw new RuntimeException('ไม่สามารถแก้ชื่อบัญชีเจ้าหน้าที่ผ่านไฟล์สมาชิก');
-                    $before=MemberAdminService::profile((int)$memberId,true);
-                    $after=$before;$after['prefix']='';$after['first_name']=$record['name'];$after['last_name']='';$after['department']=$record['department'];
-                    Database::execute('UPDATE members SET prefix=?,first_name=?,last_name=?,department=? WHERE id=?',['',$record['name'],'',$record['department'],$memberId]);
-                    Database::execute('UPDATE users SET name=? WHERE id=?',[$record['name'],$userId]);
-                    if($before!==$after)MemberAdminService::recordChange((int)$memberId,'import_profile','อัปเดตจากไฟล์นำเข้า',$before,$after);
                 }
                 $action=$oldRecord===null?'created':(self::sameFinancialRecord($oldRecord,$record)?'unchanged':'updated');$counts[$action]++;
                 $netTotal+=MemberAdminService::cents($record['net']);
