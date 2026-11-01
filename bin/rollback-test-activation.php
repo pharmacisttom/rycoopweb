@@ -73,3 +73,4 @@ try {
     echo "[FATAL ERROR] Rollback failed: " . $e->getMessage() . "\n";
     exit(1);
 }
+

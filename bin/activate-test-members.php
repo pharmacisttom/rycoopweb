@@ -164,3 +164,4 @@ try {
     echo "[FATAL ERROR] Activation failed and was rolled back: " . $e->getMessage() . "\n";
     exit(1);
 }
+
