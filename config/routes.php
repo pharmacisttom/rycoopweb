@@ -111,6 +111,8 @@ $router->get('/api/public/visitors/analytics', 'Api\\SpaApiController@visitorAna
 |--------------------------------------------------------------------------
 */
 $router->get('/api/auth/me', 'Api\\SpaApiController@me');
+$router->get('/api/member/privacy', 'Member\\PrivacyController@status', [AuthMiddleware::class, new RoleMiddleware(['member'])]);
+$router->post('/api/member/privacy', 'Member\\PrivacyController@record', [AuthMiddleware::class, new RoleMiddleware(['member']), CsrfMiddleware::class]);
 $router->get('/api/member/dividends', 'Member\\DividendController@index', [AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class]);
 $router->get('/api/member/requests', 'Api\\SpaApiController@memberGetRequests', [AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class]);
 $router->post('/api/member/requests/profile-change', 'Api\\SpaApiController@memberSubmitProfileRequest', [AuthMiddleware::class, new RoleMiddleware(['member']), MemberMiddleware::class, CsrfMiddleware::class]);
