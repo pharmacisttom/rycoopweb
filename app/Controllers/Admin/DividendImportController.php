@@ -32,7 +32,7 @@ class DividendImportController extends Controller
             if($check['errors']) {$this->json(['success'=>false,'message'=>'ข้อมูลไม่ตรงกับฐานข้อมูล กรุณาแก้ไขก่อนนำเข้า','errors'=>array_slice($check['errors'],0,100),'error_count'=>count($check['errors'])],422);return;}
             $token = bin2hex(random_bytes(24));
             Session::set('dividend_import', ['token' => $token, 'expires' => time() + 1800, 'records' => $parsed['records'], 'snapshots'=>$check['snapshots'],'source_name'=>mb_substr(basename($file['name']),0,255),'update_profiles'=>$this->request->input('update_profiles')==='1']);
-            $this->json(['success' => true, 'token' => $token, 'count' => count($parsed['records']), 'year' => (int)$year, 'total_net' => array_sum(array_column($parsed['records'], 'net')), 'counts'=>$check['counts'],'sample'=>$check['sample']]);
+            $this->json(['success' => true, 'token' => $token, 'count' => count($parsed['records']), 'year' => (int)$year, 'total_net' => \App\Services\MemberAdminService::amount(array_sum(array_map(static fn(array $r): int => \App\Services\MemberAdminService::cents($r['net']), $parsed['records']))), 'counts'=>$check['counts'],'sample'=>$check['sample']]);
         } catch (\Throwable $e) {
             if (!$e instanceof MemberDataException) Logger::error('Dividend preview failure: '.$e->getMessage());
             $this->json(['success' => false, 'message' => $e instanceof MemberDataException ? $e->getMessage() : 'ตรวจสอบไฟล์ไม่สำเร็จ กรุณาติดต่อผู้ดูแล'], $e instanceof MemberDataException ? 422 : 500);
