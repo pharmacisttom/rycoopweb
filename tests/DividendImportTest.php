@@ -52,3 +52,11 @@ foreach (['xlsx', 'csv'] as $type) {
         }
     }
 }
+
+$source = file_get_contents(__DIR__ . '/../app/Services/DividendImportService.php');
+$importMethod = substr($source, strpos($source, 'public static function import('));
+check($importMethod !== false && $importMethod !== '', 'Annual importer source available for security regression');
+check(!preg_match('/INSERT\\s+INTO\\s+(?:users|members|user_roles)\\b/i', $importMethod), 'Annual financial importer cannot provision user/member/role records');
+check(str_contains($importMethod, 'ไม่พบสมาชิกที่ผูกบัญชีแล้ว'), 'Commit rejects absent Member Master mapping');
+check(str_contains($source, 'ไม่พบทะเบียนสมาชิก กรุณานำเข้าทะเบียนสมาชิกหลัก'), 'Preview rejects absent Member Master');
+
