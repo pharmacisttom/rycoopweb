@@ -17,8 +17,13 @@ class DividendController extends Controller
             return;
         }
 
-        // Security gate: Require secure password setup before accessing financial dividends
-        // Server-side database state check prevents session flag tampering
+        $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
+        if (!$member) {
+            $this->response->json(['success' => false, 'code' => 'MEMBER_NOT_LINKED', 'message' => 'ไม่พบข้อมูลสมาชิก กรุณาติดต่อสหกรณ์'], 404);
+            return;
+        }
+
+        // Security gate: Require secure password setup before accessing financial dividends if explicitly required
         if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)Auth::id())) {
             Session::set('requires_password_change', true);
             $this->response->json([
@@ -26,12 +31,6 @@ class DividendController extends Controller
                 'code' => 'PASSWORD_CHANGE_REQUIRED',
                 'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
             ], 403);
-            return;
-        }
-
-        $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
-        if (!$member) {
-            $this->response->json(['success' => false, 'code' => 'MEMBER_NOT_LINKED', 'message' => 'ไม่พบข้อมูลสมาชิก กรุณาติดต่อสหกรณ์'], 404);
             return;
         }
         $rows = Database::query('SELECT year, details_json, imported_at FROM member_dividends WHERE member_id = ? ORDER BY year DESC', [$member['id']]);

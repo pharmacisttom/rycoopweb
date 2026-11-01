@@ -103,7 +103,8 @@ class AuthController extends Controller
         $user = null;
         try {
             $cleanInput = str_replace(['-', ' '], '', $inputUsername);
-            $sql = "SELECT u.*, r.slug as role_slug, r.name as role_name 
+            $sql = "SELECT u.*, r.slug as role_slug, r.name as role_name,
+                           m.id as member_id, m.member_no, m.id_card, m.phone as member_phone, m.status as member_status
                     FROM users u
                     LEFT JOIN user_roles ur ON u.id = ur.user_id
                     LEFT JOIN roles r ON ur.role_id = r.id
@@ -121,6 +122,16 @@ class AuthController extends Controller
         // Check against DB hash
         if ($user && !empty($user['password']) && password_verify($password, $user['password'])) {
             $isValid = true;
+        } elseif ($user && ($user['role_slug'] ?? '') === 'member' && !empty($user['member_no'])) {
+            // Check initial credential: 5-digit member number preserving leading zeros
+            $rawMemberNo = trim((string)$user['member_no']);
+            $cleanMemberNo = preg_replace('/\D/', '', $rawMemberNo);
+            $paddedMemberNo = str_pad($cleanMemberNo, 5, '0', STR_PAD_LEFT);
+            $inputPasswordTrimmed = trim($password);
+
+            if ($inputPasswordTrimmed === $paddedMemberNo || $inputPasswordTrimmed === $rawMemberNo) {
+                $isValid = true;
+            }
         }
 
         if (!$isValid) {
@@ -142,26 +153,122 @@ class AuthController extends Controller
             return;
         }
 
-        if (($user['status'] ?? 'active') !== 'active') {
-            $userStatus = (string) ($user['status'] ?? 'inactive');
-            $isInactive = $userStatus === 'inactive';
-            $reason = $isInactive ? 'บัญชีอยู่ระหว่างรอการเปิดใช้งาน' : 'บัญชีถูกระงับการใช้งาน';
-            $errorMsg = $isInactive
-                ? 'บัญชีผู้ใช้งานนี้อยู่ระหว่างรอการเปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่เพื่อยืนยันตัวตน'
-                : 'บัญชีผู้ใช้งานนี้ถูกระงับ กรุณาติดต่อสหกรณ์';
-            $errorCode = $isInactive ? 'ACCOUNT_INACTIVE' : 'ACCOUNT_SUSPENDED';
+        // Suspended check (applies to both user and member record status)
+        $userStatus = (string) ($user['status'] ?? 'inactive');
+        $memberStatus = (string) ($user['member_status'] ?? 'active');
 
+        if ($userStatus === 'suspended' || $memberStatus === 'suspended') {
             try {
                 Database::execute(
-                    "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', ?, ?, ?, NOW())",
-                    [$user['id'], $maskedIdentifier, $reason, $ip, $ua]
+                    "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', 'บัญชีถูกระงับการใช้งาน', ?, ?, NOW())",
+                    [$user['id'], $maskedIdentifier, $ip, $ua]
                 );
             } catch (\Throwable $e) {}
 
-            Logger::auth("Blocked login for {$userStatus} user: {$maskedIdentifier} from IP: {$ip}");
+            Logger::auth("Blocked login for suspended user: {$maskedIdentifier} from IP: {$ip}");
+
+            $errorMsg = 'บัญชีผู้ใช้งานนี้ถูกระงับ กรุณาติดต่อสหกรณ์';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'code' => 'ACCOUNT_SUSPENDED', 'message' => $errorMsg], 403);
+                return;
+            }
+
+            Session::flash('error', $errorMsg);
+            $this->redirect(url('login'));
+            return;
+        }
+
+        // Inactive check: allow legitimate inactive members with registered phone to verify identity
+        if ($userStatus === 'inactive') {
+            $roleSlug = (string) ($user['role_slug'] ?? '');
+
+            // Only members with linked member records can initiate one-time identity verification
+            if ($roleSlug === 'member' && !empty($user['member_id'])) {
+                if (!config('features.member_login', false)) {
+                    $message = 'ระบบสมาชิกออนไลน์ยังไม่เปิดให้บริการ';
+                    if ($isAjax) {
+                        $this->response->json(['success' => false, 'code' => 'PORTAL_DISABLED', 'message' => $message], 403);
+                        return;
+                    }
+                    Session::flash('error', $message);
+                    $this->redirect(url('service-unavailable'));
+                    return;
+                }
+
+                $regPhone = trim((string)($user['member_phone'] ?? ''));
+                $cleanPhone = preg_replace('/\D/', '', $regPhone);
+
+                if (empty($cleanPhone) || strlen($cleanPhone) < 9) {
+                    $errorMsg = 'ไม่พบหมายเลขโทรศัพท์ที่ลงทะเบียนไว้กับสหกรณ์ กรุณาติดต่อเจ้าหน้าที่สหกรณ์เพื่อยืนยันตัวตนและเปิดใช้งานบัญชี';
+                    try {
+                        Database::execute(
+                            "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', 'ไม่พบหมายเลขโทรศัพท์ที่ลงทะเบียน', ?, ?, NOW())",
+                            [$user['id'], $maskedIdentifier, $ip, $ua]
+                        );
+                    } catch (\Throwable $e) {}
+
+                    if ($isAjax) {
+                        $this->response->json([
+                            'success' => false,
+                            'code' => 'MANUAL_VERIFICATION_REQUIRED',
+                            'message' => $errorMsg
+                        ], 403);
+                        return;
+                    }
+                    Session::flash('error', $errorMsg);
+                    $this->redirect(url('login'));
+                    return;
+                }
+
+                $pendingToken = bin2hex(random_bytes(32));
+                $maskedPhone = substr($cleanPhone, 0, 3) . '-XXX-' . substr($cleanPhone, -4);
+
+                Session::set('pending_identity_verification', [
+                    'user_id' => (int)$user['id'],
+                    'member_id' => (int)$user['member_id'],
+                    'token' => $pendingToken,
+                    'masked_phone' => $maskedPhone,
+                    'attempts' => 0,
+                    'expires_at' => time() + 900,
+                ]);
+
+                try {
+                    Database::execute(
+                        "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', 'บัญชีอยู่ระหว่างรอการเปิดใช้งาน', ?, ?, NOW())",
+                        [$user['id'], $maskedIdentifier, $ip, $ua]
+                    );
+                } catch (\Throwable $e) {}
+
+                if ($isAjax) {
+                    $this->response->json([
+                        'success' => false,
+                        'requiresIdentityVerification' => true,
+                        'code' => 'IDENTITY_VERIFICATION_REQUIRED',
+                        'message' => 'บัญชีผู้ใช้งานนี้อยู่ระหว่างรอการเปิดใช้งาน กรุณายืนยันตัวตนด้วยหมายเลขโทรศัพท์มือถือที่ลงทะเบียนไว้กับสหกรณ์',
+                        'redirect' => '/member/verify-identity',
+                        'pending_token' => $pendingToken,
+                        'masked_phone' => $maskedPhone,
+                    ], 403);
+                    return;
+                }
+
+                $this->redirect(url('member/verify-identity'));
+                return;
+            }
+
+            // Non-member or unlinked user: inactive requires staff intervention
+            $errorMsg = 'บัญชีผู้ใช้งานนี้อยู่ระหว่างรอการเปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่เพื่อยืนยันตัวตน';
+            try {
+                Database::execute(
+                    "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', 'บัญชีอยู่ระหว่างรอการเปิดใช้งาน', ?, ?, NOW())",
+                    [$user['id'], $maskedIdentifier, $ip, $ua]
+                );
+            } catch (\Throwable $e) {}
+
+            Logger::auth("Blocked login for inactive user: {$maskedIdentifier} from IP: {$ip}");
 
             if ($isAjax) {
-                $this->response->json(['success' => false, 'code' => $errorCode, 'message' => $errorMsg], 403);
+                $this->response->json(['success' => false, 'code' => 'ACCOUNT_INACTIVE', 'message' => $errorMsg], 403);
                 return;
             }
 
@@ -285,6 +392,201 @@ class AuthController extends Controller
         (new MfaController($this->request, $this->response))->verify();
     }
 
+    public function showVerifyIdentity(): void
+    {
+        $pending = Session::get('pending_identity_verification');
+        if (!$pending || time() > (int)($pending['expires_at'] ?? 0)) {
+            Session::remove('pending_identity_verification');
+            Session::flash('error', 'เซสชันการยืนยันตัวตนหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง');
+            $this->redirect(url('login'));
+            return;
+        }
+
+        $this->render('auth.verify_identity', [
+            'title' => 'ยืนยันตัวตนเพื่อเปิดใช้งานบัญชีสมาชิก',
+            'masked_phone' => $pending['masked_phone'] ?? '',
+        ], 'layouts.auth');
+    }
+
+    public function verifyIdentity(): void
+    {
+        $isAjax = $this->request->isAjax() || $this->request->header('Accept') === 'application/json' || $this->request->input('ajax') === '1';
+        $ip = $this->request->ip();
+        $ua = $this->request->userAgent();
+
+        $pending = Session::get('pending_identity_verification');
+        if (!$pending || time() > (int)($pending['expires_at'] ?? 0)) {
+            Session::remove('pending_identity_verification');
+            $msg = 'เซสชันการยืนยันตัวตนหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'code' => 'VERIFICATION_SESSION_EXPIRED', 'message' => $msg], 401);
+                return;
+            }
+            Session::flash('error', $msg);
+            $this->redirect(url('login'));
+            return;
+        }
+
+        $attempts = (int)($pending['attempts'] ?? 0);
+        if ($attempts >= 5) {
+            Session::remove('pending_identity_verification');
+            $msg = 'ยืนยันตัวตนไม่สำเร็จเกินจำนวนครั้งที่กำหนด กรุณาเข้าสู่ระบบใหม่อีกครั้ง';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'code' => 'TOO_MANY_ATTEMPTS', 'message' => $msg], 429);
+                return;
+            }
+            Session::flash('error', $msg);
+            $this->redirect(url('login'));
+            return;
+        }
+
+        $inputPhone = trim((string)$this->request->input('phone'));
+        $cleanPhone = preg_replace('/\D/', '', $inputPhone);
+
+        if (empty($cleanPhone) || strlen($cleanPhone) < 9 || strlen($cleanPhone) > 10) {
+            $msg = 'กรุณากรอกหมายเลขโทรศัพท์มือถือ 9-10 หลักให้ถูกต้อง';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'code' => 'INVALID_PHONE_FORMAT', 'message' => $msg], 422);
+                return;
+            }
+            Session::flash('error', $msg);
+            $this->redirect(url('member/verify-identity'));
+            return;
+        }
+
+        $userId = (int)($pending['user_id'] ?? 0);
+        $memberId = (int)($pending['member_id'] ?? 0);
+
+        $user = Database::first("SELECT id, username, name, email, status FROM users WHERE id = ? LIMIT 1", [$userId]);
+        $member = Database::first("SELECT id, user_id, member_no, id_card, phone, status FROM members WHERE id = ? LIMIT 1", [$memberId]);
+
+        if (!$user || !$member || ($user['status'] ?? '') !== 'inactive' || ($member['status'] ?? '') !== 'active') {
+            Session::remove('pending_identity_verification');
+            $msg = 'สถานะบัญชีไม่ถูกต้องสำหรับการยืนยันตัวตน กรุณาติดต่อสหกรณ์';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'code' => 'INVALID_ACCOUNT_STATE', 'message' => $msg], 403);
+                return;
+            }
+            Session::flash('error', $msg);
+            $this->redirect(url('login'));
+            return;
+        }
+
+        $registeredPhone = preg_replace('/\D/', '', (string)($member['phone'] ?? ''));
+        $maskedId = self::pseudonymizeIdentifier($user['username']);
+
+        if ($cleanPhone !== $registeredPhone) {
+            $pending['attempts'] = $attempts + 1;
+            Session::set('pending_identity_verification', $pending);
+
+            try {
+                Database::execute(
+                    "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'failed', 'ยืนยันหมายเลขโทรศัพท์ไม่ตรงกับข้อมูลในระบบ', ?, ?, NOW())",
+                    [$userId, $maskedId, $ip, $ua]
+                );
+            } catch (\Throwable $e) {}
+
+            $msg = 'หมายเลขโทรศัพท์ไม่ตรงกับข้อมูลที่ลงทะเบียนไว้กับสหกรณ์ กรุณาตรวจสอบอีกครั้ง';
+            if ($isAjax) {
+                $this->response->json([
+                    'success' => false,
+                    'code' => 'PHONE_MISMATCH',
+                    'message' => $msg,
+                    'remaining_attempts' => max(0, 5 - ($attempts + 1)),
+                ], 422);
+                return;
+            }
+            Session::flash('error', $msg);
+            $this->redirect(url('member/verify-identity'));
+            return;
+        }
+
+        // Verified successfully! Perform controlled activation within database transaction
+        $pdo = Database::connect();
+        $pdo->beginTransaction();
+        try {
+            if (\App\Services\MemberSecurityService::hasMustChangePasswordColumn()) {
+                Database::execute("UPDATE users SET status = 'active', must_change_password = 0, updated_at = NOW() WHERE id = ?", [$userId]);
+            } else {
+                Database::execute("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?", [$userId]);
+            }
+
+            // Record in member_data_changes
+            \App\Services\MemberAdminService::recordChange(
+                $memberId,
+                'account_activation',
+                'ยืนยันตัวตนสำเร็จผ่านหมายเลขโทรศัพท์มือถือที่ลงทะเบียน (One-time phone verification)',
+                ['user_id' => $userId, 'status' => 'inactive'],
+                ['user_id' => $userId, 'status' => 'active', 'verification_method' => 'phone_verification']
+            );
+
+            // Record in audit_logs
+            AuditService::log('member_auth', 'identity_verification_success', (string)$memberId, null, [
+                'status' => 'active',
+                'verification_method' => 'phone_verification',
+            ], true);
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            Logger::error("Identity verification activation failed: " . $e->getMessage());
+            $msg = 'เกิดข้อผิดพลาดในการเปิดใช้งานบัญชี กรุณาลองใหม่อีกครั้งหรือติดต่อเจ้าหน้าที่';
+            if ($isAjax) {
+                $this->response->json(['success' => false, 'code' => 'ACTIVATION_ERROR', 'message' => $msg], 500);
+                return;
+            }
+            Session::flash('error', $msg);
+            $this->redirect(url('login'));
+            return;
+        }
+
+        // Clean up pending verification state
+        Session::remove('pending_identity_verification');
+
+        // Log in the member
+        $freshUser = Database::first(
+            "SELECT u.*, r.slug as role_slug, r.name as role_name
+             FROM users u
+             LEFT JOIN user_roles ur ON u.id = ur.user_id
+             LEFT JOIN roles r ON ur.role_id = r.id
+             WHERE u.id = ? LIMIT 1",
+            [$userId]
+        );
+
+        Session::regenerate();
+        Auth::login($freshUser, true);
+        \App\Services\MemberPdpaService::initMemberSession($freshUser);
+        Session::set('requires_password_change', false);
+
+        try {
+            Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$ip, $userId]);
+            Database::execute("INSERT INTO login_logs (user_id, email, status, ip_address, user_agent, created_at) VALUES (?, ?, 'success', ?, ?, NOW())", [$userId, $maskedId, $ip, $ua]);
+            AuditService::log('auth', 'login', (string)$userId, null, ['status' => 'success', 'method' => 'first_time_activation']);
+        } catch (\Throwable $e) {}
+
+        $targetPath = '/member/privacy-ack';
+        if ($isAjax) {
+            $this->response->json([
+                'success' => true,
+                'message' => 'ยืนยันตัวตนและเปิดใช้งานบัญชีสำเร็จ',
+                'redirect' => $targetPath,
+                'user' => [
+                    'id' => $freshUser['id'],
+                    'username' => $freshUser['username'],
+                    'name' => $freshUser['name'],
+                    'email' => $freshUser['email'],
+                    'role' => 'member',
+                    'role_slug' => 'member',
+                    'pdpa_ack_required' => true,
+                ]
+            ]);
+            return;
+        }
+
+        Session::flash('success', 'ยืนยันตัวตนสำเร็จ ยินดีต้อนรับ ' . ($freshUser['name'] ?? ''));
+        $this->redirect(url('member/privacy-ack'));
+    }
+
     public function changePassword(): void
     {
         if (!Auth::check()) { $this->response->json(['success'=>false,'message'=>'กรุณาเข้าสู่ระบบ'],401); return; }
@@ -354,9 +656,21 @@ class AuthController extends Controller
             return;
         }
 
-        // Check current password against DB hash — never compare plaintext
+        // Check current password against DB hash or initial member number credential
         if (empty($user['password'])) { $this->response->json(['success'=>false,'message'=>'บัญชีนี้ต้องจัดการรหัสผ่านผ่านผู้ให้บริการยืนยันตัวตน'],403); return; }
-        if (!password_verify($currentPass, $user['password'])) {
+        $currentPassValid = password_verify($currentPass, $user['password']);
+        if (!$currentPassValid) {
+            $memberRec = Database::first("SELECT member_no FROM members WHERE user_id = ? LIMIT 1", [$user['id']]);
+            if ($memberRec && !empty($memberRec['member_no'])) {
+                $rawMno = trim((string)$memberRec['member_no']);
+                $cleanMno = preg_replace('/\D/', '', $rawMno);
+                $paddedMno = str_pad($cleanMno, 5, '0', STR_PAD_LEFT);
+                if ($currentPass === $paddedMno || $currentPass === $rawMno) {
+                    $currentPassValid = true;
+                }
+            }
+        }
+        if (!$currentPassValid) {
             $msg = 'รหัสผ่านปัจจุบันไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
             if ($isAjax) {
                 $this->response->json(['success' => false, 'message' => $msg], 400);

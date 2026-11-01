@@ -150,6 +150,17 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const data = await response.json();
+        if (data.requiresIdentityVerification) {
+          return {
+            success: true,
+            requiresIdentityVerification: true,
+            redirect: normalizeSameOriginRedirect(data.redirect, '/member/verify-identity'),
+            maskedPhone: data.masked_phone || '',
+            pendingToken: data.pending_token || '',
+            message: data.message || 'กรุณายืนยันหมายเลขโทรศัพท์มือถือที่ลงทะเบียนไว้กับสหกรณ์เพื่อเปิดใช้งานบัญชี',
+            user: null
+          };
+        }
         if (data.success && data.redirect && !data.user) {
           setUser(null); setSessionStatus('guest');
           return { success: true, requiresTwoFactor: true, redirect: normalizeSameOriginRedirect(data.redirect, '/admin/2fa'), user: null };
@@ -223,6 +234,79 @@ export function AuthProvider({ children }) {
     };
   };
 
+  const verifyIdentity = async (phone) => {
+    const inputPhone = (phone || '').trim();
+    if (!inputPhone) {
+      return { success: false, message: 'กรุณากรอกหมายเลขโทรศัพท์มือถือ' };
+    }
+
+    try {
+      const csrfResponse = await fetch('/csrf-token', {
+        headers: { Accept: 'application/json' },
+        credentials: 'include'
+      });
+      if (!csrfResponse.ok) {
+        return { success: false, message: 'ไม่สามารถเริ่มต้นเซสชันที่ปลอดภัยได้ กรุณารีเฟรชหน้าและลองใหม่' };
+      }
+
+      const csrfData = await csrfResponse.json();
+      const formData = new FormData();
+      formData.append('phone', inputPhone);
+      formData.append('ajax', '1');
+      formData.append('_csrf_token', csrfData.token || '');
+
+      const response = await fetch('/api/auth/verify-identity', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          Accept: 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        if (data.user) {
+          const authUser = {
+            id: data.user.id,
+            username: data.user.username || '',
+            name: data.user.name || '',
+            role: 'member',
+            roleSlug: 'member',
+            permissions: data.user.permissions || [],
+            roleName: 'สมาชิกสหกรณ์',
+            roleBadge: 'สมาชิกสหกรณ์',
+            department: data.user.department || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
+            position: data.user.position || '',
+            phone: data.user.phone || '',
+            avatar: data.user.avatar || '',
+            pdpa_ack_required: true,
+          };
+          setUser(authUser);
+          setSessionStatus('online');
+        }
+        return {
+          success: true,
+          redirect: normalizeSameOriginRedirect(data.redirect, '/member/privacy-ack'),
+          user: data.user,
+          message: data.message
+        };
+      }
+
+      return {
+        success: false,
+        code: data.code,
+        message: data.message || 'ยืนยันตัวตนไม่สำเร็จ กรุณาตรวจสอบหมายเลขโทรศัพท์อีกครั้ง'
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: 'ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง'
+      };
+    }
+  };
+
   const updateProfile = ({ avatar, phone }) => {
     if (!user) return false;
     const updated = {
@@ -284,6 +368,7 @@ export function AuthProvider({ children }) {
       sessionStatus,
       can: permission => hasEffectivePermission(user,permission),
       login,
+      verifyIdentity,
       logout,
       invalidateSession,
       updateProfile,

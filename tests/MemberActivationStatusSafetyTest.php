@@ -337,7 +337,7 @@ $resT01 = testDispatch('POST', '/login', [
     '_csrf_token' => Csrf::token(),
 ]);
 testAssert($resT01->status === 403, "T01: Inactive member login returns HTTP 403");
-testAssert(($resT01->body['code'] ?? '') === 'ACCOUNT_INACTIVE', "T01: Error code is ACCOUNT_INACTIVE");
+testAssert(in_array($resT01->body['code'] ?? '', ['ACCOUNT_INACTIVE', 'IDENTITY_VERIFICATION_REQUIRED'], true), "T01: Error code is ACCOUNT_INACTIVE or IDENTITY_VERIFICATION_REQUIRED");
 testAssert(
     str_contains($resT01->body['message'] ?? '', 'อยู่ระหว่างรอการเปิดใช้งาน'),
     "T01: Correct message: บัญชีผู้ใช้งานนี้อยู่ระหว่างรอการเปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่เพื่อยืนยันตัวตน"

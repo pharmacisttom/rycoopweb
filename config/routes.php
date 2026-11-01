@@ -301,6 +301,9 @@ $router->post('/login', 'Admin\\AuthController@login', [CsrfMiddleware::class, n
 $router->get('/admin/2fa', 'Admin\\AuthController@showTwoFactor');
 $router->post('/admin/2fa', 'Admin\\AuthController@verifyTwoFactor', [CsrfMiddleware::class]);
 $router->post('/logout', 'Admin\\AuthController@logout', [CsrfMiddleware::class]);
+$router->get('/member/verify-identity', 'Admin\\AuthController@showVerifyIdentity');
+$router->post('/member/verify-identity', 'Admin\\AuthController@verifyIdentity', [CsrfMiddleware::class]);
+$router->post('/api/auth/verify-identity', 'Admin\\AuthController@verifyIdentity', [CsrfMiddleware::class]);
 $router->post('/api/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
 $router->post('/change-password', 'Admin\\AuthController@changePassword', [AuthMiddleware::class, CsrfMiddleware::class]);
 $router->get('/dashboard', 'Admin\\DashboardController@index', [AuthMiddleware::class, new RoleMiddleware(['super_admin'])]);

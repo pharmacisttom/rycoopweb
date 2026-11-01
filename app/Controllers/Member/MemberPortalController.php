@@ -612,16 +612,26 @@ class MemberPortalController extends Controller
 
         $user = Database::first("SELECT password FROM users WHERE id = ? LIMIT 1", [$userId]);
 
+        $currentPassValid = false;
         if ($user && !empty($user['password']) && !empty($currentPass)) {
-            if (!password_verify($currentPass, $user['password'])) {
-                if ($isAjax) {
-                    $this->json(['success' => false, 'message' => 'รหัสผ่านปัจจุบันไม่ถูกต้อง'], 422);
-                    return;
+            $currentPassValid = password_verify($currentPass, $user['password']);
+            if (!$currentPassValid) {
+                $rawMno = trim((string)($this->member['member_no'] ?? ''));
+                $cleanMno = preg_replace('/\D/', '', $rawMno);
+                $paddedMno = str_pad($cleanMno, 5, '0', STR_PAD_LEFT);
+                if ($currentPass === $paddedMno || $currentPass === $rawMno) {
+                    $currentPassValid = true;
                 }
-                Session::flash('error', 'รหัสผ่านปัจจุบันไม่ถูกต้อง');
-                $this->redirect(url('member/settings'));
+            }
+        }
+        if (!$currentPassValid) {
+            if ($isAjax) {
+                $this->json(['success' => false, 'message' => 'รหัสผ่านปัจจุบันไม่ถูกต้อง'], 422);
                 return;
             }
+            Session::flash('error', 'รหัสผ่านปัจจุบันไม่ถูกต้อง');
+            $this->redirect(url('member/settings'));
+            return;
         }
 
         $pwConfig = config('security.password');

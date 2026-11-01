@@ -78,6 +78,7 @@ $pdo->exec("
         email TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'active',
+        must_change_password INTEGER NOT NULL DEFAULT 0,
         session_version INTEGER NOT NULL DEFAULT 1,
         two_factor_enabled INTEGER NOT NULL DEFAULT 0,
         two_factor_secret TEXT NULL,
