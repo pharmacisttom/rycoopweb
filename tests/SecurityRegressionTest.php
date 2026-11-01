@@ -51,7 +51,7 @@ final class SecurityRegressionTest
         self::assert($routes !== false && str_contains($routes, "new RoleMiddleware(['super_admin']), CsrfMiddleware::class"), 'member invitation issuance reserved for super admin and CSRF');
         $service = file_get_contents(__DIR__ . '/../app/Services/MemberActivationService.php');
         self::assert($service !== false && str_contains($service, 'random_bytes(32)'), 'first-use invitations use cryptographic randomness');
-        self::assert($service !== false && str_contains($service, "hash('sha256',$code)"), 'only hashed invitation codes stored');
+        self::assert($service !== false && str_contains($service, "hash('sha256',\$code)"), 'only hashed invitation codes stored');
         self::assert($service !== false && str_contains($service, "status='active'"), 'activation updates user only after invite verification');
         self::assert($service !== false && str_contains($service, "used_at IS NULL"), 'single-use invitation enforced');
         $page = file_get_contents(__DIR__ . '/../src/pages/MemberActivationPage.jsx');
