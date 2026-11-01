@@ -151,8 +151,12 @@ class DividendImportService
         if(count($members)>1) throw new RuntimeException('สมาชิกในฐานข้อมูลซ้ำ ต้องแก้ไขข้อมูลก่อนนำเข้า');
         $member=$members[0]??null;
         if($member && ($member['id_card']!==$record['id_card'] || $member['member_no']!==$record['member_no'])) throw new RuntimeException('เลขบัตรประชาชนและเลขสมาชิกไม่ตรงกับฐานข้อมูล');
-        if($member && $member['user_id'] && !Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug='member'",[$member['user_id']])) throw new RuntimeException('บัญชีที่ผูกกับสมาชิกไม่มีสิทธิ์สมาชิก');
-        if((!$member || !$member['user_id']) && Database::first('SELECT id FROM users WHERE username=?',[$record['id_card']])) throw new RuntimeException('ชื่อผู้ใช้ซ้ำกับบัญชีอื่น');
+        // Annual financial imports must never provision member identities.
+        // Member Master migration and identity verification are separate, reviewed workflows.
+        if (!$member) throw new RuntimeException('ไม่พบทะเบียนสมาชิก กรุณานำเข้าทะเบียนสมาชิกหลักและตรวจ Identity Mapping ก่อน');
+        if (!$member['user_id']) throw new RuntimeException('สมาชิกยังไม่มีบัญชีที่ผูกไว้ กรุณาตรวจ Identity Mapping ก่อน');
+        if (!Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug='member'",[$member['user_id']])) throw new RuntimeException('บัญชีที่ผูกกับสมาชิกไม่มีสิทธิ์สมาชิก');
+        if (Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>'member'",[$member['user_id']])) throw new RuntimeException('บัญชีเจ้าหน้าที่ไม่สามารถใช้เป็นบัญชีสมาชิกสำหรับการนำเข้าปันผล');
         $row=$member?Database::first('SELECT details_json FROM member_dividends WHERE member_id=? AND year=?',[$member['id'],$record['year']]):null;
         return ['member'=>$member,'record'=>$row?json_decode($row['details_json'],true,512,JSON_THROW_ON_ERROR):null];
     }
@@ -162,13 +166,8 @@ class DividendImportService
         foreach($records as $i=>$record) {
             try {
                 $snapshot=self::snapshot($record);$old=$snapshot['record'];
-                if($updateProfiles && $snapshot['member']) {
-                    $member=$snapshot['member'];
-                    if(Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>'member'",[$member['user_id']]))throw new RuntimeException('ไม่สามารถแก้ชื่อบัญชีเจ้าหน้าที่ผ่านไฟล์สมาชิก');
-                    if(($member['prefix']??'')!=='' || $member['first_name']!==$record['name'] || ($member['last_name']??'')!=='' || ($member['department']??'')!==$record['department'])$counts['profile_updates']++;
-                }
                 $action=$old===null?'created':(self::sameFinancialRecord($old,$record)?'unchanged':'updated');
-                $counts[$action]++;if(!$snapshot['member'])$counts['new_members']++;
+                $counts[$action]++;
                 $snapshots[$record['year'].':'.$record['id_card']]=MemberAdminService::version($snapshot);
                 if(count($sample)<20)$sample[]=['member_no'=>$record['member_no'],'name'=>$record['name'],'year'=>$record['year'],'net'=>$record['net'],'previous_net'=>$old['net']??null,'action'=>$action];
             } catch(RuntimeException $e) {$errors[]=['row'=>$record['source_row']??$i+1,'id_card'=>$record['id_card'],'member_no'=>$record['member_no'],'message'=>$e->getMessage()];}
@@ -206,24 +205,18 @@ class DividendImportService
                     $expected=$options['snapshots'][$record['year'].':'.$record['id_card']]??'';
                     if(!hash_equals($expected,MemberAdminService::version($snapshot)))throw new RuntimeException('ข้อมูลเปลี่ยนหลังตรวจสอบไฟล์ กรุณาตรวจสอบใหม่ก่อนนำเข้า');
                 }
-                $userId = $member['user_id'] ?? null;
-                $uuid = static function () { $h = bin2hex(random_bytes(16)); return substr($h,0,8).'-'.substr($h,8,4).'-4'.substr($h,13,3).'-a'.substr($h,17,3).'-'.substr($h,20,12); };
-                if (!$userId) {
-                    if (Database::first('SELECT id FROM users WHERE username = ?', [$record['id_card']])) { throw new RuntimeException('ชื่อผู้ใช้ซ้ำกับบัญชีอื่น'); }
-                    $accountUuid = $uuid();
-                    $userId = Database::insert('INSERT INTO users (uuid, name, username, email, password, status) VALUES (?, ?, ?, ?, ?, ?)', [$accountUuid, $record['name'], $record['id_card'], 'member-' . $accountUuid . '@members.invalid', password_hash($record['member_no'], PASSWORD_DEFAULT), !$member || $member['status']==='active' ? 'active' : 'suspended']);
-                    Database::execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [$userId, $role['id']]);
-                } elseif (!Database::first('SELECT id FROM user_roles WHERE user_id = ? AND role_id = ?', [$userId, $role['id']])) { throw new RuntimeException('บัญชีที่ผูกกับสมาชิกไม่มีสิทธิ์สมาชิก'); }
-                if (!$member) {
-                    $memberId = Database::insert('INSERT INTO members (uuid, user_id, member_no, id_card, first_name, last_name, department) VALUES (?, ?, ?, ?, ?, ?, ?)', [$uuid(), $userId, $record['member_no'], $record['id_card'], $record['name'], '', $record['department']]);
-                } else { $memberId = $member['id']; Database::execute('UPDATE members SET user_id = ? WHERE id = ?', [$userId, $memberId]); }
-                if(!empty($options['update_profiles']) && $member) {
-                    if(Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>'member'",[$userId]))throw new RuntimeException('ไม่สามารถแก้ชื่อบัญชีเจ้าหน้าที่ผ่านไฟล์สมาชิก');
-                    $before=MemberAdminService::profile((int)$memberId,true);
-                    $after=$before;$after['prefix']='';$after['first_name']=$record['name'];$after['last_name']='';$after['department']=$record['department'];
-                    Database::execute('UPDATE members SET prefix=?,first_name=?,last_name=?,department=? WHERE id=?',['',$record['name'],'',$record['department'],$memberId]);
-                    Database::execute('UPDATE users SET name=? WHERE id=?',[$record['name'],$userId]);
-                    if($before!==$after)MemberAdminService::recordChange((int)$memberId,'import_profile','อัปเดตจากไฟล์นำเข้า',$before,$after);
+                // Fail closed if Member Master/identity mapping is incomplete.
+                // Do not create, activate or modify member login accounts from an annual financial file.
+                if (!$member || !$member['user_id']) {
+                    throw new RuntimeException('ไม่พบสมาชิกที่ผูกบัญชีแล้ว ห้ามสร้างบัญชีใหม่จากไฟล์ปันผล');
+                }
+                $userId = (int)$member['user_id'];
+                $memberId = (int)$member['id'];
+                if (!Database::first('SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug=\'member\'', [$userId])) {
+                    throw new RuntimeException('สมาชิกไม่มีสิทธิ์ member กรุณาตรวจ Identity Mapping');
+                }
+                if (Database::first('SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>\'member\'', [$userId])) {
+                    throw new RuntimeException('ไม่อนุญาตให้นำเข้าปันผลให้บัญชีเจ้าหน้าที่');
                 }
                 $action=$oldRecord===null?'created':(self::sameFinancialRecord($oldRecord,$record)?'unchanged':'updated');$counts[$action]++;
                 $netTotal+=MemberAdminService::cents($record['net']);

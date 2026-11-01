@@ -26,6 +26,22 @@ $legacy=Import::normalize([['Annual dividends report'], $legacyHeaders, $legacyR
 check(!$legacy['errors'] && $legacy['records'][0]['source_row']===3, 'legacy title row and selected year supported with source row');
 $duplicate=Import::normalize([Import::HEADERS,$sample,$sample],2566)['errors'][0];
 check($duplicate['id_card']===$sample[1] && str_contains($duplicate['message'],'2'), 'duplicate report identifies national ID and original row');
+
+// Legacy annual spreadsheets may have an extra index column (2567) or no index (2568).
+// Header-name mapping must keep members and currency aligned regardless of position.
+$year2567 = array_merge(['ลำดับ'], Import::HEADERS);
+$row2567 = array_merge(['1'], $sample);
+$row2567[1] = 2567;
+$annual2567 = Import::normalize([$year2567, $row2567], 2567);
+check(count($annual2567['records']) === 1 && !$annual2567['errors'], '2567 extra index column is ignored');
+check($annual2567['records'][0]['member_no'] === '00001' && $annual2567['records'][0]['net'] === '1100.00', '2567 member and net amount remain aligned');
+
+$row2568 = $sample;
+$row2568[0] = 2568;
+$annual2568 = Import::normalize([Import::HEADERS, $row2568], 2568);
+check(count($annual2568['records']) === 1 && !$annual2568['errors'], '2568 standard header positions accepted');
+check($annual2568['records'][0]['member_no'] === '00001' && $annual2568['records'][0]['net'] === '1100.00', '2568 values remain aligned');
+
 foreach (['xlsx', 'csv'] as $type) {
     if (file_exists(__DIR__ . '/../public/templates/member-dividends-template.' . $type)) {
         try {
@@ -36,3 +52,11 @@ foreach (['xlsx', 'csv'] as $type) {
         }
     }
 }
+
+$source = file_get_contents(__DIR__ . '/../app/Services/DividendImportService.php');
+$importMethod = substr($source, strpos($source, 'public static function import('));
+check($importMethod !== false && $importMethod !== '', 'Annual importer source available for security regression');
+check(!preg_match('/INSERT\\s+INTO\\s+(?:users|members|user_roles)\\b/i', $importMethod), 'Annual financial importer cannot provision user/member/role records');
+check(str_contains($importMethod, 'ไม่พบสมาชิกที่ผูกบัญชีแล้ว'), 'Commit rejects absent Member Master mapping');
+check(str_contains($source, 'ไม่พบทะเบียนสมาชิก กรุณานำเข้าทะเบียนสมาชิกหลัก'), 'Preview rejects absent Member Master');
+check(!preg_match('/UPDATE\\s+(?:users|members|user_roles)\\b/i', $importMethod), 'Annual financial import cannot update user or member profile records');
