@@ -341,6 +341,7 @@ class SpaApiController extends Controller
         }
 
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'financial-summary', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
         if (!empty($summary['member']) && is_array($summary['member'])) {
             $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
         }
@@ -393,6 +394,7 @@ class SpaApiController extends Controller
         $memberId = (int)$member['id'];
         $summary = MemberPortalService::getDashboardSummary($memberId);
         $requests = Database::query("SELECT * FROM share_change_requests WHERE member_id = ? ORDER BY created_at DESC", [$memberId]);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'shares', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json([
             'success' => true,
@@ -424,6 +426,7 @@ class SpaApiController extends Controller
         $accountNo = $this->request->query('account');
         $typeFilter = $this->request->query('type');
         $depositData = MemberPortalService::getDepositDetails((int)$member['id'], $accountNo, $typeFilter);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'deposits', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json(['success' => true, 'data' => $depositData]);
     }
@@ -448,6 +451,7 @@ class SpaApiController extends Controller
 
         $contractNo = $this->request->query('contract');
         $loanData = MemberPortalService::getLoanDetails((int)$member['id'], $contractNo);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'loans', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json(['success' => true, 'data' => $loanData]);
     }
@@ -539,6 +543,7 @@ class SpaApiController extends Controller
         }
 
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'financial-summary', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
         if (!empty($summary['member']) && is_array($summary['member'])) {
             $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
         }

@@ -131,7 +131,9 @@ class AccessController extends \App\Core\Controller
     {
         $this->run(function () use ($id) {
             $this->assertStepUpGate('roles.manage', 'roles.update');
-            return ['role' => AccessService::saveRole($this->request->all(), (int) $id)];
+            $res = AccessService::saveRole($this->request->all(), (int) $id);
+            \App\Services\SecurityAuditService::recordAdminPermissionChanged((int)Auth::id(), (string)(Auth::user()['role_slug'] ?? 'super_admin'), (int)$id, 'Role permissions updated: ' . $id);
+            return ['role' => $res];
         });
     }
 
@@ -180,7 +182,9 @@ class AccessController extends \App\Core\Controller
     {
         $this->run(function () use ($id) {
             $this->assertStepUpGate('users.update', 'users.update');
-            return ['user' => AccessService::saveAccount($this->request->all(), (int) $id)];
+            $res = AccessService::saveAccount($this->request->all(), (int) $id);
+            \App\Services\SecurityAuditService::recordAdminPermissionChanged((int)Auth::id(), (string)(Auth::user()['role_slug'] ?? 'super_admin'), (int)$id, 'User role/account updated: ' . $id);
+            return ['user' => $res];
         });
     }
 

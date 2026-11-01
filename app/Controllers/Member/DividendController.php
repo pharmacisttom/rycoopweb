@@ -41,6 +41,7 @@ class DividendController extends Controller
         }, $rows);
         $maskedMemberNo = \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']);
         $maskedName = \App\Services\MemberPiiMaskingService::maskMemberName($member['prefix'] ?? '', $member['first_name'] ?? '', $member['last_name'] ?? '');
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)Auth::id(), 'dividends', $maskedMemberNo);
         $this->response->json(['success' => true, 'member' => ['member_no' => $maskedMemberNo, 'name' => $maskedName], 'records' => $records]);
     }
 }

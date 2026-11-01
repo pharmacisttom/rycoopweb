@@ -142,7 +142,8 @@ class MemberManagementController extends Controller
     {
         $this->respond(function()use($id) {
             $columns=MemberSystemHealth::columns();$warnings=[];
-            $member=MemberAdminService::profile($this->id($id),false,$columns);$version=MemberAdminService::version($member);
+            $member=MemberAdminService::profile($this->id($id),false,$columns);
+            \App\Services\SecurityAuditService::recordAdminMemberView((int)\App\Core\Auth::id(), (string)(\App\Core\Auth::user()['role_slug'] ?? 'staff'), (int)$member['id']);$version=MemberAdminService::version($member);
             $dividends=$this->section('years',function()use($columns,$member) {
                 MemberSystemHealth::requireColumns(['member_dividends'=>MemberSystemHealth::REQUIRED['member_dividends']],$columns);
                 $rows=Database::query('SELECT year,details_json,imported_at FROM member_dividends WHERE member_id=? ORDER BY year DESC',[$member['id']]);
@@ -160,14 +161,17 @@ class MemberManagementController extends Controller
 
     public function update(string $id): void
     {
-        $this->respond(function()use($id){MemberSystemHealth::requireWrites();MemberAdminService::updateProfile($this->id($id),$this->request->all());return ['message'=>'บันทึกข้อมูลสมาชิกแล้ว'];});
+        $this->respond(function()use($id){MemberSystemHealth::requireWrites();MemberAdminService::updateProfile($this->id($id),$this->request->all());
+            \App\Services\SecurityAuditService::recordAdminMemberUpdate((int)\App\Core\Auth::id(), (string)(\App\Core\Auth::user()['role_slug'] ?? 'staff'), $this->id($id), $this->request->all());return ['message'=>'บันทึกข้อมูลสมาชิกแล้ว'];});
     }
 
     public function activate(string $id): void
     {
         $this->respond(function() use ($id) {
             MemberSystemHealth::requireWrites();
-            return MemberAdminService::activateAccount($this->id($id), $this->request->all());
+            $res = MemberAdminService::activateAccount($this->id($id), $this->request->all());
+            \App\Services\SecurityAuditService::recordAdminAccountActivation((int)\App\Core\Auth::id(), (string)(\App\Core\Auth::user()['role_slug'] ?? 'staff'), $this->id($id), false);
+            return $res;
         });
     }
 

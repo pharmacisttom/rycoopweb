@@ -164,6 +164,7 @@ class MfaController extends Controller
         $matchedSlice = null;
         if (!TwoFactorService::verifyCode($secret, $code, 1, null, $matchedSlice)) {
             $this->recordFailedAttempt($userId, (string) Auth::user()['email'], 'Invalid enrollment code', $this->request->ip(), $this->request->userAgent());
+            \App\Services\SecurityAuditService::recordAdmin2faFailed($userId, (string)(Auth::user()['role_slug'] ?? 'staff'), 'Invalid enrollment code');
             $this->response->json([
                 'success' => false,
                 'message' => 'รหัสความปลอดภัย 6 หลักไม่ถูกต้อง กรุณาตรวจสอบเวลาบนสมาร์ตโฟนและลองใหม่อีกครั้ง',
@@ -202,6 +203,7 @@ class MfaController extends Controller
         ]);
 
         $roleSlug = (string) (Auth::user()['role_slug'] ?? 'staff');
+        \App\Services\SecurityAuditService::recordAdmin2faSuccess($userId, $roleSlug, 'totp_enrollment');
         $redirectUrl = match ($roleSlug) {
             'super_admin' => '/admin/dashboard',
             'member_admin' => '/admin/members/dashboard',
@@ -278,6 +280,7 @@ class MfaController extends Controller
 
         if (!$isValid) {
             $this->recordFailedAttempt($userId, $user['email'], 'รหัส 2FA ไม่ถูกต้องหรือถูกใช้ไปแล้ว', $ip, $ua);
+            \App\Services\SecurityAuditService::recordAdmin2faFailed($userId, (string)($user['role_slug'] ?? 'staff'), 'รหัส 2FA ไม่ถูกต้องหรือถูกใช้ไปแล้ว');
             $this->response->json([
                 'success' => false,
                 'message' => 'รหัสความปลอดภัย 6 หลักไม่ถูกต้องหรือหมดอายุ',
@@ -303,6 +306,7 @@ class MfaController extends Controller
         ]);
 
         $roleSlug = (string) ($user['role_slug'] ?? 'staff');
+        \App\Services\SecurityAuditService::recordAdmin2faSuccess($userId, $roleSlug, 'totp');
         $redirectUrl = match ($roleSlug) {
             'super_admin' => '/admin/dashboard',
             'member_admin' => '/admin/members/dashboard',
@@ -370,6 +374,7 @@ class MfaController extends Controller
         $isValid = TwoFactorService::verifyRecoveryCode($userId, $code);
         if (!$isValid) {
             $this->recordFailedAttempt($userId, $user['email'], 'รหัสกู้คืนไม่ถูกต้องหรือถูกใช้งานไปแล้ว', $ip, $ua);
+            \App\Services\SecurityAuditService::recordAdmin2faFailed($userId, (string)($user['role_slug'] ?? 'staff'), 'รหัสกู้คืนไม่ถูกต้องหรือถูกใช้งานไปแล้ว');
             $this->response->json([
                 'success' => false,
                 'message' => 'รหัสกู้คืนไม่ถูกต้องหรือถูกใช้งานไปแล้ว',
@@ -389,6 +394,7 @@ class MfaController extends Controller
         ]);
 
         $roleSlug = (string) ($user['role_slug'] ?? 'staff');
+        \App\Services\SecurityAuditService::recordAdmin2faSuccess($userId, $roleSlug, 'recovery_code');
         $redirectUrl = match ($roleSlug) {
             'super_admin' => '/admin/dashboard',
             'member_admin' => '/admin/members/dashboard',

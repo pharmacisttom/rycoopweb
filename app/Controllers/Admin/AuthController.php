@@ -135,6 +135,12 @@ class AuthController extends Controller
         }
 
         if (!$isValid) {
+            $userRole = ($user['role_slug'] ?? '') ?: 'member';
+            if ($userRole === 'member') {
+                \App\Services\SecurityAuditService::recordMemberLoginFailed($user ? (int)$user['id'] : null, $maskedIdentifier, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+            } else {
+                \App\Services\SecurityAuditService::recordAdminLoginFailed($user ? (int)$user['id'] : null, $maskedIdentifier, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+            }
             // Log failed attempt with masked identifier to prevent PII exposure
             try {
                 Database::execute("INSERT INTO login_logs (email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, 'failed', 'รหัสผ่านไม่ถูกต้อง หรือไม่พบบัญชีผู้ใช้', ?, ?, NOW())", [$maskedIdentifier, $ip, $ua]);
@@ -158,6 +164,12 @@ class AuthController extends Controller
         $memberStatus = (string) ($user['member_status'] ?? 'active');
 
         if ($userStatus === 'suspended' || $memberStatus === 'suspended') {
+            $userRole = ($user['role_slug'] ?? '') ?: 'member';
+            if ($userRole === 'member') {
+                \App\Services\SecurityAuditService::recordMemberLoginFailed((int)$user['id'], $maskedIdentifier, 'บัญชีถูกระงับการใช้งาน');
+            } else {
+                \App\Services\SecurityAuditService::recordAdminLoginFailed((int)$user['id'], $maskedIdentifier, 'บัญชีถูกระงับการใช้งาน');
+            }
             try {
                 Database::execute(
                     "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', 'บัญชีถูกระงับการใช้งาน', ?, ?, NOW())",
@@ -180,6 +192,12 @@ class AuthController extends Controller
 
         // Inactive check: Reject inactive accounts until controlled activation
         if ($userStatus === 'inactive') {
+            $userRole = ($user['role_slug'] ?? '') ?: 'member';
+            if ($userRole === 'member') {
+                \App\Services\SecurityAuditService::recordMemberLoginFailed((int)$user['id'], $maskedIdentifier, 'บัญชีอยู่ระหว่างรอการเปิดใช้งาน');
+            } else {
+                \App\Services\SecurityAuditService::recordAdminLoginFailed((int)$user['id'], $maskedIdentifier, 'บัญชีอยู่ระหว่างรอการเปิดใช้งาน');
+            }
             try {
                 Database::execute(
                     "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', 'บัญชีอยู่ระหว่างรอการเปิดใช้งาน', ?, ?, NOW())",
@@ -225,36 +243,74 @@ class AuthController extends Controller
             $this->response->json(['success'=>false,'message'=>'บัญชีเจ้าหน้าที่นี้ต้องเข้าสู่ระบบด้วย Google ของสหกรณ์'],403);return;
         }
 
-        // Staff must finish enrollment before gaining an authenticated session.
-        if ($roleSlug !== 'member' && config('google.staff_mfa_required', true) && empty($user['two_factor_enabled'])) {
-            Auth::login($user, false, true);
-            if ($isAjax) { $this->response->json(['success'=>true,'redirect'=>'/admin/mfa/enroll']); return; }
-            $this->redirect(url('admin/mfa/enroll')); return;
-        }
-        if ((int)($user['two_factor_enabled']??0)===1 && empty($user['two_factor_secret'])) { $this->response->json(['success'=>false,'message'=>'การตั้งค่า MFA ของบัญชีไม่สมบูรณ์ กรุณาติดต่อผู้ดูแล'],403); return; }
-        // Check if 2FA is enabled.
-        if ((int)($user['two_factor_enabled'] ?? 0) === 1 && !empty($user['two_factor_secret'])) {
-            Auth::login($user, false);
+        // Backend Authentication: Mandatory TOTP 2FA for ALL backend / administrative roles.
+        // Privileged sessions are NEVER created prior to successful TOTP verification.
+        if ($roleSlug !== 'member') {
+            $hasMfaConfigured = (int)($user['two_factor_enabled'] ?? 0) === 1 && !empty($user['two_factor_secret']);
+
+            if (!$hasMfaConfigured) {
+                // Must enroll 2FA before gaining privileged access
+                Auth::login($user, false, true);
+                Session::set('auth_context', 'backend');
+
+                \App\Services\SecurityAuditService::recordAdminLoginSuccess(
+                    (int)$user['id'],
+                    $roleSlug,
+                    ['challenge' => 'enrollment_required', 'redirect' => '/admin/mfa/enroll']
+                );
+
+                if ($isAjax) {
+                    $this->response->json([
+                        'success' => true,
+                        'mfa_required' => true,
+                        'requires_enrollment' => true,
+                        'redirect' => '/admin/mfa/enroll',
+                        'message' => 'จำเป็นต้องลงทะเบียนยืนยันตัวตนสองขั้นตอน (2FA) ก่อนเข้าใช้งานระบบ'
+                    ]);
+                    return;
+                }
+                $this->redirect(url('admin/mfa/enroll'));
+                return;
+            }
+
+            // Enrolled: Issue 2FA TOTP verification challenge
+            Auth::login($user, false, false);
+            Session::set('auth_context', 'backend');
+
+            \App\Services\SecurityAuditService::recordAdminLoginSuccess(
+                (int)$user['id'],
+                $roleSlug,
+                ['challenge' => 'totp_verification', 'redirect' => '/admin/mfa/verify']
+            );
+
             if ($isAjax) {
-                $this->response->json(['success' => true, 'redirect' => '/admin/mfa/verify']);
+                $this->response->json([
+                    'success' => true,
+                    'mfa_required' => true,
+                    'requires_enrollment' => false,
+                    'redirect' => '/admin/mfa/verify',
+                    'message' => 'กรุณายืนยันรหัสความปลอดภัย 2FA'
+                ]);
                 return;
             }
             $this->redirect(url('admin/mfa/verify'));
             return;
         }
 
-        // Login success
+        // Member Login success (Session context: member, PDPA gate active)
         Auth::login($user, true);
+        Session::set('auth_context', 'member');
+        Session::regenerate();
+        \App\Services\MemberPdpaService::initMemberSession($user);
 
-        if ($roleSlug === 'member') {
-            Session::regenerate();
-            \App\Services\MemberPdpaService::initMemberSession($user);
+        \App\Services\SecurityAuditService::recordMemberLoginSuccess(
+            (int)$user['id'],
+            'member',
+            \App\Services\MemberPiiMaskingService::maskCitizenId($user['username'] ?? '')
+        );
 
-            // Require secure password setup before financial access if account was activated
-            // and has not yet completed a secure password change
-            $requiresPwChange = \App\Services\MemberSecurityService::isPasswordChangeRequired((int)$user['id']);
-            Session::set('requires_password_change', $requiresPwChange);
-        }
+        $requiresPwChange = \App\Services\MemberSecurityService::isPasswordChangeRequired((int)$user['id']);
+        Session::set('requires_password_change', $requiresPwChange);
 
         try {
             Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$ip, $user['id']]);
@@ -461,9 +517,18 @@ class AuthController extends Controller
     public function logout(): void
     {
         $isAjax = $this->request->isAjax() || $this->request->header('Accept') === 'application/json' || $this->request->input('ajax') === '1';
-        if (Auth::id()) {
+        $userId = Auth::id();
+        $user = Auth::user();
+        $roleSlug = (string)($user['role_slug'] ?? Session::get('role_slug', ''));
+
+        if ($userId) {
             try {
-                AuditService::log('auth', 'logout', (string)Auth::id());
+                if ($roleSlug === 'member') {
+                    \App\Services\SecurityAuditService::recordMemberLogout((int)$userId, 'member');
+                } else {
+                    \App\Services\SecurityAuditService::recordAdminLogout((int)$userId, $roleSlug ?: 'staff');
+                }
+                AuditService::log('auth', 'logout', (string)$userId);
             } catch (\Throwable $e) {}
         }
         \App\Services\MemberPdpaService::revokeSessionAcknowledgement();

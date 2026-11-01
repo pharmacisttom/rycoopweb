@@ -198,15 +198,65 @@ php tests/MemberPiiMaskingAndActivationTest.php
 php tests/MemberLoginPdpaOnlyFlowTest.php
 ```
 
-### Step 3: Rollback Plan
+### Step 3: Migration Execution (TEST ONLY)
+```bash
+# Run migration 028 for separated security audit logs
+mysql -u root -p rycoopweb_test < database/migrations/028_create_security_audit_logs.sql
+```
+
+### Step 4: Verification
+```bash
+# Run automated tests including authentication separation and audit logging
+php tests/AuthSeparationAndAuditLoggingTest.php
+php tests/MemberPiiMaskingAndActivationTest.php
+php tests/MemberLoginPdpaOnlyFlowTest.php
+php tests/MemberPdpaGateTest.php
+```
+
+### Step 5: Rollback Plan
 If any discrepancy occurs in TEST:
 ```bash
 # 1. Revert Git state to reference commit
 git checkout ba30bef54639a146d98a564cbf80b3fbde67c1fd
 
-# 2. Restore database if mutations occurred
+# 2. Rollback migration 028 if needed
+mysql -u root -p rycoopweb_test -e "DROP TABLE IF EXISTS security_audit_logs;"
+
+# 3. Restore database if mutations occurred
 mysql -u root -p rycoopweb_test < backup_rycoopweb_test_pre_masking.sql
 
-# 3. Rebuild frontend
+# 4. Rebuild frontend
 npm run build
 ```
+
+---
+
+## 7. Authentication Separation & Mandatory 2FA Enforcement
+
+### A. Member Portal Context vs Backend Context
+- **Context Separation**:
+  - `Session::get('auth_context') === 'member'` strictly bound to member users.
+  - `Session::get('auth_context') === 'backend'` strictly bound to staff/admin roles.
+- **Access Isolation**:
+  - Members are unconditionally denied access to all administrative endpoints (`/admin/*`, `/api/admin/*`) via `RoleMiddleware`.
+  - Any access attempt triggers `MEMBER_ACCESS_DENIED` in `security_audit_logs`.
+- **PDPA Gate**:
+  - Member financial endpoints (`/api/member/dividends`, `/api/member/shares`, etc.) require explicit session acknowledgement of PDPA v3.0 on every authenticated session.
+
+### B. Mandatory Backend 2FA
+- **Universal Enforcement**: Applies to `super_admin`, `member_admin`, `staff`, `finance`, `auditor`, and any non-member role.
+- **Two-Step Verification**:
+  1. Username and password verified first; session receives `2fa_verified = false`.
+  2. If 2FA not enrolled: challenge routes to `/admin/mfa/enroll`.
+  3. If 2FA enrolled: challenge routes to `/admin/mfa/verify`.
+  4. Only after valid TOTP or recovery code verification does session become privileged (`2fa_verified = true`).
+- **Fail-Closed Protection**:
+  - `AuthMiddleware` blocks partial 2FA sessions with HTTP 403 `TWO_FACTOR_REQUIRED` or `MFA_ENROLLMENT_REQUIRED`.
+  - Sensitive operations (financial exports, member editing, access management) cannot be reached with partial sessions.
+
+### C. Audit Trail Taxonomy (`security_audit_logs`)
+- **Member Events**: `MEMBER_LOGIN_SUCCESS`, `MEMBER_LOGIN_FAILED`, `MEMBER_LOGOUT`, `MEMBER_PDPA_VIEWED`, `MEMBER_PDPA_ACKNOWLEDGED`, `MEMBER_FINANCIAL_VIEW`, `MEMBER_SESSION_EXPIRED`, `MEMBER_ACCESS_DENIED`.
+- **Backend Events**: `ADMIN_LOGIN_SUCCESS`, `ADMIN_LOGIN_FAILED`, `ADMIN_2FA_SUCCESS`, `ADMIN_2FA_FAILED`, `ADMIN_LOGOUT`, `ADMIN_MEMBER_VIEW`, `ADMIN_MEMBER_UPDATE`, `ADMIN_FINANCIAL_IMPORT`, `ADMIN_FINANCIAL_EXPORT`, `ADMIN_ACCOUNT_ACTIVATION`, `ADMIN_PERMISSION_CHANGED`.
+- **Sensitive Data Protections**:
+  - All raw citizen IDs, initial passwords, TOTP codes, and financial account numbers/amounts are scrubbed or masked.
+  - Event ID (UUIDv4), Request Correlation ID, and SHA-256 session fingerprints recorded on every entry.

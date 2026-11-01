@@ -68,6 +68,7 @@ class MemberPdpaController extends Controller
         }
 
         $acknowledged = MemberPdpaService::isAcknowledged($userId, $nonce, (int) $policy['id']);
+        \App\Services\SecurityAuditService::recordMemberPdpaViewed($userId, (string) $policy['version']);
 
         $this->response->json([
             'success' => true,
@@ -189,6 +190,12 @@ class MemberPdpaController extends Controller
                 $this->response->json($result, 409);
                 return;
             }
+
+            \App\Services\SecurityAuditService::recordMemberPdpaAcknowledged(
+                $userId,
+                (string) ($result['policy_version'] ?? $policyVersion),
+                (int) ($result['ack_id'] ?? 0)
+            );
 
             $this->response->json([
                 'success' => true,
