@@ -22,6 +22,7 @@ final class SecurityRegressionTest
         self::assertLoginKeepsCsrfProtection();
         self::assertAdminDashboardImportsLoanProducts();
         self::assertMemberPortalIsDenyByDefault();
+        self::assertLegacyMigrationBackupRestoreGate();
 
         if (self::$failures === 0) {
             echo "Security regression tests passed.\n";
@@ -30,6 +31,13 @@ final class SecurityRegressionTest
 
         echo self::$failures . " security regression test(s) failed.\n";
         return false;
+    }
+
+    private static function assertLegacyMigrationBackupRestoreGate(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../app/Services/LegacyMemberMigrationService.php');
+        self::assert($source !== false && str_contains($source, "config('security.dual_control.backup_restore_execution_enabled', false)"), 'migration checks actual nested backup restore safety flag');
+        self::assert((bool)config('security.dual_control.backup_restore_execution_enabled', false) === filter_var(env('BACKUP_RESTORE_EXECUTION_ENABLED', false), FILTER_VALIDATE_BOOL), 'backup restore safety flag resolves through runtime configuration');
     }
 
     private static function assertNoAuthenticationBypass(): void

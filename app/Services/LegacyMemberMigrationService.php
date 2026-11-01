@@ -355,7 +355,7 @@ class LegacyMemberMigrationService
         if (!$bypass) {
             $memberPortalEnabled = config('features.member_portal', false);
             $memberLoginEnabled = config('features.member_login', false);
-            $backupRestoreEnabled = config('security.backup_restore_execution_enabled', false);
+            $backupRestoreEnabled = config('security.dual_control.backup_restore_execution_enabled', false);
 
             if ($memberPortalEnabled === true) {
                 throw new RuntimeException("Safety violation: features.member_portal must be false during migration.");
