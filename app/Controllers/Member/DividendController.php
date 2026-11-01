@@ -4,6 +4,7 @@ namespace App\Controllers\Member;
 use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Database;
+use App\Core\Session;
 use App\Services\MemberPortalService;
 
 class DividendController extends Controller
@@ -15,6 +16,17 @@ class DividendController extends Controller
             $this->response->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
             return;
         }
+
+        // Security gate: Require secure password setup before accessing financial dividends
+        if (Session::get('requires_password_change') === true) {
+            $this->response->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if (!$member) {
             $this->response->json(['success' => false, 'code' => 'MEMBER_NOT_LINKED', 'message' => 'ไม่พบข้อมูลสมาชิก กรุณาติดต่อสหกรณ์'], 404);

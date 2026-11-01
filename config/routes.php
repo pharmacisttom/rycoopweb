@@ -126,6 +126,7 @@ $router->group(['prefix'=>'api/admin/members','middleware'=>[AuthMiddleware::cla
     $r->get('/requests','Admin\\MemberManagementController@requests');
     $r->get('/{id}','Admin\\MemberManagementController@show');
     $r->post('/{id}','Admin\\MemberManagementController@update',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
+    $r->post('/{id}/activate','Admin\\MemberManagementController@activate',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
     $r->post('/{id}/dividends/{year}','Admin\\MemberManagementController@updateDividend',[new PermissionMiddleware('dividends','update'),CsrfMiddleware::class]);
     $r->post('/requests/{id}/approve','Admin\\MemberManagementController@approveRequest',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);
     $r->post('/requests/{id}/reject','Admin\\MemberManagementController@rejectRequest',[new PermissionMiddleware('members','update'),CsrfMiddleware::class]);

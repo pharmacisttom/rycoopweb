@@ -25,16 +25,21 @@ class MemberMiddleware
                 "SELECT u.status, r.slug as role_slug FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id WHERE u.id = ? AND u.deleted_at IS NULL",
                 [$sessionUserId]
             );
-            if ($rawUser && ($rawUser['status'] ?? '') === 'suspended') {
+            if ($rawUser && ($rawUser['status'] ?? 'active') !== 'active') {
+                $isInactive = ($rawUser['status'] ?? '') === 'inactive';
+                $code = $isInactive ? 'ACCOUNT_INACTIVE' : 'ACCOUNT_SUSPENDED';
+                $msg = $isInactive
+                    ? 'บัญชีผู้ใช้งานนี้อยู่ระหว่างรอการเปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่เพื่อยืนยันตัวตน'
+                    : 'บัญชีผู้ใช้งานนี้ถูกระงับ กรุณาติดต่อสหกรณ์';
                 if ($request->isAjax()) {
                     $response->json([
                         'success' => false,
-                        'code' => 'ACCOUNT_SUSPENDED',
-                        'message' => 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน กรุณาติดต่อสหกรณ์'
+                        'code' => $code,
+                        'message' => $msg
                     ], 403);
                     return false;
                 }
-                Session::flash('error', 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน กรุณาติดต่อสหกรณ์');
+                Session::flash('error', $msg);
                 $response->redirect(url('login'));
                 return false;
             }
@@ -75,15 +80,20 @@ class MemberMiddleware
 
         // 2. User account in users table must be active
         if ($userStatus !== 'active') {
+            $isInactive = $userStatus === 'inactive';
+            $code = $isInactive ? 'ACCOUNT_INACTIVE' : 'ACCOUNT_SUSPENDED';
+            $msg = $isInactive
+                ? 'บัญชีผู้ใช้งานนี้อยู่ระหว่างรอการเปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่เพื่อยืนยันตัวตน'
+                : 'บัญชีผู้ใช้งานนี้ถูกระงับ กรุณาติดต่อสหกรณ์';
             if ($request->isAjax()) {
                 $response->json([
                     'success' => false,
-                    'code' => 'ACCOUNT_SUSPENDED',
-                    'message' => 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน กรุณาติดต่อสหกรณ์'
+                    'code' => $code,
+                    'message' => $msg
                 ], 403);
                 return false;
             }
-            Session::flash('error', 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน กรุณาติดต่อสหกรณ์');
+            Session::flash('error', $msg);
             $response->redirect(url('login'));
             return false;
         }

@@ -14,6 +14,35 @@ use App\Services\TwoFactorService;
 
 class AuthController extends Controller
 {
+    public static function pseudonymizeIdentifier(string $identifier): string
+    {
+        $trimmed = trim($identifier);
+        $cleanDigits = preg_replace('/\D/', '', $trimmed);
+
+        // 13-digit Thai Citizen ID (raw or formatted)
+        if (strlen($cleanDigits) === 13) {
+            return substr($cleanDigits, 0, 3) . 'XXXXXX' . substr($cleanDigits, -4);
+        }
+
+        // Email address
+        if (filter_var($trimmed, FILTER_VALIDATE_EMAIL)) {
+            $parts = explode('@', $trimmed, 2);
+            $name = $parts[0];
+            $domain = $parts[1] ?? '';
+            $maskedName = strlen($name) <= 2 ? substr($name, 0, 1) . '***' : substr($name, 0, 2) . '***' . substr($name, -1);
+            return $maskedName . '@' . $domain;
+        }
+
+        // If identifier contains any sequence of 13 digits, mask it
+        if (preg_match('/\d{13}/', $trimmed)) {
+            return (string)preg_replace_callback('/\d{13}/', function ($matches) {
+                return substr($matches[0], 0, 3) . 'XXXXXX' . substr($matches[0], -4);
+            }, $trimmed);
+        }
+
+        return $trimmed;
+    }
+
     public function options(): void
     {
         $service=new \App\Services\GoogleAuthService();
@@ -87,6 +116,7 @@ class AuthController extends Controller
         }
 
         $isValid = false;
+        $maskedIdentifier = self::pseudonymizeIdentifier($inputUsername);
 
         // Check against DB hash
         if ($user && !empty($user['password']) && password_verify($password, $user['password'])) {
@@ -94,12 +124,12 @@ class AuthController extends Controller
         }
 
         if (!$isValid) {
-            // Log failed attempt
+            // Log failed attempt with masked identifier to prevent PII exposure
             try {
-                Database::execute("INSERT INTO login_logs (email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, 'failed', 'รหัสผ่านไม่ถูกต้อง หรือไม่พบบัญชีผู้ใช้', ?, ?, NOW())", [$inputUsername, $ip, $ua]);
+                Database::execute("INSERT INTO login_logs (email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, 'failed', 'รหัสผ่านไม่ถูกต้อง หรือไม่พบบัญชีผู้ใช้', ?, ?, NOW())", [$maskedIdentifier, $ip, $ua]);
             } catch (\Throwable $e) {}
 
-            Logger::auth("Failed login attempt for: {$inputUsername} from IP: {$ip}");
+            Logger::auth("Failed login attempt for: {$maskedIdentifier} from IP: {$ip}");
 
             $errorMsg = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
             if ($isAjax) {
@@ -113,13 +143,25 @@ class AuthController extends Controller
         }
 
         if (($user['status'] ?? 'active') !== 'active') {
+            $userStatus = (string) ($user['status'] ?? 'inactive');
+            $isInactive = $userStatus === 'inactive';
+            $reason = $isInactive ? 'บัญชีอยู่ระหว่างรอการเปิดใช้งาน' : 'บัญชีถูกระงับการใช้งาน';
+            $errorMsg = $isInactive
+                ? 'บัญชีผู้ใช้งานนี้อยู่ระหว่างรอการเปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่เพื่อยืนยันตัวตน'
+                : 'บัญชีผู้ใช้งานนี้ถูกระงับ กรุณาติดต่อสหกรณ์';
+            $errorCode = $isInactive ? 'ACCOUNT_INACTIVE' : 'ACCOUNT_SUSPENDED';
+
             try {
-                Database::execute("INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', 'บัญชีถูกระงับการใช้งาน', ?, ?, NOW())", [$user['id'], $inputUsername, $ip, $ua]);
+                Database::execute(
+                    "INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', ?, ?, ?, NOW())",
+                    [$user['id'], $maskedIdentifier, $reason, $ip, $ua]
+                );
             } catch (\Throwable $e) {}
 
-            $errorMsg = 'บัญชีผู้ใช้งานนี้ถูกระงับ กรุณาติดต่อผู้ดูแลระบบ';
+            Logger::auth("Blocked login for {$userStatus} user: {$maskedIdentifier} from IP: {$ip}");
+
             if ($isAjax) {
-                $this->response->json(['success' => false, 'message' => $errorMsg], 403);
+                $this->response->json(['success' => false, 'code' => $errorCode, 'message' => $errorMsg], 403);
                 return;
             }
 
@@ -132,7 +174,7 @@ class AuthController extends Controller
         if ($roleSlug === '' || ($roleSlug === 'member' && !config('features.member_login', false))) {
             $reason = $roleSlug === '' ? 'Account has no assigned role' : 'Member portal disabled';
             try {
-                Database::execute("INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', ?, ?, ?, NOW())", [$user['id'], $inputUsername, $reason, $ip, $ua]);
+                Database::execute("INSERT INTO login_logs (user_id, email, status, failure_reason, ip_address, user_agent, created_at) VALUES (?, ?, 'locked_out', ?, ?, ?, NOW())", [$user['id'], $maskedIdentifier, $reason, $ip, $ua]);
             } catch (\Throwable $e) {}
 
             $message = $roleSlug === ''
@@ -177,11 +219,32 @@ class AuthController extends Controller
         if ($roleSlug === 'member') {
             Session::regenerate();
             \App\Services\MemberPdpaService::initMemberSession($user);
+
+            // Require secure password setup before financial access if account was activated
+            // and has not yet completed a secure password change
+            $requiresPwChange = false;
+            try {
+                $memberRecord = Database::first('SELECT id FROM members WHERE user_id = ? LIMIT 1', [$user['id']]);
+                if ($memberRecord) {
+                    $wasActivated = (bool)Database::first(
+                        "SELECT 1 FROM audit_logs WHERE module = 'member_management' AND action = 'activate_account' AND record_id = ? LIMIT 1",
+                        [(string)$memberRecord['id']]
+                    );
+                    if ($wasActivated) {
+                        $hasChangedPw = (bool)Database::first(
+                            "SELECT 1 FROM audit_logs WHERE user_id = ? AND action = 'password_change' LIMIT 1",
+                            [$user['id']]
+                        );
+                        $requiresPwChange = !$hasChangedPw;
+                    }
+                }
+            } catch (\Throwable $e) {}
+            Session::set('requires_password_change', $requiresPwChange);
         }
 
         try {
             Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$ip, $user['id']]);
-            Database::execute("INSERT INTO login_logs (user_id, email, status, ip_address, user_agent, created_at) VALUES (?, ?, 'success', ?, ?, NOW())", [$user['id'], $inputUsername, $ip, $ua]);
+            Database::execute("INSERT INTO login_logs (user_id, email, status, ip_address, user_agent, created_at) VALUES (?, ?, 'success', ?, ?, NOW())", [$user['id'], $maskedIdentifier, $ip, $ua]);
             AuditService::log('auth', 'login', (string)$user['id'], null, ['status' => 'success']);
         } catch (\Throwable $e) {}
 
@@ -295,6 +358,22 @@ class AuthController extends Controller
             return;
         }
 
+        // Check if member user is attempting to set password to their member_no, id_card or default
+        $memberRecord = Database::first('SELECT member_no, id_card FROM members WHERE user_id = ? LIMIT 1', [$user['id']]);
+        if ($memberRecord) {
+            $cleanMemberNo = ltrim((string)($memberRecord['member_no'] ?? ''), '0');
+            if ($newPass === ($memberRecord['member_no'] ?? '') || $newPass === $cleanMemberNo || $newPass === ($memberRecord['id_card'] ?? '') || $newPass === 'coop1234') {
+                $msg = 'รหัสผ่านใหม่ต้องไม่ตรงกับเลขสมาชิกหรือเลขบัตรประชาชน';
+                if ($isAjax) {
+                    $this->response->json(['success' => false, 'message' => $msg], 422);
+                    return;
+                }
+                Session::flash('error', $msg);
+                $this->redirect($this->safeRefererUrl());
+                return;
+            }
+        }
+
         // Check current password against DB hash — never compare plaintext
         if (empty($user['password'])) { $this->response->json(['success'=>false,'message'=>'บัญชีนี้ต้องจัดการรหัสผ่านผ่านผู้ให้บริการยืนยันตัวตน'],403); return; }
         if (!empty($user['password'])) {
@@ -314,6 +393,9 @@ class AuthController extends Controller
         $pwConfig = config('security.password');
         $hash = password_hash($newPass, $pwConfig['algo'] ?? PASSWORD_DEFAULT, $pwConfig['options'] ?? []);
         Database::execute("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?", [$hash, $user['id']]);
+
+        // Secure password setup complete: clear requirement flag
+        Session::set('requires_password_change', false);
 
         try {
             AuditService::log('auth', 'password_change', (string)$user['id'], null, ['username' => $user['username']]);

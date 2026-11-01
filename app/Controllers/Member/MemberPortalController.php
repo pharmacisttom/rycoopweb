@@ -575,6 +575,19 @@ class MemberPortalController extends Controller
         }
 
         $userId = (int)Auth::id();
+        $memberRecord = Database::first('SELECT member_no, id_card FROM members WHERE user_id = ? LIMIT 1', [$userId]);
+        if ($memberRecord) {
+            $cleanMemberNo = ltrim((string)($memberRecord['member_no'] ?? ''), '0');
+            if ($newPass === ($memberRecord['member_no'] ?? '') || $newPass === $cleanMemberNo || $newPass === ($memberRecord['id_card'] ?? '') || $newPass === 'coop1234') {
+                if ($isAjax) {
+                    $this->json(['success' => false, 'message' => 'รหัสผ่านใหม่ต้องไม่ตรงกับเลขสมาชิกหรือเลขบัตรประชาชน'], 422);
+                    return;
+                }
+                Session::flash('error', 'รหัสผ่านใหม่ต้องไม่ตรงกับเลขสมาชิกหรือเลขบัตรประชาชน');
+                $this->redirect(url('member/settings'));
+                return;
+            }
+        }
         $user = Database::first("SELECT password FROM users WHERE id = ? LIMIT 1", [$userId]);
 
         if ($user && !empty($user['password']) && !empty($currentPass)) {
@@ -592,6 +605,7 @@ class MemberPortalController extends Controller
         $pwConfig = config('security.password');
         $hash = password_hash($newPass, $pwConfig['algo'] ?? PASSWORD_DEFAULT, $pwConfig['options'] ?? []);
         Database::execute("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?", [$hash, $userId]);
+        Session::set('requires_password_change', false);
 
         AuditService::log('auth', 'password_change', (string)$userId);
 

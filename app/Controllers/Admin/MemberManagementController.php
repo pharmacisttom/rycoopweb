@@ -163,10 +163,19 @@ class MemberManagementController extends Controller
         $this->respond(function()use($id){MemberSystemHealth::requireWrites();MemberAdminService::updateProfile($this->id($id),$this->request->all());return ['message'=>'บันทึกข้อมูลสมาชิกแล้ว'];});
     }
 
+    public function activate(string $id): void
+    {
+        $this->respond(function() use ($id) {
+            MemberSystemHealth::requireWrites();
+            return MemberAdminService::activateAccount($this->id($id), $this->request->all());
+        });
+    }
+
     public function updateDividend(string $id,string $year): void
     {
         $this->respond(function()use($id,$year){MemberSystemHealth::requireWrites();if(!preg_match('/^\d{4}$/D',$year))throw new MemberDataException('ปีไม่ถูกต้อง');MemberAdminService::updateDividend($this->id($id),(int)$year,$this->request->all());return ['message'=>'บันทึกข้อมูลปันผลแล้ว'];});
     }
+
     public function requests(): void
     {
         $this->respond(function() {

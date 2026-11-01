@@ -330,6 +330,15 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Core\Session::get('requires_password_change') === true) {
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
         $notifications = MemberPortalService::getNotifications((int)$member['id']);
 
@@ -474,6 +483,15 @@ class SpaApiController extends Controller
     {
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
+
+        if (\App\Core\Session::get('requires_password_change') === true) {
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
 
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
 

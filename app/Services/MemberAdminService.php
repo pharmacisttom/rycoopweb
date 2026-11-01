@@ -7,6 +7,11 @@ use App\Services\MemberDataException as RuntimeException;
 
 class MemberAdminService
 {
+    private static function lockClause(bool $lock = true): string
+    {
+        return $lock && Database::connect()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+    }
+
     public static function version(array $data): string { return hash('sha256', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)); }
     public static function recordChange(int $memberId, string $action, string $reason, ?array $before, array $after): void
     {
@@ -19,7 +24,7 @@ class MemberAdminService
             MemberSystemHealth::requireColumns(['members'=>['id','user_id','member_no','id_card','first_name','last_name','status']],$columns);
             $fields=array_map(static fn($field)=>in_array($field,$columns['members'],true)?$field:'NULL AS '.$field,$fields);
         }
-        $member = Database::first('SELECT '.implode(',',$fields).' FROM members WHERE id=?' . ($lock ? ' FOR UPDATE' : ''), [$id]);
+        $member = Database::first('SELECT '.implode(',',$fields).' FROM members WHERE id=?' . self::lockClause($lock), [$id]);
         if (!$member) { throw new RuntimeException('ไม่พบสมาชิก'); }
         return $member;
     }
@@ -46,18 +51,109 @@ class MemberAdminService
             if ($after['first_name'] === '' || mb_strlen($after['prefix'] . $after['first_name'] . ' ' . $after['last_name']) > 100) { throw new RuntimeException('กรุณาระบุชื่อ โดยชื่อเต็มต้องไม่เกิน 100 ตัวอักษร'); }
             if (!in_array($after['status'], ['active','resigned','suspended'], true)) { throw new RuntimeException('สถานะไม่ถูกต้อง'); }
             if ($after['email'] !== '' && !filter_var($after['email'], FILTER_VALIDATE_EMAIL)) { throw new RuntimeException('อีเมลไม่ถูกต้อง'); }
-            if (Database::first('SELECT id FROM members WHERE id<>? AND (id_card=? OR member_no=?) LIMIT 1 FOR UPDATE', [$id,$after['id_card'],$after['member_no']])) { throw new RuntimeException('เลขบัตรประชาชนหรือเลขสมาชิกซ้ำกับบัญชีอื่น'); }
+            if (Database::first('SELECT id FROM members WHERE id<>? AND (id_card=? OR member_no=?) LIMIT 1' . self::lockClause(), [$id,$after['id_card'],$after['member_no']])) { throw new RuntimeException('เลขบัตรประชาชนหรือเลขสมาชิกซ้ำกับบัญชีอื่น'); }
             if ($before['user_id']) {
-                $user = Database::first('SELECT id,username FROM users WHERE id=? FOR UPDATE', [$before['user_id']]);
+                $user = Database::first('SELECT id,username,status FROM users WHERE id=?' . self::lockClause(), [$before['user_id']]);
                 if (Database::first("SELECT ur.id FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.slug<>'member'", [$before['user_id']])) { throw new RuntimeException('บัญชีนี้มีสิทธิ์เจ้าหน้าที่ กรุณาจัดการผ่านระบบผู้ใช้งาน'); }
                 if (Database::first('SELECT id FROM users WHERE id<>? AND username=?', [$before['user_id'],$after['id_card']])) { throw new RuntimeException('ชื่อผู้ใช้ซ้ำกับบัญชีอื่น'); }
-                Database::execute('UPDATE users SET name=?,username=?,status=?,updated_at=NOW() WHERE id=?', [trim($after['prefix'].$after['first_name'].' '.$after['last_name']), $after['id_card'], $after['status']==='active'?'active':'suspended', $before['user_id']]);
+                // Preserve inactive user status if user has not yet been verified & activated
+                $newStatus = ($user['status'] ?? 'inactive') === 'inactive'
+                    ? ($after['status'] === 'suspended' ? 'suspended' : 'inactive')
+                    : ($after['status'] === 'active' ? 'active' : 'suspended');
+                Database::execute('UPDATE users SET name=?,username=?,status=?,updated_at=NOW() WHERE id=?', [trim($after['prefix'].$after['first_name'].' '.$after['last_name']), $after['id_card'], $newStatus, $before['user_id']]);
             }
             Database::execute('UPDATE members SET member_no=?,id_card=?,prefix=?,first_name=?,last_name=?,department=?,phone=?,email=?,address=?,status=?,updated_at=NOW() WHERE id=?', [$after['member_no'],$after['id_card'],$after['prefix'],$after['first_name'],$after['last_name'],$after['department'],$after['phone'],$after['email'],$after['address'],$after['status'],$id]);
             if ($before !== $after) { self::recordChange($id,'profile_update',$reason,$before,$after); }
             $pdo->commit();
         } catch (\Throwable $e) { $pdo->rollBack(); throw $e; }
     }
+
+    public static function activateAccount(int $memberId, array $input): array
+    {
+        $verificationMethod = trim((string)($input['verification_method'] ?? ''));
+        $allowedMethods = ['in_person', 'official_document', 'call_verification', 'branch_visit', 'identity_verified'];
+        if (!in_array($verificationMethod, $allowedMethods, true)) {
+            throw new RuntimeException('กรุณาระบุวิธีการยืนยันตัวตนที่ถูกต้อง (in_person, official_document, call_verification, branch_visit, identity_verified)');
+        }
+
+        $reason = trim((string)($input['reason'] ?? $input['notes'] ?? ''));
+        if ($reason === '' || mb_strlen($reason) > 500) {
+            throw new RuntimeException('กรุณาระบุบันทึกเหตุผลการเปิดใช้งานบัญชีไม่เกิน 500 ตัวอักษร');
+        }
+
+        $pdo = Database::connect();
+        $pdo->beginTransaction();
+        try {
+            $member = self::profile($memberId, true);
+            if (($member['status'] ?? '') !== 'active') {
+                throw new RuntimeException('สมาชิกต้องมีสถานะปกติ (active) จึงจะสามารถเปิดใช้งานบัญชีผู้ใช้ได้');
+            }
+
+            $userId = (int)($member['user_id'] ?? 0);
+            if ($userId <= 0) {
+                throw new RuntimeException('ไม่พบบัญชีผู้ใช้ที่เชื่อมโยงกับสมาชิกรายนี้');
+            }
+
+            $user = Database::first('SELECT id, username, status, password FROM users WHERE id = ?' . self::lockClause(), [$userId]);
+            if (!$user) {
+                throw new RuntimeException('ไม่พบบัญชีผู้ใช้ในระบบ');
+            }
+
+            // Verify user is a member role (never activate staff accounts here)
+            $isStaff = (bool)Database::first(
+                "SELECT ur.id FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ? AND r.slug <> 'member'",
+                [$userId]
+            );
+            if ($isStaff) {
+                throw new RuntimeException('ไม่สามารถเปิดใช้งานบัญชีเจ้าหน้าที่ผ่านระบบสมาชิกได้');
+            }
+
+            $beforeStatus = (string)($user['status'] ?? 'inactive');
+            if ($beforeStatus === 'active') {
+                $pdo->rollBack();
+                return ['success' => true, 'already_active' => true, 'message' => 'บัญชีผู้ใช้นี้เปิดใช้งานอยู่แล้ว'];
+            }
+
+            // Update user status to active
+            Database::execute("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?", [$userId]);
+
+            $staffId = PHP_SAPI === 'cli' ? null : Auth::id();
+
+            // Record to member_data_changes
+            self::recordChange(
+                $memberId,
+                'account_activation',
+                $reason,
+                ['user_id' => $userId, 'status' => $beforeStatus],
+                ['user_id' => $userId, 'status' => 'active', 'verification_method' => $verificationMethod, 'activated_by' => $staffId]
+            );
+
+            // Record audit log
+            AuditService::log(
+                'member_management',
+                'activate_account',
+                (string)$memberId,
+                ['user_id' => $userId, 'status' => $beforeStatus],
+                ['user_id' => $userId, 'status' => 'active', 'verification_method' => $verificationMethod],
+                true
+            );
+
+            $pdo->commit();
+            return [
+                'success' => true,
+                'member_id' => $memberId,
+                'user_id' => $userId,
+                'previous_status' => $beforeStatus,
+                'new_status' => 'active',
+                'verification_method' => $verificationMethod,
+                'message' => 'เปิดใช้งานบัญชีผู้ใช้เรียบร้อยแล้ว'
+            ];
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public static function cents(mixed $value): int
     {
         if (!is_scalar($value)) { throw new RuntimeException('จำนวนเงินต้องเป็นตัวเลข'); }
@@ -75,7 +171,7 @@ class MemberAdminService
         $pdo = Database::connect(); $pdo->beginTransaction();
         try {
             self::profile($memberId,true);
-            $row = Database::first('SELECT id,details_json FROM member_dividends WHERE member_id=? AND year=? FOR UPDATE',[$memberId,$year]);
+            $row = Database::first('SELECT id,details_json FROM member_dividends WHERE member_id=? AND year=?' . self::lockClause(),[$memberId,$year]);
             if (!$row) { throw new RuntimeException('ไม่พบรายการปันผลปีที่เลือก'); }
             $before = json_decode($row['details_json'],true,512,JSON_THROW_ON_ERROR);
             if (!hash_equals(self::version($before),(string)($input['version']??''))) { throw new RuntimeException('รายการถูกแก้ไขแล้ว กรุณาโหลดข้อมูลล่าสุด'); }
