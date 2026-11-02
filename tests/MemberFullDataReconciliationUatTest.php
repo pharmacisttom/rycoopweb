@@ -156,7 +156,7 @@ while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $maskedNo = MemberPiiMaskingService::maskMemberNo($r['member_no']);
     $maskedName = MemberPiiMaskingService::maskFullName(trim($r['first_name'] . ' ' . $r['last_name']));
     
-    if (!preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedId) || !preg_match('/^\d{2}\*\d{2}$/u', $maskedNo) || !str_contains($maskedName, '*')) {
+    if (!preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedId) || !preg_match('/^\d{2}\*\d{2}$/u', $maskedNo) || !preg_match('/(?:xx|\*)/u', $maskedName)) {
         $piiFailures++;
     }
 }

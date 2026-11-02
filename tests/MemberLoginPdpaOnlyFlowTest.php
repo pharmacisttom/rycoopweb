@@ -486,7 +486,7 @@ $returnedMemberNo = $resDivA->body['member']['member_no'] ?? '';
 testAssert($returnedMemberNo === '00*42', "13. Member A received only Member A records with masked member_no (00*42)");
 testAssert($returnedMemberNo !== '00*99', "13. Member A cannot see Member B's member_no (00*99)");
 $returnedName = $resDivA->body['member']['name'] ?? '';
-testAssert(str_contains($returnedName, '****'), "13. Member A display name is masked for privacy preservation");
+testAssert(str_contains($returnedName, 'xx') || str_contains($returnedName, '****'), "13. Member A display name is masked for privacy preservation");
 $recordNet = $resDivA->body['records'][0]['net'] ?? 0;
 testAssert((float)$recordNet === 16200.00, "13. Member A received exact Member A net dividend (16,200.00 != 43,800.00)");
 

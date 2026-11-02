@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ChangePasswordModal from '../components/common/ChangePasswordModal';
 import './MemberDividendsPage.css';
 
 const money = value => Number(value).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -13,7 +12,7 @@ export default function MemberDividendsPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
-  const [passwordOpen, setPasswordOpen] = useState(false);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(''); setData(null);
@@ -37,12 +36,15 @@ export default function MemberDividendsPage() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [attempt, invalidateSession, navigate]);
+
   const record = data?.records.find(r => String(r.year) === year);
   return <main className="dividend-page container">
-    <div className="dividend-actions"><Link to="/">กลับหน้าแรก</Link>{data && <div><button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่าน</button> <button className="btn btn-outline" onClick={async () => { await logout(); window.location.assign('/member/login'); }}>ออกจากระบบ</button></div>}</div>
+    <div className="dividend-actions">
+      <Link to="/">กลับหน้าแรก</Link>
+      {data && <div><button className="btn btn-outline" onClick={async () => { await logout(); window.location.assign('/member/login'); }}>ออกจากระบบ</button></div>}
+    </div>
     <h1>เงินปันผลและเงินเฉลี่ยคืน</h1>
     <p>ตรวจสอบรายการรายรับ รายหัก และยอดสุทธิประจำปีของคุณ</p>
-    {data && <p className="dividend-note">รหัสผ่านเริ่มต้นคือเลขสมาชิก รวมเลขศูนย์นำหน้า เช่น 00025 กรุณาเปลี่ยนเป็นรหัสผ่านส่วนตัว</p>}
     {loading && <p role="status">กำลังโหลดข้อมูลสมาชิก...</p>}
     {error && <div role="alert" className="dividend-error">{error} <Link to="/member/login">เข้าสู่ระบบ</Link> <button onClick={() => setAttempt(a => a + 1)}>ลองใหม่</button></div>}
     {data && <><p><strong>{data.member.name}</strong> · เลขทะเบียนสมาชิก {data.member.member_no}</p>
@@ -55,6 +57,5 @@ export default function MemberDividendsPage() {
         </>}
       </>}
     </>}
-    <ChangePasswordModal isOpen={passwordOpen} onClose={() => setPasswordOpen(false)} />
   </main>;
 }

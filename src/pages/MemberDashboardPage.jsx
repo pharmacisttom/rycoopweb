@@ -15,7 +15,6 @@ import { COOP_INFO, MEMBER_COMPLAINTS } from '../data/mockData';
 import { fetchMemberDashboard } from '../services/api';
 import StaffReviewModal from '../components/staff/StaffReviewModal';
 import EditProfileModal from '../components/member/EditProfileModal';
-import ChangePasswordModal from '../components/common/ChangePasswordModal';
 import NewLoanRequestModal from '../components/member/NewLoanRequestModal';
 
 // Reusable Dashboard UI Components
@@ -34,7 +33,6 @@ export default function MemberDashboardPage() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedReviewRequest, setSelectedReviewRequest] = useState(null);
   const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
-  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
 
   // Sync activeTab based on pathname and search parameters
   useEffect(() => {
@@ -369,7 +367,6 @@ export default function MemberDashboardPage() {
         <DashboardHeader
           user={user}
           onEditProfile={() => setEditProfileModalOpen(true)}
-          onChangePassword={() => setChangePasswordModalOpen(true)}
           onLogout={handleLogout}
           quickActions={
             userRole === 'member' ? (
@@ -1720,12 +1717,6 @@ export default function MemberDashboardPage() {
         <EditProfileModal
           isOpen={editProfileModalOpen}
           onClose={() => setEditProfileModalOpen(false)}
-        />
-
-        {/* Change Password Modal */}
-        <ChangePasswordModal
-          isOpen={changePasswordModalOpen}
-          onClose={() => setChangePasswordModalOpen(false)}
         />
 
         {/* New Online Loan Request Modal */}

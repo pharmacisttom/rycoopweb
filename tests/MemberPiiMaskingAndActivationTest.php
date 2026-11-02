@@ -337,22 +337,37 @@ echo "=========================================================================\
 // -------------------------------------------------------------------------
 // 1. Thai Name & Surname Masking Tests
 // -------------------------------------------------------------------------
-// Full name: นายกรณ์ชัย สมประสงค์ => นายกร**** สม****
-$maskedKornchai = MemberPiiMaskingService::maskFullName('นายกรณ์ชัย สมประสงค์');
-testAssert($maskedKornchai === 'นายกร**** สม****', "1. Fictional full name masking: 'นายกรณ์ชัย สมประสงค์' => 'นายกร**** สม****'");
+// Expected example: นายจัตุพล กันทะมูล => นายจัตุxx กันxxx
+$maskedJattuphon = MemberPiiMaskingService::maskFullName('นายจัตุพล กันทะมูล');
+testAssert($maskedJattuphon === 'นายจัตุxx กันxxx', "1. Target full name masking: 'นายจัตุพล กันทะมูล' => 'นายจัตุxx กันxxx'");
 
-$maskedComponent = MemberPiiMaskingService::maskMemberName('นาย', 'กรณ์ชัย', 'สมประสงค์');
-testAssert($maskedComponent === 'นายกร**** สม****', "1. Component name masking preserves Thai title and masks first/last names");
+$maskedKornchai = MemberPiiMaskingService::maskFullName('นายกรณ์ชัย สมประสงค์');
+testAssert($maskedKornchai === 'นายกรณ์xx สมปxxx', "1. Fictional full name masking: 'นายกรณ์ชัย สมประสงค์' => 'นายกรณ์xx สมปxxx'");
+
+$maskedComponent = MemberPiiMaskingService::maskMemberName('นาย', 'จัตุพล', 'กันทะมูล');
+testAssert($maskedComponent === 'นายจัตุxx กันxxx', "1. Component name masking preserves Thai title and masks first/last names: 'นายจัตุxx กันxxx'");
 
 // Other Thai titles (นาง, นางสาว, ภก., นพ.)
-testAssert(MemberPiiMaskingService::maskFullName('นางสมพร ใจดีมาก') === 'นางสม**** ใจ****', "1. Title 'นาง' preserved and masked correctly");
-testAssert(MemberPiiMaskingService::maskFullName('นางสาวกัญญา พงษ์ไพศาล') === 'นางสาวกั**** พง****', "1. Title 'นางสาว' preserved and masked correctly");
-testAssert(MemberPiiMaskingService::maskFullName('ภก.ทวีศักดิ์ วรเดช') === 'ภก.ทว**** วร****', "1. Professional title 'ภก.' preserved and masked correctly");
-testAssert(MemberPiiMaskingService::maskFullName('นพ.ประวิทย์ ชัยชนะ') === 'นพ.ปร**** ชั****', "1. Professional title 'นพ.' preserved and masked correctly");
+testAssert(MemberPiiMaskingService::maskFullName('นางสมพร ใจดีมาก') === 'นางสมพรxx ใจxxx', "1. Title 'นาง' preserved and masked correctly: 'นางสมพรxx ใจxxx'");
+testAssert(MemberPiiMaskingService::maskFullName('นางสาวกัญญา พงษ์ไพศาล') === 'นางสาวกัญญxx พงxxx', "1. Title 'นางสาว' preserved and masked correctly: 'นางสาวกัญญxx พงxxx'");
+testAssert(MemberPiiMaskingService::maskFullName('ภก.ทวีศักดิ์ วรเดช') === 'ภก.ทวีxx วรเxxx', "1. Professional title 'ภก.' preserved and masked correctly: 'ภก.ทวีxx วรเxxx'");
+testAssert(MemberPiiMaskingService::maskFullName('นพ.ประวิทย์ ชัยชนะ') === 'นพ.ประxx ชัยxxx', "1. Professional title 'นพ.' preserved and masked correctly: 'นพ.ประxx ชัยxxx'");
 
 // Short names
-testAssert(MemberPiiMaskingService::maskFirstName('ดี') === 'ด****', "1. Short first name handled safely without truncation errors");
-testAssert(MemberPiiMaskingService::maskLastName('สม') === 'ส****', "1. Short surname handled safely without truncation errors");
+testAssert(MemberPiiMaskingService::maskFirstName('ดี') === 'ดีxx', "1. Short first name 'ดี' handled safely with 'xx'");
+testAssert(MemberPiiMaskingService::maskLastName('สม') === 'สมxxx', "1. Short surname 'สม' handled safely with 'xxx'");
+testAssert(MemberPiiMaskingService::maskFirstName('เอก') === 'เอกxx', "1. Short first name 'เอก' handled safely with 'xx'");
+
+// Repeated masking (prevent double masking)
+testAssert(MemberPiiMaskingService::maskFirstName('จัตุxx') === 'จัตุxx', "1. Repeated first name masking prevents double masking");
+testAssert(MemberPiiMaskingService::maskLastName('กันxxx') === 'กันxxx', "1. Repeated last name masking prevents double masking");
+testAssert(MemberPiiMaskingService::maskFullName('นายจัตุxx กันxxx') === 'นายจัตุxx กันxxx', "1. Repeated full name masking prevents double masking");
+
+// Empty and null names
+testAssert(MemberPiiMaskingService::maskFullName('') === '-', "1. Empty full name returns '-'");
+testAssert(MemberPiiMaskingService::maskFullName(null) === '-', "1. Null full name returns '-'");
+testAssert(MemberPiiMaskingService::maskFirstName(null) === '', "1. Null first name returns empty string");
+testAssert(MemberPiiMaskingService::maskLastName(null) === '', "1. Null last name returns empty string");
 
 // -------------------------------------------------------------------------
 // 2. Citizen ID and Member Number Masking Tests
@@ -397,7 +412,7 @@ $sanitized = MemberPiiMaskingService::sanitizeMemberData($rawMemberRecord);
 testAssert(!isset($sanitized['id_card']), "3. Raw 'id_card' strictly unset from sanitized member record");
 testAssert(!isset($sanitized['password']), "3. Raw 'password' strictly unset from sanitized member record");
 testAssert($sanitized['id_card_pdpa'] === '3-****-*****-**-*', "3. 'id_card_pdpa' present as '3-****-*****-**-*'");
-testAssert($sanitized['name'] === 'นายกร**** สม****', "3. 'name' present as 'นายกร**** สม****'");
+testAssert($sanitized['name'] === 'นายกรณ์xx สมปxxx', "3. 'name' present as 'นายกรณ์xx สมปxxx'");
 testAssert($sanitized['member_no'] === '00*42', "3. 'member_no' present as '00*42'");
 testAssert($sanitized['phone'] === '081-XXX-5678', "3. 'phone' present as '081-XXX-5678'");
 
@@ -414,14 +429,14 @@ $resLoginA = testDispatch('POST', '/login', [
 ]);
 testAssert($resLoginA->status === 200, "4. Member A login succeeds with HTTP 200");
 testAssert($resLoginA->body['user']['username'] === '3-****-*****-**-*', "4. Login response returns masked username '3-****-*****-**-*' instead of raw Citizen ID");
-testAssert($resLoginA->body['user']['name'] === 'นายกร**** สม****', "4. Login response returns masked name 'นายกร**** สม****'");
+testAssert($resLoginA->body['user']['name'] === 'นายกรณ์xx สมปxxx', "4. Login response returns masked name 'นายกรณ์xx สมปxxx'");
 testAssert(!str_contains(json_encode($resLoginA->body), '3100600123456'), "4. Raw 13-digit citizen ID NEVER appears in /login JSON response");
 
 // Call /api/auth/me prior to PDPA ack
 $resMe = testDispatch('GET', '/api/auth/me');
 testAssert($resMe->status === 200, "4. /api/auth/me returns HTTP 200");
 testAssert($resMe->body['user']['username'] === '3-****-*****-**-*', "4. /api/auth/me returns masked username '3-****-*****-**-*'");
-testAssert($resMe->body['user']['name'] === 'นายกร**** สม****', "4. /api/auth/me returns masked name 'นายกร**** สม****'");
+testAssert($resMe->body['user']['name'] === 'นายกรณ์xx สมปxxx', "4. /api/auth/me returns masked name 'นายกรณ์xx สมปxxx'");
 testAssert(($resMe->body['user']['pdpa_ack_required'] ?? false) === true, "4. /api/auth/me indicates PDPA acknowledgement is required");
 testAssert(!str_contains(json_encode($resMe->body), '3100600123456'), "4. Raw 13-digit citizen ID NEVER appears in /api/auth/me response");
 
@@ -450,14 +465,14 @@ testAssert($resMeAcked->body['user']['phone'] === '081-XXX-5678', "5. /api/auth/
 $resDivA = testDispatch('GET', '/api/member/dividends');
 testAssert($resDivA->status === 200 && ($resDivA->body['success'] ?? false) === true, "5. Dividends accessible after PDPA acknowledgement");
 testAssert($resDivA->body['member']['member_no'] === '00*42', "5. /api/member/dividends returns masked member_no '00*42'");
-testAssert($resDivA->body['member']['name'] === 'นายกร**** สม****', "5. /api/member/dividends returns masked name 'นายกร**** สม****'");
+testAssert($resDivA->body['member']['name'] === 'นายกรณ์xx สมปxxx', "5. /api/member/dividends returns masked name 'นายกรณ์xx สมปxxx'");
 testAssert(!str_contains(json_encode($resDivA->body), '3100600123456'), "5. Raw 13-digit citizen ID NEVER appears in /api/member/dividends response");
 
 // Access /api/member/profile
 $resProfile = testDispatch('GET', '/api/member/profile');
 testAssert($resProfile->status === 200, "5. /api/member/profile accessible after PDPA acknowledgement");
 testAssert($resProfile->body['data']['member']['member_no'] === '00*42', "5. /api/member/profile returns masked member_no '00*42'");
-testAssert($resProfile->body['data']['member']['name'] === 'นายกร**** สม****', "5. /api/member/profile returns masked name 'นายกร**** สม****'");
+testAssert($resProfile->body['data']['member']['name'] === 'นายกรณ์xx สมปxxx', "5. /api/member/profile returns masked name 'นายกรณ์xx สมปxxx'");
 testAssert(!isset($resProfile->body['data']['member']['id_card']), "5. /api/member/profile strictly omits raw id_card");
 testAssert(!str_contains(json_encode($resProfile->body), '3100600123456'), "5. Raw 13-digit citizen ID NEVER appears in /api/member/profile response");
 

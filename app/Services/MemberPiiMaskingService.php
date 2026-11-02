@@ -10,7 +10,7 @@ namespace App\Services;
  * Enforces PDPA data minimization across member portal APIs, views, and exports.
  *
  * Standard Formats:
- * - Full name: นายกรณ์ชัย สมประสงค์  => นายกร**** สม****
+ * - Full name: นายจัตุพล กันทะมูล => นายจัตุxx กันxxx
  * - Citizen ID: 3-****-*****-**-*
  * - Member number: 00*42
  * - Phone: 081-XXX-5678 (or 08X-XXX-1234)
@@ -29,6 +29,43 @@ class MemberPiiMaskingService
         'ส.อ.', 'ส.ท.', 'ส.ต.',
         'Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.'
     ];
+
+    /**
+     * Extract a Unicode grapheme-cluster-safe prefix of up to $targetLength characters.
+     * Prevents cutting Thai vowels, tone marks, and combining marks mid-cluster.
+     */
+    public static function extractGraphemeSafePrefix(string $text, int $targetLength): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return '';
+        }
+
+        // Split into Unicode extended grapheme clusters (\X)
+        preg_match_all('/\X/u', $text, $matches);
+        $clusters = $matches[0] ?? [];
+
+        if (empty($clusters)) {
+            return mb_substr($text, 0, $targetLength, 'UTF-8');
+        }
+
+        $accumulated = '';
+        foreach ($clusters as $cluster) {
+            $candidate = $accumulated . $cluster;
+            $candidateLen = mb_strlen($candidate, 'UTF-8');
+
+            if ($candidateLen <= $targetLength) {
+                $accumulated = $candidate;
+            } else {
+                if ($accumulated === '') {
+                    $accumulated = $cluster;
+                }
+                break;
+            }
+        }
+
+        return $accumulated;
+    }
 
     /**
      * Mask 13-digit Thai Citizen ID per privacy-preserving format.
@@ -88,8 +125,8 @@ class MemberPiiMaskingService
     }
 
     /**
-     * Mask first name, keeping first 2 UTF-8 characters followed by ****.
-     * Example: กรณ์ชัย => กร****
+     * Mask first name, displaying first four Thai grapheme clusters followed by 'xx'.
+     * Example: จัตุพล => จัตุxx
      */
     public static function maskFirstName(?string $firstName): string
     {
@@ -98,18 +135,19 @@ class MemberPiiMaskingService
         }
 
         $clean = trim($firstName);
-        $len = mb_strlen($clean, 'UTF-8');
 
-        if ($len <= 2) {
-            return mb_substr($clean, 0, 1, 'UTF-8') . '****';
+        // Prevent double masking of previously masked values
+        if (str_ends_with($clean, 'xx') || str_contains($clean, '*')) {
+            return $clean;
         }
 
-        return mb_substr($clean, 0, 2, 'UTF-8') . '****';
+        $prefix = self::extractGraphemeSafePrefix($clean, 4);
+        return $prefix . 'xx';
     }
 
     /**
-     * Mask surname, keeping first 2 UTF-8 characters followed by ****.
-     * Example: สมประสงค์ => สม****
+     * Mask surname, displaying first three Thai grapheme clusters followed by 'xxx'.
+     * Example: กันทะมูล => กันxxx
      */
     public static function maskLastName(?string $lastName): string
     {
@@ -118,18 +156,19 @@ class MemberPiiMaskingService
         }
 
         $clean = trim($lastName);
-        $len = mb_strlen($clean, 'UTF-8');
 
-        if ($len <= 2) {
-            return mb_substr($clean, 0, 1, 'UTF-8') . '****';
+        // Prevent double masking of previously masked values
+        if (str_ends_with($clean, 'xxx') || str_contains($clean, '*')) {
+            return $clean;
         }
 
-        return mb_substr($clean, 0, 2, 'UTF-8') . '****';
+        $prefix = self::extractGraphemeSafePrefix($clean, 3);
+        return $prefix . 'xxx';
     }
 
     /**
      * Mask full name from components (prefix, first name, last name).
-     * Example: ('นาย', 'กรณ์ชัย', 'สมประสงค์') => นายกร**** สม****
+     * Example: ('นาย', 'จัตุพล', 'กันทะมูล') => นายจัตุxx กันxxx
      */
     public static function maskMemberName(?string $prefix, ?string $firstName, ?string $lastName): string
     {
@@ -143,7 +182,7 @@ class MemberPiiMaskingService
 
     /**
      * Mask single full name string, extracting title and masking first and last names.
-     * Example: นายกรณ์ชัย สมประสงค์ => นายกร**** สม****
+     * Example: นายจัตุพล กันทะมูล => นายจัตุxx กันxxx
      */
     public static function maskFullName(?string $fullName): string
     {
@@ -152,6 +191,14 @@ class MemberPiiMaskingService
         }
 
         $cleaned = trim(preg_replace('/\s+/', ' ', $fullName));
+        if ($cleaned === '' || $cleaned === '-') {
+            return '-';
+        }
+
+        // Prevent double masking of previously masked full name
+        if (preg_match('/(?:xx|xxx|\*{2,})/', $cleaned)) {
+            return $cleaned;
+        }
 
         $matchedPrefix = '';
         $nameWithoutPrefix = $cleaned;
