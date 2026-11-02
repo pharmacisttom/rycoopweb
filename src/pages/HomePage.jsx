@@ -562,7 +562,7 @@ export default function HomePage() {
           
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
-            <h2 className="section-title">สินเชื่อเพื่อบุคลากรสาธารณสุข</h2>
+            <h2 className="section-title">เงินกู้ของสหกรณ์</h2>
             <p className="section-subtitle">วงเงินกู้สูง ดอกเบี้ยต่ำ ผ่อนชำระสบาย ยื่นกู้ง่าย อนุมัติรวดเร็ว</p>
             <div className="section-line" />
           </div>

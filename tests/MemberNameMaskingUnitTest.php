@@ -123,3 +123,4 @@ final class MemberNameMaskingUnitTest
 }
 
 exit(MemberNameMaskingUnitTest::run() ? 0 : 1);
+
