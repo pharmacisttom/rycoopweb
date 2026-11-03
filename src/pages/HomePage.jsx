@@ -51,6 +51,10 @@ export default function HomePage() {
   const [heroSlides, setHeroSlides] = useState([]);
 
   useEffect(() => {
+    if (import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true') {
+      setLoading(false);
+      return undefined;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -651,7 +655,7 @@ export default function HomePage() {
                   ))
                 )}
                 {((activeNewsTab === 'news' && newsList.length === 0) || (activeNewsTab === 'announcements' && announcements.length === 0)) && (
-                  <p className="hero-news-empty">ยังไม่มีรายการในขณะนี้</p>
+                  <p className="hero-news-empty">อยู่ระหว่างเตรียมเผยแพร่ข่าวสารประชาสัมพันธ์รอบใหม่ สามารถติดตามประกาศและเอกสารสำคัญได้ที่ศูนย์เอกสาร</p>
                 )}
               </div>
             </section>
@@ -662,6 +666,7 @@ export default function HomePage() {
       {/* =========================================================================
           KEY COOPERATIVE STATS
           ========================================================================= */}
+      {keyStats.length > 0 && (
       <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           
@@ -706,6 +711,7 @@ export default function HomePage() {
 
         </div>
       </section>
+      )}
 
       {/* =========================================================================
           FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)

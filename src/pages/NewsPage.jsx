@@ -18,7 +18,14 @@ export default function NewsPage() {
   const detail = useRef(null);
   useEffect(() => { if (selectedNews && detail.current && !detail.current.open) detail.current.showModal(); }, [selectedNews]);
 
+  const isStaticMode = import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true';
+
   useEffect(() => {
+    if (isStaticMode) {
+      setLoading(false);
+      setNewsList([]);
+      return undefined;
+    }
     let cancelled = false;
     setLoading(true);setError('');
     fetchNews(page).then((result) => {
@@ -108,16 +115,35 @@ export default function NewsPage() {
         </div>
 
         {!loading && filteredNews.length === 0 && (
-          <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>
-            ยังไม่พบข่าวสารที่ตรงกับเงื่อนไข
-          </p>
+          <div style={{
+            textAlign: 'center',
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '1rem',
+            padding: '2.5rem 1.5rem',
+            maxWidth: '640px',
+            margin: '2rem auto',
+            boxShadow: '0 4px 12px rgba(15, 43, 92, 0.04)'
+          }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0F2B5C', marginBottom: '0.75rem' }}>
+              ศูนย์ข้อมูลข่าวสารและประกาศทางการ
+            </h3>
+            <p style={{ color: '#64748B', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              ขณะนี้เว็บไซต์อยู่ในโหมดเผยแพร่ข้อมูลสาธารณะแบบคงที่ ท่านสามารถติดตามประกาศ ข้อบังคับ และเอกสารเผยแพร่ทางการได้ที่ศูนย์เอกสาร
+            </p>
+            <a href="/app/documents" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>ไปยังศูนย์เอกสารและประกาศ</span>
+            </a>
+          </div>
         )}
 
+        {!isStaticMode && total > 0 && (
         <nav aria-label="หน้าข่าว" className="activity-controls">
           <button type="button" className="btn btn-outline" disabled={loading||page===1} onClick={()=>setPage(value=>value-1)}>หน้าก่อนหน้า</button>
           <span>หน้า {page}</span>
           <button type="button" className="btn btn-outline" disabled={loading||page*12>=total} onClick={()=>setPage(value=>value+1)}>หน้าถัดไป</button>
         </nav>
+        )}
         {/* News Detail Modal */}
         {selectedNews && (
           <dialog ref={detail} aria-label={selectedNews.title} onCancel={()=>setSelectedNews(null)} style={{

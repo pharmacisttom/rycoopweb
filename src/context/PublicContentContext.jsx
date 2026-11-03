@@ -3,12 +3,13 @@ import reference from '../data/legacyReference.json';
 
 const PublicContentContext = createContext({ catalog: reference, status: 'reference', reload: async () => {} });
 export function PublicContentProvider({ children }) {
+  const isStaticMode = import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true';
   const [catalog, setCatalog] = useState(reference);
   const [status, setStatus] = useState('reference');
-  const endpointUnavailableRef = useRef(false);
+  const endpointUnavailableRef = useRef(isStaticMode);
 
   const reload = useCallback(async signal => {
-    if (endpointUnavailableRef.current) return;
+    if (isStaticMode || endpointUnavailableRef.current) return;
     try {
       const response = await fetch('/api/public/content', { credentials: 'same-origin', cache: 'no-cache', signal, headers: { Accept: 'application/json' } });
       if (response.status === 404 || response.status === 503) {
@@ -26,14 +27,20 @@ export function PublicContentProvider({ children }) {
       }
     }
   }, []);
-  useEffect(() => { const controller = new AbortController(); reload(controller.signal); return () => controller.abort(); }, [reload]);
   useEffect(() => {
+    if (isStaticMode) return undefined;
+    const controller = new AbortController();
+    reload(controller.signal);
+    return () => controller.abort();
+  }, [reload, isStaticMode]);
+  useEffect(() => {
+    if (isStaticMode) return undefined;
     const onFocus = () => {
       if (!endpointUnavailableRef.current) reload();
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [reload]);
+  }, [reload, isStaticMode]);
   return <PublicContentContext.Provider value={{ catalog, status, reload }}>{children}</PublicContentContext.Provider>;
 }
 export const usePublicContent = () => useContext(PublicContentContext);

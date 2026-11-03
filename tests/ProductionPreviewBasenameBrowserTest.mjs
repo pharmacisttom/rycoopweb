@@ -51,9 +51,21 @@ function startProdPreviewServer(port = 5210) {
       }
 
       // Public API mock for home data if requested
-      if (pathname.startsWith('/api/public/home')) {
+      if (pathname.startsWith('/api/public/home') || pathname.startsWith('/api/public/coop-info') || pathname.startsWith('/api/public/visitors')) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, message: 'Home data not available in public static mode' }));
+        res.end(JSON.stringify({ success: false, message: 'API not available in public static mode' }));
+        return;
+      }
+
+      if (pathname === '/csrf-token') {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'CSRF endpoint not available in static mode' }));
+        return;
+      }
+
+      if (pathname === '/api/visits/record') {
+        res.writeHead(501, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Not Implemented - Static mode' }));
         return;
       }
 
@@ -239,7 +251,8 @@ async function runTests() {
         ['/app/welfare', 'Welfare'],
         ['/app/about', 'About Us'],
         ['/app/contact', 'Contact Us'],
-        ['/app/news', 'News']
+        ['/app/news', 'News'],
+        ['/app/visitor-stats', 'Visitor Stats (Static Notice)']
       ];
 
       for (const [routePath, routeLabel] of testPublicRoutes) {
@@ -320,6 +333,31 @@ async function runTests() {
     const authOptionRequests = requestedUrls.filter(u => u.includes('/api/auth/options'));
     assert.equal(authOptionRequests.length, 0, `Forbidden /api/auth/options requests made in public mode: ${authOptionRequests.length}`);
     console.log('[PASS] ZERO /api/auth/options requests made during public preview.');
+
+    // Static Mode API Suppression Assertions
+    const homeRequests = requestedUrls.filter(u => u.includes('/api/public/home'));
+    assert.equal(homeRequests.length, 0, `Unnecessary /api/public/home requests in static mode: ${homeRequests.length}`);
+    console.log('[PASS] ZERO /api/public/home requests in static mode.');
+
+    const coopInfoRequests = requestedUrls.filter(u => u.includes('/api/public/coop-info'));
+    assert.equal(coopInfoRequests.length, 0, `Unnecessary /api/public/coop-info requests in static mode: ${coopInfoRequests.length}`);
+    console.log('[PASS] ZERO /api/public/coop-info requests in static mode.');
+
+    const visitorStatsRequests = requestedUrls.filter(u => u.includes('/api/public/visitors/summary') || u.includes('/api/public/visitors/analytics'));
+    assert.equal(visitorStatsRequests.length, 0, `Unnecessary visitor stats requests in static mode: ${visitorStatsRequests.length}`);
+    console.log('[PASS] ZERO /api/public/visitors/* requests in static mode.');
+
+    const contentRequests = requestedUrls.filter(u => u.includes('/api/public/content'));
+    assert.equal(contentRequests.length, 0, `Unnecessary /api/public/content requests in static mode: ${contentRequests.length}`);
+    console.log('[PASS] ZERO /api/public/content requests in static mode.');
+
+    const csrfRequests = requestedUrls.filter(u => u.includes('/csrf-token'));
+    assert.equal(csrfRequests.length, 0, `Unnecessary /csrf-token requests in static mode: ${csrfRequests.length}`);
+    console.log('[PASS] ZERO /csrf-token requests in static mode.');
+
+    const visitTrackingRequests = requestedUrls.filter(u => u.includes('/api/visits/record'));
+    assert.equal(visitTrackingRequests.length, 0, `Unnecessary /api/visits/record requests in static mode: ${visitTrackingRequests.length}`);
+    console.log('[PASS] ZERO /api/visits/record tracking requests in static mode.');
 
     // ──────────────────────────────────────────────────────────────────────────
     // PART 3: DEVELOPMENT ROUTING AT / (Port 5211)

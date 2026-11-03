@@ -16,8 +16,17 @@ export default function ContactPage() {
   const [trackingId, setTrackingId] = useState('');
   const [trackingResult, setTrackingResult] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
-  const [faqs,setFaqs]=useState([]);
-  useEffect(()=>{let cancelled=false;fetchFaqs().then(result=>{if(!cancelled && result?.success)setFaqs(result.data.map(f=>({...f,q:f.question,a:f.answer})));});return()=>{cancelled=true;};},[]);
+  const [faqs, setFaqs] = useState(FAQS);
+  useEffect(() => {
+    if (import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true') return undefined;
+    let cancelled = false;
+    fetchFaqs().then(result => {
+      if (!cancelled && result?.success && Array.isArray(result.data)) {
+        setFaqs(result.data.map(f => ({ ...f, q: f.question, a: f.answer })));
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const [form, setForm] = useState({
     name: '',
