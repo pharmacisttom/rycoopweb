@@ -129,8 +129,12 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $validId = (bool)preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedIdCard);
     // Masked member number pattern: 00*42
     $validNo = (bool)preg_match('/^\d{2}\*\d{2}$/u', $maskedMemberNo);
-    // Masked Thai name: approved format with 'xx' for first name and 'xxx' for surname (or fallback '*')
-    $validName = (bool)preg_match('/(?:xx|xxx|\*)/u', $maskedName);
+    // Masked Thai name: approved format with 'xx' for first name and 'xxx' for surname
+    // Standard: นายจัตุพล กันทะมูล -> นายจัตุxx กันxxx
+    $hasLastName = trim((string)$row['last_name']) !== '';
+    $validName = $hasLastName
+        ? ((bool)preg_match('/xx/u', $maskedName) && (bool)preg_match('/xxx/u', $maskedName))
+        : (bool)preg_match('/xx/u', $maskedName);
 
     if (!$validId || !$validNo || !$validName) {
         $formatViolations++;
