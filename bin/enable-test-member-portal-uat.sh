@@ -267,16 +267,39 @@ for subdir in uploads logs tmp; do
     echo "[PASS] Storage symlink for ${subdir} verified -> ${expected_resolved}"
 done
 
-# Requirement 1: Fix Database Connection Verification
+# ------------------------------------------------------------------------------
+# STEP 2.2: INSTALL COMPOSER DEPENDENCIES IN STAGED BACKEND RELEASE
+# (Must be installed before any PHP CLI database or runtime checks)
+# ------------------------------------------------------------------------------
+echo "[DIAGNOSTIC] Installing Composer dependencies in staged UAT backend..."
+cd "${UAT_BACKEND}"
+composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+# Ensure vendor/autoload.php exists before invoking PHP CLI checks
+if [ ! -f "${UAT_BACKEND}/vendor/autoload.php" ]; then
+    echo "[ERROR] vendor/autoload.php not found after composer install! Aborting." >&2
+    exit 1
+fi
+echo "[PASS] Composer dependencies installed and vendor/autoload.php verified."
+
+# ------------------------------------------------------------------------------
+# STEP 2.3: DATABASE CONNECTIVITY & ISOLATION CHECK
 # Use actual config/database.php structure: $config['connections']['mysql']
 # Load staged .env.uat through application's bootstrap mechanism.
 # Use PDO to execute SELECT DATABASE(). Abort unless connected database is strictly rycoopweb_test.
+# ------------------------------------------------------------------------------
 echo "[CHECK 2.1] Verifying runtime database connection to rycoopweb_test via application config..."
+cd "${UAT_BACKEND}"
 php -r "
     require '${UAT_BACKEND}/vendor/autoload.php';
     require '${UAT_BACKEND}/app/Core/helpers.php';
-    \$cfg = require '${UAT_BACKEND}/config/database.php';
-    \$mysql = \$cfg['connections']['mysql'] ?? null;
+    
+    // Validate effective database configuration via application bootstrap
+    \$mysql = config('database.connections.mysql');
+    if (!is_array(\$mysql)) {
+        \$cfg = require '${UAT_BACKEND}/config/database.php';
+        \$mysql = \$cfg['connections']['mysql'] ?? null;
+    }
     if (!is_array(\$mysql)) {
         fprintf(STDERR, 'Missing connections.mysql in config/database.php\n');
         exit(1);
@@ -316,14 +339,16 @@ php -r "
 }
 echo "[PASS] Runtime database connectivity verified: connected strictly to 'rycoopweb_test'."
 
-# Build React frontend with UAT flags
-echo "[DIAGNOSTIC] Installing dependencies and building React frontend with VITE_FEATURE_MEMBER_PORTAL=true..."
+# ------------------------------------------------------------------------------
+# STEP 2.4: BUILD REACT FRONTEND WITH UAT FLAGS
+# ------------------------------------------------------------------------------
+echo "[DIAGNOSTIC] Installing npm dependencies and building React frontend with VITE_FEATURE_MEMBER_PORTAL=true..."
 export VITE_FEATURE_MEMBER_PORTAL="true"
 export FEATURE_MEMBER_PORTAL="true"
 export FEATURE_MEMBER_LOGIN="true"
 export FEATURE_MEMBER_FINANCIAL_DATA="true"
 
-composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+cd "${UAT_BACKEND}"
 npm ci --silent
 npm run build
 
