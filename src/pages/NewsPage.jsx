@@ -24,10 +24,11 @@ export default function NewsPage() {
     fetchNews(page).then((result) => {
       if (!cancelled && result?.success && Array.isArray(result.data)) {
         setNewsList(result.data.map(normalizeNewsItem));setTotal(result.meta?.total||0);
-      } else if(!cancelled) {
-        setError(result?.message||'โหลดข่าวไม่สำเร็จ');
+      } else if (!cancelled) {
+        setNewsList([]);
+        setError('');
       }
-    }).catch(() => { if(!cancelled)setError('โหลดข่าวไม่สำเร็จ กรุณาลองใหม่'); }).finally(() => {
+    }).catch(() => { if (!cancelled) { setNewsList([]); setError(''); } }).finally(() => {
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };

@@ -139,6 +139,7 @@ const staffRoles = [
 ];
 
 function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
+  if (!memberPortalEnabled) return <ServiceUnavailablePage />;
   const { user, isLoggedIn, sessionStatus, can } = useAuth();
 
   if (sessionStatus === 'checking') return <PageSkeletonLoader />;
@@ -159,6 +160,7 @@ function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
 }
 
 function MemberProtectedRoute({ children }) {
+  if (!memberPortalEnabled) return <ServiceUnavailablePage />;
   const { user, isLoggedIn, sessionStatus } = useAuth();
   const location = useLocation();
 
@@ -279,11 +281,11 @@ export default function App() {
             <Route path="/admin/led/batch" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedBatchPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/schema" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedSchemaPage /></StaffProtectedRoute>} />
 
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/member/login" element={<LoginPage />} />
-            <Route path="/member/privacy-ack" element={<MemberPrivacyAckPage />} />
-            <Route path="/member/dividends" element={<MemberProtectedRoute><MemberDividendsPage /></MemberProtectedRoute>} />
-            <Route path="/admin/login" element={<LoginPage />} />
+            <Route path="/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/member/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/member/privacy-ack" element={memberPortalEnabled ? <MemberPrivacyAckPage /> : <ServiceUnavailablePage />} />
+            <Route path="/member/dividends" element={memberPortalEnabled ? <MemberProtectedRoute><MemberDividendsPage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />
+            <Route path="/admin/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

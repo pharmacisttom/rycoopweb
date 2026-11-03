@@ -36,6 +36,9 @@ const apiFetch = async (path, options = {}) => {
       if (res.status === 401) {
         return { success: false, authenticated: false, message: 'กรุณาเข้าสู่ระบบ' };
       }
+      if (res.status === 404) {
+        return { success: false, message: 'ไม่พบข้อมูล' };
+      }
     } catch (e) {
       // try next URL
     }
@@ -85,21 +88,39 @@ export const fetchStatistics = () => apiFetch('/api/public/statistics');
 // AUTH APIs
 // ──────────────────────────────────────────────
 
+const isPortalEnabled = () => import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
+
 /** Check if current user is authenticated */
-export const fetchCurrentUser = () => apiFetch('/api/auth/me', { cache: 'no-store' });
+export const fetchCurrentUser = () => {
+  if (!isPortalEnabled()) {
+    return Promise.resolve({ success: false, authenticated: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
+  }
+  return apiFetch('/api/auth/me', { cache: 'no-store' });
+};
+
+/** Fetch member dashboard summary */
+export const fetchMemberDashboard = () => {
+  if (!isPortalEnabled()) return Promise.resolve({ success: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
+  return apiFetch('/api/member/dashboard');
+};
+
+/** Fetch member profile data */
+export const fetchMemberProfile = () => {
+  if (!isPortalEnabled()) return Promise.resolve({ success: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
+  return apiFetch('/api/member/profile');
+};
+
+/** Fetch member shares data */
+export const fetchMemberShares = () => {
+  if (!isPortalEnabled()) return Promise.resolve({ success: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
+  return apiFetch('/api/member/shares');
+};
 
 // ──────────────────────────────────────────────
 // MEMBER DATA APIs (require authentication)
 // ──────────────────────────────────────────────
 
-/** Fetch member dashboard summary */
-export const fetchMemberDashboard = () => apiFetch('/api/member/dashboard');
 
-/** Fetch member profile data */
-export const fetchMemberProfile = () => apiFetch('/api/member/profile');
-
-/** Fetch member shares data */
-export const fetchMemberShares = () => apiFetch('/api/member/shares');
 
 /** Fetch member deposit accounts & transactions */
 export const fetchMemberDeposits = (account, type) => {

@@ -217,7 +217,11 @@ export default function Navbar() {
 
         {/* Right Action: User Profile Pill / Login */}
         <div className="navbar-actions">
-          <Link to={user?.role === 'member' ? '/member/dividends' : '/member/login'} className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก"><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
+          {import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true' ? (
+            <Link to={user?.role === 'member' ? '/member/dividends' : '/member/login'} className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก"><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
+          ) : (
+            <Link to="/eservice" className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก (เร็วๆ นี้)" title="ระบบสมาชิกออนไลน์อยู่ระหว่างเตรียมความพร้อม" style={{ opacity: 0.85 }}><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
+          )}
 
           {isLoggedIn ? (
             /* Logged-In User Pill with Dropdown matching user screenshot */

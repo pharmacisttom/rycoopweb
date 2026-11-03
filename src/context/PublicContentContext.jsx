@@ -1,21 +1,36 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import reference from '../data/legacyReference.json';
 
 const PublicContentContext = createContext({ catalog: reference, status: 'reference', reload: async () => {} });
 export function PublicContentProvider({ children }) {
   const [catalog, setCatalog] = useState(reference);
-  const [status, setStatus] = useState('loading');
+  const [status, setStatus] = useState('reference');
+  const endpointUnavailableRef = useRef(false);
+
   const reload = useCallback(async signal => {
+    if (endpointUnavailableRef.current) return;
     try {
       const response = await fetch('/api/public/content', { credentials: 'same-origin', cache: 'no-cache', signal, headers: { Accept: 'application/json' } });
+      if (response.status === 404 || response.status === 503) {
+        endpointUnavailableRef.current = true;
+        setStatus('reference');
+        return;
+      }
       const result = await response.json();
       if (!response.ok || !result.success || !result.data?.coopInfo || !Array.isArray(result.data?.boardMembers)) throw new Error('CONTENT_UNAVAILABLE');
       setCatalog(result.data); setStatus('published');
-    } catch (error) { if (error.name !== 'AbortError') setStatus('unavailable'); }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        endpointUnavailableRef.current = true;
+        setStatus('reference');
+      }
+    }
   }, []);
   useEffect(() => { const controller = new AbortController(); reload(controller.signal); return () => controller.abort(); }, [reload]);
   useEffect(() => {
-    const onFocus = () => reload();
+    const onFocus = () => {
+      if (!endpointUnavailableRef.current) reload();
+    };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [reload]);

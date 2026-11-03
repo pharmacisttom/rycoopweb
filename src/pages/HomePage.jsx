@@ -23,6 +23,7 @@ const FALLBACK_COOP = {
 };
 
 export default function HomePage() {
+  const memberPortalEnabled = import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
   const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
   const coopInfo = COOP_INFO;
   const { setShowAuthModal, isLoggedIn } = useAuth();
@@ -171,7 +172,7 @@ export default function HomePage() {
           }}>
             
             {/* Card 1: เข้าสู่ระบบสมาชิก */}
-            <Link to="/member/login" className="surface-card" style={{
+            <Link to={memberPortalEnabled ? '/member/login' : '/eservice'} className="surface-card" style={{
               background: '#FFFFFF',
               border: '1px solid #DCE5F0',
               borderRadius: '0.75rem',
