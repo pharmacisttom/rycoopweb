@@ -398,6 +398,10 @@ html, body {
   .hero-portrait {
     margin-bottom: 0.5rem;
   }
+
+  .chairperson-welcome-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 @media (max-width: 720px) {

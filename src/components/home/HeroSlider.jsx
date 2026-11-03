@@ -124,6 +124,7 @@ export default function HeroSlider({ slides = [] }) {
 
   // Pointer swipe gestures
   const handlePointerDown = (e) => {
+    if (e.target.closest('button, a, .hero-nav-btn, .hero-controls-bar')) return;
     if (totalSlides <= 1 || (e.pointerType === 'mouse' && e.button !== 0)) return;
     pointerStartRef.current = { x: e.clientX, y: e.clientY };
     isDraggingRef.current = true;

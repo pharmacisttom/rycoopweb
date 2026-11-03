@@ -151,302 +151,15 @@ export default function HomePage() {
     setIsNewsSlideshowPaused(false);
   };
 
-  const heroSettings = {
-    title: coopInfo.nameTh,
-    subtitle: `${coopInfo.slogan || FALLBACK_COOP.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`,
-    badgeText: 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล',
-    bgImageUrl: '/assets/img/hero_bg_coop.jpg'
-  };
-
   return (
     <div>
       
       {/* =========================================================================
-          HERO SECTION (High Impact Modern Banner)
+          HERO PROMOTIONAL SLIDER (Modern White & Blue High-Impact Carousel)
           ========================================================================= */}
-      <section style={{
-        position: 'relative',
-        backgroundImage: heroSettings.bgImageUrl ? `linear-gradient(135deg, rgba(15, 43, 92, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%), url(${heroSettings.bgImageUrl})` : 'var(--gradient-hero)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        color: '#ffffff',
-        padding: '4.5rem 0 4rem 0',
-        overflow: 'hidden',
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
-      }}>
-        {/* Background glow & shapes */}
-        <div style={{
-          position: 'absolute',
-          top: '-20%',
-          right: '-10%',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(37, 99, 235, 0.4) 0%, rgba(37, 99, 235, 0) 70%)',
-          filter: 'blur(50px)',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-20%',
-          left: '-5%',
-          width: '400px',
-          height: '400px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(13, 148, 136, 0.3) 0%, rgba(13, 148, 136, 0) 70%)',
-          filter: 'blur(50px)',
-          pointerEvents: 'none'
-        }} />
+      <HeroSlider slides={heroSlides} />
 
-        <div className="container" style={{ position: 'relative', zIndex: 2 }}>
-          <div className="home-hero-grid">
-            
-            {/* Left Hero Content */}
-            <div className="animate-fade-in">
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.4rem 1rem',
-                background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#fbbf24',
-                marginBottom: '1.25rem',
-                border: '1px solid rgba(251, 191, 36, 0.3)'
-              }}>
-                <Sparkles size={16} />
-                <span>{heroSettings.badgeText || 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล'}</span>
-              </div>
-
-              <h1 className="home-hero-title" style={{
-                fontSize: 'clamp(1.8rem, 3vw, 3rem)',
-                fontWeight: 800,
-                lineHeight: 1.2,
-                color: '#ffffff',
-                marginBottom: '1rem',
-                letterSpacing: '-0.02em',
-                whiteSpace: 'nowrap'
-              }}>
-                {heroSettings.title || COOP_INFO.nameTh}
-              </h1>
-
-              <p style={{
-                fontSize: '1.15rem',
-                color: '#e2e8f0',
-                lineHeight: 1.6,
-                marginBottom: '2rem',
-                maxWidth: '560px'
-              }}>
-                {heroSettings.subtitle || `${COOP_INFO.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`}
-              </p>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <Link to="/service-unavailable" className="btn btn-gold btn-lg">
-                  <span>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
-                  <ArrowRight size={18} />
-                </Link>
-
-                <Link to="/calculator" className="btn btn-outline btn-lg" style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.08)' }}>
-                  <Calculator size={18} />
-                  <span>คำนวณเงินกู้</span>
-                </Link>
-              </div>
-
-              {/* Quick Trust Badges */}
-              <div style={{ display: 'flex', gap: '1.5rem', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.15)', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ShieldCheck size={20} style={{ color: '#38bdf8' }} />
-                  <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>บริหารโปร่งใสตามหลักธรรมาภิบาล</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Award size={20} style={{ color: '#fbbf24' }} />
-                  <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>ตรวจสอบยอดปันผลในระบบสมาชิก</span>
-                </div>
-              </div>
-
-            </div>
-
-            <div className="hero-dashboard-row">
-            {/* Right Hero Card: Quick Rates & Services Widget */}
-            <div className="glass-card hero-rate-card" style={{
-              background: 'rgba(15, 23, 42, 0.65)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              padding: '2rem',
-              borderRadius: 'var(--radius-xl)',
-              color: '#ffffff'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <TrendingUp style={{ color: '#fbbf24' }} size={20} />
-                  <span>อัตราดอกเบี้ยเด่นวันนี้</span>
-                </h3>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>อัปเดตล่าสุด</span>
-              </div>
-
-              <p style={{ marginBottom: '1.5rem', color: '#cbd5e1' }}>
-                {INTEREST_RATES.deposits.map(item => `${item.type} ${item.rate} ต่อปี`).join(' / ')}
-                <br />
-                <a href={INTEREST_RATES.depositSource.url} style={{ color: '#cbd5e1' }}>ข้อมูลตามเว็บเดิม — ตรวจสอบประกาศล่าสุดก่อนทำรายการ</a>
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Link to="/deposits" className="btn btn-sm" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
-                  <span>ดูดอกเบี้ยเงินฝาก</span>
-                </Link>
-                <Link to="/loans" className="btn btn-sm" style={{ background: 'rgba(74, 222, 128, 0.2)', color: '#4ade80', border: '1px solid rgba(74, 222, 128, 0.4)' }}>
-                  <span>ดูดอกเบี้ยเงินกู้</span>
-                </Link>
-              </div>
-
-            </div>
-
-            <section className="glass-card hero-news-card" aria-labelledby="hero-news-heading">
-              <div className="hero-news-header">
-                <div>
-                  <h3 id="hero-news-heading">
-                    <FileText aria-hidden="true" size={20} />
-                    <span>ข่าวสารและประกาศ</span>
-                  </h3>
-                  <span>อัปเดตล่าสุดจากสหกรณ์</span>
-                </div>
-                <Link to="/news" className="hero-news-all">
-                  <span>ทั้งหมด</span>
-                  <ChevronRight aria-hidden="true" size={16} />
-                </Link>
-              </div>
-
-              <div className="hero-news-tabs" aria-label="ประเภทข่าวสาร">
-                <button
-                  type="button"
-                  aria-pressed={activeNewsTab === 'news'}
-                  className={activeNewsTab === 'news' ? 'is-active' : ''}
-                  onClick={() => {
-                    setActiveNewsTab('news');
-                    setActiveNewsSlide(0);
-                  }}
-                >
-                  ข่าวประชาสัมพันธ์
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={activeNewsTab === 'announcements'}
-                  className={activeNewsTab === 'announcements' ? 'is-active' : ''}
-                  onClick={() => setActiveNewsTab('announcements')}
-                >
-                  ประกาศทางการ
-                </button>
-              </div>
-
-              <div className="hero-news-list">
-                {activeNewsTab === 'news' ? (
-                  newsList.length > 0 && (
-                    <div
-                      className={`hero-news-slideshow${isNewsSlideDragging ? ' is-dragging' : ''}`}
-                      onMouseEnter={() => setIsNewsSlideshowPaused(true)}
-                      onMouseLeave={() => setIsNewsSlideshowPaused(false)}
-                      onFocusCapture={() => setIsNewsSlideshowPaused(true)}
-                      onBlurCapture={(event) => {
-                        if (!event.currentTarget.contains(event.relatedTarget)) {
-                          setIsNewsSlideshowPaused(false);
-                        }
-                      }}
-                      onPointerDown={handleNewsSlidePointerDown}
-                      onPointerUp={handleNewsSlidePointerEnd}
-                      onPointerCancel={handleNewsSlidePointerCancel}
-                    >
-                      {(() => {
-                        const item = newsList[activeNewsSlide];
-                        return (
-                          <article className="hero-news-slide" key={item.id}>
-                            <SafeImage src={item.image} alt={item.title} />
-                            <div className="hero-news-slide-overlay">
-                              <span className="hero-news-meta">{item.category || 'ข่าวสาร'} · {item.date}</span>
-                              <h4>{item.title}</h4>
-                              <Link
-                                to="/news"
-                                className="hero-news-read-more"
-                                onClick={(event) => {
-                                  if (newsSlideWasDraggedRef.current) {
-                                    event.preventDefault();
-                                    newsSlideWasDraggedRef.current = false;
-                                  }
-                                }}
-                              >
-                                อ่านข่าวฉบับเต็ม <ChevronRight aria-hidden="true" size={15} />
-                              </Link>
-                            </div>
-                          </article>
-                        );
-                      })()}
-
-                      {newsList.length > 1 && (
-                        <>
-                          <div className="hero-news-slide-actions">
-                            <button type="button" disabled={reduceNewsMotion} onClick={() => setNewsAutoPlay(value=>!value)} aria-label={newsAutoPlay?'หยุดสไลด์ข่าว':'เล่นสไลด์ข่าว'}>{newsAutoPlay?'หยุด':'เล่น'}</button>
-                            <button type="button" onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide((activeNewsSlide - 1 + newsList.length) % newsList.length);}} aria-label="ข่าวก่อนหน้า">
-                              <ChevronLeft aria-hidden="true" size={18} />
-                            </button>
-                            <button type="button" onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide((activeNewsSlide + 1) % newsList.length);}} aria-label="ข่าวถัดไป">
-                              <ChevronRight aria-hidden="true" size={18} />
-                            </button>
-                          </div>
-                          <div className="hero-news-slide-dots" aria-label="เลือกข่าวที่ต้องการดู">
-                            {newsList.map((item, index) => (
-                              <button
-                                type="button"
-                                key={item.id}
-                                className={index === activeNewsSlide ? 'is-active' : ''}
-                                aria-label={`แสดงข่าว ${index + 1}: ${item.title}`}
-                                aria-pressed={index === activeNewsSlide}
-                                onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide(index);}}
-                              />
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )
-                ) : (
-                  announcements.slice(0, 3).map((item) => (
-                    <Link key={item.id} to="/news" className="hero-news-item">
-                      <span className="hero-news-meta">{item.important ? 'ประกาศสำคัญ' : 'ประกาศ'} · {item.date}</span>
-                      <strong>{item.title}</strong>
-                      <ChevronRight aria-hidden="true" size={16} />
-                    </Link>
-                  ))
-                )}
-                {((activeNewsTab === 'news' && newsList.length === 0) || (activeNewsTab === 'announcements' && announcements.length === 0)) && (
-                  <p className="hero-news-empty">ยังไม่มีรายการในขณะนี้</p>
-                )}
-              </div>
-            </section>
-            </div>
-
-            <figure className="hero-portrait">
-              <div className="hero-portrait-frame">
-                <img
-                  src={heroPortrait}
-                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
-                  width="294"
-                  height="394"
-                  fetchPriority="high"
-                />
-              </div>
-              <figcaption className="hero-portrait-caption">
-                <strong>นางสาวอุษา อิศรางกูร ณ อยุธยา</strong>
-                <span>ประธานกรรมการสหกรณ์</span>
-              </figcaption>
-            </figure>
-
-          </div>
-        </div>
-      </section>
-
-            {/* =========================================================================
+      {/* =========================================================================
           HOMEPAGE QUICK ACCESS CARDS (Clean White & Blue Responsive Grid)
           ========================================================================= */}
       <section style={{ padding: '2.5rem 0 2rem 0', background: 'var(--background-main, #F4F8FD)' }}>
@@ -649,6 +362,298 @@ export default function HomePage() {
               <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>กำหนดการและวันจ่ายเงินกู้</p>
             </Link>
 
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          CHAIRPERSON WELCOME & COOPERATIVE GOVERNANCE (สารจากประธานกรรมการสหกรณ์)
+          ========================================================================= */}
+      <section className="section" style={{ background: '#FFFFFF', padding: '3.5rem 0', borderBottom: '1px solid #E2E8F0' }}>
+        <div className="container">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 280px',
+            gap: '2.5rem',
+            alignItems: 'center'
+          }} className="chairperson-welcome-grid">
+            
+            {/* Left: Message & Vision */}
+            <div>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.4rem 1rem',
+                background: '#EFF6FF',
+                borderRadius: '9999px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: '#1D4ED8',
+                marginBottom: '1rem',
+                border: '1px solid #BFDBFE'
+              }}>
+                <Sparkles size={16} />
+                <span>สารจากประธานกรรมการสหกรณ์</span>
+              </div>
+
+              <h2 style={{
+                fontSize: 'clamp(1.5rem, 2.5vw, 2.2rem)',
+                fontWeight: 800,
+                color: '#0F2B5C',
+                lineHeight: 1.3,
+                marginBottom: '1rem'
+              }}>
+                {COOP_INFO.nameTh}
+              </h2>
+
+              <p style={{
+                fontSize: '1.05rem',
+                color: '#334155',
+                lineHeight: 1.7,
+                marginBottom: '1.5rem'
+              }}>
+                {coopInfo.slogan || FALLBACK_COOP.slogan} สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด มุ่งมั่นดำเนินงานตามหลักธรรมาภิบาล พัฒนาสู่ระบบสหกรณ์ดิจิทัลที่ทันสมัย สะดวก รวดเร็ว และปลอดภัย พร้อมส่งเสริมความมั่นคงทางการเงินและสวัสดิการที่ครอบคลุมทุกช่วงชีวิตของมวลสมาชิก
+              </p>
+
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+                <Link to="/about" className="btn btn-primary" style={{ background: '#1769C2', borderColor: '#1769C2', color: '#ffffff' }}>
+                  <span>วิสัยทัศน์และคณะกรรมการ</span>
+                  <ArrowRight size={16} />
+                </Link>
+                <Link to="/documents?category=annual_reports" className="btn btn-outline" style={{ color: '#1769C2', borderColor: '#BFDBFE', background: '#F8FAFC' }}>
+                  <FileText size={16} />
+                  <span>รายงานประจำปี</span>
+                </Link>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ShieldCheck size={20} style={{ color: '#0284C7' }} />
+                  <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>บริหารงานโปร่งใสตามหลักธรรมาภิบาล</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Award size={20} style={{ color: '#D97706' }} />
+                  <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>สิทธิประโยชน์และผลตอบแทนที่มั่นคง</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Official Chairperson Portrait */}
+            <figure style={{
+              width: '100%',
+              maxWidth: '280px',
+              margin: '0 auto',
+              padding: '0.85rem',
+              background: '#FFFFFF',
+              borderRadius: '1.25rem',
+              border: '2px solid #BFDBFE',
+              boxShadow: '0 12px 28px rgba(15, 43, 92, 0.08)',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '100%',
+                maxWidth: '240px',
+                margin: '0 auto',
+                overflow: 'hidden',
+                borderRadius: '0.85rem',
+                border: '2px solid #93C5FD',
+                aspectRatio: '294 / 394'
+              }}>
+                <img
+                  src={heroPortrait}
+                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+                  width="294"
+                  height="394"
+                />
+              </div>
+              <figcaption style={{ marginTop: '0.75rem' }}>
+                <strong style={{ display: 'block', fontSize: '0.95rem', color: '#0F2B5C', fontWeight: 700 }}>
+                  นางสาวอุษา อิศรางกูร ณ อยุธยา
+                </strong>
+                <span style={{ display: 'block', fontSize: '0.85rem', color: '#64748B', marginTop: '0.15rem' }}>
+                  ประธานกรรมการสหกรณ์
+                </span>
+              </figcaption>
+            </figure>
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          NEWS, ANNOUNCEMENTS & HIGHLIGHT RATES (ข่าวสาร ประกาศ และอัตราดอกเบี้ยเด่น)
+          ========================================================================= */}
+      <section className="section" style={{ background: '#0F2B5C', padding: '3.5rem 0', color: '#ffffff' }}>
+        <div className="container">
+          <div className="section-title-wrap" style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
+            <span className="section-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}>
+              ข่าวสารและอัตราดอกเบี้ย
+            </span>
+            <h2 className="section-title" style={{ color: '#ffffff' }}>
+              ข่าวประชาสัมพันธ์และอัตราดอกเบี้ยประจำวัน
+            </h2>
+            <p className="section-subtitle" style={{ color: '#cbd5e1' }}>
+              ติดตามข้อมูลข่าวสาร ประกาศทางการ และอัตราดอกเบี้ยเงินฝาก-เงินกู้ของสหกรณ์
+            </p>
+            <div className="section-line" style={{ background: 'linear-gradient(90deg, #38bdf8, #fbbf24)', margin: '1rem auto 0' }} />
+          </div>
+
+          <div className="hero-dashboard-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+            {/* Quick Rates & Services Widget */}
+            <div className="glass-card hero-rate-card" style={{
+              background: 'rgba(15, 23, 42, 0.65)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              padding: '2rem',
+              borderRadius: 'var(--radius-xl)',
+              color: '#ffffff'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <TrendingUp style={{ color: '#fbbf24' }} size={20} />
+                  <span>อัตราดอกเบี้ยเด่นวันนี้</span>
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>อัปเดตล่าสุด</span>
+              </div>
+
+              <p style={{ marginBottom: '1.5rem', color: '#cbd5e1' }}>
+                {INTEREST_RATES.deposits.map(item => `${item.type} ${item.rate} ต่อปี`).join(' / ')}
+                <br />
+                <a href={INTEREST_RATES.depositSource.url} style={{ color: '#cbd5e1' }}>ข้อมูลตามเว็บเดิม — ตรวจสอบประกาศล่าสุดก่อนทำรายการ</a>
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <Link to="/deposits" className="btn btn-sm" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
+                  <span>ดูดอกเบี้ยเงินฝาก</span>
+                </Link>
+                <Link to="/loans" className="btn btn-sm" style={{ background: 'rgba(74, 222, 128, 0.2)', color: '#4ade80', border: '1px solid rgba(74, 222, 128, 0.4)' }}>
+                  <span>ดูดอกเบี้ยเงินกู้</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* News & Announcements Card */}
+            <section className="glass-card hero-news-card" aria-labelledby="hero-news-heading">
+              <div className="hero-news-header">
+                <div>
+                  <h3 id="hero-news-heading">
+                    <FileText aria-hidden="true" size={20} />
+                    <span>ข่าวสารและประกาศ</span>
+                  </h3>
+                  <span>อัปเดตล่าสุดจากสหกรณ์</span>
+                </div>
+                <Link to="/news" className="hero-news-all">
+                  <span>ทั้งหมด</span>
+                  <ChevronRight aria-hidden="true" size={16} />
+                </Link>
+              </div>
+
+              <div className="hero-news-tabs" aria-label="ประเภทข่าวสาร">
+                <button
+                  type="button"
+                  aria-pressed={activeNewsTab === 'news'}
+                  className={activeNewsTab === 'news' ? 'is-active' : ''}
+                  onClick={() => {
+                    setActiveNewsTab('news');
+                    setActiveNewsSlide(0);
+                  }}
+                >
+                  ข่าวประชาสัมพันธ์
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={activeNewsTab === 'announcements'}
+                  className={activeNewsTab === 'announcements' ? 'is-active' : ''}
+                  onClick={() => setActiveNewsTab('announcements')}
+                >
+                  ประกาศทางการ
+                </button>
+              </div>
+
+              <div className="hero-news-list">
+                {activeNewsTab === 'news' ? (
+                  newsList.length > 0 && (
+                    <div
+                      className={`hero-news-slideshow${isNewsSlideDragging ? ' is-dragging' : ''}`}
+                      onMouseEnter={() => setIsNewsSlideshowPaused(true)}
+                      onMouseLeave={() => setIsNewsSlideshowPaused(false)}
+                      onFocusCapture={() => setIsNewsSlideshowPaused(true)}
+                      onBlurCapture={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget)) {
+                          setIsNewsSlideshowPaused(false);
+                        }
+                      }}
+                      onPointerDown={handleNewsSlidePointerDown}
+                      onPointerUp={handleNewsSlidePointerEnd}
+                      onPointerCancel={handleNewsSlidePointerCancel}
+                    >
+                      {(() => {
+                        const item = newsList[activeNewsSlide];
+                        return (
+                          <article className="hero-news-slide" key={item.id}>
+                            <SafeImage src={item.image} alt={item.title} />
+                            <div className="hero-news-slide-overlay">
+                              <span className="hero-news-meta">{item.category || 'ข่าวสาร'} · {item.date}</span>
+                              <h4>{item.title}</h4>
+                              <Link
+                                to="/news"
+                                className="hero-news-read-more"
+                                onClick={(event) => {
+                                  if (newsSlideWasDraggedRef.current) {
+                                    event.preventDefault();
+                                    newsSlideWasDraggedRef.current = false;
+                                  }
+                                }}
+                              >
+                                อ่านข่าวฉบับเต็ม <ChevronRight aria-hidden="true" size={15} />
+                              </Link>
+                            </div>
+                          </article>
+                        );
+                      })()}
+
+                      {newsList.length > 1 && (
+                        <>
+                          <div className="hero-news-slide-actions">
+                            <button type="button" disabled={reduceNewsMotion} onClick={() => setNewsAutoPlay(value=>!value)} aria-label={newsAutoPlay?'หยุดสไลด์ข่าว':'เล่นสไลด์ข่าว'}>{newsAutoPlay?'หยุด':'เล่น'}</button>
+                            <button type="button" onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide((activeNewsSlide - 1 + newsList.length) % newsList.length);}} aria-label="ข่าวก่อนหน้า">
+                              <ChevronLeft aria-hidden="true" size={18} />
+                            </button>
+                            <button type="button" onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide((activeNewsSlide + 1) % newsList.length);}} aria-label="ข่าวถัดไป">
+                              <ChevronRight aria-hidden="true" size={18} />
+                            </button>
+                          </div>
+                          <div className="hero-news-slide-dots" aria-label="เลือกข่าวที่ต้องการดู">
+                            {newsList.map((item, index) => (
+                              <button
+                                type="button"
+                                key={item.id}
+                                className={index === activeNewsSlide ? 'is-active' : ''}
+                                aria-label={`แสดงข่าว ${index + 1}: ${item.title}`}
+                                aria-pressed={index === activeNewsSlide}
+                                onClick={() => {setNewsAutoPlay(false);setActiveNewsSlide(index);}}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  announcements.slice(0, 3).map((item) => (
+                    <Link key={item.id} to="/news" className="hero-news-item">
+                      <span className="hero-news-meta">{item.important ? 'ประกาศสำคัญ' : 'ประกาศ'} · {item.date}</span>
+                      <strong>{item.title}</strong>
+                      <ChevronRight aria-hidden="true" size={16} />
+                    </Link>
+                  ))
+                )}
+                {((activeNewsTab === 'news' && newsList.length === 0) || (activeNewsTab === 'announcements' && announcements.length === 0)) && (
+                  <p className="hero-news-empty">ยังไม่มีรายการในขณะนี้</p>
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </section>
