@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { 
   Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2, 
   ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall, 
-  ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award
+  ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award, Calendar
 } from 'lucide-react';
 import { fetchHomeData, fetchCoopInfo } from '../services/api';
 import LoanCalculator from '../components/calculators/LoanCalculator';
