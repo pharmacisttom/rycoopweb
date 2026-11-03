@@ -292,16 +292,24 @@ echo "[CHECK 2.1] Verifying runtime database connection to rycoopweb_test via ap
 cd "${UAT_BACKEND}"
 php -r "
     require '${UAT_BACKEND}/vendor/autoload.php';
-    require '${UAT_BACKEND}/app/Core/helpers.php';
     
-    // Validate effective database configuration via application bootstrap
+    // Requirement 3: Verify helper functions loaded by Composer Autoload (files autoloading)
+    if (!function_exists('config') || !function_exists('env')) {
+        fprintf(STDERR, 'Autoload Error: config() or env() helper functions missing after autoloading\n');
+        exit(1);
+    }
+
+    // Requirement 4: Confirm staged .env resolves to the intended isolated TEST configuration
+    \$envDatabase = env('DB_DATABASE');
+    if (\$envDatabase !== 'rycoopweb_test') {
+        fprintf(STDERR, 'Environment Error: env(DB_DATABASE) is %s, expected strictly rycoopweb_test\n', var_export(\$envDatabase, true));
+        exit(1);
+    }
+
+    // Requirement 5: Verify config('database.connections.mysql') returns rycoopweb_test
     \$mysql = config('database.connections.mysql');
     if (!is_array(\$mysql)) {
-        \$cfg = require '${UAT_BACKEND}/config/database.php';
-        \$mysql = \$cfg['connections']['mysql'] ?? null;
-    }
-    if (!is_array(\$mysql)) {
-        fprintf(STDERR, 'Missing connections.mysql in config/database.php\n');
+        fprintf(STDERR, 'Missing connections.mysql in config(database)\n');
         exit(1);
     }
     \$host = \$mysql['host'] ?? '127.0.0.1';
@@ -316,6 +324,7 @@ php -r "
         exit(1);
     }
 
+    // Requirement 6: Execute SELECT DATABASE() and abort unless exactly rycoopweb_test
     try {
         \$dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', \$host, \$port, \$dbName, \$charset);
         \$options = \$mysql['options'] ?? [
@@ -476,7 +485,6 @@ echo "[PASS] Gateway Basic Auth gate is ACTIVE."
 echo "[SMOKE TEST 5.2] Verifying PHP runtime feature flags in UAT environment..."
 RUNTIME_FLAGS=$(php -r "
     require '${UAT_BACKEND}/vendor/autoload.php';
-    require '${UAT_BACKEND}/app/Core/helpers.php';
     \$cfg = require '${UAT_BACKEND}/config/features.php';
     echo sprintf('login=%s,portal=%s,financial=%s',
         (\$cfg['member_login'] ?? false) ? 'true' : 'false',
