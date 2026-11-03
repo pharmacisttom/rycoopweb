@@ -48,15 +48,20 @@ export default function WelfarePage() {
                 </div>
 
                 <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
-                  <Link to="/documents" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary-600)' }}>
+                  <Link to="/documents?category=welfare" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary-600)' }}>
                     <Download size={14} />
                     <span>ดาวน์โหลดแบบขอรับสวัสดิการ</span>
                   </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         {/* =========================================================================
             PARTNER ASSOCIATIONS SECTION (สสธท. / กสธท. / สส.ชสอ.)
             ========================================================================= */}
-        <div id="associations" style={{ marginTop: '3.5rem' }}>
+        <div id="associations" style={{ marginTop: '2.5rem', marginBottom: '3rem' }}>
           <div className="section-title-wrap" style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
             <span className="section-badge" style={{ background: '#EDF5FF', color: '#1769C2' }}>พันธมิตรและสมาคมฌาปนกิจสงเคราะห์</span>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#17315A', margin: '0.5rem 0' }}>
@@ -98,28 +103,26 @@ export default function WelfarePage() {
                   สมาคมฌาปนกิจสงเคราะห์สมาชิก สสธท.
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: '#526783', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                  สมาคมฌาปนกิจสงเคราะห์สมาชิกสหกรณ์ออมทรัพย์สาธารณสุขไทย มอบความคุ้มครองและเงินสงเคราะห์แก่ครอบครัวสมาชิก
+                  สมาคมฌาปนกิจสงเคราะห์สมาชิกสหกรณ์ออมทรัพย์สาธารณสุขไทย มอบความคุ้มครองและเงินสงเคราะห์ครอบครัว
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <a
-                  href="https://cpct.or.th"
+                  href="https://ss-th.org"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-primary btn-sm"
                   style={{ background: '#1769C2', color: '#FFFFFF', padding: '0.45rem 0.95rem' }}
                 >
-                  เว็บไซต์ทางการ
+                  เข้าสู่เว็บไซต์ สสธท.
                 </a>
-                <a
-                  href="https://cpct.icoopsiam.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  to="/documents?category=associations"
                   className="btn btn-outline btn-sm"
                   style={{ borderColor: '#DCE5F0', color: '#1769C2', padding: '0.45rem 0.95rem' }}
                 >
-                  ตรวจสอบข้อมูลสมาชิก
-                </a>
+                  แบบฟอร์ม
+                </Link>
               </div>
             </div>
 
@@ -205,12 +208,6 @@ export default function WelfarePage() {
               </div>
             </div>
           </div>
-        </div>
-
-                </div>
-              </div>
-            );
-          })}
         </div>
 
         {/* Claim Procedure Guide */}

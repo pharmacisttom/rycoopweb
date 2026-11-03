@@ -172,3 +172,26 @@ Every broken test across the test harness was investigated and fixed:
 4. **Password UI Hidden:** Member password change buttons remain suppressed as approved.
 5. **Backend Security:** Mandatory TOTP 2FA and RBAC enforced across all administrative endpoints.
 6. **Production Protection:** Production server and database (`www.rayongcoop.org`) remain 100% isolated and unmodified.
+
+---
+
+## 10. Legacy Website vs. RYCOOPWEB 14-Module Status & Implementation
+
+| # | ระบบ / เนื้อหา | เว็บไซต์เดิม | RYCOOPWEB ใหม่ | สถานะการดำเนินการ (Actions Implemented) |
+|---|---|---|---|---|
+| 1 | **ภาพประชาสัมพันธ์ Slide** | มีหลายภาพ | กำลังพัฒนา | เพิ่ม Hero Slider 4 สไลด์ (`HeroSlider.jsx`) อัตราส่วน responsive, auto-play, pause on hover และเข้ากันได้กับ CMS |
+| 2 | **ข่าวประชาสัมพันธ์** | มีข่าวย้อนหลังจำนวนมาก | มี CMS ข่าว | วางโครงสร้าง Category, Pagination, Migration Matrix และ Rich Text Content ใน `NewsPage.jsx` |
+| 3 | **ประกาศสหกรณ์** | มี | มีระบบจัดการ | ตรวจสอบการจัดกลุ่มประกาศ อัตราดอกเบี้ย และวันหยุด พร้อมแท็กสถานะใน `NewsPage.jsx` |
+| 4 | **เอกสารดาวน์โหลด** | มีจำนวนมาก | มีโมดูลเอกสาร | จัดระบบ 11 หมวดหมู่มาตรฐาน พร้อมระบบค้นหาแบบทันที (Instant Search) และ URL Filter ใน `DocumentsPage.jsx` |
+| 5 | **ระเบียบและข้อบังคับ** | มี | มีโครงสร้างหน้าเนื้อหา | จัดเข้าหมวด `regulations` ในศูนย์เอกสารดาวน์โหลด และลิงก์ตรงจากเมนูโครงสร้างองค์กร |
+| 6 | **แผนยุทธศาสตร์** | มีเอกสาร | มี CMS | จัดเข้าหมวด `strategic` ในศูนย์เอกสาร พร้อมดาวน์โหลดฉบับ พ.ศ. 2566–2570 และปีที่เกี่ยวข้อง |
+| 7 | **คณะกรรมการและเจ้าหน้าที่** | มี | มีระบบข้อมูลบุคลากร | ตรวจสอบรูปภาพ รายนามคณะกรรมการชุดที่ 32 และทำเนียบฝ่ายจัดการใน `BoardPage.jsx` และ `BoardOfficerPage.jsx` |
+| 8 | **เงินฝากและเงินกู้** | มีรายละเอียดและอัตราดอกเบี้ย | มีระบบผลิตภัณฑ์ | บรรจุผลิตภัณฑ์สินเชื่อหลักทั้ง 10 ประเภท พร้อมอัตราดอกเบี้ยตรงตามฐานข้อมูลใน `LoansPage.jsx` และ `DepositsPage.jsx` |
+| 9 | **เครื่องคำนวณเงินกู้** | มี | มี Calculator | พัฒนาโปรแกรมคำนวณเงินกู้แบบลดต้นลดดอก (Amortization PMT) ตรงตามสูตรสินเชื่อสหกรณ์ ใน `LoanCalculator.jsx` |
+| 10 | **สวัสดิการสมาชิก** | มีหลายประเภท | มีหน้าเนื้อหา | นำเสนอสวัสดิการสมาชิก 6 ด้าน พร้อมขั้นตอนการขอรับเงินและลิงก์ดาวน์โหลดแบบคำขอ ใน `WelfarePage.jsx` |
+| 11 | **ตรวจสอบปันผล** | ลิงก์ไป E-Service | มี Member Portal | พอร์ทัลตรวจสอบเงินปันผล-เฉลี่ยคืนรายบุคคล พร้อม PDPA 3.0 Gate และการมาสก์ข้อมูล PII ใน `MemberDividendsPage.jsx` |
+| 12 | **สสธท. / กสธท.** | มีลิงก์และแบบฟอร์ม | ยังไม่ยืนยันความครบถ้วน | **เพิ่มการ์ดและเมนูเฉพาะ**: รองรับ สสธท., กสธท., และ สส.ชสอ. พร้อมเส้นทางตรง `/associations` และ `/mutual-aid` และเมนูนำทาง |
+| 13 | **กำหนดการยื่นกู้** | มีประกาศ | ยังไม่ยืนยันหน้าที่เผยแพร่ | **เพิ่มหน้าตารางกำหนดการ**: หน้า `LoanSchedulePage.jsx` (`/loan-schedule`) พร้อมปฏิทิน 12 เดือน ปี 2569 และดาวน์โหลด `pay2569.png` |
+| 14 | **เรื่องร้องเรียน** | มีช่องทาง | มีโครงสร้างระบบ | ทดสอบระบบรับเรื่องร้องเรียนและกล่องข้อเสนอแนะ พร้อมฟอร์มส่งเรื่องและระบบติดตามสถานะใน `ContactPage.jsx` (`/complaints`) |
+
+

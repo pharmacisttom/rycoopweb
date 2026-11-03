@@ -109,6 +109,8 @@ const publicRoutes = [
   ['/loans/checklist', LoanChecklistPage],
   ['/dividend-estimator', CalculatorPage],
   ['/welfare', WelfarePage],
+  ['/associations', WelfarePage],
+  ['/mutual-aid', WelfarePage],
   ['/eservice', EServicePage],
   ['/documents', DocumentsPage],
   ['/news', NewsPage],
