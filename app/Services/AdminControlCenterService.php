@@ -1054,7 +1054,11 @@ class AdminControlCenterService
             return self::getLegacyAuditLogs($filters);
         }
 
-        return self::getSecurityAuditLogs();
+        try {
+            return self::getSecurityAuditLogs($filters);
+        } catch (\Throwable $e) {
+            return self::getLegacyAuditLogs($filters);
+        }
     }
 
     /**

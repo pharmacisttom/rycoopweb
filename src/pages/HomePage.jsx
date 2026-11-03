@@ -1,3 +1,4 @@
+import HeroSlider from '../components/home/HeroSlider';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -46,6 +47,7 @@ export default function HomePage() {
   const [newsList, setNewsList] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [welfareItems, setWelfareItems] = useState([]);
+  const [heroSlides, setHeroSlides] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +64,8 @@ export default function HomePage() {
           setLoanRates(d.loanRates || []);
           setNewsList((d.latestNews || []).map(normalizeNewsItem));
           setAnnouncements(d.importantAnnouncements || []);
-          setWelfareItems(d.heroSlides || []); // welfare comes from separate endpoint if needed
+          setWelfareItems(d.heroSlides || []);
+          setHeroSlides(d.heroSlides || []); // welfare comes from separate endpoint if needed
 
           // Build key stats from latestStats
           if (d.latestStats) {
@@ -443,63 +446,207 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
+            {/* =========================================================================
+          HOMEPAGE QUICK ACCESS CARDS (Clean White & Blue Responsive Grid)
           ========================================================================= */}
-      <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
+      <section style={{ padding: '2.5rem 0 2rem 0', background: 'var(--background-main, #F4F8FD)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '1.25rem'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+            gap: '1rem'
           }}>
             
-            <Link to="/calculator" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
+            {/* Card 1: เข้าสู่ระบบสมาชิก */}
+            <Link to="/member/login" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <Users size={24} />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เข้าสู่ระบบสมาชิก</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ตรวจสอบข้อมูลของคุณ</p>
+            </Link>
+
+            {/* Card 2: เงินกู้ของสหกรณ์ */}
+            <Link to="/loans" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
                 <Calculator size={24} />
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>คำนวณเงินกู้</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>จำลองค่างวดและดอกเบี้ย</p>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เงินกู้ของสหกรณ์</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ประเภทเงินกู้และเงื่อนไข</p>
             </Link>
 
-            <Link to="/dividend-estimator" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-teal-light)', color: 'var(--accent-teal-dark)' }}>
-                <TrendingUp size={24} />
+            {/* Card 3: เงินฝาก */}
+            <Link to="/deposits" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <Landmark size={24} />
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>ประมาณการปันผล</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ปันผลหุ้น & เฉลี่ยคืน</p>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เงินฝาก</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ประเภทเงินฝากและดอกเบี้ย</p>
             </Link>
 
-            <Link to="/verify-receipt" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--primary-100)', color: 'var(--primary-700)' }}>
+            {/* Card 4: เอกสารดาวน์โหลด */}
+            <Link to="/documents" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
                 <FileText size={24} />
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>e-Receipt</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ตรวจสอบใบเสร็จออนไลน์</p>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เอกสารดาวน์โหลด</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>แบบฟอร์มและเอกสารต่าง ๆ</p>
             </Link>
 
-            <Link to="/loan-checklist" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-emerald-light)', color: 'var(--accent-emerald-dark)' }}>
-                <CheckCircle2 size={24} />
+            {/* Card 5: ข่าวสารและประกาศ */}
+            <Link to="/news" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <TrendingUp size={24} />
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>เช็คความพร้อมกู้</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ตรวจเอกสารและสิทธิ</p>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>ข่าวสารและประกาศ</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ติดตามข่าวสารสหกรณ์</p>
             </Link>
 
-            <Link to="/welfare" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-rose-light)', color: 'var(--accent-rose)' }}>
-                <HeartHandshake size={24} />
+            {/* Card 6: ปฏิทินยื่นกู้ */}
+            <Link to="/loan-schedule" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <Calendar size={24} />
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>สวัสดิการสมาชิก</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ทุนการศึกษา & ช่วยเหลือ</p>
-            </Link>
-
-            <Link to="/service-unavailable" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
-                <Coins size={24} />
-              </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ยังไม่เปิดให้บริการในระยะนี้</p>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>ปฏิทินยื่นกู้</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>กำหนดการและวันจ่ายเงินกู้</p>
             </Link>
 
           </div>

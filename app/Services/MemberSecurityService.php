@@ -162,7 +162,10 @@ class MemberSecurityService
 
         $cleanPass = preg_replace('/\D/', '', $password);
 
-        $memberRecord = Database::first("SELECT member_no, id_card FROM members WHERE user_id = ? LIMIT 1", [$userId]);
+        $memberRecord = null;
+        try {
+            $memberRecord = Database::first("SELECT member_no, id_card FROM members WHERE user_id = ? LIMIT 1", [$userId]);
+        } catch (\Throwable $e) {}
         if ($memberRecord) {
             $rawMemberNo = (string)($memberRecord['member_no'] ?? '');
             $cleanMemberNo = ltrim($rawMemberNo, '0');

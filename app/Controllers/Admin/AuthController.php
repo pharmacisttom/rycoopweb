@@ -113,7 +113,19 @@ class AuthController extends Controller
                     LIMIT 1";
             $user = Database::first($sql, [$inputUsername, $cleanInput, $inputUsername, $inputUsername, $cleanInput, $cleanInput]);
         } catch (\Throwable $e) {
-            Logger::error("Database user query error: " . $e->getMessage());
+            try {
+                $sqlFallback = "SELECT u.*, r.slug as role_slug, r.name as role_name,
+                                       m.member_no, m.id_card
+                                FROM users u
+                                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                                LEFT JOIN roles r ON ur.role_id = r.id
+                                LEFT JOIN members m ON u.id = m.user_id
+                                WHERE (u.username = ? OR u.username = ? OR u.email = ? OR m.member_no = ? OR m.id_card = ?) AND u.deleted_at IS NULL
+                                LIMIT 1";
+                $user = Database::first($sqlFallback, [$inputUsername, $cleanInput, $inputUsername, $inputUsername, $cleanInput]);
+            } catch (\Throwable $e2) {
+                Logger::error("Database user query error: " . $e2->getMessage());
+            }
         }
 
         $isValid = false;
@@ -288,7 +300,7 @@ class AuthController extends Controller
                     'success' => true,
                     'mfa_required' => true,
                     'requires_enrollment' => false,
-                    'redirect' => '/admin/mfa/verify',
+                    'redirect' => '/admin/mfa/verify', // Legacy compatibility: 'redirect' => '/admin/2fa'
                     'message' => 'กรุณายืนยันรหัสความปลอดภัย 2FA'
                 ]);
                 return;
@@ -324,7 +336,7 @@ class AuthController extends Controller
             'member' => '/member/privacy-ack',
             'member_admin' => '/admin/members/dashboard',
             'super_admin' => '/admin/dashboard',
-            default => '/admin/workspace'
+            default => '/staff/dashboard'
         };
 
         if ($isAjax) {
@@ -471,7 +483,10 @@ class AuthController extends Controller
         if (empty($user['password'])) { $this->response->json(['success'=>false,'message'=>'บัญชีนี้ต้องจัดการรหัสผ่านผ่านผู้ให้บริการยืนยันตัวตน'],403); return; }
         $currentPassValid = password_verify($currentPass, $user['password']);
         if (!$currentPassValid) {
-            $memberRec = Database::first("SELECT member_no FROM members WHERE user_id = ? LIMIT 1", [$user['id']]);
+            $memberRec = null;
+            try {
+                $memberRec = Database::first("SELECT member_no FROM members WHERE user_id = ? LIMIT 1", [$user['id']]);
+            } catch (\Throwable $e) {}
             if ($memberRec && !empty($memberRec['member_no'])) {
                 $rawMno = trim((string)$memberRec['member_no']);
                 $cleanMno = preg_replace('/\D/', '', $rawMno);

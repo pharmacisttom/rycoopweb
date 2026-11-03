@@ -17,6 +17,20 @@ export const KEY_STATS = [
 export const INTEREST_RATES = legacyReference.interestRates;
 
 export const LOAN_PRODUCTS = legacyReference.loanProducts;
+// Master loan products reference to verify consistency
+export const LOAN_PRODUCTS_MASTER = [
+  'เงินกู้สามัญ',
+  'เงินกู้ฉุกเฉิน',
+  'เงินกู้พิเศษ',
+  'เงินกู้ผ่อนชำระสินค้า ฯ',
+  'เงินกู้เพื่อการศึกษา',
+  'เงินกู้เพื่อพัฒนาคุณภาพชีวิต',
+  'เงินกู้เพื่อจัดซื้อรถยนต์',
+  'เงินกู้พิเศษเพื่อความมั่นคงในชีวิต',
+  'เงินกู้เพื่อปรับปรุงโครงสร้างหนี้',
+  'เงินกู้รับการค้ำประกัน'
+];
+
 
 export const WELFARE_ITEMS = [
   {

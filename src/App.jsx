@@ -44,6 +44,7 @@ const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const LoansPage = lazy(() => import('./pages/LoansPage'));
 const DepositsPage = lazy(() => import('./pages/DepositsPage'));
 const LoanChecklistPage = lazy(() => import('./pages/LoanChecklistPage'));
+const LoanSchedulePage = lazy(() => import('./pages/LoanSchedulePage'));
 const WelfarePage = lazy(() => import('./pages/WelfarePage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
@@ -99,6 +100,9 @@ const publicRoutes = [
   ['/deposits', DepositsPage],
   ['/rates', DepositsPage],
   ['/loans', LoansPage],
+  ['/loan-schedule', LoanSchedulePage],
+  ['/loans/schedule', LoanSchedulePage],
+  ['/loan-calendar', LoanSchedulePage],
   ['/calculator', CalculatorPage],
   ['/loan-checklist', LoanChecklistPage],
   ['/loan-readiness', LoanChecklistPage],
