@@ -19,6 +19,22 @@ echo " Target Environment: TEST ONLY (rycoopweb_test)"
 echo "=============================================================================="
 
 # ------------------------------------------------------------------------------
+# EXCLUSIVE OPERATION LOCK
+# (Requirement 9: Prevent concurrent deployment or rollback)
+# ------------------------------------------------------------------------------
+LOCK_FILE="${SHARED_TEST_DIR}/.deploy.lock"
+mkdir -p "${SHARED_TEST_DIR}" 2>/dev/null || true
+exec 200>"${LOCK_FILE}"
+if command -v flock >/dev/null 2>&1; then
+    if ! flock -n 200; then
+        echo "[CRITICAL ERROR] Concurrent deployment or rollback detected! (lock held on ${LOCK_FILE})." >&2
+        echo "                 Refusing to run simultaneous operations. Aborting." >&2
+        exit 1
+    fi
+    echo "[PASS] Acquired exclusive rollback lock: ${LOCK_FILE}"
+fi
+
+# ------------------------------------------------------------------------------
 # HELPER: ATOMIC SYMLINK SWITCH WITH VALIDATION
 # (Uses validated temporary symlink followed by mv -Tf; never ln -sfn directly on live links)
 # ------------------------------------------------------------------------------
@@ -62,20 +78,31 @@ atomic_symlink_switch() {
 
 # ------------------------------------------------------------------------------
 # STEP 1: RESOLVE RECORDED PRE-UAT BASELINE TARGETS
-# (Requirement 9: Must restore exact previous targets, not hardcoded paths)
+# (Requirements 8, 9: Restore from deployment manifest or legacy record files)
 # ------------------------------------------------------------------------------
+MANIFEST="${SHARED_TEST_DIR}/manifests/latest.json"
 BACKEND_RECORD="${SHARED_TEST_DIR}/last_pre_uat_backend.txt"
 STATIC_RECORD="${SHARED_TEST_DIR}/last_pre_uat_static.txt"
 
-if [ ! -f "${BACKEND_RECORD}" ] || [ ! -f "${STATIC_RECORD}" ]; then
-    echo "[ERROR] Pre-UAT baseline records missing:" >&2
-    echo "        Expected: ${BACKEND_RECORD} and ${STATIC_RECORD}" >&2
-    echo "        Refusing to restore to hardcoded or unverified paths. Aborting." >&2
-    exit 1
+PREV_BACKEND=""
+PREV_STATIC=""
+
+if [ -f "${MANIFEST}" ]; then
+    echo "[DIAGNOSTIC] Resolving rollback baseline from deployment manifest: ${MANIFEST}..."
+    PREV_BACKEND=$(grep -E '"previous_backend":' "${MANIFEST}" | head -n1 | cut -d '"' -f4 || echo "")
+    PREV_STATIC=$(grep -E '"previous_static":' "${MANIFEST}" | head -n1 | cut -d '"' -f4 || echo "")
 fi
 
-PREV_BACKEND=$(cat "${BACKEND_RECORD}" | tr -d '[:space:]')
-PREV_STATIC=$(cat "${STATIC_RECORD}" | tr -d '[:space:]')
+if [ -z "${PREV_BACKEND}" ] || [ -z "${PREV_STATIC}" ]; then
+    if [ ! -f "${BACKEND_RECORD}" ] || [ ! -f "${STATIC_RECORD}" ]; then
+        echo "[ERROR] Pre-UAT baseline records missing:" >&2
+        echo "        Expected manifest (${MANIFEST}) or records (${BACKEND_RECORD} / ${STATIC_RECORD})" >&2
+        echo "        Refusing to restore to hardcoded or unverified paths. Aborting." >&2
+        exit 1
+    fi
+    PREV_BACKEND=$(cat "${BACKEND_RECORD}" | tr -d '[:space:]')
+    PREV_STATIC=$(cat "${STATIC_RECORD}" | tr -d '[:space:]')
+fi
 
 if [ -z "${PREV_BACKEND}" ] || [ ! -d "${PREV_BACKEND}" ]; then
     echo "[ERROR] Recorded previous backend directory is invalid or missing: '${PREV_BACKEND}'" >&2
@@ -126,8 +153,13 @@ if [ "${CURRENT_STATIC}" != "${PREV_STATIC}" ]; then
     exit 1
 fi
 
+if [ -f "${MANIFEST:-}" ]; then
+    sed -i 's/"status": .*/"status": "ROLLED_BACK"/' "${MANIFEST}" 2>/dev/null || true
+fi
+
 echo "[PASS] Active Backend successfully restored: ${CURRENT_BACKEND}"
 echo "[PASS] Active Static successfully restored:  ${CURRENT_STATIC}"
 echo "=============================================================================="
 echo " ROLLBACK COMPLETE: TEST environment restored to exact pre-UAT release."
+echo " Manifest: ${MANIFEST:-NONE} (status: ROLLED_BACK)"
 echo "=============================================================================="

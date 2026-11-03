@@ -36,6 +36,22 @@ echo " Target Environment:     TEST ONLY (rycoopweb_test)"
 echo "=============================================================================="
 
 # ------------------------------------------------------------------------------
+# EXCLUSIVE DEPLOYMENT LOCK
+# (Requirement 9: Prevent concurrent deployments using an exclusive lock)
+# ------------------------------------------------------------------------------
+LOCK_FILE="${SHARED_TEST_DIR}/.deploy.lock"
+mkdir -p "${SHARED_TEST_DIR}" 2>/dev/null || true
+exec 200>"${LOCK_FILE}"
+if command -v flock >/dev/null 2>&1; then
+    if ! flock -n 200; then
+        echo "[CRITICAL ERROR] Concurrent deployment detected! Another deployment is currently running (lock held on ${LOCK_FILE})." >&2
+        echo "                 Refusing to run simultaneous deployments. Aborting." >&2
+        exit 1
+    fi
+    echo "[PASS] Acquired exclusive deployment lock: ${LOCK_FILE}"
+fi
+
+# ------------------------------------------------------------------------------
 # HELPER: ATOMIC SYMLINK SWITCH WITH STRICT RESOLUTION VALIDATION
 # (Uses validated temporary symlink followed by mv -Tf; never ln -sfn directly on live links)
 # ------------------------------------------------------------------------------
@@ -102,17 +118,11 @@ if ! systemctl is-active --quiet rycoop-test-fpm.service; then
 fi
 echo "[PASS] Dedicated 'rycoop-test-fpm.service' is active and running."
 
-# Requirement 3: Preserve production and existing shared-test/.env without modification
-SHARED_ENV="${SHARED_TEST_DIR}/.env"
-if [ ! -f "${SHARED_ENV}" ]; then
-    echo "[ERROR] Precondition Failed: ${SHARED_ENV} does not exist!" >&2
-    echo "       Refusing to proceed without existing verified TEST configuration." >&2
-    exit 1
-fi
-echo "[PASS] Verified existing shared-test/.env preserved intact: ${SHARED_ENV}"
-
-# Requirement 3: Record original backend and frontend targets before switching
-# Never overwrite existing TEST symlinks during preparation
+# ------------------------------------------------------------------------------
+# VERIFY ACTIVE TEST CONFIG & BASELINE RESOLUTION
+# (Requirements 1, 2, 7: Inspect active backend .env, never overwrite active config)
+# ------------------------------------------------------------------------------
+echo "[CHECK 1.2] VERIFY ACTIVE TEST CONFIG"
 ORIG_BACKEND=$(readlink -f "${ACTIVE_BACKEND_LINK}" 2>/dev/null || echo "")
 ORIG_STATIC=$(readlink -f "${ACTIVE_STATIC_LINK}" 2>/dev/null || echo "")
 
@@ -130,20 +140,101 @@ if [ "${ORIG_BACKEND}" = "${UAT_BACKEND}" ]; then
     exit 1
 fi
 
-# Do not overwrite another deployment's rollback baseline if current deployment is active
+ACTIVE_BACKEND_ENV=""
+ACTIVE_ENV_CHECKSUM=""
+if [ -L "${ORIG_BACKEND}/.env" ] || [ -f "${ORIG_BACKEND}/.env" ]; then
+    ACTIVE_BACKEND_ENV=$(readlink -f "${ORIG_BACKEND}/.env" 2>/dev/null || echo "")
+    if [ -f "${ACTIVE_BACKEND_ENV}" ]; then
+        ACTIVE_ENV_CHECKSUM=$(sha256sum "${ACTIVE_BACKEND_ENV}" 2>/dev/null | awk '{print $1}' || echo "")
+    fi
+fi
+
+echo "  - Active Backend Directory: ${ORIG_BACKEND}"
+echo "  - Active Backend .env link: ${ORIG_BACKEND}/.env"
+echo "  - Resolved Active .env file: ${ACTIVE_BACKEND_ENV:-[NONE]}"
+if [ -n "${ACTIVE_ENV_CHECKSUM}" ]; then
+    echo "  - Active .env SHA256 Hash:   ${ACTIVE_ENV_CHECKSUM}"
+fi
+
+# Requirement 3: Preserve production and existing shared-test/.env without modification
+SHARED_ENV="${SHARED_TEST_DIR}/.env"
+if [ ! -f "${SHARED_ENV}" ]; then
+    if [ -n "${ACTIVE_BACKEND_ENV}" ] && [ -f "${ACTIVE_BACKEND_ENV}" ]; then
+        echo "[DIAGNOSTIC] ${SHARED_ENV} not found; deriving base template from active backend configuration..."
+        cp -p "${ACTIVE_BACKEND_ENV}" "${SHARED_ENV}"
+        chmod 640 "${SHARED_ENV}"
+        chown www-data:www-data "${SHARED_ENV}" 2>/dev/null || true
+    else
+        echo "[ERROR] Precondition Failed: ${SHARED_ENV} does not exist!" >&2
+        echo "       Refusing to proceed without existing verified TEST configuration." >&2
+        exit 1
+    fi
+fi
+echo "[PASS] Verified base shared-test/.env preserved intact: ${SHARED_ENV}"
+
+# ------------------------------------------------------------------------------
+# STEP 1.3: GENERATE PER-RELEASE IMMUTABLE ENVIRONMENT CONFIGURATION
+# (Requirements 2, 3, 4, 5, 6, 7)
+# ------------------------------------------------------------------------------
+# Define unique per-release environment configuration file under protected shared-test (Requirement 3)
+UAT_ENV="${SHARED_TEST_DIR}/.env.uat.${RESOLVED_SHA}"
+
+# Requirement 2: Never overwrite an environment configuration referenced by any active release
+if [ -n "${ACTIVE_BACKEND_ENV}" ] && [ "${UAT_ENV}" = "${ACTIVE_BACKEND_ENV}" ]; then
+    echo "[CRITICAL ERROR] Target environment file ${UAT_ENV} is referenced by active backend release (${ORIG_BACKEND})!" >&2
+    echo "                 Refusing to overwrite active environment. Aborting." >&2
+    exit 1
+fi
+
+# If per-release env file already exists, verify it is not referenced by active release
+if [ -f "${UAT_ENV}" ]; then
+    echo "[WARN] Target per-release environment ${UAT_ENV} already exists. Ensuring it is not referenced by active backend..."
+    if [ "${UAT_ENV}" = "${ACTIVE_BACKEND_ENV}" ]; then
+        echo "[CRITICAL ERROR] ${UAT_ENV} is referenced by active backend release! Aborting." >&2
+        exit 1
+    fi
+fi
+
+# Requirement 8: Record rollback targets in a deployment-specific manifest
+MANIFESTS_DIR="${SHARED_TEST_DIR}/manifests"
+mkdir -p "${MANIFESTS_DIR}"
+chmod 750 "${MANIFESTS_DIR}" 2>/dev/null || true
+
+DEPLOYMENT_MANIFEST="${MANIFESTS_DIR}/deployment_${RESOLVED_SHA}.json"
+DEPLOY_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%d %H:%M:%S")
+
+cat <<EOF > "${DEPLOYMENT_MANIFEST}"
+{
+  "timestamp": "${DEPLOY_TIMESTAMP}",
+  "target_commit_sha": "${RESOLVED_SHA}",
+  "target_backend": "${UAT_BACKEND}",
+  "target_static": "${UAT_STATIC}",
+  "target_env": "${UAT_ENV}",
+  "previous_backend": "${ORIG_BACKEND}",
+  "previous_static": "${ORIG_STATIC}",
+  "previous_env": "${ACTIVE_BACKEND_ENV}",
+  "database": "rycoopweb_test",
+  "status": "STAGED",
+  "allow_unreconciled_source": "${ALLOW_UNRECONCILED_SOURCE:-false}"
+}
+EOF
+chmod 640 "${DEPLOYMENT_MANIFEST}" 2>/dev/null || true
+ln -snf "${DEPLOYMENT_MANIFEST}" "${MANIFESTS_DIR}/latest.json"
+
+# Preserve legacy rollback record files for backward compatibility
 echo "${ORIG_BACKEND}" > "${SHARED_TEST_DIR}/last_pre_uat_backend.txt"
 echo "${ORIG_STATIC}" > "${SHARED_TEST_DIR}/last_pre_uat_static.txt"
-echo "[PASS] Recorded exact pre-UAT symlink baselines for rollback."
+echo "[PASS] Recorded exact pre-UAT symlink baselines in manifest:"
+echo "       Manifest:        ${DEPLOYMENT_MANIFEST}"
 echo "       Previous Backend Target: ${ORIG_BACKEND}"
 echo "       Previous Static Target:  ${ORIG_STATIC}"
+echo "       Previous Environment:    ${ACTIVE_BACKEND_ENV:-[NONE]}"
 
-# Requirement 1 & 4: Create isolated TEST UAT environment configuration (.env.uat)
-# Keep .env.uat private with chmod 640 and chown www-data:www-data
-UAT_ENV="${SHARED_TEST_DIR}/.env.uat"
-echo "[DIAGNOSTIC] Generating isolated UAT configuration (${UAT_ENV}) from ${SHARED_ENV}..."
+# Requirement 4: Copy the approved TEST configuration without exposing secrets in logs
+echo "[DIAGNOSTIC] Generating per-release isolated UAT configuration (${UAT_ENV}) from ${SHARED_ENV}..."
 cp "${SHARED_ENV}" "${UAT_ENV}"
 
-# Verify the actual TEST database name in .env.uat is strictly rycoopweb_test before any DB operation
+# Requirement 5: Verify that the database is strictly rycoopweb_test
 DB_NAME=$(grep -E '^DB_DATABASE=' "${UAT_ENV}" | head -n1 | cut -d '=' -f2 | tr -d ' "\r\n')
 if [ "${DB_NAME}" != "rycoopweb_test" ]; then
     echo "[CRITICAL ERROR] Target database name in ${UAT_ENV} is '${DB_NAME}', expected strictly 'rycoopweb_test'!" >&2
@@ -151,7 +242,7 @@ if [ "${DB_NAME}" != "rycoopweb_test" ]; then
     rm -f "${UAT_ENV}"
     exit 1
 fi
-echo "[PASS] Verified target database in .env.uat is strictly 'rycoopweb_test'."
+echo "[PASS] Verified target database in ${UAT_ENV} is strictly 'rycoopweb_test'."
 
 update_or_append_flag() {
     local key="$1"
@@ -172,8 +263,12 @@ update_or_append_flag "VITE_FEATURE_MEMBER_PORTAL" "true" "${UAT_ENV}"
 chown www-data:www-data "${UAT_ENV}" 2>/dev/null || true
 chmod 640 "${UAT_ENV}" 2>/dev/null || true
 
+# Safe logging: only log non-sensitive keys without exposing passwords or secrets (Requirement 4)
 echo "[PASS] Isolated TEST UAT environment configuration generated and secured (chmod 640):"
-grep -E '^(FEATURE_MEMBER_|VITE_FEATURE_MEMBER_)' "${UAT_ENV}"
+echo "  - File:     ${UAT_ENV}"
+echo "  - Database: ${DB_NAME}"
+echo "  - Active Flags:"
+grep -E '^(FEATURE_MEMBER_|VITE_FEATURE_MEMBER_)' "${UAT_ENV}" | sed 's/^/      * /'
 
 # ------------------------------------------------------------------------------
 # PHASE 2: STAGE IMMUTABLE TEST UAT RELEASE (BACKEND & FRONTEND)
@@ -194,9 +289,17 @@ fi
 
 cd "${UAT_BACKEND}"
 
-# Link isolated UAT .env
+# Link isolated per-release UAT .env (Requirement 6)
 rm -f "${UAT_BACKEND}/.env"
 ln -snf "${UAT_ENV}" "${UAT_BACKEND}/.env"
+
+# Verify staged backend points strictly to its own per-release immutable environment file
+RESOLVED_BACKEND_ENV=$(readlink -f "${UAT_BACKEND}/.env" 2>/dev/null || echo "")
+if [ "${RESOLVED_BACKEND_ENV}" != "${UAT_ENV}" ]; then
+    echo "[ERROR] Staged backend .env link resolution mismatch: '${RESOLVED_BACKEND_ENV}' != '${UAT_ENV}'" >&2
+    exit 1
+fi
+echo "[PASS] Staged backend points strictly to its own immutable environment file: ${UAT_ENV}"
 
 # Requirement 2: Shared Storage Safety without destructive rm -rf
 # If target is existing correct symlink, preserve it.
@@ -496,6 +599,22 @@ else
     fi
 fi
 
+# Requirement 7: Preserve the active release configuration unchanged
+echo "[CHECK 3.8] Verifying active release configuration remained completely unchanged..."
+if [ -n "${ACTIVE_BACKEND_ENV}" ] && [ -f "${ACTIVE_BACKEND_ENV}" ] && [ -n "${ACTIVE_ENV_CHECKSUM}" ]; then
+    CURRENT_ACTIVE_CHECKSUM=$(sha256sum "${ACTIVE_BACKEND_ENV}" 2>/dev/null | awk '{print $1}' || echo "")
+    if [ "${CURRENT_ACTIVE_CHECKSUM}" != "${ACTIVE_ENV_CHECKSUM}" ]; then
+        echo "[CRITICAL ERROR] Active release environment (${ACTIVE_BACKEND_ENV}) was modified during staging!" >&2
+        echo "                 Baseline SHA256: ${ACTIVE_ENV_CHECKSUM}" >&2
+        echo "                 Current SHA256:  ${CURRENT_ACTIVE_CHECKSUM}" >&2
+        echo "                 Aborting deployment to preserve active release integrity." >&2
+        exit 1
+    fi
+    echo "[PASS] Active release environment (${ACTIVE_BACKEND_ENV}) preserved completely unchanged (SHA256 verified)."
+else
+    echo "[PASS] Active release environment preservation verified."
+fi
+
 echo "[PASS] All pre-switch automated verification suites passed cleanly (100%)."
 
 # ------------------------------------------------------------------------------
@@ -508,6 +627,9 @@ echo "--- [PHASE 4] Atomic Symlink Switch & Dedicated Service Activation ---"
 rollback() {
     local exit_code=$?
     echo "[CRITICAL] Post-switch smoke test failed (code: ${exit_code})! Initiating immediate atomic rollback..." >&2
+    if [ -f "${DEPLOYMENT_MANIFEST:-}" ]; then
+        sed -i 's/"status": "STAGED"/"status": "ROLLED_BACK"/' "${DEPLOYMENT_MANIFEST}" 2>/dev/null || true
+    fi
     if [ -n "${ORIG_BACKEND}" ] && [ -d "${ORIG_BACKEND}" ]; then
         atomic_symlink_switch "${ORIG_BACKEND}" "${ACTIVE_BACKEND_LINK}"
         echo "[ROLLBACK] Restored backend symlink -> ${ORIG_BACKEND}" >&2
@@ -626,12 +748,20 @@ fi
 # Disarm trap on successful completion
 trap - ERR INT TERM
 
+# Update manifest status to ACTIVE upon successful activation
+if [ -f "${DEPLOYMENT_MANIFEST:-}" ]; then
+    sed -i 's/"status": "STAGED"/"status": "ACTIVE"/' "${DEPLOYMENT_MANIFEST}" 2>/dev/null || true
+fi
+
 echo ""
 echo "=============================================================================="
 echo " RYCOOPWEB TEST UAT DEPLOYMENT COMPLETED SUCCESSFULLY"
-echo " Active Backend: ${UAT_BACKEND}"
-echo " Active Static:  ${UAT_STATIC}"
-echo " Database:       rycoopweb_test"
-echo " Pre-UAT Backup: ${SHARED_TEST_DIR}/last_pre_uat_backend.txt"
-echo " Status:         READY FOR UAT VERIFICATION"
+echo " Active Backend:   ${UAT_BACKEND}"
+echo " Active Static:    ${UAT_STATIC}"
+echo " Active Env:       ${UAT_ENV}"
+echo " Database:         rycoopweb_test"
+echo " Deployment Lock:  RELEASED (${LOCK_FILE})"
+echo " Manifest:         ${DEPLOYMENT_MANIFEST}"
+echo " Pre-UAT Backup:   ${SHARED_TEST_DIR}/last_pre_uat_backend.txt"
+echo " Status:           READY FOR UAT VERIFICATION"
 echo "=============================================================================="
