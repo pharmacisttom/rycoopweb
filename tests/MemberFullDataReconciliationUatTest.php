@@ -148,19 +148,31 @@ assertUat(
     "UAT 4: All 4,855 dividend records reconciled (Year 2567: 2,429 records, Year 2568: 2,426 records)"
 );
 
-// UAT 5: PII Masking Across All 2,508 Records
+// UAT 5: PII Masking & Exposure Prevention Across All 2,508 Records
 $stmt = $pdo->query("SELECT id_card, member_no, first_name, last_name FROM members");
 $piiFailures = 0;
+$exposureFailures = 0;
 while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    $maskedId = MemberPiiMaskingService::maskCitizenId($r['id_card']);
-    $maskedNo = MemberPiiMaskingService::maskMemberNo($r['member_no']);
-    $maskedName = MemberPiiMaskingService::maskFullName(trim($r['first_name'] . ' ' . $r['last_name']));
+    $rawId = (string)$r['id_card'];
+    $rawNo = (string)$r['member_no'];
+    $rawFullName = trim($r['first_name'] . ' ' . $r['last_name']);
+
+    $maskedId = MemberPiiMaskingService::maskCitizenId($rawId);
+    $maskedNo = MemberPiiMaskingService::maskMemberNo($rawNo);
+    $maskedName = MemberPiiMaskingService::maskFullName($rawFullName);
     
-    if (!preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedId) || !preg_match('/^\d{2}\*\d{2}$/u', $maskedNo) || !preg_match('/(?:xx|\*)/u', $maskedName)) {
+    // Format check: citizen ID, member no, name ending with xx/xxx
+    if (!preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedId) || !preg_match('/^\d{2}\*\d{2}$/u', $maskedNo) || !preg_match('/(?:xx|xxx|\*)/u', $maskedName)) {
         $piiFailures++;
     }
+
+    // Exposure check: ensure raw values are not exposed verbatim
+    if ($maskedId === $rawId || $maskedNo === $rawNo || ($rawFullName !== '' && $maskedName === $rawFullName)) {
+        $exposureFailures++;
+    }
 }
-assertUat($piiFailures === 0, "UAT 5: 100% of 2,508 member records pass centralized PII masking (names, citizen IDs, member nos)");
+assertUat($piiFailures === 0, "UAT 5.1: 100% of 2,508 member records pass approved PII format masking (names xx/xxx, citizen IDs, member nos)");
+assertUat($exposureFailures === 0, "UAT 5.2: Zero raw PII exposures detected across entire 2,508 membership baseline");
 
 // UAT 6: Financial Data Isolation (Zero IDOR Cross-Leakage)
 $sampleCheck = $pdo->query("SELECT id, member_no FROM members LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);

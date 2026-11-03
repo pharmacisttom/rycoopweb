@@ -523,6 +523,32 @@ foreach ($loginLogEntries as $entry) {
     testAssert(!str_contains($entry['email'], '3100300999999'), "9. Raw 13-digit citizen ID NEVER logged in login_logs");
 }
 
+// -------------------------------------------------------------------------
+// 10. API Regression Tests for Raw PII & Unauthorized Financial Data
+// -------------------------------------------------------------------------
+// 10.1 Verify raw full names are strictly excluded from all member-facing responses
+testAssert(!str_contains(json_encode($resLoginA->body), 'นายกรณ์ชัย สมประสงค์'), "10. Raw full name 'นายกรณ์ชัย สมประสงค์' NEVER exposed in /login response");
+testAssert(!str_contains(json_encode($resMe->body), 'นายกรณ์ชัย สมประสงค์'), "10. Raw full name NEVER exposed in /api/auth/me response");
+testAssert(!str_contains(json_encode($resDivA->body), 'นายกรณ์ชัย สมประสงค์'), "10. Raw full name NEVER exposed in /api/member/dividends response");
+testAssert(!str_contains(json_encode($resProfile->body), 'นายกรณ์ชัย สมประสงค์'), "10. Raw full name NEVER exposed in /api/member/profile response");
+
+// 10.2 Verify raw password hashes never leak into any API response
+testAssert(!str_contains(json_encode($resLoginA->body), 'secret_hash'), "10. Password hashes never present in /login response");
+testAssert(!str_contains(json_encode($resProfile->body), 'secret_hash'), "10. Password hashes never present in /api/member/profile response");
+
+// 10.3 Unauthorized financial data access check (Unauthenticated request returns 401/403)
+Auth::logout();
+$resUnauth = testDispatch('GET', '/api/member/dividends');
+testAssert($resUnauth->status === 401 || $resUnauth->status === 403, "10. Unauthenticated financial dividends endpoint access returns HTTP 401/403");
+
+$resUnauthProfile = testDispatch('GET', '/api/member/profile');
+testAssert($resUnauthProfile->status === 401 || $resUnauthProfile->status === 403, "10. Unauthenticated profile endpoint access returns HTTP 401/403");
+
+// 10.4 Thai Unicode Grapheme Cluster Integrity at Truncation Boundary
+$complexClusterTest = MemberPiiMaskingService::maskFullName('นายฐิติวัชร ยิ่งลักษณ์');
+testAssert($complexClusterTest === 'นายฐิติxx ยิ่xxx', "10. Thai Unicode combining vowels and tone marks handled cleanly without orphan marks");
+testAssert(preg_match('/xx/u', $complexClusterTest) && preg_match('/xxx/u', $complexClusterTest), "10. Approved xx/xxx suffix format strictly preserved across complex Thai clusters");
+
 echo "=========================================================================\n";
 echo "SUMMARY: ALL PII MASKING & ACTIVATION SAFETY TESTS PASSED!\n";
 echo "=========================================================================\n";

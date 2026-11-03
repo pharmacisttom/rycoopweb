@@ -110,37 +110,48 @@ echo "  [PASS] All 4,855 historical financial dividend records verified.\n\n";
 // 5. Data Privacy & PII Masking Verification Across All 2,508 Records
 echo "[CHECK 5] Comprehensive PII Masking Verification (All 2,508 Records):\n";
 $stmt = $pdo->query("SELECT id, id_card, member_no, first_name, last_name, phone FROM members");
-$piiViolations = 0;
+$formatViolations = 0;
+$exposureViolations = 0;
 $checkedMembers = 0;
 
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $checkedMembers++;
-    $maskedIdCard = MemberPiiMaskingService::maskCitizenId((string)$row['id_card']);
-    $maskedMemberNo = MemberPiiMaskingService::maskMemberNo((string)$row['member_no']);
-    $maskedName = MemberPiiMaskingService::maskFullName(trim($row['first_name'] . ' ' . $row['last_name']));
+    $rawIdCard = (string)$row['id_card'];
+    $rawMemberNo = (string)$row['member_no'];
+    $rawFullName = trim($row['first_name'] . ' ' . $row['last_name']);
+
+    $maskedIdCard = MemberPiiMaskingService::maskCitizenId($rawIdCard);
+    $maskedMemberNo = MemberPiiMaskingService::maskMemberNo($rawMemberNo);
+    $maskedName = MemberPiiMaskingService::maskFullName($rawFullName);
     
-    // Validate masked citizen ID pattern: 3-****-*****-**-*
-    if (!preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedIdCard)) {
-        $piiViolations++;
+    // 5.1 Format Validation:
+    // Masked citizen ID pattern: 3-****-*****-**-*
+    $validId = (bool)preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedIdCard);
+    // Masked member number pattern: 00*42
+    $validNo = (bool)preg_match('/^\d{2}\*\d{2}$/u', $maskedMemberNo);
+    // Masked Thai name: approved format with 'xx' for first name and 'xxx' for surname (or fallback '*')
+    $validName = (bool)preg_match('/(?:xx|xxx|\*)/u', $maskedName);
+
+    if (!$validId || !$validNo || !$validName) {
+        $formatViolations++;
     }
-    // Validate masked member number pattern: 00*42
-    if (!preg_match('/^\d{2}\*\d{2}$/u', $maskedMemberNo)) {
-        $piiViolations++;
-    }
-    // Validate masked name contains asterisks
-    if (!str_contains($maskedName, '*')) {
-        $piiViolations++;
+
+    // 5.2 Exposure Prevention Check (Ensures raw PII is never exposed verbatim):
+    if ($maskedIdCard === $rawIdCard || $maskedMemberNo === $rawMemberNo || ($rawFullName !== '' && $maskedName === $rawFullName)) {
+        $exposureViolations++;
     }
 }
 
 echo "  - Total members verified: {$checkedMembers}\n";
-echo "  - PII masking violations: {$piiViolations}\n";
+echo "  - Format validation failures: {$formatViolations}\n";
+echo "  - Raw PII exposure violations: {$exposureViolations}\n";
 
-if ($piiViolations > 0) {
-    echo "  [FAIL] PII masking failed for {$piiViolations} records!\n";
+if ($formatViolations > 0 || $exposureViolations > 0) {
+    echo "  [FAIL] PII masking failed (format: {$formatViolations}, exposure: {$exposureViolations})!\n";
     exit(1);
 }
-echo "  [PASS] 100% of 2,508 member records conform to centralized PII masking.\n\n";
+echo "  [PASS] 100% of 2,508 member records conform to approved PII masking (names, citizen IDs, member nos).\n";
+echo "  [PASS] Zero raw PII exposures detected across entire membership baseline.\n\n";
 
 // 6. Financial Isolation & IDOR Protection Verification
 echo "[CHECK 6] Financial Data Isolation & IDOR Prevention:\n";
