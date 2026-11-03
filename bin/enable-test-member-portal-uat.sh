@@ -202,7 +202,8 @@ ln -snf "${UAT_ENV}" "${UAT_BACKEND}/.env"
 # If target is existing correct symlink, preserve it.
 # If it is a different symlink, fail safely and report conflict.
 # If it is an empty directory, remove only empty directory using rmdir, then create symlink.
-# If it contains any files, stop without deleting anything.
+# If it contains only .gitkeep placeholder, verify no other files exist, remove .gitkeep, and rmdir the empty directory.
+# If it contains any other files, stop without deleting anything.
 # Never delete uploads, logs, backups, or financial data.
 # Verify symlink targets after creation.
 mkdir -p "${UAT_BACKEND}/storage"
@@ -223,15 +224,28 @@ for subdir in uploads logs tmp; do
             exit 1
         fi
     elif [ -d "${target_link}" ]; then
-        # Check if directory contains files
-        if [ -n "$(ls -A "${target_link}" 2>/dev/null)" ]; then
-            echo "[ERROR] Storage directory ${target_link} is not empty and contains files!" >&2
-            echo "        Stopping without deleting anything to prevent data loss. Aborting." >&2
-            exit 1
-        else
+        # Inspect directory contents safely
+        local_entries=$(ls -A1 "${target_link}" 2>/dev/null || echo "")
+        if [ -z "${local_entries}" ]; then
             echo "[DIAGNOSTIC] ${target_link} is an empty directory. Safely removing with rmdir..."
             rmdir "${target_link}"
             ln -s "${shared_target}" "${target_link}"
+        elif [ "${local_entries}" = ".gitkeep" ]; then
+            echo "[DIAGNOSTIC] ${target_link} contains only .gitkeep placeholder. Removing placeholder..."
+            rm -f "${target_link}/.gitkeep"
+            # Verify directory is now strictly empty before using rmdir
+            remaining=$(ls -A1 "${target_link}" 2>/dev/null || echo "")
+            if [ -n "${remaining}" ]; then
+                echo "[ERROR] Storage directory ${target_link} is not empty after placeholder removal! Aborting." >&2
+                exit 1
+            fi
+            echo "[DIAGNOSTIC] Safely removing now-empty directory with rmdir..."
+            rmdir "${target_link}"
+            ln -s "${shared_target}" "${target_link}"
+        else
+            echo "[ERROR] Storage directory ${target_link} contains files or subdirectories other than .gitkeep!" >&2
+            echo "        Stopping without deleting anything to prevent data loss. Aborting." >&2
+            exit 1
         fi
     elif [ ! -e "${target_link}" ]; then
         ln -s "${shared_target}" "${target_link}"
