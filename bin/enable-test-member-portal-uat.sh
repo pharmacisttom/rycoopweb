@@ -230,8 +230,8 @@ for subdir in uploads logs tmp; do
             echo "[DIAGNOSTIC] ${target_link} is an empty directory. Safely removing with rmdir..."
             rmdir "${target_link}"
             ln -s "${shared_target}" "${target_link}"
-        elif [ "${local_entries}" = ".gitkeep" ]; then
-            echo "[DIAGNOSTIC] ${target_link} contains only .gitkeep placeholder. Removing placeholder..."
+        elif [ "${local_entries}" = ".gitkeep" ] && [ -f "${target_link}/.gitkeep" ] && [ ! -L "${target_link}/.gitkeep" ]; then
+            echo "[DIAGNOSTIC] ${target_link} contains only regular .gitkeep placeholder. Removing placeholder from staged release..."
             rm -f "${target_link}/.gitkeep"
             # Verify directory is now strictly empty before using rmdir
             remaining=$(ls -A1 "${target_link}" 2>/dev/null || echo "")
