@@ -475,11 +475,22 @@ fi
 
 # Set permissions
 echo "[DIAGNOSTIC] Setting strict least-privilege permissions on UAT release code..."
-chown -R www-data:www-data "${UAT_BACKEND}" "${UAT_STATIC}"
-find "${UAT_BACKEND}" -type d -exec chmod 755 {} \;
-find "${UAT_BACKEND}" -type f -exec chmod 644 {} \;
-find "${UAT_BACKEND}/bin" -type f -exec chmod 755 {} \; 2>/dev/null || true
-chmod -R 775 "${UAT_BACKEND}/storage"
+# Release files remain owned by the deployment user.
+# PHP-FPM only needs read/traverse access to code and static files.
+# Never recursively change ownership or permissions on shared storage.
+for release_dir in "${UAT_BACKEND}" "${UAT_STATIC}"; do
+    find "${release_dir}" -type d -exec chmod 755 {} +
+    find "${release_dir}" -type f -exec chmod 644 {} +
+done
+
+if [ -d "${UAT_BACKEND}/bin" ]; then
+    find "${UAT_BACKEND}/bin" -type f -exec chmod 755 {} +
+fi
+
+# Verify effective runtime access without changing shared storage.
+sudo -u www-data test -r "${UAT_BACKEND}/public/index.php"
+sudo -u www-data test -r "${UAT_STATIC}/index.html"
+sudo -u www-data test -w "${UAT_BACKEND}/storage/logs"
 
 sudo -u www-data test -r "${UAT_BACKEND}/public/index.php" || {
     echo "[ERROR] PHP-FPM user www-data cannot read ${UAT_BACKEND}/public/index.php" >&2
