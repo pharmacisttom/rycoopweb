@@ -35,7 +35,7 @@ final class MaskingTestResponse extends Response
     }
 }
 
-$sessionDir = dirname(__DIR__) . '/storage/tmp/member-pii-masking-test-sessions';
+$sessionDir = sys_get_temp_dir() . '/rycoop-uat-member-pii-masking-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));
 if (!is_dir($sessionDir)) {
     mkdir($sessionDir, 0700, true);
 }

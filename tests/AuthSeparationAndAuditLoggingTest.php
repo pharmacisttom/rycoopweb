@@ -33,7 +33,7 @@ final class TestResponseCapture extends Response
     }
 }
 
-$sessionDir = dirname(__DIR__) . '/storage/tmp/auth-separation-audit-test-sessions';
+$sessionDir = sys_get_temp_dir() . '/rycoop-uat-auth-separation-audit-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));
 if (!is_dir($sessionDir)) {
     mkdir($sessionDir, 0700, true);
 }

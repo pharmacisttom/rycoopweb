@@ -32,7 +32,7 @@ final class TestResponse extends Response
     }
 }
 
-$sessionDirectory = dirname(__DIR__) . '/storage/tmp/member-auth-test-sessions';
+$sessionDirectory = sys_get_temp_dir() . '/rycoop-uat-member-auth-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));
 if (!is_dir($sessionDirectory)) {
     mkdir($sessionDirectory, 0700, true);
 }

@@ -36,7 +36,7 @@ final class UatResponseCapture extends Response
 // -----------------------------------------------------------------------------
 // Session & Environment Setup for UAT Verification
 // -----------------------------------------------------------------------------
-$sessionDir = dirname(__DIR__) . '/storage/tmp/uat-full-system-test-sessions';
+$sessionDir = sys_get_temp_dir() . '/rycoop-uat-uat-full-system-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));
 if (!is_dir($sessionDir)) {
     mkdir($sessionDir, 0700, true);
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 if(getenv('APP_ENV')!=='testing'||getenv('GITHUB_ACTIONS')!=='true'||getenv('CRUD_DISPOSABLE_MYSQL')!=='1'||getenv('DB_DATABASE')!=='rayongcoop_ci'||!in_array(getenv('DB_HOST'),['127.0.0.1','localhost'],true)||getenv('DB_USERNAME')!=='rycoop_ci_app'){
     fwrite(STDERR,"REFUSED: requires fresh GitHub Actions disposable rayongcoop_ci MySQL 8, never TEST/Production.\n");exit(2);
 }
-$sessions=dirname(__DIR__).'/storage/tmp/crud-mysql-sessions';if(!is_dir($sessions))mkdir($sessions,0700,true);putenv('SESSION_SAVE_PATH='.$sessions);putenv('SESSION_SECURE=false');
+$sessions=sys_get_temp_dir() . '/rycoop-uat-crud-mysql-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));if(!is_dir($sessions))mkdir($sessions,0700,true);putenv('SESSION_SAVE_PATH='.$sessions);putenv('SESSION_SECURE=false');
 require dirname(__DIR__).'/vendor/autoload.php';
 use App\Core\{Auth,Csrf,Database,Request,Response,Router,Session};
 use App\Services\{AccessService,AdminCrudService,StaffInvitationService,TwoFactorService};

@@ -27,7 +27,7 @@ final class VisitorAnalyticsCapturedResponse extends Response
     }
 }
 
-$sessionDirectory = dirname(__DIR__) . '/storage/tmp/visitor-analytics-test-sessions';
+$sessionDirectory = sys_get_temp_dir() . '/rycoop-uat-visitor-analytics-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));
 if (!is_dir($sessionDirectory)) {
     mkdir($sessionDirectory, 0700, true);
 }

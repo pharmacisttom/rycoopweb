@@ -5,7 +5,7 @@ use App\Core\{Auth,Database};
 use App\Services\PublicContentService as Content;
 
 date_default_timezone_set('Asia/Bangkok');
-$sessions=dirname(__DIR__).'/storage/tmp/content-test-sessions';if(!is_dir($sessions))mkdir($sessions,0700,true);
+$sessions=sys_get_temp_dir() . '/rycoop-uat-content-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));if(!is_dir($sessions))mkdir($sessions,0700,true);
 putenv('SESSION_SAVE_PATH='.$sessions);putenv('SESSION_SECURE=false');
 $pdo=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 (new ReflectionProperty(Database::class,'instance'))->setValue(null,$pdo);

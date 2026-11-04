@@ -35,9 +35,12 @@ final class PdpaOnlyTestResponse extends Response
     }
 }
 
-$sessionDir = dirname(__DIR__) . '/storage/tmp/member-pdpa-only-flow-test-sessions';
-if (!is_dir($sessionDir)) {
-    mkdir($sessionDir, 0700, true);
+// Use an isolated test session directory, never shared runtime storage.
+$sessionDir = sys_get_temp_dir()
+    . '/rycoop-pdpa-uat-' . getmyuid() . '-' . getmypid();
+
+if (!mkdir($sessionDir, 0700) || !is_dir($sessionDir)) {
+    throw new RuntimeException('Cannot create isolated test session directory');
 }
 putenv('SESSION_SAVE_PATH=' . $sessionDir);
 putenv('SESSION_SECURE=false');

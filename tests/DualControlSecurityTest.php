@@ -9,7 +9,7 @@ declare(strict_types=1);
 putenv('APP_KEY=isolated-dual-control-key-not-for-production-0001');
 putenv('SESSION_SECURE=false');
 
-$sessionDirectory = dirname(__DIR__) . '/storage/tmp/dual-control-test-sessions';
+$sessionDirectory = sys_get_temp_dir() . '/rycoop-uat-dual-control-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));
 if (!is_dir($sessionDirectory)) {
     mkdir($sessionDirectory, 0700, true);
 }

@@ -15,7 +15,7 @@ final class CapturedResponse extends Response
     public function redirect(string $url, int $status = 302): void { $this->status = $status; }
 }
 
-$sessionDirectory = dirname(__DIR__) . '/storage/tmp/permission-test-sessions';
+$sessionDirectory = sys_get_temp_dir() . '/rycoop-uat-permission-test-sessions-' . getmypid() . '-' . bin2hex(random_bytes(4));
 if (!is_dir($sessionDirectory)) mkdir($sessionDirectory, 0700, true);
 putenv('SESSION_SAVE_PATH=' . $sessionDirectory);
 putenv('SESSION_SECURE=false');
