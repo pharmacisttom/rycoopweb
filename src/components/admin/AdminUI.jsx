@@ -52,3 +52,19 @@ export function AdminPermissionMatrix({ catalog, modules, actions, value, onChan
       })}</tr>)}
     </tbody></table></div>;
 }
+
+
+// Re-exports from Design System 3.0
+export { default as AdminLayout } from './design-system/AdminLayout';
+export { default as ResponsiveSidebar } from './design-system/ResponsiveSidebar';
+export { default as AdminTopbar } from './design-system/AdminTopbar';
+export { default as PageHeader } from './design-system/PageHeader';
+export { default as Breadcrumbs } from './design-system/Breadcrumbs';
+export { default as CrudDataTable } from './design-system/CrudDataTable';
+export { default as CrudFormDrawer } from './design-system/CrudFormDrawer';
+export { default as CrudDetailModal } from './design-system/CrudDetailModal';
+export { default as StatusBadge } from './design-system/StatusBadge';
+export { default as EmptyState } from './design-system/EmptyState';
+export { default as LoadingSkeleton } from './design-system/LoadingSkeleton';
+export { default as PermissionGuard } from './design-system/PermissionGuard';
+export { default as FormValidationSummary } from './design-system/FormValidationSummary';
