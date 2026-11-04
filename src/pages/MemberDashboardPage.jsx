@@ -63,7 +63,7 @@ export default function MemberDashboardPage() {
       const saved = localStorage.getItem('coop_member_complaints');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return MEMBER_COMPLAINTS;
+    return [];
   });
   const [complaintFilter, setComplaintFilter] = useState('all');
   const [selectedAdminComplaint, setSelectedAdminComplaint] = useState(null);
@@ -109,12 +109,7 @@ export default function MemberDashboardPage() {
         return JSON.parse(saved);
       }
     } catch (e) {}
-    return [
-      { id: 'LN-6703-01', memberName: 'นายสมชาย มีสุข', memberId: '04892', department: 'โรงพยาบาลระยอง', phone: '081-234-5678', type: 'คำขอกู้เงินฉุกเฉินออนไลน์', amount: '50,000 บาท', date: '11 มี.ค. 2567', status: 'รอดำเนินการ', currentStep: 2, note: 'รอการตรวจสอบเอกสารและอนุมัติจากเจ้าหน้าที่สินเชื่อ' },
-      { id: 'LN-6703-02', memberName: 'นางสาววิมลรัตน์ จันทร์เพ็ญ', memberId: '05120', department: 'สสจ.ระยอง', phone: '089-987-6543', type: 'เงินกู้สามัญเพื่อสวัสดิการ', amount: '400,000 บาท', date: '10 มี.ค. 2567', status: 'รอตรวจเอกสารผู้ค้ำ', currentStep: 2, note: 'ตรวจสอบเอกสารผู้ค้ำประกัน 2 ท่าน' },
-      { id: 'REQ-6703-09', memberName: 'นายเอกชัย บุญรอด', memberId: '03411', department: 'รพ.สต.บ้านแลง', phone: '086-555-4321', type: 'ขอเปลี่ยนแปลงค่าหุ้นรายเดือน', amount: '4,000 บ./ด.', date: '10 มี.ค. 2567', status: 'รอดำเนินการ', currentStep: 2, note: 'ขอปรับเพิ่มค่าหุ้นรายเดือนเป็น 4,000 บาท' },
-      { id: 'WF-6703-05', memberName: 'นางสาวจารุณี รัตนโชติ', memberId: '06214', department: 'รพ.แกลง', phone: '082-111-2233', type: 'ขอรับสวัสดิการคลอดบุตร', amount: '3,000 บาท', date: '09 มี.ค. 2567', status: 'อนุมัติเรียบร้อยแล้ว', currentStep: 4, note: 'โอนเงินสวัสดิการเข้าบัญชีเรียบร้อย' }
-    ];
+    return [];
   });
 
   if (!isLoggedIn || !user) {
@@ -335,29 +330,20 @@ export default function MemberDashboardPage() {
         balance: parseFloat(acc.balance || 0),
         status: acc.status === 'active' ? 'ปกติ' : acc.status
       }))
-    : (user.accounts && user.accounts.length > 0 ? user.accounts : [
-        { accNo: '101-2-04892-1', type: 'ออมทรัพย์สุขใจ', balance: 45300.50, status: 'ปกติ' },
-        { accNo: '201-4-04892-8', type: 'ออมทรัพย์พิเศษพลัส', balance: 200000.00, status: 'ปกติ' },
-      ]);
+    : (user.accounts && user.accounts.length > 0 ? user.accounts : []);
 
   const memberLoans = apiSummary?.loans?.active_loans && apiSummary.loans.active_loans.length > 0
     ? apiSummary.loans.active_loans.map(loan => ({
         contractNo: loan.contract_no,
         type: loan.loan_type || 'เงินกู้สามัญ',
-        principal: parseFloat(loan.principal_amount || 0),
-        balance: parseFloat(loan.balance || 0),
+        principal: parseFloat(loan.principal_amount || loan.principal_balance || 0),
+        balance: parseFloat(loan.balance || loan.principal_balance || 0),
         monthlyPay: parseFloat(loan.monthly_installment || 0),
         termRemaining: `${loan.remaining_months || 0} งวด`
       }))
-    : (user.loans && user.loans.length > 0 ? user.loans : [
-        { contractNo: 'ส.66/0129', type: 'เงินกู้สามัญ', principal: 1000000, balance: 820000, monthlyPay: 12500, termRemaining: '96 งวด' },
-      ]);
+    : (user.loans && user.loans.length > 0 ? user.loans : []);
 
-  const memberReceipts = user.recentReceipts && user.recentReceipts.length > 0 ? user.recentReceipts : [
-    { receiptNo: 'RC-67020084', period: 'กุมภาพันธ์ 2567', date: '28 ก.พ. 2567', totalAmount: 15500, status: 'ชำระแล้ว' },
-    { receiptNo: 'RC-67010079', period: 'มกราคม 2567', date: '31 ม.ค. 2567', totalAmount: 15500, status: 'ชำระแล้ว' },
-    { receiptNo: 'RC-66120092', period: 'ธันวาคม 2566', date: '29 ธ.ค. 2566', totalAmount: 15500, status: 'ชำระแล้ว' },
-  ];
+  const memberReceipts = user.recentReceipts && user.recentReceipts.length > 0 ? user.recentReceipts : [];
 
   return (
     <div className="section" style={{ background: 'var(--bg-main)', minHeight: '85vh', paddingBottom: '3.5rem' }}>
@@ -1034,7 +1020,7 @@ export default function MemberDashboardPage() {
                 title="หนี้สินเงินกู้คงเหลือ"
                 value={memberLoanBalance.toLocaleString()}
                 unit="บาท"
-                subtitle="สัญญา ส.66/0129 (เหลือ 96 งวด)"
+                subtitle={memberLoans.length > 0 ? `${memberLoans.length} สัญญาเงินกู้` : 'ไม่มีภาระหนี้สินเงินกู้'}
                 icon={CreditCard}
                 variant="rose"
               />

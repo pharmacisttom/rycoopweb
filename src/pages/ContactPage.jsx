@@ -6,7 +6,7 @@ import {
   MapPin, Phone, Mail, Clock, MessageSquare,
   Send, CheckCircle2, ChevronDown, ChevronUp, Search, ShieldCheck, AlertCircle
 } from 'lucide-react';
-import { FAQS, MEMBER_COMPLAINTS } from '../data/mockData';
+import { FAQS } from '../data/mockData';
 
 export default function ContactPage() {
   const { COOP_INFO } = usePublicInformation();
@@ -71,7 +71,7 @@ export default function ContactPage() {
     e.preventDefault();
     if (!trackingId) return;
 
-    let list = MEMBER_COMPLAINTS;
+    let list = [];
     try {
       const saved = localStorage.getItem('coop_member_complaints');
       if (saved) list = JSON.parse(saved);

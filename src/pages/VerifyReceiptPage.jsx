@@ -1,37 +1,47 @@
 import { maskName } from '../utils/pdpa';
 import React, { useState } from 'react';
-import { ShieldCheck, QrCode, Search, CheckCircle2, FileText, Printer } from 'lucide-react';
-import { COOP_INFO } from '../data/mockData';
+import { ShieldCheck, Search, FileText, Printer, AlertCircle } from 'lucide-react';
+import { usePublicInformation } from '../context/PublicContentContext';
 
 export default function VerifyReceiptPage() {
-  const [receiptToken, setReceiptToken] = useState('RC-67020084');
-  const [verified, setVerified] = useState(true);
+  const { COOP_INFO } = usePublicInformation();
+  const [receiptToken, setReceiptToken] = useState('');
+  const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
 
-  const sampleReceipt = {
-    receiptNo: 'RC-67020084',
-    issueDate: '28 กุมภาพันธ์ 2567',
-    period: 'กุมภาพันธ์ 2567',
-    memberId: '04892',
-    memberName: 'นายเกียรติศักดิ์ พูลเพิ่ม',
-    department: 'โรงพยาบาลระยอง',
-    items: [
-      { name: 'ค่าหุ้นรายเดือน', principal: 3000, interest: 0, total: 3000 },
-      { name: 'เงินกู้สามัญ (สัญญา ส.66/0129)', principal: 8900, interest: 3600, total: 12500 },
-    ],
-    totalAmount: 15500,
-    digitalSignStatus: 'ผ่านการรับรองลายมือชื่อดิจิทัล (Valid Digital Signature)',
-    signedBy: 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด (CA Certified)',
-    timestamp: '2024-02-28 09:15:22 GMT+7'
-  };
-
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
+    const token = receiptToken.trim();
+    if (!token) return;
+
     setLoading(true);
-    setTimeout(() => {
+    setSearched(true);
+    setVerified(false);
+    setReceiptData(null);
+
+    try {
+      const res = await fetch(`/api/verify-receipt/${encodeURIComponent(token)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.success && json?.data) {
+          setReceiptData(json.data);
+          setVerified(true);
+        } else {
+          setReceiptData(null);
+          setVerified(false);
+        }
+      } else {
+        setReceiptData(null);
+        setVerified(false);
+      }
+    } catch {
+      setReceiptData(null);
+      setVerified(false);
+    } finally {
       setLoading(false);
-      setVerified(true);
-    }, 400);
+    }
   };
 
   return (
@@ -54,7 +64,7 @@ export default function VerifyReceiptPage() {
                 <input 
                   type="text" 
                   className="form-control" 
-                  placeholder="เช่น RC-67020084" 
+                  placeholder="ระบุเลขที่ใบเสร็จรับเงินเพื่อตรวจสอบ..." 
                   value={receiptToken} 
                   onChange={(e) => setReceiptToken(e.target.value)} 
                   required 
@@ -68,8 +78,23 @@ export default function VerifyReceiptPage() {
           </form>
         </div>
 
+        {/* Not Found State */}
+        {searched && !verified && !loading && (
+          <div className="surface-card animate-fade-in" style={{ maxWidth: '650px', margin: '0 auto', padding: '2rem', textAlign: 'center', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'inline-flex', padding: '1rem', borderRadius: '50%', background: 'var(--bg-subtle)', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              <AlertCircle size={32} />
+            </div>
+            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+              ยังไม่มีข้อมูลที่ได้รับการบันทึกในระบบ
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+              ไม่พบข้อมูลใบเสร็จรับเงินตามรหัสที่ระบุ หรือยังไม่มีการนำเข้าใบเสร็จงวดดังกล่าวเข้าสู่ระบบ
+            </p>
+          </div>
+        )}
+
         {/* Receipt Verification Result Card */}
-        {verified && (
+        {verified && receiptData && (
           <div className="surface-card animate-fade-in" style={{ maxWidth: '750px', margin: '0 auto', padding: '2.5rem', borderRadius: 'var(--radius-xl)', border: '2px solid var(--accent-emerald-light)' }}>
             
             {/* Status Banner */}
@@ -88,8 +113,8 @@ export default function VerifyReceiptPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <ShieldCheck size={28} />
                 <div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>ใบเสร็จรับเงินถูกต้องตามกฎหมาย</h4>
-                  <p style={{ fontSize: '0.8rem' }}>{sampleReceipt.digitalSignStatus}</p>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>ใบเสร็จรับเงินถูกต้องตามฐานข้อมูลสหกรณ์</h4>
+                  <p style={{ fontSize: '0.8rem' }}>{receiptData.digitalSignStatus || 'ผ่านการตรวจสอบความถูกต้อง'}</p>
                 </div>
               </div>
               <button onClick={() => window.print()} className="btn btn-teal btn-sm">
@@ -100,61 +125,63 @@ export default function VerifyReceiptPage() {
 
             {/* Receipt Header */}
             <div style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.3rem', color: 'var(--primary-800)', marginBottom: '0.25rem' }}>{COOP_INFO.nameTh}</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{COOP_INFO.address}</p>
+              <h3 style={{ fontSize: '1.3rem', color: 'var(--primary-800)', marginBottom: '0.25rem' }}>{COOP_INFO?.nameTh || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด'}</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{COOP_INFO?.address || ''}</p>
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary-700)', marginTop: '0.75rem' }}>
-                ใบเสร็จรับเงินประจำงวด {sampleReceipt.period}
+                ใบเสร็จรับเงินประจำงวด {receiptData.period || ''}
               </div>
             </div>
 
             {/* Member & Receipt Details */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
               <div>
-                <span style={{ color: 'var(--text-muted)' }}>เลขที่ใบเสร็จ:</span> <strong>{sampleReceipt.receiptNo}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>เลขที่ใบเสร็จ:</span> <strong>{receiptData.receiptNo}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--text-muted)' }}>วันที่ออกใบเสร็จ:</span> <strong>{sampleReceipt.issueDate}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>วันที่ออกใบเสร็จ:</span> <strong>{receiptData.issueDate || '-'}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--text-muted)' }}>สมาชิก:</span> <strong>{maskName(sampleReceipt.memberName)}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>สมาชิก:</span> <strong>{maskName(receiptData.memberName || '')}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--text-muted)' }}>เลขทะเบียน:</span> <strong>{sampleReceipt.memberId}</strong> ({sampleReceipt.department})
+                <span style={{ color: 'var(--text-muted)' }}>เลขทะเบียน:</span> <strong>{receiptData.memberId || '-'}</strong> ({receiptData.department || '-'})
               </div>
             </div>
 
             {/* Receipt Items Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <th style={{ padding: '0.75rem', textAlign: 'left' }}>รายการชำระ</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>เงินต้น</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>ดอกเบี้ย</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>รวมเป็นเงิน</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sampleReceipt.items.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '0.75rem' }}>{item.name}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'right' }}>{item.principal.toLocaleString()}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'right' }}>{item.interest.toLocaleString()}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600 }}>{item.total.toLocaleString()}</td>
+            {Array.isArray(receiptData.items) && receiptData.items.length > 0 && (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>รายการชำระ</th>
+                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>เงินต้น</th>
+                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>ดอกเบี้ย</th>
+                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>รวมเป็นเงิน</th>
                   </tr>
-                ))}
-                <tr style={{ fontWeight: 800, fontSize: '1.05rem', background: 'var(--bg-subtle)' }}>
-                  <td colSpan={3} style={{ padding: '0.75rem', textAlign: 'right' }}>ยอดชำระสุทธิ:</td>
-                  <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--primary-700)' }}>
-                    {sampleReceipt.totalAmount.toLocaleString()} บาท
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {receiptData.items.map((item, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.75rem' }}>{item.name}</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>{Number(item.principal || 0).toLocaleString()}</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>{Number(item.interest || 0).toLocaleString()}</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600 }}>{Number(item.total || 0).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ fontWeight: 800, fontSize: '1.05rem', background: 'var(--bg-subtle)' }}>
+                    <td colSpan={3} style={{ padding: '0.75rem', textAlign: 'right' }}>ยอดชำระสุทธิ:</td>
+                    <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--primary-700)' }}>
+                      {Number(receiptData.totalAmount || 0).toLocaleString()} บาท
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
 
             {/* Digital Signature Info */}
             <div style={{ background: 'var(--bg-subtle)', padding: '1rem', borderRadius: '8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              <div><strong>ผู้ลงลายมือชื่อดิจิทัล:</strong> {sampleReceipt.signedBy}</div>
-              <div><strong>ประทับเวลา (Timestamp):</strong> {sampleReceipt.timestamp}</div>
+              <div><strong>ผู้ลงนาม:</strong> {receiptData.signedBy || 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด'}</div>
+              <div><strong>วันที่บันทึก:</strong> {receiptData.timestamp || '-'}</div>
             </div>
 
           </div>

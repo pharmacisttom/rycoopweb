@@ -235,7 +235,9 @@ class SpaApiController extends Controller
     {
         $stats = [];
         try {
-            $stats = Database::query("SELECT year, month, total_members, total_assets, total_shares, total_deposits, total_loans, dividend_rate, loan_refund_rate FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 24");
+            if (Database::hasTable('financial_statistics')) {
+                $stats = Database::query("SELECT year, month, total_members, total_assets, share_capital, total_deposits, total_loans, reserve_fund, net_profit, dividend_rate, liquidity_ratio FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 24");
+            }
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $stats]);
