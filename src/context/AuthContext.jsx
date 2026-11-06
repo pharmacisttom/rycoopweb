@@ -8,7 +8,6 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    if (import.meta.env.VITE_FEATURE_MEMBER_PORTAL !== 'true') return null;
     try {
       const saved = localStorage.getItem('coop_auth_user');
       return saved ? JSON.parse(saved) : null;
@@ -33,11 +32,7 @@ export function AuthProvider({ children }) {
   // localStorage only remembers the UI state. The PHP session remains the source
   // of truth for protected actions such as publishing news.
   useEffect(() => {
-    // In public-only production mode, skip session checks and polling completely
-    if (import.meta.env.VITE_FEATURE_MEMBER_PORTAL !== 'true') {
-      setSessionStatus('offline');
-      return;
-    }
+    // Session checks and background verification run for staff/admin independent of member portal flag
 
     let cancelled = false;
     let checking = false;
@@ -160,8 +155,10 @@ export function AuthProvider({ children }) {
         const data = await response.json();
 
         if (data.success && data.redirect && !data.user) {
-          setUser(null); setSessionStatus('guest');
-          return { success: true, requiresTwoFactor: true, redirect: normalizeSameOriginRedirect(data.redirect, '/admin/2fa'), user: null };
+          setUser(null);
+          const isEnroll = data.redirect.includes('enroll') || data.requires_enrollment;
+          setSessionStatus(isEnroll ? 'mfa-enroll' : 'mfa-verify');
+          return { success: true, requiresTwoFactor: true, redirect: normalizeSameOriginRedirect(data.redirect, isEnroll ? '/admin/mfa/enroll' : '/admin/mfa/verify'), user: null };
         }
         if (data.success && data.user) {
               const roleSlug = data.user.role || data.user.role_slug || '';

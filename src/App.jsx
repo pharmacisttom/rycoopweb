@@ -146,7 +146,6 @@ const staffRoles = [
 ];
 
 function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
-  if (!memberPortalEnabled) return <ServiceUnavailablePage />;
   const { user, isLoggedIn, sessionStatus, can } = useAuth();
 
   if (sessionStatus === 'checking') return <PageSkeletonLoader />;
@@ -299,7 +298,7 @@ export default function App() {
             <Route path="/member/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
             <Route path="/member/privacy-ack" element={memberPortalEnabled ? <MemberPrivacyAckPage /> : <ServiceUnavailablePage />} />
             <Route path="/member/dividends" element={memberPortalEnabled ? <MemberProtectedRoute><MemberDividendsPage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />
-            <Route path="/admin/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

@@ -18,7 +18,6 @@ export default function LoginPage() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
-    if (import.meta.env.VITE_FEATURE_MEMBER_PORTAL !== 'true') return;
     const controller = new AbortController();
     fetch('/api/auth/options', { signal: controller.signal, credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(r => r.json())

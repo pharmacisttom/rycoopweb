@@ -13,7 +13,7 @@ const getApiUrl = (path) => path.startsWith('/') ? path : `/${path}`;
  * Core fetch wrapper with fallback URLs for development/production compatibility.
  */
 const apiFetch = async (path, options = {}) => {
-  if (isStaticMode) {
+  if (isStaticMode && !path.startsWith('/api/auth') && !path.startsWith('/api/admin')) {
     return { success: false, available: false, message: 'ระบบอยู่ในโหมดเผยแพร่ข้อมูลสาธารณะแบบคงที่ (Static Mode)' };
   }
   const uniqueUrls = [getApiUrl(path)];
@@ -97,9 +97,6 @@ const isPortalEnabled = () => import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'tr
 
 /** Check if current user is authenticated */
 export const fetchCurrentUser = () => {
-  if (!isPortalEnabled()) {
-    return Promise.resolve({ success: false, authenticated: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
-  }
   return apiFetch('/api/auth/me', { cache: 'no-store' });
 };
 
