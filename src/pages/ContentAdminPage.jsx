@@ -145,13 +145,17 @@ export default function ContentAdminPage() {
 
   return (
     <section className="admin-module">
-      <Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link>
       <AdminPageHeader
-        title="จัดการข่าวและคำถาม"
-        description="บันทึกร่าง ส่งตรวจ และตรวจตัวอย่างก่อนเผยแพร่"
+        title={tab === 'news' ? 'จัดการข่าวและกิจกรรมประชาสัมพันธ์' : 'จัดการคำถามที่พบบ่อย (FAQ)'}
+        description="บันทึกร่าง ส่งตรวจ และตรวจตัวอย่างก่อนเผยแพร่สู่เว็บไซต์สาธารณะ"
+        breadcrumbs={[
+          { label: 'Admin Control Center', path: '/admin/dashboard' },
+          { label: 'พื้นที่ทำงาน', path: '/admin/workspace' },
+          { label: tab === 'news' ? 'ข่าวสาร & ประชาสัมพันธ์' : 'คำถามที่พบบ่อย (FAQ)' }
+        ]}
         actions={
-          <button className="btn btn-outline" disabled={busy || loading} onClick={handleReload}>
-            โหลดข้อมูลล่าสุด
+          <button className="btn btn-outline" disabled={busy || loading} onClick={handleReload} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <span>{loading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}</span>
           </button>
         }
       />

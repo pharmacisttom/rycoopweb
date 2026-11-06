@@ -121,6 +121,11 @@ export default function AdminStoredContentPage({ kind = 'documents' }) {
       <AdminPageHeader
         title={settings ? 'ข้อมูลเว็บไซต์ที่อนุญาตให้แก้ไข' : 'จัดการเอกสารสหกรณ์'}
         description={settings ? 'ข้อมูลติดต่อและชื่อองค์กร · ไม่รวม secrets, feature flags หรือการตั้งค่า MFA' : 'ข้อมูลและไฟล์จากฐานข้อมูลส่วนกลาง รองรับฉบับร่างและปิดใช้งาน'}
+        breadcrumbs={[
+          { label: 'Admin Control Center', path: '/admin/dashboard' },
+          { label: 'พื้นที่ทำงาน', path: '/admin/workspace' },
+          { label: settings ? 'ข้อมูลเว็บไซต์' : 'จัดการเอกสาร' }
+        ]}
         actions={
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {!settings && (

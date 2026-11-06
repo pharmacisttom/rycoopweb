@@ -39,3 +39,4 @@ The Member Administration domain operates under strict Protected Core rules. Pha
 | **New/Existing Reconciliation** | `/admin/members/health` | `members`, `member_dividends` | • Cross-check dividend records against registered member IDs.<br>• Identify unmapped records before committing import. | Prohibits creating new member accounts from dividend sheets. |
 | **Annual Dividend History** | `/admin/members/:id` | `member_dividends` (4,855 rows) | • Historical dividends view by fiscal year.<br>• Detailed breakdowns (Shares dividend, Loan refund). | Read-only view for cooperative officers and members. |
 | **Audit & Approval Workflow** | `/admin/approvals` | `audit_logs`, `approvals` | • Dual-Control Maker/Checker requests.<br>• Step-up MFA authorization on sensitive actions. | Immutable audit trail with actor ID, timestamp, and IP. |
+

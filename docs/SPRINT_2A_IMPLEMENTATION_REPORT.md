@@ -40,3 +40,4 @@ Every standardized module has been verified to ensure zero reliance on browser `
 - **Zero LocalStorage Fallback:** No content module reads from or writes to browser `localStorage` as a data store.
 - **Zero Fabricated Statistics:** Missing database metrics return explicit unavailable states (`—` or `ข้อมูลอยู่ระหว่างปรับปรุง`) rather than placeholder numbers.
 - **Audit Logging:** Every mutating content action logs the administrator user ID, IP address, timestamp, and changed fields into `audit_logs`.
+

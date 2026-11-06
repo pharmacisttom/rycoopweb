@@ -105,3 +105,4 @@ mysql --defaults-file=/root/.my.cnf rycoopweb_test < \
 # Atomic Symlink Switch
 bash bin/deploy-test-release.sh d9e6a44bc86e55b342bb47d58bc3f313933f5bb7
 ```
+

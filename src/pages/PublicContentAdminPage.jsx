@@ -63,7 +63,7 @@ export default function PublicContentAdminPage() {
   async function publish(revision){if(!window.confirm(`เผยแพร่ร่าง #${revision.id} มีผล ${revision.effective_on}?`))return;setBusy(true);setError('');try{
     await memberAdminApi(`/api/admin/public-content/revisions/${revision.id}/publish`,{data:{}});await reload();setMessage('อนุมัติแล้ว ข้อมูลจะแสดงตามวันที่มีผล');setRefresh(n=>n+1);
   }catch(e){setError(e.message);}finally{setBusy(false);}}
-  return <section className="admin-module public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่"/>
+  return <section className="admin-module public-content-admin"><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์และอัตราดอกเบี้ย" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่" breadcrumbs={[{ label: "Admin Control Center", path: "/admin/dashboard" }, { label: "พื้นที่ทำงาน", path: "/admin/workspace" }, { label: "ข้อมูลเว็บไซต์สหกรณ์" }]} />
     {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
     <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?'))setSection(e.target.value);}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
     <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
