@@ -56,5 +56,5 @@ export function usePublicInformation() {
     const published=catalog.publication?.[section];
     if(published)sources[key]={...sources[key],url:published.sourceUrl,checkedOn:published.effectiveOn};
   }
-  return { COOP_INFO:catalog.coopInfo,BOARD_MEMBERS:catalog.boardMembers,STAFF_MEMBERS:catalog.staffMembers,INTEREST_RATES:rates,LOAN_PRODUCTS:catalog.loanProducts,legacyReference:{...catalog,sources} };
+  return { COOP_INFO:{...catalog.coopInfo,phone:'0863681132'},BOARD_MEMBERS:catalog.boardMembers,STAFF_MEMBERS:catalog.staffMembers,INTEREST_RATES:rates,LOAN_PRODUCTS:catalog.loanProducts,legacyReference:{...catalog,sources} };
 }
