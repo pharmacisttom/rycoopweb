@@ -105,3 +105,4 @@ Standardized via `src/components/admin/design-system/PageHeader.jsx`:
 - Slide-in from right, width `min(540px, 100vw)`.
 - Explicit Cancel and Save action buttons fixed at the drawer footer.
 - Keyboard accessible: `Escape` closes drawer (with unsaved changes check).
+

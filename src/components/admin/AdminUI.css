@@ -12,7 +12,7 @@
 .admin-field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;min-width:0;font-weight:600}.admin-field small{font-weight:400;color:var(--acc-text-secondary);line-height:1.6}
 .admin-field input,.admin-field select,.admin-field textarea,.acc-content .form-control{width:100%;max-width:100%;box-sizing:border-box;background:var(--acc-surface);color:var(--acc-text);border:1px solid var(--acc-border-strong);border-radius:9px;padding:11px 12px;font:inherit;min-height:44px}
 .admin-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}.admin-form-grid .admin-full-width{grid-column:1/-1}
-.admin-table-scroll{overflow:auto;max-width:100%;border:1px solid var(--acc-border);border-radius:10px;margin-block:16px}
+.admin-table-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;max-width:100%;border:1px solid var(--acc-border,#e2e8f0);border-radius:10px;margin-block:16px;background:linear-gradient(to right,white 30%,rgba(255,255,255,0)),linear-gradient(to right,rgba(255,255,255,0),white 70%) 100% 0,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,0.08),rgba(0,0,0,0)),radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,0.08),rgba(0,0,0,0)) 100% 0;background-repeat:no-repeat;background-color:#ffffff;background-size:40px 100%,40px 100%,14px 100%,14px 100%;background-attachment:local,local,scroll,scroll}
 .admin-table-hint{font-size:.8rem;color:var(--acc-text-secondary);margin:10px 0}
 @media(min-width:1100px){.admin-table-hint{display:none}}
 .admin-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:660px;font-size:.9rem}

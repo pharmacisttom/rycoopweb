@@ -48,9 +48,9 @@ export default function Breadcrumbs({ items = [] }) {
               }}
             >
               <ChevronRight size={13} aria-hidden="true" style={{ opacity: 0.6 }} />
-              {item.to && !isLast ? (
+              {(item.to || item.path) && !isLast ? (
                 <Link
-                  to={item.to}
+                  to={item.to || item.path}
                   style={{
                     color: 'inherit',
                     textDecoration: 'none',

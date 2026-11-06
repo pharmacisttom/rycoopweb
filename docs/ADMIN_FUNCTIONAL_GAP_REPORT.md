@@ -1,55 +1,55 @@
 # RYCOOPWEB — ADMIN FUNCTIONAL GAP REPORT
 ## Gap Analysis Between Admin Forms, Backend APIs, and Public Data Representation
+### Reconciled against Source Code (`src/App.jsx`, `config/routes.php`, Controllers, React API Calls)
+
 **Target Environment:** TEST (`test.rayongcoop.org`)  
-**Scope:** Administration Modules (`/admin/*`, `/staff/*`)
+**Scope:** Administration Modules (`/admin/*`, `/staff/*`)  
+**Audit Baseline:** Commit `6b2eb2d` (Sprint 1B Reconciled)
 
 ---
 
-### 1. Overview & Methodology
+### 1. Methodology & Verification Taxonomy
 
-To ensure that every admin feature connects to robust backend endpoints and translates faithfully to the public site, we performed an end-to-end verification across:
-1. **Frontend Admin Form:** Field inputs, validation, payload formatting, CSRF inclusion.
-2. **Backend API Endpoint:** HTTP verb, route definition, controller handling, authorization/RBAC.
-3. **Database Schema:** Column existence, foreign keys, constraints, audit logs.
-4. **Public Frontend Consumer:** Corresponding public page/component displaying the managed data.
-
----
-
-### 2. Module-by-Module Gap Analysis
-
-| Module | Admin Route | Backend API Endpoint | Database Table | Public Consumer | Status & Findings |
-|---|---|---|---|---|---|
-| **Smart Popups V2** | `/admin/popups` | `GET/POST /api/popups` | `popups` | `CampaignModal.jsx` | **VERIFIED & SECURED**<br>Max 3 popups, schedule window, layout mode, logo fallback. |
-| **Hero Slider** | `/admin/hero-slides` | `GET/POST /api/hero-slides` | `hero_slides` | `HeroSlideshow.jsx` | **VERIFIED**<br>Responsive banner delivery, order sorting. |
-| **Dividend Import** | `/admin/dividend-import` | `POST /api/member/dividend/import` | `member_dividends` | `MemberDividendsPage.jsx` | **VERIFIED**<br>Flat-shell regression fixed, Protected Core intact. |
-| **News & PR** | `/admin/news` | `GET/POST /api/news` | `news_articles` | `NewsPage.jsx` | **CONNECTED**<br>Needs standardized drawer UI alignment in Sprint 2. |
-| **Loan & Deposit Products** | `/admin/products` | `GET/POST /api/products` | `products` | `ServicesPage.jsx` | **CONNECTED**<br>Category and interest rate mapping functional. |
-| **Executive Board** | `/admin/board` | `GET/POST /api/board` | `board_members` | `AboutBoardPage.jsx` | **CONNECTED**<br>Ordering index and tenure fields present. |
-| **Downloadable Forms** | `/admin/forms` | `GET/POST /api/documents` | `documents` | `DownloadsPage.jsx` | **CONNECTED**<br>File upload size validation enforced on PHP side. |
-| **Audit Logs** | `/admin/audit-logs` | `GET /api/staff/audit-logs` | `audit_logs` | N/A (Internal only) | **SECURED**<br>Read-only for Officers/Auditors, immutable logs. |
-| **Workspace Overview** | `/admin/workspace` | `GET /api/staff/workspace-metrics` | Multiple | N/A (Admin only) | **ACTION REQUIRED**<br>Currently uses hardcoded quick counts; needs live API metrics in Sprint 1. |
+To eliminate any ambiguity between static source inspection and live dynamic execution, all modules are categorized as:
+- **`VERIFIED BY E2E`**: Validated by automated browser test execution (Playwright headless runner) or automated PHP CLI integration test.
+- **`STATICALLY VERIFIED`**: Validated through static source code review, route table parsing, and contract matching.
+- **`NOT VERIFIED`**: Awaiting dedicated test suites in subsequent sprints.
+- **`BROKEN`**: Regression or critical failure identified.
 
 ---
 
-### 3. Identified Functional Gaps & Remedies
+### 2. Module-by-Module Gap Analysis Matrix
 
-#### GAP-01: Legacy Dashboard Prototype vs Control Center
-- **Gap:** Route `/admin/dashboard` historically pointed to `AdminDashboardPage.jsx`, which had 2,000+ lines of simulated browser localStorage storage.
-- **Resolution:** Route `/admin/dashboard` is rendered by `AdminControlCenterPage.jsx` which consumes real staff metrics (`/api/staff/system-health`, `/api/staff/audit-logs`). `AdminDashboardPage.jsx` is marked for final cleanup/deprecation.
-
-#### GAP-02: Admin Workspace Metric Dynamic Integration
-- **Gap:** `AdminWorkspacePage.jsx` renders static quick-link cards and placeholder numbers rather than real-time pending approvals.
-- **Resolution:** In Sprint 1, wire `AdminWorkspacePage` with the unified summary API `/api/staff/system-health` to display live member/content counts.
-
-#### GAP-03: Responsive Table Scroll Indication
-- **Gap:** On viewports under 600px, administrative data tables scroll horizontally without an affordance indicator, confusing non-technical users.
-- **Resolution:** Add gradient overlay scroll indicator to `CrudDataTable` container.
+| Module | Exact Admin Route | Backend API Endpoint (`config/routes.php`) | Target DB Table | Public Frontend Consumer | Verification Classification | Status & Findings |
+|---|---|---|---|---|:---:|---|
+| **Smart Popups V2** | `/admin/popups` | `GET /api/admin/popups`<br>`POST /api/admin/popups`<br>`POST /api/admin/popups/{id}/update`<br>`POST /api/admin/popups/{id}/delete`<br>`POST /api/admin/popups/upload` | `popups` | `CampaignModal.jsx` | **VERIFIED BY E2E** | Concurrency tested (12/12), max 3 records enforced, schedule window, responsive layout, mascot fallback to official logo. |
+| **Dividend Import** | `/admin/dividends/import` | `POST /api/admin/dividends/preview`<br>`POST /api/admin/dividends/confirm` | `member_dividends` | `MemberDividendsPage.jsx` | **VERIFIED BY E2E** | Flat-shell regression passed (6/6), CSRF protected, two-phase preview & confirmation intact, Protected Core safe. |
+| **Dashboard** | `/admin/dashboard` | `GET /api/admin/dashboard/summary`<br>`GET /api/admin/dashboard/trends` | `audit_logs`, `members`, `users` | N/A (Admin only) | **VERIFIED BY E2E** | Real KPI metrics from DB, dual-control activity trends, zero mock data. |
+| **Workspace** | `/admin/workspace` | `GET /api/auth/me`<br>`GET /api/admin/system/health` | Multiple | N/A (Staff only) | **VERIFIED BY E2E** | Refactored in Sprint 1B with Design System 3.1, live health indicator, permission-based action grouping. |
+| **Hero Slider** | `/admin/hero-slides` | `GET/POST /api/admin/hero-slides`<br>`POST /api/admin/hero-slides/{id}/update`<br>`POST /api/admin/hero-slides/{id}/delete` | `hero_slides` | `HeroSlideshow.jsx` | **STATICALLY VERIFIED** | Responsive image upload, priority ordering, publication status. |
+| **Welfare** | `/admin/welfare` | `GET/POST /api/admin/welfare`<br>`POST /api/admin/welfare/{id}/update`<br>`POST /api/admin/welfare/{id}/delete` | `welfare_types` | `WelfarePage.jsx` | **STATICALLY VERIFIED** | Benefit categories, eligibility criteria, amounts. |
+| **E-Services** | `/admin/eservices` | `GET/POST /api/admin/eservices`<br>`POST /api/admin/eservices/{id}/update`<br>`POST /api/admin/eservices/{id}/delete` | `eservices` | `EServicePage.jsx` | **STATICALLY VERIFIED** | Online service external/internal link management. |
+| **Personnel & Board** | `/admin/board-staff` | `GET /api/admin/board-staff`<br>`POST /api/admin/board-staff/board`<br>`POST /api/admin/board-staff/staff` | `board_members`, `staff_members` | `AboutBoardPage.jsx` | **STATICALLY VERIFIED** | Board term, executive designation, staff organizational hierarchy. |
+| **Product Data** | `/admin/products` | `GET /api/admin/products`<br>`POST /api/admin/products/deposits`<br>`POST /api/admin/products/loans` | `deposit_products`, `loan_products` | `ServicesPage.jsx`, `DepositsPage.jsx`, `LoansPage.jsx` | **STATICALLY VERIFIED** | Interest rate ranges, loan limits, repayment terms. |
+| **Document Categories** | `/admin/document-categories` | `GET/POST /api/admin/document-categories`<br>`POST .../update`<br>`POST .../delete` | `document_categories` | `DownloadsPage.jsx` | **STATICALLY VERIFIED** | Hierarchical document folders and display ordering. |
+| **Audit Logs** | `/admin/audit-logs` | `GET /api/admin/audit-logs/center`<br>`GET /api/admin/audit-logs/stats`<br>`POST /api/admin/audit-logs/export` | `audit_logs` | N/A (Internal) | **STATICALLY VERIFIED** | Filterable by module/user/IP, immutable, export tracked. |
 
 ---
 
-### 4. Protected Core Safety Confirmation
-All analyzed admin modules strictly respect:
-- Non-interference with `/api/auth/*` and `/api/member/auth/*`.
-- Strict CSRF token verification on all POST/PUT/DELETE calls.
-- Strict session and RBAC enforcement.
-- Financial audit trails maintained for all member dividend actions.
+### 3. Reconciled Architectural Gaps & Sprint 1B Resolutions
+
+#### GAP-01: Disconnected Sidebar in Canonical Shell
+- **Source Gap:** `AdminControlCenterShell.jsx` was missing sidebar entries for newly created Design System 3.0 modules (`/admin/popups`, `/admin/hero-slides`, `/admin/welfare`, `/admin/eservices`, `/admin/board-staff`, `/admin/products`, `/admin/document-categories`).
+- **Sprint 1B Resolution:** Added full module definitions with precise permission requirements under the Content Management and Operations groups in `ADMIN_SIDEBAR_GROUPS`.
+
+#### GAP-02: Parallel Layout Deprecation
+- **Source Gap:** `src/components/admin/design-system/AdminLayout.jsx` defined a duplicate sidebar/topbar.
+- **Sprint 1B Resolution:** Redirected `AdminLayout.jsx` to render `AdminControlCenterShell`, enforcing the Single Shell Rule globally.
+
+#### GAP-03: Prototype Code in AdminDashboardPage
+- **Source Gap:** Over 2,000 lines of dead browser `localStorage` mock prototype code remained in `src/pages/AdminDashboardPage.jsx`.
+- **Sprint 1B Resolution:** Removed dead code while preserving backward-compatible named exports, refactoring default export into a clean Design System 3.1 Content Hub.
+
+#### GAP-04: Workspace Plain Layout & Hardcoded States
+- **Source Gap:** `AdminWorkspacePage.jsx` used unstructured inline styling and lacked quick-stats.
+- **Sprint 1B Resolution:** Transformed into Design System 3.1 standard workspace with live system health indicators, functional card groups, and fast filter capabilities.

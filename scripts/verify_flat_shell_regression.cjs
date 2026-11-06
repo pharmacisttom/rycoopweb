@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('========================================================================');
-console.log(' ADMIN APP SHELL & DIVIDEND IMPORT REGRESSION TEST');
+console.log(' ADMIN APP SHELL & DIVIDEND IMPORT REGRESSION TEST (SPRINT 1B)');
 console.log('========================================================================');
 
 let passed = 0;
@@ -43,18 +43,21 @@ const appContent = fs.readFileSync(appPath, 'utf8');
 it('4. App.jsx route /admin/dividends/import uses StaffProtectedRoute without outer shell wrapper',
   appContent.includes('path="/admin/dividends/import" element={<StaffProtectedRoute permission="dividends.import"><AdminDividendImportPage /></StaffProtectedRoute>}'));
 
-// 5. Verify StaffProtectedRoute renders AdminAppShell exactly once for staff routes
-const staffProtectedRoutePath = path.join(__dirname, '../src/components/layout/StaffProtectedRoute.jsx');
-if (fs.existsSync(staffProtectedRoutePath)) {
-  const staffProtectedContent = fs.readFileSync(staffProtectedRoutePath, 'utf8');
-  it('5. StaffProtectedRoute integrates AdminAppShell exactly once',
-    staffProtectedContent.includes('<AdminAppShell') || staffProtectedContent.includes('AdminAppShell'));
-} else {
-  // If in components/admin or another layout folder
-  it('5. Staff protection architecture verified', true);
-}
+// 5. Verify actual StaffProtectedRoute in src/App.jsx renders AdminAppShell exactly once for staff routes
+const staffProtectedRouteRegex = /function StaffProtectedRoute\([\s\S]*?return\s+<AdminActionProvider><AdminAppShell[\s\S]*?>\{children\}<\/AdminAppShell><\/AdminActionProvider>;/m;
+const staffProtectionVerified = staffProtectedRouteRegex.test(appContent);
 
-// 6. Ensure no nested AdminAppShell or double shell across Admin pages
+it('5. StaffProtectedRoute in src/App.jsx renders AdminAppShell exactly once with AdminActionProvider',
+  staffProtectionVerified);
+
+// 6. Verify AdminLayout.jsx delegates directly to canonical AdminControlCenterShell
+const adminLayoutPath = path.join(__dirname, '../src/components/admin/design-system/AdminLayout.jsx');
+const adminLayoutContent = fs.readFileSync(adminLayoutPath, 'utf8');
+it('6. AdminLayout.jsx delegates directly to canonical AdminControlCenterShell (Single Shell Rule)',
+  adminLayoutContent.includes('import AdminControlCenterShell from') &&
+  adminLayoutContent.includes('<AdminControlCenterShell'));
+
+// 7. Ensure no nested AdminAppShell, AdminMemberShell or double shell across Admin pages
 const adminPages = [
   'AdminDividendImportPage.jsx',
   'AdminPopupsPage.jsx',
@@ -63,7 +66,9 @@ const adminPages = [
   'AdminWelfarePage.jsx',
   'AdminEServicesPage.jsx',
   'AdminBoardPersonnelPage.jsx',
-  'AdminDocumentCategoriesPage.jsx'
+  'AdminDocumentCategoriesPage.jsx',
+  'AdminDashboardPage.jsx',
+  'AdminWorkspacePage.jsx'
 ];
 
 let doubleShellFound = false;
@@ -71,18 +76,17 @@ for (const p of adminPages) {
   const fullPath = path.join(__dirname, '../src/pages', p);
   if (fs.existsSync(fullPath)) {
     const content = fs.readFileSync(fullPath, 'utf8');
-    // Check if page imports AdminAppShell inside itself when StaffProtectedRoute already provides it
-    if (content.includes('import AdminAppShell') && content.includes('<AdminAppShell')) {
+    if ((content.includes('import AdminAppShell') && content.includes('<AdminAppShell')) ||
+        (content.includes('import AdminMemberShell') && content.includes('<AdminMemberShell'))) {
       doubleShellFound = true;
-      console.log(`      Found nested AdminAppShell in ${p}`);
+      console.log(`      Found nested shell in ${p}`);
     }
   }
 }
-it('6. Admin pages do not nest AdminAppShell inside pages (Flat Shell Architecture preserved)', !doubleShellFound);
+it('7. Admin pages do not nest AdminAppShell or AdminMemberShell (Flat Shell Architecture preserved)', !doubleShellFound);
 
 console.log('========================================================================');
 console.log(` RESULTS: ${passed} PASSED, ${failed} FAILED`);
 console.log('========================================================================');
 
 if (failed > 0) process.exit(1);
-

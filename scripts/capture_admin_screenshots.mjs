@@ -103,6 +103,7 @@ try {
   const pagesToCapture = [
     { kind: 'dashboard', name: 'Dashboard' },
     { kind: 'workspace', name: 'Workspace' },
+    { kind: 'popups', name: 'PopupManager' },
     { kind: 'dividendImport', name: 'DividendImport' }
   ];
 
@@ -137,6 +138,50 @@ try {
             body: JSON.stringify({ success: true, charts: {} })
           });
         }
+        if (url.pathname === '/api/admin/popups') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              data: {
+                items: [
+                  {
+                    id: 1,
+                    title: 'เปิดรับสมัครสมาชิกใหม่ ประจำปี 2568',
+                    subtitle: 'สิทธิประโยชน์เงินกู้และเงินออมดอกเบี้ยพิเศษ',
+                    banner_image: '/assets/img/popup_dividend.jpg',
+                    layout_mode: 'banner_only',
+                    button_text: 'ดูรายละเอียด',
+                    button_url: '/services',
+                    button_target: '_self',
+                    priority_order: 1,
+                    status: 'active'
+                  },
+                  {
+                    id: 2,
+                    title: 'โครงการออมสุขสร้างอนาคต น้องออมสุขชวนออม',
+                    subtitle: 'ฝากประจำดอกเบี้ยสูงเพื่อสมาชิกสหกรณ์',
+                    mascot_image: '/assets/img/logo.webp',
+                    layout_mode: 'mascot_only',
+                    button_text: 'อ่านรายละเอียด',
+                    button_url: '/deposits',
+                    button_target: '_self',
+                    priority_order: 2,
+                    status: 'active'
+                  }
+                ]
+              }
+            })
+          });
+        }
+        if (url.pathname === '/api/admin/system/health') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: 'healthy', database: 'connected', version: '3.1.0' })
+          });
+        }
         if (url.pathname === '/api/admin/operations') {
           return route.fulfill({
             status: 200,
@@ -154,6 +199,12 @@ try {
       const url = `http://127.0.0.1:${port}/__admin_fixture?kind=${pageItem.kind}&theme=light`;
       await page.goto(url, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
+
+      // Assert exactly one Topbar and one Sidebar
+      const topbarCount = await page.locator('.acc-topbar').count();
+      const sidebarCount = await page.locator('.acc-sidebar').count();
+      assert.strictEqual(topbarCount, 1, `Expected exactly 1 .acc-topbar on ${pageItem.name}, found ${topbarCount}`);
+      assert.strictEqual(sidebarCount, 1, `Expected exactly 1 .acc-sidebar on ${pageItem.name}, found ${sidebarCount}`);
 
       // Check for horizontal overflow
       const hasOverflow = await page.evaluate(() => {

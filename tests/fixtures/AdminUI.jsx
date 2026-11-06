@@ -14,6 +14,7 @@ const pages={documents:lazy(()=>import('../../src/pages/AdminStoredContentPage')
   cms:lazy(()=>import('../../src/pages/AdminDashboardPage')),membersDashboard:lazy(()=>import('../../src/pages/AdminMembersDashboardPage')),
   members:lazy(()=>import('../../src/pages/AdminMembersPage')),memberDetail:lazy(()=>import('../../src/pages/AdminMemberDetailPage')),
   membersHealth:lazy(()=>import('../../src/pages/AdminMembersHealthPage')),dividendImport:lazy(()=>import('../../src/pages/AdminDividendImportPage')),
+  popups:lazy(()=>import('../../src/pages/AdminPopupsPage')),
   ledDashboard:lazy(()=>import('../../src/pages/AdminLedDashboardPage')),ledSearch:lazy(()=>import('../../src/pages/AdminLedSearchPage')),
   ledReview:lazy(()=>import('../../src/pages/AdminLedReviewPage')),ledBatch:lazy(()=>import('../../src/pages/AdminLedBatchPage')),ledSchema:lazy(()=>import('../../src/pages/AdminLedSchemaPage'))};
 const Control=lazy(()=>import('../../src/pages/AdminControlCenterPage'));
