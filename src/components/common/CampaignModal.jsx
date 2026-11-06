@@ -305,13 +305,13 @@ export default function CampaignModal() {
                 minHeight: '260px'
               }}>
                 <img
-                  src={currentPopup.mascot_image || '/assets/img/mascot-aomsuk.svg'}
-                  alt="มาสคอตน้องออมสุข"
+                  src={currentPopup.mascot_image || '/assets/img/logo.webp'}
+                  alt={currentPopup.title || "สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด"}
                   style={{
-                    width: 'min(240px, 75%)',
+                    width: 'min(180px, 60%)',
                     height: 'auto',
                     objectFit: 'contain',
-                    filter: 'drop-shadow(0 12px 20px rgba(2, 132, 199, 0.25))'
+                    filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1))'
                   }}
                 />
                 <span style={{
@@ -324,7 +324,7 @@ export default function CampaignModal() {
                   borderRadius: '9999px',
                   boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06)'
                 }}>
-                  น้องออมสุข สหกรณ์ออมทรัพย์ฯ
+                  สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด
                 </span>
               </div>
             )}
@@ -360,15 +360,15 @@ export default function CampaignModal() {
                   />
                 )}
                 <img
-                  src={currentPopup.mascot_image || '/assets/img/mascot-aomsuk.svg'}
-                  alt="มาสคอตน้องออมสุข"
+                  src={currentPopup.mascot_image || '/assets/img/logo.webp'}
+                  alt={currentPopup.title || "สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด"}
                   style={{
                     position: 'relative',
                     zIndex: 2,
-                    width: 'min(220px, 70%)',
+                    width: 'min(180px, 60%)',
                     height: 'auto',
                     objectFit: 'contain',
-                    filter: 'drop-shadow(0 14px 24px rgba(0, 0, 0, 0.4))'
+                    filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25))'
                   }}
                 />
                 <span style={{

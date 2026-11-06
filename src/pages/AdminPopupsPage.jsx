@@ -283,9 +283,9 @@ export default function AdminPopupsPage() {
             </div>
             {isMascot && (
               <img
-                src={item.mascot_image || '/assets/img/mascot-aomsuk.svg'}
-                alt="น้องออมสุข"
-                title="มาสคอตน้องออมสุข"
+                src={item.mascot_image || '/assets/img/logo.webp'}
+                alt="ตราสัญลักษณ์/มาสคอต"
+                title="ตราสัญลักษณ์ทางการ / มาสคอต"
                 style={{ width: '28px', height: '28px', objectFit: 'contain' }}
               />
             )}
@@ -544,15 +544,15 @@ export default function AdminPopupsPage() {
               <div style={{ background: '#f0f9ff', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #bae6fd' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                   <label className="form-label" style={{ fontWeight: 600, color: '#0369a1' }}>
-                    มาสคอต "น้องออมสุข" (Mascot Artwork)
+                    ภาพสัญลักษณ์ / มาสคอต (Artwork)
                   </label>
                   <button
                     type="button"
-                    onClick={() => handleChange('mascot_image', '/assets/img/mascot-aomsuk.svg')}
+                    onClick={() => handleChange('mascot_image', '/assets/img/logo.webp')}
                     className="btn btn-sm btn-subtle"
                     style={{ fontSize: '0.78rem', color: '#0284c7' }}
                   >
-                    ใช้น้องออมสุขมาตรฐาน
+                    ใช้ตราสหกรณ์ทางการ
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -561,16 +561,16 @@ export default function AdminPopupsPage() {
                     className="form-control"
                     value={formData.mascot_image}
                     onChange={(e) => handleChange('mascot_image', e.target.value)}
-                    placeholder="เว้นว่างเพื่อใช้น้องออมสุขทางการ หรือระบุพาธภาพ..."
+                    placeholder="เว้นว่างเพื่อใช้ตราสหกรณ์ที่ได้รับอนุมัติ หรือระบุพาธภาพ..."
                     style={{ flex: 1, padding: '0.55rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1' }}
                   />
                   <label className="btn btn-outline" style={{ cursor: 'pointer', padding: '0.55rem 0.85rem' }}>
-                    <span>เปลี่ยนมาสคอต</span>
+                    <span>เปลี่ยนภาพ</span>
                     <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'mascot')} style={{ display: 'none' }} />
                   </label>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#0284c7' }}>
-                  ภาพเวกเตอร์ทางการ: <code>/assets/img/mascot-aomsuk.svg</code>
+                  ภาพทางการที่ได้รับอนุมัติ: <code>/assets/img/logo.webp</code> (ภาพมาสคอตใหม่ต้องผ่านการตรวจรับก่อนเผยแพร่)
                 </div>
               </div>
             )}
@@ -730,9 +730,9 @@ export default function AdminPopupsPage() {
                   {formData.layout_mode === 'mascot_only' && (
                     <div style={{ padding: '1.5rem', background: '#e0f2fe', textAlign: 'center' }}>
                       <img
-                        src={formData.mascot_image || '/assets/img/mascot-aomsuk.svg'}
-                        alt="น้องออมสุข"
-                        style={{ height: '100px', objectFit: 'contain' }}
+                        src={formData.mascot_image || '/assets/img/logo.webp'}
+                        alt="ภาพตราสหกรณ์/มาสคอต"
+                        style={{ height: '90px', objectFit: 'contain' }}
                       />
                     </div>
                   )}
@@ -742,7 +742,7 @@ export default function AdminPopupsPage() {
                       {formData.banner_image && (
                         <img src={formData.banner_image} alt="" style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.2 }} />
                       )}
-                      <img src={formData.mascot_image || '/assets/img/mascot-aomsuk.svg'} alt="" style={{ height: '100px', objectFit: 'contain', zIndex: 2 }} />
+                      <img src={formData.mascot_image || '/assets/img/logo.webp'} alt="" style={{ height: '90px', objectFit: 'contain', zIndex: 2 }} />
                     </div>
                   )}
 

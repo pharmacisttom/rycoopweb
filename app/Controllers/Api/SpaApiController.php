@@ -244,10 +244,17 @@ class SpaApiController extends Controller
 
             $popups = array_map(function (array $p): array {
                 $p['banner_image'] = resolve_media_url($p['banner_image'] ?? null);
-                $p['mascot_image'] = resolve_media_url($p['mascot_image'] ?? null);
-                if (empty($p['mascot_image']) && in_array($p['layout_mode'] ?? 'banner_only', ['mascot_only', 'banner_and_mascot'], true)) {
-                    $p['mascot_image'] = '/assets/img/mascot-aomsuk.svg';
+                $mascot = resolve_media_url($p['mascot_image'] ?? null);
+
+                // Release Hardening: Keep unapproved mascot asset disabled for public publication.
+                // Replace proposed mascot fallback with cooperative's approved original artwork (/assets/img/logo.webp).
+                if (empty($mascot) || str_contains($mascot, 'mascot-aomsuk.svg')) {
+                    $mascot = in_array($p['layout_mode'] ?? 'banner_only', ['mascot_only', 'banner_and_mascot'], true)
+                        ? '/assets/img/logo.webp'
+                        : null;
                 }
+
+                $p['mascot_image'] = $mascot;
                 return $p;
             }, $popups);
         } catch (\Throwable $e) {
