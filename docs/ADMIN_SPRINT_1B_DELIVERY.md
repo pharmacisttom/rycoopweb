@@ -90,3 +90,4 @@ All screenshots are stored in `storage/screenshots/admin-transformation/`:
 - Zero horizontal overflow on mobile viewports.
 - Protected Core (Auth, TOTP MFA, PDPA, RBAC, Financials, Dividends) 100% preserved.
 - Ready for officer UAT testing on `https://test.rayongcoop.org`.
+

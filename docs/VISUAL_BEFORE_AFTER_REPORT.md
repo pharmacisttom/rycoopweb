@@ -38,3 +38,4 @@ During the execution of `scripts/capture_admin_screenshots.mjs`:
 All visual capture artifacts are persisted under:
 - Before Baseline: `storage/screenshots/admin-transformation/before/`
 - After Delivery: `storage/screenshots/admin-transformation/after/`
+
