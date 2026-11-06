@@ -105,6 +105,12 @@ class MemberManagementController extends Controller
                 if(!in_array($status,['active','resigned','suspended'],true)) throw new MemberDataException('สถานะไม่ถูกต้อง');
                 $where[]='m.status=?';$params[]=$status;
             }
+            $account=(string)$this->request->query('account','');
+            if($account==='linked'||$account==='has_account') {
+                $where[]='m.user_id IS NOT NULL';
+            } elseif($account==='unlinked'||$account==='no_account') {
+                $where[]='m.user_id IS NULL';
+            }
             $year=(string)$this->request->query('year','');
             $hasReports=isset($columns['member_dividends']);
             if($year!=='' || $hasReports) MemberSystemHealth::requireColumns(['member_dividends'=>['member_id','year','details_json','imported_at']],$columns);
@@ -134,7 +140,7 @@ class MemberManagementController extends Controller
             if($missing)$warnings[]=['section'=>'members','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'ข้อมูลบางช่องยังไม่พร้อม กรุณาตรวจการอัปเดตฐานข้อมูล','missing'=>array_map(fn($f)=>'members.'.$f,$missing)];
             if(!$hasReports)$warnings[]=['section'=>'years','code'=>'MEMBER_SCHEMA_NOT_READY','message'=>'ยังไม่มีตารางปันผล กรุณาอัปเดตฐานข้อมูลก่อนนำเข้า'];
             $availableYears=$hasReports?Database::query('SELECT DISTINCT year FROM member_dividends ORDER BY year DESC'):[];
-            return ['items'=>$items,'total'=>$total,'page'=>$page,'limit'=>$limit,'year'=>$year,'available_years'=>array_column($availableYears,'year'),'warnings'=>$warnings];
+            return ['items'=>$items,'total'=>$total,'page'=>$page,'limit'=>$limit,'year'=>$year,'account'=>$account,'available_years'=>array_column($availableYears,'year'),'warnings'=>$warnings];
         });
     }
 
@@ -144,6 +150,33 @@ class MemberManagementController extends Controller
             $columns=MemberSystemHealth::columns();$warnings=[];
             $member=MemberAdminService::profile($this->id($id),false,$columns);
             \App\Services\SecurityAuditService::recordAdminMemberView((int)\App\Core\Auth::id(), (string)(\App\Core\Auth::user()['role_slug'] ?? 'staff'), (int)$member['id']);$version=MemberAdminService::version($member);
+
+            // Add PDPA masked strings for default safe view
+            $member['id_card_pdpa'] = \App\Services\PdpaService::maskIdCard($member['id_card'] ?? '');
+            $member['name_pdpa'] = \App\Services\PdpaService::maskName(trim(($member['prefix'] ?? '') . ($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? '')));
+
+            // 1-to-1 Identity Mapping & duplicate check
+            $duplicates = [
+                'member_no' => (int)Database::value("SELECT COUNT(*) FROM members WHERE member_no=? AND id<>?", [$member['member_no'], $member['id']]),
+                'id_card' => (int)Database::value("SELECT COUNT(*) FROM members WHERE id_card=? AND id<>?", [$member['id_card'], $member['id']]),
+            ];
+
+            // Connected user account (safe presentation: zero password hashes or TOTP secrets)
+            $userAccount = null;
+            if (!empty($member['user_id'])) {
+                $user = Database::first("SELECT id, name, username, status, created_at, updated_at FROM users WHERE id=?", [$member['user_id']]);
+                if ($user) {
+                    $userAccount = [
+                        'id' => (int)$user['id'],
+                        'name_pdpa' => \App\Services\PdpaService::maskName($user['name'] ?? ''),
+                        'username_pdpa' => \App\Services\PdpaService::maskIdCard($user['username'] ?? ''),
+                        'status' => $user['status'],
+                        'created_at' => $user['created_at'],
+                        'updated_at' => $user['updated_at'],
+                    ];
+                }
+            }
+
             $dividends=$this->section('years',function()use($columns,$member) {
                 MemberSystemHealth::requireColumns(['member_dividends'=>MemberSystemHealth::REQUIRED['member_dividends']],$columns);
                 $rows=Database::query('SELECT year,details_json,imported_at FROM member_dividends WHERE member_id=? ORDER BY year DESC',[$member['id']]);
@@ -155,7 +188,16 @@ class MemberManagementController extends Controller
             },$warnings);
             $readOnly=false;
             try{MemberSystemHealth::requireWrites();}catch(MemberSchemaException $error){$readOnly=true;$warnings[]=['section'=>'profile']+$this->failure($error);}
-            return ['member'=>$member,'version'=>$version,'dividends'=>$dividends??[],'history'=>$history??[],'read_only'=>$readOnly,'warnings'=>$warnings];
+            return [
+                'member'=>$member,
+                'version'=>$version,
+                'dividends'=>$dividends??[],
+                'history'=>$history??[],
+                'account'=>$userAccount,
+                'duplicates'=>$duplicates,
+                'read_only'=>$readOnly,
+                'warnings'=>$warnings
+            ];
         });
     }
 
@@ -177,7 +219,9 @@ class MemberManagementController extends Controller
 
     public function updateDividend(string $id,string $year): void
     {
-        $this->respond(function()use($id,$year){MemberSystemHealth::requireWrites();if(!preg_match('/^\d{4}$/D',$year))throw new MemberDataException('ปีไม่ถูกต้อง');MemberAdminService::updateDividend($this->id($id),(int)$year,$this->request->all());return ['message'=>'บันทึกข้อมูลปันผลแล้ว'];});
+        $this->respond(function()use($id,$year){
+            throw new MemberDataException('ข้อมูลเงินปันผลรายปีได้รับการคุ้มครองความถูกต้อง (Read-Only) การแก้ไขตัวเลขย้อนหลังโดยตรงถูกปิดใช้งาน การปรับปรุงยอดเงินต้องดำเนินการผ่านระบบ Preflight & Import อย่างเป็นทางการ');
+        });
     }
 
     public function requests(): void

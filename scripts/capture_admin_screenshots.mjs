@@ -104,7 +104,11 @@ try {
     { kind: 'dashboard', name: 'Dashboard' },
     { kind: 'workspace', name: 'Workspace' },
     { kind: 'popups', name: 'PopupManager' },
-    { kind: 'dividendImport', name: 'DividendImport' }
+    { kind: 'dividendImport', name: 'DividendImport' },
+    { kind: 'membersDashboard', name: 'MembersDashboard' },
+    { kind: 'members', name: 'MembersDirectory' },
+    { kind: 'memberDetail', name: 'MemberDetail' },
+    { kind: 'membersHealth', name: 'MembersHealth' }
   ];
 
   for (const pageItem of pagesToCapture) {
@@ -116,6 +120,142 @@ try {
       // Mock essential API responses
       await page.route('**/api/**', (route) => {
         const url = new URL(route.request().url());
+
+        if (url.pathname === '/api/admin/members/dashboard') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              members: { total: 2508, active: 2490, suspended: 12, resigned: 6, no_account: 350 },
+              years: [
+                { year: 2568, records: 2480, total_income: '12500000.00', total_deductions: '1200000.00', net_total: '11300000.00', updated_at: '2026-10-15 14:30:00' },
+                { year: 2567, records: 2375, total_income: '11800000.00', total_deductions: '1150000.00', net_total: '10650000.00', updated_at: '2025-10-12 11:20:00' }
+              ],
+              runs: [
+                { id: 12, created_at: '2026-10-15 14:30:00', source_name: 'dividend_2568_final.xlsx', year: 2568, record_count: 2480, created_count: 105, updated_count: 2375, unchanged_count: 0, net_total: '11300000.00', actor: 'เภสัชกร ทอม' }
+              ],
+              changes: [
+                { id: 45, member_id: 1, member_no: '00004', member_name: 'ทอxx วิศิxxx', action: 'profile_update', reason: 'เปลี่ยนเบอร์โทรศัพท์ตามคำขอสมาชิก', created_at: '2026-11-01 09:15:00', actor: 'เจ้าหน้าที่ สหกรณ์' }
+              ],
+              warnings: []
+            })
+          });
+        }
+
+        if (url.pathname === '/api/admin/members/health') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              health: {
+                ready: true,
+                missing: [],
+                extensions: { pdo_mysql: true, mbstring: true, zip: true, simplexml: true },
+                member_admin_role: true
+              }
+            })
+          });
+        }
+
+        if (url.pathname.match(/\/api\/admin\/members\/\d+$/)) {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              member: {
+                id: 1,
+                member_no: '00004',
+                user_id: 2,
+                prefix: 'ภก.',
+                first_name: 'ทอม',
+                last_name: 'วิศิษฏ์',
+                name_pdpa: 'ภก.ทอxx วิศิxxx',
+                id_card: '3219900100959',
+                id_card_pdpa: '3-2199-00100-95-9',
+                department: 'กลุ่มงานเภสัชกรรม รพ.ระยอง',
+                position: 'เภสัชกรชำนาญการพิเศษ',
+                phone: '081-xxx-xxxx',
+                email: 'pharmacistxxx@rayongcoop.com',
+                address: 'รพ.ระยอง อ.เมือง จ.ระยอง',
+                status: 'active',
+                join_date: '2018-05-10'
+              },
+              account: {
+                id: 2,
+                name_pdpa: 'ทอxx วิศิxxx',
+                username_pdpa: '3-2199-00100-95-9',
+                status: 'active',
+                created_at: '2024-01-15 10:00:00',
+                updated_at: '2026-10-15 14:30:00'
+              },
+              duplicates: { member_no: 0, id_card: 0 },
+              dividends: [
+                {
+                  record: {
+                    year: 2568,
+                    total_income: 45000,
+                    total_deductions: 5000,
+                    net: 40000,
+                    dividend_rate: 5.25,
+                    refund_rate: 12.5,
+                    income: { 'เงินปันผลตามหุ้น': 35000, 'เงินเฉลี่ยคืนเงินกู้': 10000 },
+                    deductions: { 'หักชำระหนี้พิเศษ': 3000, 'หักเข้าบัญชีเงินฝากออมทรัพย์': 2000 }
+                  },
+                  updated_at: '2026-10-15 14:30:00'
+                },
+                {
+                  record: {
+                    year: 2567,
+                    total_income: 42000,
+                    total_deductions: 4500,
+                    net: 37500,
+                    dividend_rate: 5.0,
+                    refund_rate: 12.0,
+                    income: { 'เงินปันผลตามหุ้น': 33000, 'เงินเฉลี่ยคืนเงินกู้': 9000 },
+                    deductions: { 'หักชำระหนี้พิเศษ': 2500, 'หักเข้าบัญชีเงินฝากออมทรัพย์': 2000 }
+                  },
+                  updated_at: '2025-10-12 11:20:00'
+                }
+              ],
+              history: [
+                {
+                  id: 101,
+                  action: 'profile_update',
+                  reason: 'ปรับปรุงเบอร์โทรศัพท์ติดต่อและอีเมลตามคำขอ',
+                  actor: 'เจ้าหน้าที่ทะเบียน',
+                  created_at: '2026-11-01 09:15:00',
+                  before_json: '{"phone":"081-111-1111","email":"old@rayongcoop.com"}',
+                  after_json: '{"phone":"081-999-9999","email":"pharmacistxxx@rayongcoop.com"}'
+                }
+              ],
+              warnings: []
+            })
+          });
+        }
+
+        if (url.pathname === '/api/admin/members') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              items: [
+                { id: 1, member_no: '00004', name: 'ทอม วิศิษฏ์', name_pdpa: 'ทอxx วิศิxxx', department: 'กลุ่มงานเภสัชกรรม รพ.ระยอง', status: 'active', has_account: 1, id_card_pdpa: '3-2199-00100-95-9', record_count: 2 },
+                { id: 2, member_no: '00006', name: 'สมศรี ใจดี', name_pdpa: 'สมxx ใจxx', department: 'กลุ่มงานการเงิน', status: 'active', has_account: 1, id_card_pdpa: '3-2099-00034-15-8', record_count: 2 },
+                { id: 3, member_no: '00015', name: 'ประสิทธิ์ มั่นคง', name_pdpa: 'ประxxxx มั่นxx', department: 'รพ.สต.บ้านค่าย', status: 'active', has_account: 0, id_card_pdpa: '3-2199-00123-39-8', record_count: 1 },
+                { id: 4, member_no: '00042', name: 'กาญจนา ศรีสุข', name_pdpa: 'กาญxxxx ศรีxx', department: 'สสจ.ระยอง', status: 'suspended', has_account: 1, id_card_pdpa: '3-2101-00335-99-6', record_count: 2 }
+              ],
+              total: 2508,
+              page: 1,
+              limit: 25,
+              available_years: [2568, 2567],
+              warnings: []
+            })
+          });
+        }
         if (url.pathname === '/api/admin/dashboard/summary') {
           return route.fulfill({
             status: 200,
