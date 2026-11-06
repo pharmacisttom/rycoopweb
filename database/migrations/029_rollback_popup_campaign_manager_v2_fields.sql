@@ -5,3 +5,4 @@ ALTER TABLE `popups`
     DROP COLUMN IF EXISTS `priority_order`,
     DROP COLUMN IF EXISTS `layout_mode`,
     DROP COLUMN IF EXISTS `mascot_image`;
+

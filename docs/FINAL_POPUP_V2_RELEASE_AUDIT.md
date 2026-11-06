@@ -180,3 +180,4 @@ If any anomaly occurs on TEST:
 ### 🟡 **PRODUCTION ENVIRONMENT: CONDITIONAL HOLD (NO-GO for Production until Gate Sign-off)**
 - **Blocker / Gate Condition:** Formal sign-off on the vector artwork `public/assets/img/mascot-aomsuk.svg` by the Cooperative System Owner / PR Department.
 - Do not release to Production (`https://www.rayongcoop.org`) until the cooperative explicitly approves the artwork or provides its official mascot image.
+
