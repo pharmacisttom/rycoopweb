@@ -15,9 +15,9 @@ export default function CampaignModal() {
   const isProtectedWorkflow = 
     location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/staff') ||
-    location.pathname.startsWith('/member/login') ||
-    location.pathname.startsWith('/member/privacy-ack') ||
+    location.pathname.startsWith('/member') ||
     location.pathname.startsWith('/dashboard') ||
+    location.pathname.startsWith('/profile') ||
     location.pathname === '/login' ||
     location.pathname === '/service-unavailable';
 

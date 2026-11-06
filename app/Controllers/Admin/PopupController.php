@@ -62,8 +62,14 @@ class PopupController extends Controller
             return;
         }
 
-        Database::beginTransaction();
+        // Concurrency Hardening: Use explicit MySQL Named Advisory Lock to serialize concurrent creation requests
+        // and eliminate phantom inserts or gap lock race conditions across all isolation levels.
+        $lockAcquired = false;
         try {
+            $lockValue = Database::value("SELECT GET_LOCK('rycoop_popup_quota_mutex', 10)");
+            $lockAcquired = ((int)$lockValue === 1);
+
+            Database::beginTransaction();
             // Strict enforcement of max 3 popups with pessimistic lock
             $count = (int)Database::value("SELECT COUNT(*) FROM popups WHERE deleted_at IS NULL FOR UPDATE");
             if ($count >= self::MAX_ALLOWED_POPUPS) {
@@ -157,8 +163,18 @@ class PopupController extends Controller
 
             $this->response->json(['success' => true, 'message' => 'สร้างแคมเปญป็อปอัปสำเร็จ', 'data' => $row], 201);
         } catch (Throwable $e) {
-            Database::rollBack();
+            if (Database::inTransaction()) {
+                Database::rollBack();
+            }
             $this->response->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึก: ' . $e->getMessage()], 500);
+        } finally {
+            if ($lockAcquired) {
+                try {
+                    Database::query("SELECT RELEASE_LOCK('rycoop_popup_quota_mutex')");
+                } catch (Throwable) {
+                    // Ignore release lock error if connection closed
+                }
+            }
         }
     }
 
