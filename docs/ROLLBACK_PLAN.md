@@ -62,3 +62,4 @@ mysql --defaults-file=/root/.my.cnf rycoopweb_test < \
 1. Verify `curl -k -I https://test.rayongcoop.org` returns HTTP 200 or 401 (Basic auth).
 2. Verify Admin Login and Dividend Import page mount correctly.
 3. Confirm dedicated FPM is running: `systemctl status rycoop-test-fpm.service`.
+

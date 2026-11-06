@@ -41,3 +41,4 @@ A detailed differential audit was performed between the live Production environm
   - `POST /api/admin/popups/upload`
   All new endpoints are protected behind `AuthMiddleware`, `PermissionMiddleware('news', '...')`, and `CsrfMiddleware`.
 - **Production Safety:** Production web server routes are unaffected since Candidate Release 01 is deployed exclusively to `/var/www/rycoopweb/test-v2`.
+

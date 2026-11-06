@@ -39,3 +39,4 @@ The following components from the Admin Experience Transformation project are **
 - **Frontend Build Bundle Hash:** `index-BD37hSaE.js` (Built cleanly from commit `d9e6a44`)
 - **Backend Entrypoint:** `public/index.php`
 - **Migration Target:** `rycoopweb_test` (`database/migrations/029_add_popup_campaign_manager_v2_fields.sql`)
+
