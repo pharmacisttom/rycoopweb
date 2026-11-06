@@ -96,6 +96,7 @@ $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements')
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
 $router->get('/api/public/welfare', 'Api\\SpaApiController@welfare');
 $router->get('/api/public/faqs', 'Api\\SpaApiController@faqs');
+$router->get('/api/public/popups', 'Api\\SpaApiController@popups');
 $router->get('/api/public/board-members', 'Api\\SpaApiController@boardMembers');
 $router->get('/api/public/statistics', 'Api\\SpaApiController@statistics');
 $router->post('/api/visits/record', 'Api\\SpaApiController@recordVisit');
@@ -200,6 +201,15 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/hero-slides', 'Admin\\HeroSlideController@apiStore', [new PermissionMiddleware('news', 'create'), CsrfMiddleware::class]);
     $r->post('/hero-slides/{id}/update', 'Admin\\HeroSlideController@apiUpdate', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
     $r->post('/hero-slides/{id}/delete', 'Admin\\HeroSlideController@apiDestroy', [new PermissionMiddleware('news', 'delete'), CsrfMiddleware::class]);
+
+    // Popup Campaign Manager V2
+    $r->get('/popups', 'Admin\\PopupController@apiIndex', [new PermissionMiddleware('news', 'view')]);
+    $r->post('/popups', 'Admin\\PopupController@apiStore', [new PermissionMiddleware('news', 'create'), CsrfMiddleware::class]);
+    $r->post('/popups/{id}/update', 'Admin\\PopupController@apiUpdate', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
+    $r->put('/popups/{id}', 'Admin\\PopupController@apiUpdate', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
+    $r->post('/popups/{id}/delete', 'Admin\\PopupController@apiDestroy', [new PermissionMiddleware('news', 'delete'), CsrfMiddleware::class]);
+    $r->delete('/popups/{id}', 'Admin\\PopupController@apiDestroy', [new PermissionMiddleware('news', 'delete'), CsrfMiddleware::class]);
+    $r->post('/popups/upload', 'Admin\\PopupController@apiUpload', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
 
     // Welfare
     $r->get('/welfare', 'Admin\\WelfareController@apiIndex', [new PermissionMiddleware('welfare', 'view')]);

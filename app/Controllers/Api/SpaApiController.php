@@ -220,6 +220,44 @@ class SpaApiController extends Controller
     }
 
     /**
+     * GET /api/public/popups
+     * Returns active, scheduled public popup campaigns (max 3, ordered by priority).
+     */
+    public function popups(): void
+    {
+        $popups = [];
+        try {
+            $now = date('Y-m-d H:i:s');
+            $popups = Database::query(
+                "SELECT id, title, content AS subtitle, desktop_image AS banner_image, 
+                        mascot_image, layout_mode, button_text, button_url, button_target, 
+                        priority_order AS priority, start_at, end_at, status 
+                 FROM popups 
+                 WHERE deleted_at IS NULL 
+                   AND status = 'active' 
+                   AND (start_at IS NULL OR start_at <= ?) 
+                   AND (end_at IS NULL OR end_at >= ?) 
+                 ORDER BY priority_order ASC, id ASC 
+                 LIMIT 3",
+                [$now, $now]
+            );
+
+            $popups = array_map(function (array $p): array {
+                $p['banner_image'] = resolve_media_url($p['banner_image'] ?? null);
+                $p['mascot_image'] = resolve_media_url($p['mascot_image'] ?? null);
+                if (empty($p['mascot_image']) && in_array($p['layout_mode'] ?? 'banner_only', ['mascot_only', 'banner_and_mascot'], true)) {
+                    $p['mascot_image'] = '/assets/img/mascot-aomsuk.svg';
+                }
+                return $p;
+            }, $popups);
+        } catch (\Throwable $e) {
+            $popups = [];
+        }
+
+        $this->json(['success' => true, 'data' => $popups]);
+    }
+
+    /**
      * GET /api/public/board-members
      */
     public function boardMembers(): void

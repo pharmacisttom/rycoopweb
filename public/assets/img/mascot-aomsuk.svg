@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="goldCoin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="innerCoin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="bellyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0f9ff"/>
+    </linearGradient>
+    <linearGradient id="capGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0c4a6e" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Shadow Base -->
+  <ellipse cx="200" cy="450" rx="110" ry="18" fill="#0f172a" opacity="0.15" />
+
+  <!-- Main Mascot Group with Shadow -->
+  <g filter="url(#softShadow)">
+    <!-- Feet -->
+    <ellipse cx="145" cy="425" rx="36" ry="24" fill="#0369a1" />
+    <ellipse cx="255" cy="425" rx="36" ry="24" fill="#0369a1" />
+    <ellipse cx="145" cy="420" rx="30" ry="18" fill="#38bdf8" />
+    <ellipse cx="255" cy="420" rx="30" ry="18" fill="#38bdf8" />
+
+    <!-- Left Arm / Hand (Waving) -->
+    <g transform="rotate(-25 100 250)">
+      <ellipse cx="90" cy="240" rx="26" ry="42" fill="#0284c7" />
+      <circle cx="82" cy="205" r="22" fill="#38bdf8" />
+      <!-- Thumb -->
+      <ellipse cx="98" cy="210" rx="10" ry="14" fill="#38bdf8" transform="rotate(30 98 210)" />
+    </g>
+
+    <!-- Main Chubby Body (Friendly drop / pig-bank shape) -->
+    <path d="M200,85 C285,85 325,150 325,260 C325,370 275,420 200,420 C125,420 75,370 75,260 C75,150 115,85 200,85 Z" fill="url(#bodyGrad)" />
+
+    <!-- Cute Cheerful Ears -->
+    <ellipse cx="115" cy="115" rx="22" ry="32" fill="#0284c7" transform="rotate(-30 115 115)" />
+    <ellipse cx="115" cy="115" rx="14" ry="22" fill="#f472b6" opacity="0.75" transform="rotate(-30 115 115)" />
+    <ellipse cx="285" cy="115" rx="22" ry="32" fill="#0284c7" transform="rotate(30 285 115)" />
+    <ellipse cx="285" cy="115" rx="14" ry="22" fill="#f472b6" opacity="0.75" transform="rotate(30 285 115)" />
+
+    <!-- Medical / Health Cap (Symbolizing Public Health) -->
+    <path d="M150,90 Q200,55 250,90 L245,120 Q200,105 155,120 Z" fill="url(#capGrad)" stroke="#cbd5e1" stroke-width="2" />
+    <!-- Red/Green Health Cross on Cap -->
+    <rect x="194" y="78" width="12" height="28" rx="3" fill="#10b981" />
+    <rect x="186" y="86" width="28" height="12" rx="3" fill="#10b981" />
+
+    <!-- Chubby White Belly -->
+    <path d="M200,210 C265,210 285,270 285,340 C285,395 245,410 200,410 C155,410 115,395 115,340 C115,270 135,210 200,210 Z" fill="url(#bellyGrad)" />
+
+    <!-- Cooperative Emblem Badge on Chest -->
+    <circle cx="200" cy="270" r="32" fill="#1e3a8a" stroke="#fbbf24" stroke-width="3" />
+    <circle cx="200" cy="270" r="26" fill="#ffffff" />
+    <!-- Stylized Coop Leaves / Heart in Badge -->
+    <path d="M200,256 C206,250 216,250 219,258 C222,267 212,276 200,283 C188,276 178,267 181,258 C184,250 194,250 200,256 Z" fill="#0284c7" />
+
+    <!-- Cute Big Eyes -->
+    <g>
+      <!-- Left Eye -->
+      <ellipse cx="165" cy="170" rx="14" ry="20" fill="#0f172a" />
+      <circle cx="160" cy="162" r="6" fill="#ffffff" />
+      <circle cx="171" cy="177" r="3" fill="#ffffff" />
+      <!-- Right Eye -->
+      <ellipse cx="235" cy="170" rx="14" ry="20" fill="#0f172a" />
+      <circle cx="230" cy="162" r="6" fill="#ffffff" />
+      <circle cx="241" cy="177" r="3" fill="#ffffff" />
+    </g>
+
+    <!-- Rosy Cheeks -->
+    <ellipse cx="138" cy="195" rx="14" ry="9" fill="#f43f5e" opacity="0.45" />
+    <ellipse cx="262" cy="195" rx="14" ry="9" fill="#f43f5e" opacity="0.45" />
+
+    <!-- Cute Snout / Nose & Smiling Mouth -->
+    <ellipse cx="200" cy="182" rx="20" ry="14" fill="#38bdf8" />
+    <ellipse cx="193" cy="182" rx="4" ry="5" fill="#0284c7" />
+    <ellipse cx="207" cy="182" rx="4" ry="5" fill="#0284c7" />
+    <path d="M190,196 Q200,208 210,196" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" />
+
+    <!-- Right Hand Holding Big Shiny Gold Coin (Savings Symbol) -->
+    <!-- Gold Coin -->
+    <g transform="translate(240, 240)">
+      <circle cx="50" cy="50" r="48" fill="url(#goldCoin)" stroke="#b45309" stroke-width="2.5" />
+      <circle cx="50" cy="50" r="40" fill="url(#innerCoin)" stroke="#ca8a04" stroke-width="2" stroke-dasharray="4,3" />
+      <!-- Thai Baht Symbol (฿) or Savings Sparkle -->
+      <text x="50" y="64" font-family="'Sarabun', 'Noto Sans Thai', sans-serif" font-size="44" font-weight="900" fill="#78350f" text-anchor="middle">฿</text>
+      <!-- Sparkle on Coin -->
+      <path d="M25,25 Q30,30 35,30 Q30,30 25,35 Q30,30 25,25 Z" fill="#ffffff" />
+    </g>
+
+    <!-- Right Arm holding the coin -->
+    <ellipse cx="270" cy="305" rx="24" ry="32" fill="#0284c7" transform="rotate(-20 270 305)" />
+    <circle cx="282" cy="285" r="18" fill="#38bdf8" />
+
+    <!-- Name Ribbon Tag: "น้องออมสุข" -->
+    <g transform="translate(110, 395)">
+      <rect x="0" y="0" width="180" height="34" rx="17" fill="#1e3a8a" stroke="#fbbf24" stroke-width="2.5" />
+      <text x="90" y="23" font-family="'Sarabun', 'Prompt', sans-serif" font-size="16" font-weight="800" fill="#ffffff" text-anchor="middle">น้องออมสุข</text>
+    </g>
+  </g>
+</svg>

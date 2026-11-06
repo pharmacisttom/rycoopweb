@@ -46,6 +46,7 @@ const AdminEServicesPage = lazy(() => import('./pages/AdminEServicesPage'));
 const AdminBoardPersonnelPage = lazy(() => import('./pages/AdminBoardPersonnelPage'));
 const AdminProductsPage = lazy(() => import('./pages/AdminProductsPage'));
 const AdminDocumentCategoriesPage = lazy(() => import('./pages/AdminDocumentCategoriesPage'));
+const AdminPopupsPage = lazy(() => import('./pages/AdminPopupsPage'));
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const LoansPage = lazy(() => import('./pages/LoansPage'));
 const DepositsPage = lazy(() => import('./pages/DepositsPage'));
@@ -187,7 +188,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|login|2fa|hero-slides|welfare|eservices|board-staff|products|document-categories)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|login|2fa|hero-slides|welfare|eservices|board-staff|products|document-categories|popups)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -272,6 +273,7 @@ export default function App() {
             <Route path="/admin/settings/content" element={<StaffProtectedRoute permission="settings.view"><AdminStoredContentPage kind="settings"/></StaffProtectedRoute>} />
             <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view','faqs.view']}><ContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/hero-slides" element={<StaffProtectedRoute permission="content.view"><AdminHeroSlidesPage /></StaffProtectedRoute>} />
+            <Route path="/admin/popups" element={<StaffProtectedRoute permission="content.view"><AdminPopupsPage /></StaffProtectedRoute>} />
             <Route path="/admin/welfare" element={<StaffProtectedRoute permission="welfare.view"><AdminWelfarePage /></StaffProtectedRoute>} />
             <Route path="/admin/eservices" element={<StaffProtectedRoute permission="content.view"><AdminEServicesPage /></StaffProtectedRoute>} />
             <Route path="/admin/board-staff" element={<StaffProtectedRoute permission="people.view"><AdminBoardPersonnelPage /></StaffProtectedRoute>} />

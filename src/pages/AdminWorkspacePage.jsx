@@ -7,6 +7,7 @@ import ChangePasswordModal from '../components/common/ChangePasswordModal';
 
 const destinations = [
   ['content.view', '/admin/hero-slides', 'ภาพสไลด์แบนเนอร์ (Hero Slides)'],
+  ['content.view', '/admin/popups', 'แคมเปญป็อปอัป (Popup Manager V2)'],
   ['welfare.view', '/admin/welfare', 'สวัสดิการสมาชิก'],
   ['content.view', '/admin/eservices', 'ลิงก์บริการออนไลน์ (E-Services)'],
   ['people.view', '/admin/board-staff', 'คณะกรรมการและเจ้าหน้าที่'],
