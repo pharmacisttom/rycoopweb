@@ -198,12 +198,247 @@ class SpaApiController extends Controller
      */
     public function welfare(): void
     {
-        $types = [];
+        $items = [];
         try {
-            $types = Database::query("SELECT id, name, description, max_amount, icon, requirements FROM welfare_types WHERE status = 'active' ORDER BY id ASC");
+            $items = Database::query("SELECT id, category, title, slug, short_description, full_description, benefit_amount, eligibility, required_documents, application_process, contact_info, sort_order, status FROM welfare WHERE status = 'active' AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
         } catch (\Throwable $e) {}
 
-        $this->json(['success' => true, 'data' => $types]);
+        $this->json(['success' => true, 'data' => $items]);
+    }
+
+    /**
+     * GET /api/public/eservices
+     */
+    public function eservices(): void
+    {
+        $links = [];
+        try {
+            $links = Database::query("SELECT id, title, category, url, icon, is_external, is_featured, sort_order FROM eservice_links WHERE status = 'active' ORDER BY sort_order ASC, id ASC");
+        } catch (\Throwable $e) {}
+
+        $this->json(['success' => true, 'data' => $links]);
+    }
+
+    /**
+     * GET /api/public/documents/{id}/download
+     */
+    public function downloadDocument(string $id): void
+    {
+        $docId = (int)$id;
+        $doc = Database::first("SELECT * FROM documents WHERE id = ? AND status = 'published' AND deleted_at IS NULL", [$docId]);
+        if (!$doc) {
+            $this->json(['success' => false, 'message' => 'ไม่พบเอกสาร'], 404);
+            return;
+        }
+
+        try {
+            Database::execute("UPDATE documents SET download_count = download_count + 1 WHERE id = ?", [$docId]);
+        } catch (\Throwable $e) {}
+
+        $filePath = resolve_media_url($doc['file_path']);
+        $this->json([
+            'success' => true,
+            'data' => [
+                'id' => $doc['id'],
+                'title' => $doc['title'],
+                'file_url' => $filePath,
+                'download_count' => (int)$doc['download_count'] + 1,
+            ]
+        ]);
+    }
+
+    /**
+     * POST /api/public/complaints
+     * Server-side complaint submission with unique tracking reference.
+     */
+    public function publicSubmitComplaint(): void
+    {
+        $name = trim((string)$this->request->input('name'));
+        $phone = trim((string)$this->request->input('phone'));
+        $email = trim((string)$this->request->input('email', ''));
+        $topic = trim((string)$this->request->input('topic', 'สอบถามข้อมูลทั่วไป'));
+        $message = trim((string)$this->request->input('message'));
+
+        if ($name === '' || $phone === '' || $message === '') {
+            $this->json(['success' => false, 'message' => 'กรุณากรอกชื่อ เบอร์โทรศัพท์ และรายละเอียดข้อความให้ครบถ้วน'], 422);
+            return;
+        }
+
+        if (mb_strlen($name) > 100 || mb_strlen($phone) > 50 || mb_strlen($message) > 5000) {
+            $this->json(['success' => false, 'message' => 'ข้อมูลที่กรอกมีความยาวเกินกำหนด'], 422);
+            return;
+        }
+
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->json(['success' => false, 'message' => 'รูปแบบอีเมลไม่ถูกต้อง'], 422);
+            return;
+        }
+
+        try {
+            $prefix = 'TKT-' . date('ym');
+            $count = (int)Database::value("SELECT COUNT(*) FROM complaints WHERE ticket_no LIKE ?", ["{$prefix}%"]);
+            $ticketNo = sprintf('%s-%04d', $prefix, $count + 1);
+
+            $complaintId = (int)Database::insert(
+                "INSERT INTO complaints (ticket_no, category, subject, description, complainant_name, complainant_phone, complainant_email, status, priority, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'received', 'normal', NOW(), NOW())",
+                [$ticketNo, $topic, $topic, $message, $name, $phone, $email ?: null]
+            );
+
+            Database::insert(
+                "INSERT INTO complaint_logs (complaint_id, action, note, created_at)
+                 VALUES (?, 'ยื่นเรื่องร้องเรียนเข้าสู่ระบบ', 'ระบบได้รับเรื่องร้องเรียนเรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบ', NOW())",
+                [$complaintId]
+            );
+
+            $this->json([
+                'success' => true,
+                'message' => 'ระบบได้รับเรื่องร้องเรียนเรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบโดยเร็วที่สุด',
+                'data' => [
+                    'ticket_no' => $ticketNo,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]
+            ], 201);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง'], 500);
+        }
+    }
+
+    /**
+     * GET /api/public/complaints/track
+     * Server-side tracking lookup with PII protection.
+     */
+    public function publicTrackComplaint(): void
+    {
+        $ticket = trim((string)($this->request->query('ticket') ?? $this->request->query('ticket_no') ?? ''));
+        if ($ticket === '') {
+            $this->json(['success' => false, 'message' => 'กรุณาระบุรหัสติดตามเรื่อง'], 422);
+            return;
+        }
+
+        try {
+            $complaint = Database::first(
+                "SELECT id, ticket_no, category, subject, description, complainant_name, status, response_message, answered_at, created_at
+                 FROM complaints WHERE LOWER(ticket_no) = LOWER(?) LIMIT 1",
+                [$ticket]
+            );
+
+            if (!$complaint) {
+                $this->json([
+                    'success' => false,
+                    'message' => 'ไม่พบข้อมูลรหัสติดตามเรื่อง',
+                    'data' => [
+                        'notFound' => true,
+                        'id' => $ticket,
+                    ]
+                ], 404);
+                return;
+            }
+
+            $logs = Database::query(
+                "SELECT action, note, created_at FROM complaint_logs WHERE complaint_id = ? ORDER BY id ASC",
+                [(int)$complaint['id']]
+            );
+
+            $thaiDate = date('j M Y', strtotime($complaint['created_at']));
+            $replyDate = !empty($complaint['answered_at']) ? date('j M Y H:i', strtotime($complaint['answered_at'])) : null;
+
+            $this->json([
+                'success' => true,
+                'data' => [
+                    'id' => $complaint['ticket_no'],
+                    'topic' => $complaint['category'] ?: $complaint['subject'],
+                    'message' => $complaint['description'],
+                    'name' => $this->maskComplainantName((string)$complaint['complainant_name']),
+                    'status' => $this->formatComplaintStatus((string)$complaint['status']),
+                    'raw_status' => $complaint['status'],
+                    'adminReply' => $complaint['response_message'] ?? '',
+                    'replyDate' => $replyDate,
+                    'date' => $thaiDate,
+                    'logs' => $logs,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการค้นหาข้อมูล'], 500);
+        }
+    }
+
+    private function maskComplainantName(string $name): string
+    {
+        $name = trim($name);
+        if ($name === '') return 'ผู้ยื่นคำร้อง';
+        $parts = preg_split('/\s+/', $name);
+        $masked = [];
+        foreach ($parts as $p) {
+            $len = mb_strlen($p);
+            if ($len <= 2) {
+                $masked[] = $p;
+            } else {
+                $first = mb_substr($p, 0, 2);
+                $masked[] = $first . '***';
+            }
+        }
+        return implode(' ', $masked);
+    }
+
+    private function formatComplaintStatus(string $status): string
+    {
+        return match($status) {
+            'received' => 'รอดำเนินการ',
+            'under_review' => 'กำลังตรวจสอบ',
+            'assigned', 'in_progress' => 'กำลังดำเนินการ',
+            'answered' => 'ตอบกลับแล้ว',
+            'closed' => 'ปิดเรื่องแล้ว',
+            'rejected' => 'ไม่อยู่ในเงื่อนไข',
+            default => 'รอดำเนินการ'
+        };
+    }
+
+    /**
+     * POST /api/admin/complaints/{id}/status
+     */
+    public function adminUpdateComplaintStatus(string $id): void
+    {
+        $complaintId = (int)$id;
+        $complaint = Database::first("SELECT * FROM complaints WHERE id = ?", [$complaintId]);
+        if (!$complaint) {
+            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลเรื่องร้องเรียน'], 404);
+            return;
+        }
+
+        $status = trim((string)$this->request->input('status', $complaint['status']));
+        $priority = trim((string)$this->request->input('priority', $complaint['priority']));
+        $responseMessage = trim((string)$this->request->input('response_message', $complaint['response_message'] ?? ''));
+        $note = trim((string)$this->request->input('note', ''));
+
+        $allowedStatuses = ['received', 'under_review', 'assigned', 'in_progress', 'answered', 'closed', 'rejected'];
+        if (!in_array($status, $allowedStatuses, true)) {
+            $this->json(['success' => false, 'message' => 'สถานะไม่ถูกต้อง'], 422);
+            return;
+        }
+
+        $officerId = Auth::id();
+        $answeredAt = ($status === 'answered' && empty($complaint['answered_at'])) ? date('Y-m-d H:i:s') : $complaint['answered_at'];
+        $closedAt = ($status === 'closed' && empty($complaint['closed_at'])) ? date('Y-m-d H:i:s') : $complaint['closed_at'];
+
+        Database::execute(
+            "UPDATE complaints SET status = ?, priority = ?, response_message = ?, assigned_officer_id = ?, answered_at = ?, closed_at = ?, updated_at = NOW() WHERE id = ?",
+            [$status, $priority, $responseMessage ?: null, $officerId, $answeredAt, $closedAt, $complaintId]
+        );
+
+        Database::execute(
+            "INSERT INTO complaint_logs (complaint_id, action, note, officer_id, created_at) VALUES (?, ?, ?, ?, NOW())",
+            [$complaintId, 'ปรับปรุงสถานะเป็น ' . $this->formatComplaintStatus($status), $note ?: ($responseMessage ?: 'อัปเดตสถานะ'), $officerId]
+        );
+
+        AuditService::log('complaints', 'update_status', (string)$complaintId, $complaint, [
+            'status' => $status,
+            'priority' => $priority,
+            'response_message' => $responseMessage
+        ]);
+
+        $updated = Database::first("SELECT * FROM complaints WHERE id = ?", [$complaintId]);
+        $this->json(['success' => true, 'message' => 'บันทึกสถานะเรื่องร้องเรียนเรียบร้อยแล้ว', 'data' => $updated]);
     }
 
     /**

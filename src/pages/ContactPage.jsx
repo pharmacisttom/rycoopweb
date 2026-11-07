@@ -36,57 +36,69 @@ export default function ContactPage() {
     message: ''
   });
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [trackingLoading, setTrackingLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newId = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
-    const newEntry = {
-      id: newId,
-      name: form.name,
-      phone: form.phone,
-      email: form.email || '-',
-      department: 'สมาชิกทั่วไป',
-      topic: form.topic,
-      message: form.message,
-      date: new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
-      status: 'รอดำเนินการ',
-      adminReply: '',
-      replyDate: ''
-    };
+    setSubmitting(true);
+    setSubmitError('');
 
     try {
-      const saved = localStorage.getItem('coop_member_complaints');
-      const list = saved ? JSON.parse(saved) : MEMBER_COMPLAINTS;
-      const updated = [newEntry, ...list];
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-    } catch (err) {
-      // ignore
-    }
+      const res = await fetch('/api/public/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+          topic: form.topic,
+          message: form.message,
+        }),
+      });
 
-    setLastSubmittedId(newId);
-    setSubmitted(true);
+      const data = await res.json();
+      if (res.ok && data.success && data.data?.ticket_no) {
+        setLastSubmittedId(data.data.ticket_no);
+        setSubmitted(true);
+      } else {
+        setSubmitError(data.message || 'ไม่สามารถส่งข้อความได้ กรุณาลองใหม่อีกครั้ง');
+      }
+    } catch (err) {
+      setSubmitError('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleTrack = (e) => {
+  const handleTrack = async (e) => {
     e.preventDefault();
-    if (!trackingId) return;
+    if (!trackingId.trim()) return;
 
-    let list = [];
+    setTrackingLoading(true);
+    setTrackingResult(null);
+
     try {
-      const saved = localStorage.getItem('coop_member_complaints');
-      if (saved) list = JSON.parse(saved);
+      const res = await fetch(`/api/public/complaints/track?ticket=${encodeURIComponent(trackingId.trim())}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        setTrackingResult(data.data);
+      } else {
+        setTrackingResult({
+          notFound: true,
+          id: trackingId.trim(),
+        });
+      }
     } catch (err) {
-      // ignore
-    }
-
-    const found = list.find(item => item.id.toLowerCase() === trackingId.trim().toLowerCase());
-    if (found) {
-      setTrackingResult(found);
-    } else {
       setTrackingResult({
         notFound: true,
-        id: trackingId
+        id: trackingId.trim(),
       });
+    } finally {
+      setTrackingLoading(false);
     }
   };
 
@@ -256,9 +268,15 @@ export default function ContactPage() {
                     <textarea className="form-control" rows={4} required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="พิมพ์รายละเอียดที่ต้องการแจ้ง..." />
                   </div>
 
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem' }}>
+                  {submitError && (
+                    <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '1rem', background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                      {submitError}
+                    </div>
+                  )}
+
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem' }} disabled={submitting}>
                     <Send size={16} />
-                    <span>ส่งข้อความ</span>
+                    <span>{submitting ? 'กำลังส่งข้อมูล...' : 'ส่งข้อความ'}</span>
                   </button>
                 </form>
               )}
@@ -273,21 +291,21 @@ export default function ContactPage() {
               ติดตามสถานะเรื่องร้องเรียน / คำร้อง
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '2rem', textAlign: 'center' }}>
-              กรอกรหัสติดตามเรื่อง (Ticket ID เช่น TKT-670301) ที่ได้รับเพื่อตรวจสอบความคืบหน้า
+              กรอกรหัสติดตามเรื่อง (Ticket ID เช่น TKT-2611-0001) ที่ได้รับเพื่อตรวจสอบความคืบหน้า
             </p>
 
             <form onSubmit={handleTrack} style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
               <input
                 type="text"
                 className="form-control"
-                placeholder="เช่น TKT-670301, TKT-670303"
+                placeholder="เช่น TKT-2611-0001"
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
                 required
               />
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={trackingLoading}>
                 <Search size={16} />
-                <span>ตรวจสอบ</span>
+                <span>{trackingLoading ? 'กำลังค้นหา...' : 'ตรวจสอบ'}</span>
               </button>
             </form>
 
