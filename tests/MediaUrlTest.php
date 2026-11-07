@@ -16,6 +16,8 @@ $cases = [
     ['storage/uploads/news/a.jpg', '/storage/uploads/news/a.jpg'],
     ['abc.jpg', '/storage/uploads/abc.jpg'],
     ['news\\abc.jpg', '/storage/uploads/news/abc.jpg'],
+    ['./assets/img/committee/committee-01-president.webp', '/assets/img/committee/committee-01-president.webp'],
+    ['./storage/uploads/personnel/test.jpg', '/storage/uploads/personnel/test.jpg'],
 ];
 
 $failed = 0;

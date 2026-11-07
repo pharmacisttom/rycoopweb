@@ -160,7 +160,7 @@ class PublicContentService
                 elseif ($key==='id' && $section!=='products') $item[$key]=self::integer($field,999999);
                 elseif ($key==='highlight') $item[$key]=(bool)$field;
                 elseif (in_array($key,['rate','rateValue'],true)) { $number=rtrim((string)$field,'%');if (!preg_match('/^\d{1,3}(?:\.\d{1,3})?$/D',$number) || (float)$number>100) throw new InvalidArgumentException('ดอกเบี้ยต้องอยู่ระหว่าง 0–100% และทศนิยมไม่เกิน 3 ตำแหน่ง'); }
-                else $item[$key]=self::text($field,1000);
+                else $item[$key]=$field===null?null:self::text($field,1000);
             }
             $required=match($section){'boards','staff'=>['id','name','position'],'deposits'=>['type','rate','minDeposit','payFreq'],'loan_rates'=>['type','rate','maxTerm','condition'],'products'=>['id','title','rateValue','maxLimit','maxTerm','guarantee','features']};
             foreach($required as $key)if(!array_key_exists($key,$item) || $item[$key]==='')throw new InvalidArgumentException('กรุณากรอกข้อมูลที่จำเป็นให้ครบ');

@@ -638,4 +638,5 @@ $router->group(['prefix'=>'api/admin/public-content','middleware'=>[AuthMiddlewa
     $r->get('/sections/{section}', 'Admin\\PublicContentController@show');
     $r->post('/sections/{section}/drafts', 'Admin\\PublicContentController@draft', [CsrfMiddleware::class]);
     $r->post('/revisions/{id}/publish', 'Admin\\PublicContentController@publish', [CsrfMiddleware::class]);
+    $r->post('/upload', 'Admin\\PublicContentController@upload', [new PermissionMiddleware(['people', 'coop_info'], 'update'), CsrfMiddleware::class]);
 });
