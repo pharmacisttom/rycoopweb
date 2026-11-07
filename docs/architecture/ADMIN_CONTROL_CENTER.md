@@ -1,9 +1,9 @@
 # RYCOOPWEB 3.0 — Enterprise Admin Control Center Architecture & Repository Audit
 
-**Organization**: Rayong Public Health Savings and Credit Cooperative Limited (สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด)  
-**Repository**: `pharmacisttom/rycoopweb`  
-**Integration Baseline**: `Test` (`2d400a7`) + MFA QR Fix (`5cbdfa8` on `codex/fix-mfa-qr`)  
-**Development Branch**: `codex/admin-control-center`  
+**Organization**: Rayong Public Health Savings and Credit Cooperative Limited (สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด)
+**Repository**: `pharmacisttom/rycoopweb`
+**Integration Baseline**: `Test` (`2d400a7`) + MFA QR Fix (`5cbdfa8` on `codex/fix-mfa-qr`)
+**Development Branch**: `codex/admin-control-center`
 **Status**: Implemented in Phased, Non-Destructive Architecture (Zero Unapproved Migrations Executed)
 
 ---
@@ -174,4 +174,3 @@ CREATE TABLE IF NOT EXISTS `restore_approval_requests` (
     CONSTRAINT `fk_restore_req_user` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
-

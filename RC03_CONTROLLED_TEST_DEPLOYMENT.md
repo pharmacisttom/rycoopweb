@@ -4,7 +4,7 @@
 **Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)<br>
 **Target Branch:** `integration/test-rc03-unified-content`<br>
 **Verified Baseline:** `2bf75982e5b0d1a328fc184c7a84d4fdf41210c2` (RC02 Deployed Baseline)<br>
-**Production Status:** STRICTLY FROZEN  
+**Production Status:** STRICTLY FROZEN
 
 ---
 

@@ -1,7 +1,7 @@
 # RYCOOPWEB 3.0 — Admin Control Center RBAC & Permission Matrix
 
-**Organization**: Rayong Public Health Savings and Credit Cooperative Limited  
-**Security Standard**: Deny-by-Default, Least Privilege, Separation of Duties, Mandatory MFA  
+**Organization**: Rayong Public Health Savings and Credit Cooperative Limited
+**Security Standard**: Deny-by-Default, Least Privilege, Separation of Duties, Mandatory MFA
 **Status**: Active & Reconciled with Existing `roles`, `permissions`, and `AccessService`
 
 ---
@@ -96,4 +96,3 @@ Legend: `✅` Allowed | `👁️` Read-Only / Scoped | `—` Denied (Default Den
    - Database restoration is disabled from unapproved execution and requires dual-control governance.
 4. **Immediate Session Invalidation**: Updating a staff member's role, suspending an account, or unlinking Google OIDC increments `users.session_version`, immediately invalidating all active PHP sessions for that user on the next request.
 5. **Audit Log Redaction**: `AdminControlCenterService::redactMetadata()` strips keys matching `password`, `secret`, `token`, `otp`, `recovery`, `cookie`, `authorization`, `key`, and `hash` before returning audit records to any administrator or auditor.
-

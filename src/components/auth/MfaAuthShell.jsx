@@ -136,4 +136,3 @@ export default function MfaAuthShell({
     </div>
   );
 }
-

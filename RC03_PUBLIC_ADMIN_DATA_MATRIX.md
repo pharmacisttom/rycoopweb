@@ -1,9 +1,9 @@
 # RYCOOPWEB — RC03 PUBLIC / ADMIN END-TO-END DATA MATRIX
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Integration Branch:** `integration/test-rc03-unified-content`  
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
-**Production Status:** STRICTLY FROZEN  
+**Repository:** `pharmacisttom/rycoopweb`
+**Integration Branch:** `integration/test-rc03-unified-content`
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
+**Production Status:** STRICTLY FROZEN
 
 ---
 

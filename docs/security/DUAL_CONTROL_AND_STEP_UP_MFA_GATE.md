@@ -98,4 +98,3 @@ This document specifies the **Backend Security Gate Architecture**, **Manual Sec
    - If a rollback is required on `TEST`, repoint `/var/www/rycoopweb/current` to the previous release directory (`139cc6b4275c3fcfebe14752c33392b34a11d517`) and reload PHP-FPM (`sudo systemctl reload php8.3-fpm`).
 3. **Emergency Restore Execution Kill-Switch**:
    - If `BACKUP_RESTORE_EXECUTION_ENABLED` was temporarily enabled during a scheduled maintenance window on `TEST`, set `BACKUP_RESTORE_EXECUTION_ENABLED=false` in `.env` to immediately lock all restore execution (`423 RESTORE_EXECUTION_DISABLED_BY_POLICY`) without restarting the database.
-

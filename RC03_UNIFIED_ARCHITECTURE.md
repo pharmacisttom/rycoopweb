@@ -1,11 +1,11 @@
 # RYCOOPWEB — RC03 UNIFIED CONTENT ARCHITECTURE SPECIFICATION
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Integration Branch:** `integration/test-rc03-unified-content`  
-**Integration Commit SHA:** `3317da8`  
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
-**Production Status:** STRICTLY FROZEN  
-**Design System:** Modern Design System 3.1 (Flat Shell Architecture)  
+**Repository:** `pharmacisttom/rycoopweb`
+**Integration Branch:** `integration/test-rc03-unified-content`
+**Integration Commit SHA:** `3317da8`
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
+**Production Status:** STRICTLY FROZEN
+**Design System:** Modern Design System 3.1 (Flat Shell Architecture)
 
 ---
 

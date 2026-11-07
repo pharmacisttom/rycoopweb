@@ -64,4 +64,3 @@ This document records the verification, security posture, and acceptance test re
   - `src/App.jsx`
 - **Automated Tests**:
   - `tests/AdminControlCenterTest.php`
-
