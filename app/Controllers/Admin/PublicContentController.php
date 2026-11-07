@@ -28,6 +28,29 @@ class PublicContentController extends Controller
     public function show(string $section): void { $this->respond(fn()=>Content::section($section)); }
     public function draft(string $section): void { $this->respond(fn()=>['id'=>Content::saveDraft($section,$this->request->all())]); }
     public function publish(string $id): void { $this->respond(function()use($id){Content::publish((int)$id);return [];}); }
+    public function upload(): void
+    {
+        if (!$this->request->hasFile('file')) {
+            $this->json(['success' => false, 'message' => 'ไม่พบไฟล์ที่อัปโหลด'], 422);
+            return;
+        }
+
+        try {
+            $upload = \App\Services\MediaService::upload($this->request->file('file'), 'personnel', 'Personnel photo');
+            $this->json([
+                'success' => true,
+                'data' => [
+                    'url' => $upload['url'],
+                    'path' => $upload['path'],
+                    'filename' => $upload['filename'],
+                ]
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            $this->json(['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'message' => 'อัปโหลดล้มเหลว: ' . $e->getMessage()], 500);
+        }
+    }
     public function publicCatalog(): void
     {
         header('Cache-Control: no-cache');

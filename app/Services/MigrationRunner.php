@@ -475,6 +475,11 @@ class MigrationRunner
             throw new InvalidArgumentException("Invalid migration filename format: `{$filename}`. Must match `000_name.sql` pattern.");
         }
 
+        // Defensive safeguard: Rollback scripts must never be executed as forward migrations
+        if (str_contains(strtolower($cleanName), 'rollback')) {
+            throw new InvalidArgumentException("Rollback script `{$filename}` cannot be executed as a forward migration. Rollback scripts must reside in database/rollbacks/ and be executed explicitly through rollback procedures.");
+        }
+
         $fullPath = $this->migrationsDir . DIRECTORY_SEPARATOR . $cleanName;
         $realPath = realpath($fullPath);
 
@@ -896,6 +901,10 @@ class MigrationRunner
 
         foreach ($files as $file) {
             $basename = basename($file);
+            // Defensive safeguard: Rollback scripts must never be autodiscovered or executed by forward migration runner
+            if (str_contains(strtolower($basename), 'rollback')) {
+                continue;
+            }
             if (isset($applied[$basename]) && ($applied[$basename]['status'] ?? 'success') === 'success') {
                 continue;
             }

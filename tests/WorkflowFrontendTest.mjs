@@ -23,7 +23,7 @@ try{
   ['/admin/workspace',['news.view'],'จัดการข่าวประชาสัมพันธ์'],
   ['/admin/workspace',['rates.view'],'อัตราดอกเบี้ย'],
   ['/admin/public-content',['rates.view'],'จัดการข้อมูลเว็บไซต์สหกรณ์'],
-  ['/admin/content?tab=news',['news.view'],'จัดการข่าวและคำถาม'],
+  ['/admin/content?tab=news',['news.view'],'จัดการข่าวและกิจกรรมประชาสัมพันธ์'],
   ['/admin/mfa/enroll',[],'ตั้งค่าการยืนยันตัวตนสองขั้นตอน'],
   ['/admin/mfa/verify',[],'ยืนยันตัวตนสองขั้นตอน'],
   ['/admin/2fa',[],'ยืนยันตัวตนสองขั้นตอน'],

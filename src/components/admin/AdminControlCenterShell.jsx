@@ -77,9 +77,11 @@ export const ADMIN_SIDEBAR_GROUPS = [
   {
     id: 'finance',
     label: 'Financial Administration',
-    thaiLabel: 'การเงินและสินเชื่อ',
+    thaiLabel: 'การเงินและผลิตภัณฑ์',
     icon: FileSpreadsheet,
     items: [
+      { label: 'ข้อมูลปันผล & นำเข้าข้อมูล', to: '/admin/dividends/import', permissions: ['dividends.import'] },
+      { label: 'ผลิตภัณฑ์เงินกู้และเงินฝาก', to: '/admin/products', permissions: ['products.view'] },
       { label: 'รายงานการเงิน', to: '/admin/reports?category=finance', permissions: ['finance.view', 'rates.view', 'products.view', 'dividends.import'] },
       { label: 'ข้อมูลเงินฝาก & อัตราดอกเบี้ย', to: '/admin/public-content', permissions: ['rates.view'] },
       { label: 'ข้อมูลสินเชื่อ', to: '/admin/public-content?section=products', permissions: ['products.view'] },
@@ -89,14 +91,19 @@ export const ADMIN_SIDEBAR_GROUPS = [
   {
     id: 'content',
     label: 'Content Management',
-    thaiLabel: 'จัดการเนื้อหาและข่าวสาร',
+    thaiLabel: 'จัดการเนื้อหาและเว็บไซต์',
     icon: FileText,
     items: [
-      { label: 'ข่าวสาร & ประกาศ', to: '/admin/content?tab=news', permissions: ['news.view'] },
-      { label: 'ประกาศสำคัญ', to: '/admin/workspace', permissions: ['announcements.view'] },
+      { label: 'แคมเปญป๊อปอัป (Popup Manager)', to: '/admin/popups', permissions: ['news.view', 'content.view'] },
+      { label: 'ภาพสไลด์แบนเนอร์ (Hero Slides)', to: '/admin/hero-slides', permissions: ['news.view', 'content.view'] },
+      { label: 'ข่าวสาร & ประชาสัมพันธ์', to: '/admin/content?tab=news', permissions: ['news.view'] },
+      { label: 'สวัสดิการสมาชิก', to: '/admin/welfare', permissions: ['welfare.view'] },
+      { label: 'บริการออนไลน์ (E-Services)', to: '/admin/eservices', permissions: ['settings.view', 'content.view'] },
+      { label: 'คณะกรรมการและเจ้าหน้าที่', to: '/admin/board-staff', permissions: ['people.view'] },
+      { label: 'หมวดหมู่เอกสาร', to: '/admin/document-categories', permissions: ['documents.view'] },
+      { label: 'คลังเอกสารและแบบฟอร์ม', to: '/admin/documents', permissions: ['documents.view'] },
       { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view'] },
-      { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
-      { label: 'ศูนย์เอกสาร', to: '/admin/documents', permissions: ['documents.view'] },
+      { label: 'ข้อมูลสหกรณ์ & ทั่วไป', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
     ],
   },
   {
@@ -288,9 +295,16 @@ function FullAdminControlCenterShell({
 
   const isItemActive = (to) => {
     if (to.includes('?')) {
-      return currentFullUrl === to;
+      const [targetPath, targetQuery] = to.split('?');
+      if (location.pathname !== targetPath) return false;
+      const targetParams = new URLSearchParams(targetQuery);
+      const currentParams = new URLSearchParams(location.search);
+      for (const [key, val] of targetParams.entries()) {
+        if (currentParams.get(key) !== val) return false;
+      }
+      return true;
     }
-    return location.pathname === to && !location.search;
+    return location.pathname === to;
   };
 
   const toggleGroup = (groupId) => {

@@ -8,6 +8,32 @@
    ========================================================================== */
 
 :root {
+  /* ========================================================================
+     WHITE & BLUE DESIGN SYSTEM TOKENS (Master Design Direction)
+     ======================================================================== */
+  --brand-primary: #1769C2;
+  --brand-primary-hover: #1255A0;
+  --brand-navy: #102F68;
+
+  --brand-light: #DCEEFF;
+  --brand-soft: #EDF5FF;
+
+  --background-main: #F4F8FD;
+  --background-white: #FFFFFF;
+
+  --text-primary: #17315A;
+  --text-secondary: #526783;
+  --text-muted: #718096;
+
+  --border-default: #DCE5F0;
+  --border-light: #EAF0F6;
+
+  --success: #16805D;
+  --warning: #AD6D14;
+  --danger: #C43B42;
+
+  --shadow-soft: 0 4px 18px rgba(16, 47, 104, 0.055);
+
   /* Color Palette - Light Mode */
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;

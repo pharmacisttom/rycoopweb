@@ -124,7 +124,7 @@ export default function BoardPage() {
         <section key={group.title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
           <h2>{group.title}</h2>
           <ul>{group.members.map(([id, position]) => (
-            <li key={id}>{BOARD_MEMBERS.find(member => member.id === id).name} — {position}</li>
+            <li key={id}>{BOARD_MEMBERS.find(member => member.id === id)?.name || 'กรรมการ'} — {position}</li>
           ))}</ul>
         </section>
       ))}

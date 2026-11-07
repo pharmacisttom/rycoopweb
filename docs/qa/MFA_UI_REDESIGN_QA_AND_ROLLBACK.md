@@ -41,4 +41,3 @@ sudo systemctl reload nginx
 ```
 
 Because `MfaController.php` only adds additive fields (`challenge_started_at`, `challenge_expires_at`, `remaining_seconds`, `server_time`) to `GET /api/auth/mfa/status` while preserving all existing session keys, TOTP encryption (`AES-256-GCM`), and recovery-code tables, rolling back to `Test` requires **zero database changes** and does **not** invalidate existing enrolled users or recovery codes.
-

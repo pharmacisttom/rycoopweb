@@ -169,6 +169,10 @@ if (!function_exists('resolve_media_url')) {
             return $path;
         }
 
+        if (str_starts_with($path, './')) {
+            $path = substr($path, 2);
+        }
+
         if (str_starts_with($path, 'assets/')) {
             return '/' . $path;
         }

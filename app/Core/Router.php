@@ -84,7 +84,7 @@ class Router
             $method = strtoupper((string) $request->input('_method'));
         }
 
-        $uri = $request->uri();
+        $uri = rtrim($request->uri(), '/') ?: '/';
 
         foreach ($this->routes as $route) {
             if ($route['method'] !== $method) {

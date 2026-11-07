@@ -19,10 +19,25 @@ class MemberSystemHealth
 
     public static function columns(): array
     {
-        $rows = Database::query('SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()');
-        $columns=[];
-        foreach($rows as $row) $columns[$row['TABLE_NAME']][]=$row['COLUMN_NAME'];
-        return $columns;
+        try {
+            $rows = Database::query('SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()');
+            $columns=[];
+            foreach($rows as $row) $columns[$row['TABLE_NAME']][]=$row['COLUMN_NAME'];
+            return $columns;
+        } catch (\Throwable $e) {
+            $columns = [];
+            try {
+                $tables = Database::query("SELECT name FROM sqlite_master WHERE type='table'");
+                foreach ($tables as $t) {
+                    $tableName = (string)$t['name'];
+                    $cols = Database::query("PRAGMA table_info(" . $tableName . ")");
+                    foreach ($cols as $c) {
+                        $columns[$tableName][] = (string)$c['name'];
+                    }
+                }
+            } catch (\Throwable $ex) {}
+            return $columns;
+        }
     }
 
     public static function inspect(): array

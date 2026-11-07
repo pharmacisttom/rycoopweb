@@ -186,8 +186,18 @@ class SpaApiController extends Controller
     {
         $docs = [];
         try {
-            $docs = Database::query("SELECT id, title, category, file_path, file_size, download_count, created_at FROM documents WHERE status = 'published' ORDER BY created_at DESC");
-            $docs = array_map(fn(array $doc): array => $this->withResolvedMediaUrls($doc, ['thumbnail', 'thumbnail_url', 'image_url']), $docs);
+            $docs = Database::query(
+                "SELECT d.id, d.title, d.slug, d.category_id, c.name as category, c.slug as category_slug,
+                        d.file_path, d.file_size, d.file_type, d.download_count, d.created_at
+                 FROM documents d
+                 LEFT JOIN document_categories c ON d.category_id = c.id
+                 WHERE d.status = 'active' AND d.deleted_at IS NULL
+                 ORDER BY d.sort_order ASC, d.id ASC"
+            );
+            $docs = array_map(function (array $doc): array {
+                $doc['file_url'] = resolve_media_url($doc['file_path']);
+                return $doc;
+            }, $docs);
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $docs]);
@@ -198,12 +208,253 @@ class SpaApiController extends Controller
      */
     public function welfare(): void
     {
-        $types = [];
+        $items = [];
         try {
-            $types = Database::query("SELECT id, name, description, max_amount, icon, requirements FROM welfare_types WHERE status = 'active' ORDER BY id ASC");
+            $items = Database::query("SELECT id, category, title, slug, short_description, full_description, benefit_amount, eligibility, required_documents, application_process, contact_info, sort_order, status FROM welfare WHERE status = 'active' AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
         } catch (\Throwable $e) {}
 
-        $this->json(['success' => true, 'data' => $types]);
+        $this->json(['success' => true, 'data' => $items]);
+    }
+
+    /**
+     * GET /api/public/eservices
+     */
+    public function eservices(): void
+    {
+        $links = [];
+        try {
+            $links = Database::query(
+                "SELECT id, name, name AS title, description, category, url, icon,
+                        is_internal, open_new_tab, confirm_before_redirect, is_maintenance, sort_order
+                 FROM eservice_links
+                 WHERE status = 'active' AND deleted_at IS NULL
+                 ORDER BY sort_order ASC, id ASC"
+            );
+        } catch (\Throwable $e) {}
+
+        $this->json(['success' => true, 'data' => $links]);
+    }
+
+    /**
+     * GET /api/public/documents/{id}/download
+     */
+    public function downloadDocument(string $id): void
+    {
+        $docId = (int)$id;
+        $doc = Database::first("SELECT * FROM documents WHERE id = ? AND status = 'active' AND deleted_at IS NULL", [$docId]);
+        if (!$doc) {
+            $this->json(['success' => false, 'message' => 'ไม่พบเอกสาร'], 404);
+            return;
+        }
+
+        try {
+            Database::execute("UPDATE documents SET download_count = download_count + 1 WHERE id = ?", [$docId]);
+        } catch (\Throwable $e) {}
+
+        $filePath = resolve_media_url($doc['file_path']);
+        $this->json([
+            'success' => true,
+            'data' => [
+                'id' => $doc['id'],
+                'title' => $doc['title'],
+                'file_url' => $filePath,
+                'download_count' => (int)$doc['download_count'] + 1,
+            ]
+        ]);
+    }
+
+    /**
+     * POST /api/public/complaints
+     * Server-side complaint submission with unique tracking reference.
+     */
+    public function publicSubmitComplaint(): void
+    {
+        $name = trim((string)$this->request->input('name'));
+        $phone = trim((string)$this->request->input('phone'));
+        $email = trim((string)$this->request->input('email', ''));
+        $topic = trim((string)$this->request->input('topic', 'สอบถามข้อมูลทั่วไป'));
+        $message = trim((string)$this->request->input('message'));
+
+        if ($name === '' || $phone === '' || $message === '') {
+            $this->json(['success' => false, 'message' => 'กรุณากรอกชื่อ เบอร์โทรศัพท์ และรายละเอียดข้อความให้ครบถ้วน'], 422);
+            return;
+        }
+
+        if (mb_strlen($name) > 100 || mb_strlen($phone) > 50 || mb_strlen($message) > 5000) {
+            $this->json(['success' => false, 'message' => 'ข้อมูลที่กรอกมีความยาวเกินกำหนด'], 422);
+            return;
+        }
+
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->json(['success' => false, 'message' => 'รูปแบบอีเมลไม่ถูกต้อง'], 422);
+            return;
+        }
+
+        try {
+            $prefix = 'TKT-' . date('ym');
+            $count = (int)Database::value("SELECT COUNT(*) FROM complaints WHERE ticket_no LIKE ?", ["{$prefix}%"]);
+            $ticketNo = sprintf('%s-%04d', $prefix, $count + 1);
+
+            $complaintId = (int)Database::insert(
+                "INSERT INTO complaints (ticket_no, category, subject, description, complainant_name, complainant_phone, complainant_email, status, priority, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'received', 'normal', NOW(), NOW())",
+                [$ticketNo, $topic, $topic, $message, $name, $phone, $email ?: null]
+            );
+
+            Database::insert(
+                "INSERT INTO complaint_logs (complaint_id, action, note, created_at)
+                 VALUES (?, 'ยื่นเรื่องร้องเรียนเข้าสู่ระบบ', 'ระบบได้รับเรื่องร้องเรียนเรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบ', NOW())",
+                [$complaintId]
+            );
+
+            $this->json([
+                'success' => true,
+                'message' => 'ระบบได้รับเรื่องร้องเรียนเรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบโดยเร็วที่สุด',
+                'data' => [
+                    'ticket_no' => $ticketNo,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]
+            ], 201);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง'], 500);
+        }
+    }
+
+    /**
+     * GET /api/public/complaints/track
+     * Server-side tracking lookup with PII protection.
+     */
+    public function publicTrackComplaint(): void
+    {
+        $ticket = trim((string)($this->request->query('ticket') ?? $this->request->query('ticket_no') ?? ''));
+        if ($ticket === '') {
+            $this->json(['success' => false, 'message' => 'กรุณาระบุรหัสติดตามเรื่อง'], 422);
+            return;
+        }
+
+        try {
+            $complaint = Database::first(
+                "SELECT id, ticket_no, category, subject, description, complainant_name, status, response_message, answered_at, created_at
+                 FROM complaints WHERE LOWER(ticket_no) = LOWER(?) LIMIT 1",
+                [$ticket]
+            );
+
+            if (!$complaint) {
+                $this->json([
+                    'success' => false,
+                    'message' => 'ไม่พบข้อมูลรหัสติดตามเรื่อง',
+                    'data' => [
+                        'notFound' => true,
+                        'id' => $ticket,
+                    ]
+                ], 404);
+                return;
+            }
+
+            $logs = Database::query(
+                "SELECT action, note, created_at FROM complaint_logs WHERE complaint_id = ? ORDER BY id ASC",
+                [(int)$complaint['id']]
+            );
+
+            $thaiDate = date('j M Y', strtotime($complaint['created_at']));
+            $replyDate = !empty($complaint['answered_at']) ? date('j M Y H:i', strtotime($complaint['answered_at'])) : null;
+
+            $this->json([
+                'success' => true,
+                'data' => [
+                    'id' => $complaint['ticket_no'],
+                    'topic' => $complaint['category'] ?: $complaint['subject'],
+                    'message' => $complaint['description'],
+                    'name' => $this->maskComplainantName((string)$complaint['complainant_name']),
+                    'status' => $this->formatComplaintStatus((string)$complaint['status']),
+                    'raw_status' => $complaint['status'],
+                    'adminReply' => $complaint['response_message'] ?? '',
+                    'replyDate' => $replyDate,
+                    'date' => $thaiDate,
+                    'logs' => $logs,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการค้นหาข้อมูล'], 500);
+        }
+    }
+
+    private function maskComplainantName(string $name): string
+    {
+        $name = trim($name);
+        if ($name === '') return 'ผู้ยื่นคำร้อง';
+        $parts = preg_split('/\s+/', $name);
+        $masked = [];
+        foreach ($parts as $p) {
+            $len = mb_strlen($p);
+            if ($len <= 2) {
+                $masked[] = $p;
+            } else {
+                $first = mb_substr($p, 0, 2);
+                $masked[] = $first . '***';
+            }
+        }
+        return implode(' ', $masked);
+    }
+
+    private function formatComplaintStatus(string $status): string
+    {
+        return match($status) {
+            'received' => 'รอดำเนินการ',
+            'under_review' => 'กำลังตรวจสอบ',
+            'assigned', 'in_progress' => 'กำลังดำเนินการ',
+            'answered' => 'ตอบกลับแล้ว',
+            'closed' => 'ปิดเรื่องแล้ว',
+            'rejected' => 'ไม่อยู่ในเงื่อนไข',
+            default => 'รอดำเนินการ'
+        };
+    }
+
+    /**
+     * POST /api/admin/complaints/{id}/status
+     */
+    public function adminUpdateComplaintStatus(string $id): void
+    {
+        $complaintId = (int)$id;
+        $complaint = Database::first("SELECT * FROM complaints WHERE id = ?", [$complaintId]);
+        if (!$complaint) {
+            $this->json(['success' => false, 'message' => 'ไม่พบข้อมูลเรื่องร้องเรียน'], 404);
+            return;
+        }
+
+        $status = trim((string)$this->request->input('status', $complaint['status']));
+        $priority = trim((string)$this->request->input('priority', $complaint['priority']));
+        $responseMessage = trim((string)$this->request->input('response_message', $complaint['response_message'] ?? ''));
+        $note = trim((string)$this->request->input('note', ''));
+
+        $allowedStatuses = ['received', 'under_review', 'assigned', 'in_progress', 'answered', 'closed', 'rejected'];
+        if (!in_array($status, $allowedStatuses, true)) {
+            $this->json(['success' => false, 'message' => 'สถานะไม่ถูกต้อง'], 422);
+            return;
+        }
+
+        $officerId = Auth::id();
+        $answeredAt = ($status === 'answered' && empty($complaint['answered_at'])) ? date('Y-m-d H:i:s') : $complaint['answered_at'];
+        $closedAt = ($status === 'closed' && empty($complaint['closed_at'])) ? date('Y-m-d H:i:s') : $complaint['closed_at'];
+
+        Database::execute(
+            "UPDATE complaints SET status = ?, priority = ?, response_message = ?, assigned_officer_id = ?, answered_at = ?, closed_at = ?, updated_at = NOW() WHERE id = ?",
+            [$status, $priority, $responseMessage ?: null, $officerId, $answeredAt, $closedAt, $complaintId]
+        );
+
+        Database::execute(
+            "INSERT INTO complaint_logs (complaint_id, action, note, officer_id, created_at) VALUES (?, ?, ?, ?, NOW())",
+            [$complaintId, 'ปรับปรุงสถานะเป็น ' . $this->formatComplaintStatus($status), $note ?: ($responseMessage ?: 'อัปเดตสถานะ'), $officerId]
+        );
+
+        AuditService::log('complaints', 'update_status', (string)$complaintId, $complaint, [
+            'status' => $status,
+            'priority' => $priority,
+            'response_message' => $responseMessage
+        ]);
+
+        $updated = Database::first("SELECT * FROM complaints WHERE id = ?", [$complaintId]);
+        $this->json(['success' => true, 'message' => 'บันทึกสถานะเรื่องร้องเรียนเรียบร้อยแล้ว', 'data' => $updated]);
     }
 
     /**
@@ -220,6 +471,51 @@ class SpaApiController extends Controller
     }
 
     /**
+     * GET /api/public/popups
+     * Returns active, scheduled public popup campaigns (max 3, ordered by priority).
+     */
+    public function popups(): void
+    {
+        $popups = [];
+        try {
+            $now = date('Y-m-d H:i:s');
+            $popups = Database::query(
+                "SELECT id, title, content AS subtitle, desktop_image AS banner_image,
+                        mascot_image, layout_mode, button_text, button_url, button_target,
+                        priority_order AS priority, start_at, end_at, status
+                 FROM popups
+                 WHERE deleted_at IS NULL
+                   AND status = 'active'
+                   AND (start_at IS NULL OR start_at <= ?)
+                   AND (end_at IS NULL OR end_at >= ?)
+                 ORDER BY priority_order ASC, id ASC
+                 LIMIT 3",
+                [$now, $now]
+            );
+
+            $popups = array_map(function (array $p): array {
+                $p['banner_image'] = resolve_media_url($p['banner_image'] ?? null);
+                $mascot = resolve_media_url($p['mascot_image'] ?? null);
+
+                // Release Hardening: Keep unapproved mascot asset disabled for public publication.
+                // Replace proposed mascot fallback with cooperative's approved original artwork (/assets/img/logo.webp).
+                if (empty($mascot) || str_contains($mascot, 'mascot-aomsuk.svg')) {
+                    $mascot = in_array($p['layout_mode'] ?? 'banner_only', ['mascot_only', 'banner_and_mascot'], true)
+                        ? '/assets/img/logo.webp'
+                        : null;
+                }
+
+                $p['mascot_image'] = $mascot;
+                return $p;
+            }, $popups);
+        } catch (\Throwable $e) {
+            $popups = [];
+        }
+
+        $this->json(['success' => true, 'data' => $popups]);
+    }
+
+    /**
      * GET /api/public/board-members
      */
     public function boardMembers(): void
@@ -229,13 +525,26 @@ class SpaApiController extends Controller
     }
 
     /**
+     * GET /api/public/board-terms/history
+     */
+    public function boardTermsHistory(): void
+    {
+        $this->json([
+            'success' => true,
+            'data' => \App\Services\BoardTermService::getHistoricalTerms(),
+        ]);
+    }
+
+    /**
      * GET /api/public/statistics
      */
     public function statistics(): void
     {
         $stats = [];
         try {
-            $stats = Database::query("SELECT year, month, total_members, total_assets, total_shares, total_deposits, total_loans, dividend_rate, loan_refund_rate FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 24");
+            if (Database::hasTable('financial_statistics')) {
+                $stats = Database::query("SELECT year, month, total_members, total_assets, share_capital, total_deposits, total_loans, reserve_fund, net_profit, dividend_rate, liquidity_ratio FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 24");
+            }
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $stats]);
@@ -330,7 +639,21 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'financial-summary', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
+        if (!empty($summary['member']) && is_array($summary['member'])) {
+            $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
+        }
         $notifications = MemberPortalService::getNotifications((int)$member['id']);
 
         $this->json([
@@ -367,9 +690,20 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $memberId = (int)$member['id'];
         $summary = MemberPortalService::getDashboardSummary($memberId);
         $requests = Database::query("SELECT * FROM share_change_requests WHERE member_id = ? ORDER BY created_at DESC", [$memberId]);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'shares', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json([
             'success' => true,
@@ -388,9 +722,20 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $accountNo = $this->request->query('account');
         $typeFilter = $this->request->query('type');
         $depositData = MemberPortalService::getDepositDetails((int)$member['id'], $accountNo, $typeFilter);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'deposits', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json(['success' => true, 'data' => $depositData]);
     }
@@ -403,8 +748,19 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $contractNo = $this->request->query('contract');
         $loanData = MemberPortalService::getLoanDetails((int)$member['id'], $contractNo);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'loans', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json(['success' => true, 'data' => $loanData]);
     }
@@ -429,6 +785,16 @@ class SpaApiController extends Controller
     {
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
+
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
 
         $memberId = (int)$member['id'];
         $year = (int)($this->request->query('year') ?? date('Y'));
@@ -475,7 +841,21 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'financial-summary', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
+        if (!empty($summary['member']) && is_array($summary['member'])) {
+            $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
+        }
 
         $this->json(['success' => true, 'data' => $summary]);
     }
@@ -589,9 +969,29 @@ class SpaApiController extends Controller
             ],
         ];
 
-        if ($member) {
-            $userData['member_no'] = $member['member_no'] ?? '';
-            $userData['phone'] = $member['phone'] ?? '';
+        $isPdpaAcked = true;
+        if ($roleSlug === 'member') {
+            $isPdpaAcked = \App\Services\MemberPdpaService::isAcknowledged((int) $user['id']);
+            $userData['pdpa_ack_required'] = !$isPdpaAcked;
+            if (!$isPdpaAcked) {
+                $userData['redirect'] = '/member/privacy-ack';
+            }
+            // Enforce PII masking on member identity fields (never expose raw 13-digit citizen ID)
+            $userData['username'] = \App\Services\MemberPiiMaskingService::maskCitizenId($user['username'] ?? '');
+            $userData['name'] = \App\Services\MemberPiiMaskingService::maskFullName($user['name'] ?? '');
+        } else {
+            $userData['pdpa_ack_required'] = false;
+        }
+
+        if ($member && ($roleSlug !== 'member' || $isPdpaAcked)) {
+            if ($roleSlug === 'member') {
+                $userData['member_no'] = \App\Services\MemberPiiMaskingService::maskMemberNo((string)($member['member_no'] ?? ''));
+                $userData['memberId'] = $userData['member_no'];
+                $userData['phone'] = \App\Services\MemberPiiMaskingService::maskPhone((string)($member['phone'] ?? ''));
+            } else {
+                $userData['member_no'] = $member['member_no'] ?? '';
+                $userData['phone'] = $member['phone'] ?? '';
+            }
             $userData['department'] = $member['org_name'] ?? ($userData['department'] ?? '');
             $userData['position'] = $member['position'] ?? '';
         }
@@ -925,22 +1325,6 @@ class SpaApiController extends Controller
 
     private function sanitizeMember(array $member): array
     {
-        // Provide PDPA compliant masked identity before unsetting
-        $rawIdCard = $member['id_card'] ?? '';
-        $rawName = trim(($member['prefix'] ?? '') . ' ' . ($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? ''));
-        if ($rawName === '') {
-            $rawName = $member['name'] ?? '';
-        }
-
-        $member['id_card_pdpa'] = \App\Services\PdpaService::maskIdCard($rawIdCard);
-        $member['name_pdpa'] = \App\Services\PdpaService::maskName($rawName);
-
-        // Remove PII that should not be sent in raw form
-        unset($member['id_card']);
-        unset($member['password']);
-        if (array_key_exists('avatar', $member)) {
-            $member['avatar'] = resolve_media_url($member['avatar']);
-        }
-        return $member;
+        return \App\Services\MemberPiiMaskingService::sanitizeMemberData($member);
     }
 }

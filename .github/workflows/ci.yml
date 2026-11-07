@@ -125,6 +125,7 @@ jobs:
           php tests/PasswordWorkflowTest.php
           php tests/MigrationRunnerTest.php
           php tests/LegacyMemberMigrationTest.php
+          php tests/MemberPdpaGateTest.php
 
       - name: Validate release guard without deploying
         run: |
@@ -203,7 +204,12 @@ jobs:
           php -r "require 'vendor/autoload.php'; exit(config('features.member_portal', true) === false && config('features.member_login', true) === false ? 0 : 1);"
 
       - name: Check patch whitespace
-        run: git diff --check HEAD^ HEAD
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
+            git diff --check HEAD^1 HEAD^2
+          else
+            git diff --check HEAD^ HEAD
+          fi
 
   frontend-build:
     name: React production build
@@ -263,7 +269,12 @@ jobs:
           grep -q '/app/assets/' public/app/index.html
 
       - name: Check patch whitespace
-        run: git diff --check HEAD^ HEAD
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
+            git diff --check HEAD^1 HEAD^2
+          else
+            git diff --check HEAD^ HEAD
+          fi
 
       - name: Upload production build artifact
         uses: actions/upload-artifact@v4

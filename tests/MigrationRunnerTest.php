@@ -770,4 +770,42 @@ assertThrows(function () use ($liveLabRunner) {
     $liveLabRunner->runSingle('020_sync_deposit_rates.sql');
 }, 'Financial migration safety gate triggered', '16.25 Migration 020 remains strictly blocked without financial confirmation');
 
+// =========================================================================
+// 17. Forward Migration Discovery & Rollback Script Separation Guard
+// =========================================================================
+$migration029File = $migrationsDir . '/029_add_popup_campaign_manager_v2_fields.sql';
+assertTrue(file_exists($migration029File), '17.1 Migration 029 forward migration file exists in database/migrations/');
+
+$migration029Analysis = $labRunner025->analyzeSql((string) file_get_contents($migration029File));
+assertTrue($migration029Analysis['is_destructive'] === false, '17.2 Migration 029 is strictly non-destructive');
+assertTrue($migration029Analysis['is_financial'] === false, '17.3 Migration 029 is strictly non-financial');
+
+$rollbackDir = realpath(__DIR__ . '/../database/rollbacks') ?: (__DIR__ . '/../database/rollbacks');
+$rollback029File = $rollbackDir . '/029_rollback_popup_campaign_manager_v2_fields.sql';
+assertTrue(file_exists($rollback029File), '17.4 Rollback 029 script resides in dedicated database/rollbacks/');
+assertTrue(!file_exists($migrationsDir . '/029_rollback_popup_campaign_manager_v2_fields.sql'), '17.5 Rollback 029 is completely absent from database/migrations/');
+
+// Verify that attempting to execute rollback script via resolveMigrationFile throws InvalidArgumentException
+assertThrows(function () use ($labRunner025) {
+    $labRunner025->resolveMigrationFile('029_rollback_popup_campaign_manager_v2_fields.sql');
+}, 'Rollback script `029_rollback_popup_campaign_manager_v2_fields.sql` cannot be executed as a forward migration', '17.6 MigrationRunner strictly rejects rollback script from forward migration execution');
+
+// =========================================================================
+// 18. Migration 030 (Board Term Management) & Rollback 030 Separation Guard
+// =========================================================================
+$migration030File = $migrationsDir . '/030_create_board_term_management_tables.sql';
+assertTrue(file_exists($migration030File), '18.1 Migration 030 forward migration file exists in database/migrations/');
+
+$migration030Analysis = $labRunner025->analyzeSql((string) file_get_contents($migration030File));
+assertTrue($migration030Analysis['is_destructive'] === false, '18.2 Migration 030 is strictly non-destructive');
+assertTrue($migration030Analysis['is_financial'] === false, '18.3 Migration 030 is strictly non-financial');
+
+$rollback030File = $rollbackDir . '/030_rollback_board_term_management_tables.sql';
+assertTrue(file_exists($rollback030File), '18.4 Rollback 030 script resides in dedicated database/rollbacks/');
+assertTrue(!file_exists($migrationsDir . '/030_rollback_board_term_management_tables.sql'), '18.5 Rollback 030 is completely absent from database/migrations/');
+
+assertThrows(function () use ($labRunner025) {
+    $labRunner025->resolveMigrationFile('030_rollback_board_term_management_tables.sql');
+}, 'Rollback script `030_rollback_board_term_management_tables.sql` cannot be executed as a forward migration', '18.6 MigrationRunner strictly rejects rollback script from forward migration execution');
+
 echo "All MigrationRunner Unit, Safety & Security tests PASSED successfully!\n";

@@ -44,4 +44,3 @@ class SecurityGateException extends RuntimeException
         return $this->context;
     }
 }
-

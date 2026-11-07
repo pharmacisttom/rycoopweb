@@ -1,229 +1,373 @@
-import React, { useState } from 'react';
-import { 
-  Laptop, FileCheck, Coins, FileText, HeartHandshake, 
-  MapPin, CheckCircle2, ArrowRight, ShieldCheck, Sparkles, Send 
+import React, { useState, useEffect } from 'react';
+import {
+  Laptop, FileCheck, Coins, FileText, HeartHandshake,
+  MapPin, CheckCircle2, ArrowRight, ShieldCheck, Sparkles, Send,
+  ExternalLink, AlertTriangle, Globe, Lock, Info
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const SERVICES = [
-  {
-    id: 'emergency-loan',
-    title: 'ยื่นคำขอกู้เงินฉุกเฉินออนไลน์',
-    desc: 'สำหรับสมาชิกที่ต้องการกู้เงินฉุกเฉินไม่เกิน 100,000 บาท อนุมัติและโอนเงินเข้าบัญชีภายใน 1 วันทำการ',
-    icon: FileCheck,
-    badge: 'อนุมัติไว',
-    color: 'emerald'
-  },
-  {
-    id: 'share-change',
-    title: 'ขอเปลี่ยนแปลงค่าหุ้นรายเดือน',
-    desc: 'ยื่นคำขอเพิ่มหรือลดจำนวนเงินส่งค่าหุ้นรายเดือน (ต้องยื่นก่อนวันที่ 15 ของเดือน)',
-    icon: Coins,
-    badge: 'สะดวก',
-    color: 'gold'
-  },
-  {
-    id: 'tax-cert',
-    title: 'ขอหนังสือรับรองดอกเบี้ยเงินกู้ (ลดหย่อนภาษี)',
-    desc: 'ดาวน์โหลดหนังสือรับรองยอดดอกเบี้ยเงินกู้เพื่อที่อยู่อาศัย สำหรับนำไปยื่นลดหย่อนภาษีเงินได้บุคคลธรรมดา',
-    icon: FileText,
-    badge: 'อัตโนมัติ',
-    color: 'primary'
-  },
-  {
-    id: 'welfare-claim',
-    title: 'ยื่นคำขอรับเงินสวัสดิการสมาชิก',
-    desc: 'ส่งคำขอและเอกสารแนบเพื่อขอรับสวัสดิการคลอดบุตร มงคลสมรส เจ็บป่วย หรือทุนการศึกษา',
-    icon: HeartHandshake,
-    badge: 'ออนไลน์',
-    color: 'teal'
-  },
-  {
-    id: 'update-profile',
-    title: 'แจ้งเปลี่ยนแปลงที่อยู่ / เบอร์โทรศัพท์',
-    desc: 'ปรับปรุงข้อมูลส่วนบุคคล ที่อยู่จัดส่งเอกสาร และหมายเลขโทรศัพท์ให้เป็นปัจจุบัน',
-    icon: MapPin,
-    badge: 'รวดเร็ว',
-    color: 'primary'
+const CATEGORY_NAMES = {
+  all: 'ทั้งหมด',
+  member: 'ข้อมูลสมาชิก',
+  deposit: 'เงินฝาก',
+  loan: 'สินเชื่อและเงินกู้',
+  external: 'สมาคมฌาปนกิจและพันธมิตร',
+  general: 'บริการทั่วไป',
+};
+
+function getServiceIcon(iconName) {
+  switch (iconName) {
+    case 'bi-person-badge':
+    case 'user':
+      return Laptop;
+    case 'bi-wallet2':
+    case 'wallet':
+      return Coins;
+    case 'bi-cash-coin':
+    case 'cash':
+      return FileCheck;
+    case 'bi-shield-check':
+    case 'shield':
+      return ShieldCheck;
+    case 'bi-heart-pulse':
+    case 'heart':
+      return HeartHandshake;
+    default:
+      return Globe;
   }
-];
+}
 
 export default function EServicePage() {
-  const { user, isLoggedIn, setShowAuthModal } = useAuth();
-  const [selectedService, setSelectedService] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    memberId: user?.memberId || '04892',
-    name: user?.name || 'นายเกียรติศักดิ์ พูลเพิ่ม',
-    phone: '081-234-5678',
-    amount: '50000',
-    details: 'ประสงค์ขอยื่นกู้เพื่อเหตุฉุกเฉินทางการเงิน'
+  const { user } = useAuth();
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [confirmRedirectService, setConfirmRedirectService] = useState(null);
+  const [maintenanceService, setMaintenanceService] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/public/eservices')
+      .then((res) => res.json())
+      .then((resData) => {
+        if (!cancelled && resData?.success && Array.isArray(resData.data)) {
+          setServices(resData.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const categories = ['all', ...Array.from(new Set(services.map((s) => s.category).filter(Boolean)))];
+
+  const filteredServices = services.filter((s) => {
+    if (selectedCategory === 'all') return true;
+    return s.category === selectedCategory;
   });
 
-  const handleOpenForm = (srv) => {
-    setSelectedService(srv);
-    setSubmitted(false);
+  const handleServiceClick = (srv) => {
+    if (srv.is_maintenance) {
+      setMaintenanceService(srv);
+      return;
+    }
+
+    if (srv.confirm_before_redirect) {
+      setConfirmRedirectService(srv);
+      return;
+    }
+
+    if (srv.url) {
+      window.open(srv.url, srv.open_new_tab ? '_blank' : '_self', 'noopener,noreferrer');
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
+  const handleConfirmRedirect = () => {
+    if (confirmRedirectService?.url) {
+      window.open(
+        confirmRedirectService.url,
+        confirmRedirectService.open_new_tab ? '_blank' : '_self',
+        'noopener,noreferrer'
+      );
+    }
+    setConfirmRedirectService(null);
   };
 
   return (
     <div className="section">
       <div className="container">
-        
         <div className="section-title-wrap">
           <span className="section-badge">บริการดิจิทัล 24 ชั่วโมง</span>
           <h1 className="section-title">ศูนย์บริการสมาชิกออนไลน์ (e-Services)</h1>
-          <p className="section-subtitle">ทำธุรกรรม ยื่นคำขอ และติดตามสถานะได้สะดวกรวดเร็ว ทุกที่ทุกเวลา</p>
+          <p className="section-subtitle">ทำธุรกรรม ตรวจสอบข้อมูล และเข้าถึงบริการดิจิทัลของสหกรณ์ได้ทุกที่ทุกเวลา</p>
           <div className="section-line" />
         </div>
 
+        {/* Category Filters */}
+        {categories.length > 1 && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '2.5rem' }}>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`btn btn-sm ${selectedCategory === cat ? 'btn-primary' : 'btn-outline'}`}
+                style={{ borderRadius: '9999px', padding: '0.4rem 1.1rem', fontSize: '0.85rem' }}
+              >
+                {CATEGORY_NAMES[cat] || cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
+            กำลังโหลดรายการบริการอิเล็กทรอนิกส์...
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && filteredServices.length === 0 && (
+          <div className="surface-card" style={{ padding: '3rem', textAlign: 'center', maxWidth: '500px', margin: '0 auto 3rem auto' }}>
+            <Info size={40} style={{ color: 'var(--primary-600)', margin: '0 auto 1rem auto' }} />
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>ไม่พบรายการบริการ</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>ขณะนี้ยังไม่มีรายการบริการอิเล็กทรอนิกส์ในหมวดหมู่นี้</p>
+          </div>
+        )}
+
         {/* Services Grid */}
-        <div className="grid-3" style={{ marginBottom: '3rem' }}>
-          {SERVICES.map((srv) => {
-            const Icon = srv.icon;
-            return (
-              <div key={srv.id} className="surface-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--primary-100)', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon size={24} />
+        {!loading && filteredServices.length > 0 && (
+          <div className="grid-3" style={{ marginBottom: '3rem' }}>
+            {filteredServices.map((srv) => {
+              const Icon = getServiceIcon(srv.icon);
+              const isMaint = Boolean(srv.is_maintenance);
+
+              return (
+                <div
+                  key={srv.id}
+                  className="surface-card"
+                  style={{
+                    padding: '2rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    opacity: isMaint ? 0.75 : 1,
+                    border: isMaint ? '1px dashed var(--border-subtle)' : undefined,
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <div
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '12px',
+                          background: isMaint ? '#F3F4F6' : 'var(--primary-100)',
+                          color: isMaint ? '#9CA3AF' : 'var(--primary-600)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Icon size={24} />
+                      </div>
+                      {isMaint ? (
+                        <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertTriangle size={12} /> ปรับปรุงระบบ
+                        </span>
+                      ) : (
+                        <span className="badge badge-primary">
+                          {CATEGORY_NAMES[srv.category] || 'บริการออนไลน์'}
+                        </span>
+                      )}
                     </div>
-                    <span className={`badge badge-${srv.color}`}>{srv.badge}</span>
+
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--primary-800)', marginBottom: '0.4rem' }}>
+                      {srv.name || srv.title}
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                      {srv.description}
+                    </p>
                   </div>
 
-                  <h3 style={{ fontSize: '1.15rem', color: 'var(--primary-800)', marginBottom: '0.4rem' }}>{srv.title}</h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-                    {srv.desc}
-                  </p>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => handleServiceClick(srv)}
+                      className={`btn ${isMaint ? 'btn-subtle' : 'btn-outline'}`}
+                      style={{ width: '100%' }}
+                    >
+                      <span>{isMaint ? 'แจ้งเตือนการปรับปรุง' : 'เข้าสู่ระบบบริการ'}</span>
+                      {srv.open_new_tab ? <ExternalLink size={16} /> : <ArrowRight size={16} />}
+                    </button>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                <button 
-                  onClick={() => handleOpenForm(srv)} 
-                  className="btn btn-outline"
-                  style={{ width: '100%' }}
+        {/* External Redirect Confirmation Modal */}
+        {confirmRedirectService && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 2000,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
+            }}
+          >
+            <div
+              className="glass-card animate-fade-in"
+              style={{
+                width: '100%',
+                maxWidth: '480px',
+                background: 'var(--bg-surface)',
+                borderRadius: 'var(--radius-xl)',
+                padding: '2rem',
+                position: 'relative',
+              }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: 'var(--primary-100)',
+                    color: 'var(--primary-600)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem auto',
+                  }}
                 >
-                  <span>เริ่มทำรายการ</span>
-                  <ArrowRight size={16} />
+                  <ShieldCheck size={32} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--primary-900)', marginBottom: '0.5rem' }}>
+                  ไปยังบริการภายนอกที่ปลอดภัย
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                  คุณกำลังจะเปิดหน้าต่างใหม่เพื่อเข้าสู่บริการ
+                  <br />
+                  <strong style={{ color: 'var(--text-main)' }}>{confirmRedirectService.name}</strong>
+                </p>
+                <div
+                  style={{
+                    background: 'var(--bg-subtle, #F8FAFC)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.8rem',
+                    marginTop: '1rem',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-muted)',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {confirmRedirectService.url}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmRedirectService(null)}
+                  className="btn btn-subtle"
+                  style={{ flex: 1 }}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRedirect}
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  <span>ยืนยันเข้าสู่บริการ</span>
+                  <ExternalLink size={16} />
                 </button>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Interactive Online Request Modal */}
-        {selectedService && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 2000,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
-          }}>
-            <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '520px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: '2rem', position: 'relative' }}>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
-                <h3 style={{ fontSize: '1.2rem', color: 'var(--primary-800)' }}>{selectedService.title}</h3>
-                <button onClick={() => setSelectedService(null)} style={{ color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-              </div>
-
-              {submitted ? (
-                <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--accent-emerald-light)', color: 'var(--accent-emerald-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
-                    <CheckCircle2 size={36} />
-                  </div>
-                  <h3 style={{ fontSize: '1.3rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>ส่งคำขอสำเร็จเรียบร้อย!</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                    เลขที่คำขอของคุณคือ <strong>REQ-{Math.floor(100000 + Math.random() * 900000)}</strong> เจ้าหน้าที่จะดำเนินการตรวจสอบและแจ้งผลกลับผ่าน SMS ภายใน 1 วันทำการ
-                  </p>
-                  <button onClick={() => setSelectedService(null)} className="btn btn-primary">
-                    <span>ปิดหน้าต่าง</span>
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit}>
-                  <div className="form-group">
-                    <label className="form-label">เลขทะเบียนสมาชิก</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      value={formData.memberId} 
-                      onChange={(e) => setFormData({ ...formData, memberId: e.target.value })} 
-                      required 
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">ชื่อ - นามสกุล ผู้ยื่นคำขอ</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      value={formData.name} 
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                      required 
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">เบอร์โทรศัพท์ที่ติดต่อได้</label>
-                    <input 
-                      type="tel" 
-                      className="form-control" 
-                      value={formData.phone} 
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
-                      required 
-                    />
-                  </div>
-
-                  {selectedService.id === 'emergency-loan' && (
-                    <div className="form-group">
-                      <label className="form-label">จำนวนเงินที่ขอกู้ (บาท)</label>
-                      <input 
-                        type="number" 
-                        className="form-control" 
-                        value={formData.amount} 
-                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })} 
-                        required 
-                      />
-                    </div>
-                  )}
-
-                  <div className="form-group">
-                    <label className="form-label">รายละเอียด / เหตุผลความจำเป็น</label>
-                    <textarea 
-                      className="form-control" 
-                      rows={3} 
-                      value={formData.details} 
-                      onChange={(e) => setFormData({ ...formData, details: e.target.value })} 
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-                    <button type="button" onClick={() => setSelectedService(null)} className="btn btn-subtle" style={{ flex: 1 }}>
-                      ยกเลิก
-                    </button>
-                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                      <Send size={16} />
-                      <span>ส่งคำขอ</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-
             </div>
           </div>
         )}
 
+        {/* Maintenance Notice Modal */}
+        {maintenanceService && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 2000,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
+            }}
+          >
+            <div
+              className="glass-card animate-fade-in"
+              style={{
+                width: '100%',
+                maxWidth: '460px',
+                background: 'var(--bg-surface)',
+                borderRadius: 'var(--radius-xl)',
+                padding: '2rem',
+                position: 'relative',
+              }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: '#FEF3C7',
+                    color: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem auto',
+                  }}
+                >
+                  <AlertTriangle size={32} />
+                </div>
+                <h3 style={{ fontSize: '1.2rem', color: '#92400E', marginBottom: '0.5rem' }}>
+                  ระบบอยู่ระหว่างการปรับปรุงชั่วคราว
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                  บริการ <strong style={{ color: 'var(--text-main)' }}>{maintenanceService.name}</strong> กำลังได้รับการบำรุงรักษาเพื่อเพิ่มประสิทธิภาพ ขออภัยในความไม่สะดวก
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setMaintenanceService(null)}
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                >
+                  รับทราบ
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

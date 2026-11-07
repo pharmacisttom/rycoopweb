@@ -15,13 +15,28 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [googleEnabled,setGoogleEnabled]=useState(false);
-  useEffect(()=>{const controller=new AbortController();fetch('/api/auth/options',{signal:controller.signal,credentials:'same-origin',headers:{Accept:'application/json'}}).then(r=>r.json()).then(r=>setGoogleEnabled(r.success&&r.google_enabled)).catch(()=>{});return()=>controller.abort();},[]);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
-    if (sessionStatus === 'mfa-enroll' || sessionStatus === 'mfa-verify') { navigate(sessionStatus === 'mfa-enroll' ? '/admin/mfa/enroll' : '/admin/mfa/verify', { replace: true }); return; }
+    const controller = new AbortController();
+    fetch('/api/auth/options', { signal: controller.signal, credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(r => r.json())
+      .then(r => setGoogleEnabled(r.success && r.google_enabled))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (sessionStatus === 'mfa-enroll' || sessionStatus === 'mfa-verify') {
+      navigate(sessionStatus === 'mfa-enroll' ? '/admin/mfa/enroll' : '/admin/mfa/verify', { replace: true });
+      return;
+    }
     if (sessionStatus !== 'online' || !user) return;
-    navigate(user.role === 'member' ? '/member/dividends' : user.role === 'member_admin' ? '/admin/members/dashboard' : user.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace', { replace: true });
+    if (user.role === 'member') {
+      navigate(user.pdpa_ack_required ? '/member/privacy-ack' : '/member/dividends', { replace: true });
+      return;
+    }
+    navigate(user.role === 'member_admin' ? '/admin/members/dashboard' : user.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace', { replace: true });
   }, [navigate, sessionStatus, user]);
 
   const handleSubmit = async (event) => {
@@ -44,7 +59,9 @@ export default function LoginPage() {
         navigate(normalizeSameOriginRedirect(result.redirect, '/admin/mfa/verify'), { replace: true });
         return;
       }
-      const fallback = result.user.role === 'member' ? '/member/dividends' : result.user.role === 'member_admin' ? '/admin/members/dashboard' : result.user.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace';
+      const fallback = result.user?.role === 'member'
+        ? (result.user.pdpa_ack_required ? '/member/privacy-ack' : '/member/dividends')
+        : result.user?.role === 'member_admin' ? '/admin/members/dashboard' : result.user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace';
       navigate(normalizeSameOriginRedirect(result.redirect, fallback), { replace: true });
     } catch {
       setError('ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');
@@ -71,12 +88,12 @@ export default function LoginPage() {
             <p className="member-entry-subtitle">{staffLogin ? 'ใช้บัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์จากสหกรณ์' : 'ยินดีต้อนรับสู่บริการสมาชิกออนไลน์'}</p>
             {location.state?.sessionRequired && <p role="status" className="member-entry-notice">กรุณาเข้าสู่ระบบเพื่อดูข้อมูลของคุณ หากเซสชันหมดอายุให้เข้าสู่ระบบอีกครั้ง</p>}
             {error && <p role="alert" className="member-entry-error">{error}</p>}
-            {staffLogin&&googleEnabled&&<a className="btn btn-outline" href={'/auth/google/start' + (new URLSearchParams(window.location.search).has('invitation') ? '?invitation=' + encodeURIComponent(new URLSearchParams(window.location.search).get('invitation')) : '')}>เข้าสู่ระบบด้วย Google ของสหกรณ์</a>}
+            {staffLogin && googleEnabled && <a className="btn btn-outline" href={'/auth/google/start' + (new URLSearchParams(window.location.search).has('invitation') ? '?invitation=' + encodeURIComponent(new URLSearchParams(window.location.search).get('invitation')) : '')}>เข้าสู่ระบบด้วย Google ของสหกรณ์</a>}
             <form onSubmit={handleSubmit} noValidate>
               <label htmlFor="login-username">{staffLogin ? 'ชื่อผู้ใช้งาน / อีเมล' : 'เลขบัตรประชาชน'}</label>
               <div className="member-entry-input"><User size={18} aria-hidden="true" /><input id="login-username" type="text" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck="false" disabled={loading} placeholder={staffLogin ? 'กรอกชื่อผู้ใช้งาน' : 'กรอกเลขบัตรประชาชน 13 หลัก'} autoFocus /></div>
               <label htmlFor="login-password">รหัสผ่าน</label>
-              <div className="member-entry-input"><KeyRound size={18} aria-hidden="true" /><input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" disabled={loading} placeholder="กรอกรหัสผ่านของคุณ" /><button type="button" className="member-entry-eye" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div>
+              <div className="member-entry-input"><KeyRound size={18} aria-hidden="true" /><input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" disabled={loading} placeholder={staffLogin ? 'กรอกรหัสผ่านของคุณ' : 'เลขสมาชิก 5 หลัก (เช่น 00025)'} /><button type="button" className="member-entry-eye" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div>
               <button className="member-entry-submit" type="submit" disabled={loading}>{loading ? <><LoaderCircle className="member-entry-spin" size={19} /> กำลังตรวจสอบ...</> : <><LockKeyhole size={19} /> เข้าสู่ระบบ{staffLogin ? '' : 'สมาชิก'}</>}</button>
             </form>
             <p className="member-entry-help">มีปัญหาในการเข้าสู่ระบบ? <Link to="/contact">ติดต่อสหกรณ์</Link></p>

@@ -1,0 +1,169 @@
+/**
+ * RYCOOPWEB Admin 3.0 Unified Design System CSS
+ * Light Blue (#e0f2fe / #0284c7), Crisp White (#ffffff), and Deep Navy (#0f2d59)
+ */
+
+:root {
+  --rycoop-navy-900: #0a192f;
+  --rycoop-navy-800: #0f2d59;
+  --rycoop-blue-600: #0284c7;
+  --rycoop-blue-500: #0ea5e9;
+  --rycoop-blue-100: #e0f2fe;
+  --rycoop-blue-50: #f0f9ff;
+  --rycoop-slate-800: #1e293b;
+  --rycoop-slate-600: #475569;
+  --rycoop-slate-400: #94a3b8;
+  --rycoop-slate-200: #e2e8f0;
+  --rycoop-slate-100: #f1f5f9;
+  --rycoop-slate-50: #f8fafc;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Responsive Sidebar & Breakpoints */
+.mobile-hamburger-btn {
+  display: none !important;
+}
+
+.desktop-sidebar-btn {
+  display: flex !important;
+}
+
+/* Status Badges */
+.status-badge-active, .status-badge-approved, .status-badge-published {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.status-badge-inactive, .status-badge-draft, .status-badge-archived, .status-badge-neutral {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.status-badge-suspended, .status-badge-rejected, .status-badge-expired {
+  background-color: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.status-badge-pending, .status-badge-submitted {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Table Hover and Clickable Rows */
+.admin-table-row:hover {
+  background-color: var(--acc-surface-elevated, #f8fafc) !important;
+}
+
+/* SweetAlert2 Brand Styling */
+.swal2-popup.rycoop-swal-popup {
+  border-radius: 16px !important;
+  font-family: 'Sarabun', sans-serif !important;
+  padding: 24px !important;
+}
+
+.swal2-title.rycoop-swal-title {
+  color: var(--rycoop-navy-800) !important;
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+}
+
+.swal2-html-container.rycoop-swal-html {
+  color: var(--rycoop-slate-600) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+}
+
+.swal2-confirm.rycoop-swal-confirm-btn {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+}
+
+.swal2-cancel.rycoop-swal-cancel-btn {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+}
+
+/* Mobile & Tablet Responsive Media Queries */
+@media (max-width: 1024px) {
+  .admin-layout-content {
+    padding: 20px 16px !important;
+  }
+
+  .mobile-hamburger-btn {
+    display: flex !important;
+  }
+
+  .desktop-sidebar-btn {
+    display: none !important;
+  }
+
+  .admin-responsive-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    width: 280px !important;
+    z-index: 9999 !important;
+  }
+
+  .admin-responsive-sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .mobile-close-btn {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-topbar {
+    padding: 0 12px !important;
+  }
+
+  .logout-text {
+    display: none;
+  }
+
+  .admin-layout-content {
+    padding: 16px 12px !important;
+  }
+
+  .admin-page-header h1 {
+    font-size: 1.25rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
