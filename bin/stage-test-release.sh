@@ -140,7 +140,7 @@ composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 echo "[DIAGNOSTIC] Installing Node dependencies and compiling React frontend..."
 npm ci --silent
-npm run build
+VITE_FEATURE_MEMBER_PORTAL=false VITE_PUBLIC_STATIC_MODE=false npx vite build --base=/
 
 echo "[DIAGNOSTIC] Syncing compiled assets to immutable static release directory..."
 rm -rf "${TARGET_STATIC:?}"/*

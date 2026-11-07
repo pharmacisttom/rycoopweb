@@ -5,32 +5,29 @@
 **Target Database:** `rycoopweb_test`  
 **Production Status:** STRICTLY FROZEN  
 **Baseline Commit:** `2bf75982e5b0d1a328fc184c7a84d4fdf41210c2`  
-**Integration Commit:** `3317da8`  
 
 ---
 
-## 1. User Discrepancy Investigation: `users = 2,509` vs `users = 2,510`
+## 1. VPS Baseline vs Development Database Investigation
 
-### 1.1 The Investigation
-A thorough investigation was conducted into the discrepancy between historical inventory counts citing `users = 2,509` versus active database query results showing `users = 2,510`:
+### 1.1 The Authoritative VPS Baseline
+On the active TEST VPS server (`https://test.rayongcoop.org` / `rycoopweb_test`), the verified database record counts are:
 
 ```sql
 SELECT COUNT(*) FROM members;                         -- Returns: 2,508
-SELECT COUNT(*) FROM users;                           -- Returns: 2,510
+SELECT COUNT(*) FROM member_dividends;                -- Returns: 4,855
+SELECT COUNT(*) FROM users;                           -- Returns: 2,509
 SELECT COUNT(DISTINCT user_id) FROM members;          -- Returns: 2,508
 ```
 
-### 1.2 Exact Account Inventory
-Every member account (2,508 records) maps 1-to-1 with a user record (User IDs 2 through 2,509).
+### 1.2 Account Mapping on VPS
+- **Member Users (2,508 records):** User IDs 2 through 2,509 map 1-to-1 with the 2,508 member accounts.
+- **Super Administrator (1 record):** User ID 1 (`username: admin`, `role: super_admin`).
+- **Mathematical Formula:** `2,508 Members + 1 Super Admin (ID 1) = 2,509 Users`.
 
-Non-member accounts:
-1. **User ID 1:** `username: admin`, `email: pharmacisttom@gmail.com`, `role: super_admin` (Primary Platform Super Administrator).
-2. **User ID 2510:** `username: memberadmin`, `email: memberadmin@member-admin.invalid`, `role: member_admin` (Dedicated Member Administration Officer seeded for Dual-Control SoD).
-
-### 1.3 Resolution & Record
-- **Mathematical Formula:** `2,508 Members + 1 Super Admin (ID 1) + 1 Member Admin (ID 2510) = 2,510 Users`.
-- Historical documentation referencing `2,509` users performed a naive calculation of `2,508 members + 1 super admin`, omitting the dedicated `memberadmin` service identity.
-- **Action Taken:** ZERO modifications made to user accounts. All 2,510 user accounts and 2,508 member accounts are preserved with 100% data integrity.
+### 1.3 Development Environment Discrepancy
+- In local development databases, `users` may report `2,510` due to a dedicated test fixture (User ID 2510 `memberadmin`, `role: member_admin`) seeded during dual-control segregation of duties tests.
+- **Strict Invariant Rule:** **DO NOT CREATE, DELETE, OR MODIFY ANY USER OR MEMBER ACCOUNTS TO RECONCILE COUNTS.** The VPS baseline of 2,509 users is authoritative and must remain strictly untouched on the TEST server.
 
 ---
 
@@ -38,19 +35,19 @@ Non-member accounts:
 
 The following tables and record counts are **STRICTLY IMMUTABLE** and cannot be altered, dropped, or modified by any migration or script:
 
-| Table Name | Immutable Row Count | Integrity Rule |
+| Table Name | Authoritative VPS Count | Integrity Rule |
 |:---|:---:|:---|
 | `member_dividends` | **4,855** | Annual dividend payouts; zero updates or deletions permitted |
 | `members` | **2,508** | Core cooperative membership ledger |
-| `users` | **2,510** | Authentication credentials & cryptographic nonces |
-| `user_roles` | **2,510** | RBAC permission bindings |
+| `users` | **2,509** | Authentication credentials & cryptographic nonces |
+| `user_roles` | **2,509** | RBAC permission bindings |
 
 ---
 
 ## 3. Forward Migration Specification: Migration 030
 
 ### Migration File: `database/migrations/030_create_board_term_management_tables.sql`
-- **Schema Additions:**
+- **Schema Additions (Additive Only):**
   1. `board_terms`:
      - `id` (BIGINT UNSIGNED PK)
      - `term_number` (INT UNSIGNED NOT NULL UNIQUE)
@@ -81,7 +78,7 @@ The following tables and record counts are **STRICTLY IMMUTABLE** and cannot be 
 
 ---
 
-## 4. Rollback Isolation Architecture
+## 4. Rollback Isolation Architecture & Governance
 
 In compliance with the RC02 migration safety gate, all rollback scripts reside strictly in `database/rollbacks/`:
 - `database/rollbacks/029_rollback_popup_campaign_manager_v2_fields.sql`
@@ -89,25 +86,51 @@ In compliance with the RC02 migration safety gate, all rollback scripts reside s
 
 The forward migration runner (`MigrationRunner.php`) autodiscoveres files strictly from `database/migrations/`, completely preventing unintended destructive execution during CI or deployment.
 
+> [!WARNING]
+> **CODE ROLLBACK NEVER DROPS TABLES:**
+> In the event of a code rollback on the TEST server, the code symlinks are reverted to the baseline release (`ORIG_BACKEND` & `ORIG_STATIC`). The additive Migration 030 tables and any committee term data **remain untouched** in the database.
+>
+> Dropping tables via `database/rollbacks/030_rollback_board_term_management_tables.sql` is strictly an exceptional manual disaster recovery procedure.
+
+**Accurate Reverse Foreign-Key Table Drop Order:**
+1. `DROP TABLE IF EXISTS board_term_group_members;`
+2. `DROP TABLE IF EXISTS board_term_groups;`
+3. `DROP TABLE IF EXISTS board_term_members;`
+4. `DROP TABLE IF EXISTS board_terms;` *(Note: Stale `board_term_terms` reference removed).*
+
 ---
 
-## 5. Migration Deployment Checklist for TEST
+## 5. Single-File Migration Deployment Checklist for TEST
 
-1. **Pre-Flight Validation (CLI Dry Run & Unit Tests):**
+1. **Pre-Flight Validation & Dry Run:**
    ```bash
+   cd /var/www/rycoopweb/releases/${TARGET_SHA}
+
+   # Load environment securely from shared-test/.env
+   set -a
+   [ -f /var/www/rycoopweb/shared-test/.env ] && . /var/www/rycoopweb/shared-test/.env
+   set +a
+
+   # Run automated regression tests
    php tests/MigrationRunnerTest.php
-   php bin/console db:migrate --dry-run --db-name=rycoopweb_test
+
+   # Execute pre-flight dry-run targeting single file 030
+   php bin/console db:migrate --dry-run --db-name=rycoopweb_test --file=030_create_board_term_management_tables.sql
    ```
-2. **Execute Forward Migration:**
+
+2. **Execute Forward Single-File Migration:**
    ```bash
-   php bin/console db:migrate --db-name=rycoopweb_test
+   php bin/console db:migrate --db-name=rycoopweb_test --file=030_create_board_term_management_tables.sql
    ```
+
 3. **Verify Table Creation:**
    Verify `board_terms`, `board_term_members`, `board_term_groups`, `board_term_group_members` exist in `rycoopweb_test` (total tables = 38).
+
 4. **Term Governance & Seeding Rule:**
    - Migration 030 is schema-only.
    - Do **NOT** automatically seed or publish term 38 or term 39 during migration.
-   - Committee Term 38 remains the active published term for public display.
-   - Committee Term 39 remains an unapproved draft isolated within the administrative workflow.
-5. **Verify Core Financial & Member Counts:**
-   Confirm `member_dividends = 4,855`, `members = 2,508`, `users = 2,510`.
+   - Committee Term 38 must remain publicly visible to website visitors at all times until an authorized replacement term is explicitly published.
+   - Committee Term 39 must remain an unapproved draft isolated within the administrative workflow.
+
+5. **Verify Core Financial & Member Invariants:**
+   Confirm `member_dividends = 4,855`, `members = 2,508`, `users = 2,509`.

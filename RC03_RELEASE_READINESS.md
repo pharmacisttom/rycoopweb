@@ -51,8 +51,11 @@ All 12 automated test suites were executed against the runtime environment and M
 
 - [x] **Production Freeze:** Changes are isolated to `integration/test-rc03-unified-content`. No PR or merge targeting `main`.
 - [x] **Database Safety:** Forward Migration 030 is 100% additive. Rollbacks are safely isolated in `database/rollbacks/`.
-- [x] **Financial Data Immutability:** `member_dividends = 4,855`, `members = 2,508`, `users = 2,510` strictly preserved.
-- [x] **User Discrepancy Resolved:** Documented that `users = 2,510` comprises 2,508 members + 1 super admin (ID 1) + 1 member admin (ID 2510).
+- [x] **Financial Immutability:** `member_dividends = 4,855`, `members = 2,508`, `users = 2,509` (VPS baseline) strictly preserved.
+- [x] **User Discrepancy Resolved:** Documented authoritative VPS baseline (`users = 2,509`: 2,508 members + 1 super admin ID 1). Local dev fixture (ID 2510) not synced to avoid mutating user accounts.
+- [x] **Single-File Migration 030:** Runner command uses explicit `--file=030_create_board_term_management_tables.sql` with prior dry-run and secure environment loading.
+- [x] **Symlink Architecture & Rollback:** Staging uses immutable releases; controlled switch uses atomic rename (`mv -Tf`); code rollback restores symlinks and never drops tables automatically.
+- [x] **Committee Continuity:** Term 38 remains public until authorized replacement published; Term 39 remains draft.
 - [x] **Security Posture:** PDPA fail-closed enforcement active; Member Portal disabled by default on TEST; CSRF enforced on all mutating requests.
 - [x] **Build Integrity:** Production assets compile cleanly in under 7 seconds.
 

@@ -63,29 +63,37 @@ echo "[INFO] Verified baseline backend target: ${ORIG_BACKEND}"
 echo "[INFO] Verified baseline frontend target: ${ORIG_STATIC}"
 
 # RULE 5: Reliable automated rollback of both TEST symlinks on failure
+# NOTE: Code rollback restores previous active release symlinks only;
+# it NEVER executes DROP TABLE automatically, preserving additive tables and data.
 rollback() {
     local exit_code=$?
     echo "[CRITICAL] Deployment failed (code: ${exit_code})! Initiating rollback of both TEST symlinks..." >&2
     if [ -n "${ORIG_BACKEND}" ] && [ -d "${ORIG_BACKEND}" ]; then
-        ln -sfn "${ORIG_BACKEND}" "${ACTIVE_BACKEND_LINK}"
+        ln -sfn "${ORIG_BACKEND}" "${ACTIVE_BACKEND_LINK}.tmp"
+        mv -Tf "${ACTIVE_BACKEND_LINK}.tmp" "${ACTIVE_BACKEND_LINK}"
         echo "[ROLLBACK] Restored backend symlink -> ${ORIG_BACKEND}" >&2
     fi
     if [ -n "${ORIG_STATIC}" ] && [ -d "${ORIG_STATIC}" ]; then
-        ln -sfn "${ORIG_STATIC}" "${ACTIVE_STATIC_LINK}"
+        ln -sfn "${ORIG_STATIC}" "${ACTIVE_STATIC_LINK}.tmp"
+        mv -Tf "${ACTIVE_STATIC_LINK}.tmp" "${ACTIVE_STATIC_LINK}"
         echo "[ROLLBACK] Restored frontend symlink -> ${ORIG_STATIC}" >&2
     fi
     sudo systemctl restart rycoop-test-fpm.service || true
     sudo nginx -s reload || true
     echo "[ROLLBACK] TEST symlinks and dedicated FPM restored to previous baseline." >&2
+    echo "[NOTE] Code rollback preserved all additive database tables and data (NO DROP TABLE)." >&2
     exit "${exit_code}"
 }
 
 trap rollback ERR INT TERM
 
-# 4. Atomic Symlink Switch
+# 4. Controlled Symlink Switch using Temporary Symlink and Atomic Rename
 echo "[DIAGNOSTIC] Performing atomic symlink switch to release ${TARGET_SHA}..."
-ln -sfn "${TARGET_BACKEND}" "${ACTIVE_BACKEND_LINK}"
-ln -sfn "${TARGET_STATIC}" "${ACTIVE_STATIC_LINK}"
+ln -sfn "${TARGET_BACKEND}" "${ACTIVE_BACKEND_LINK}.tmp"
+mv -Tf "${ACTIVE_BACKEND_LINK}.tmp" "${ACTIVE_BACKEND_LINK}"
+
+ln -sfn "${TARGET_STATIC}" "${ACTIVE_STATIC_LINK}.tmp"
+mv -Tf "${ACTIVE_STATIC_LINK}.tmp" "${ACTIVE_STATIC_LINK}"
 
 # 5. Dedicated FPM Restart & Nginx Reload
 echo "[DIAGNOSTIC] Restarting dedicated rycoop-test-fpm.service (SHARED FPM UNTOUCHED)..."
