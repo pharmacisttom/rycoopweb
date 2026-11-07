@@ -1,11 +1,35 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Eye, Edit2, Trash2, CheckCircle, XCircle, Users, Award,
-  Briefcase, Mail, Phone, Image as ImageIcon, Copy, Calendar, Globe,
-  ArrowUp, ArrowDown, ShieldCheck, Clock, RefreshCw
+  Users,
+  Award,
+  Briefcase,
+  Plus,
+  Edit2,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Upload,
+  ExternalLink,
+  ShieldCheck,
+  RefreshCw,
+  FileText,
+  ChevronRight,
+  X,
+  Building,
+  UserCheck,
+  Search,
+  Filter,
+  Layers,
+  Image as ImageIcon
 } from 'lucide-react';
 import { memberAdminApi } from '../services/memberAdminApi';
 import alertService from '../services/alertService';
+import { usePublicContent } from '../context/PublicContentContext';
+import SafeImage from '../components/common/SafeImage';
 import { resolveMediaUrl } from '../utils/media';
 import {
   PageHeader,
@@ -13,1739 +37,1862 @@ import {
   CrudFormDrawer,
   CrudDetailModal,
   StatusBadge,
-  PermissionGuard,
+  EmptyState,
+  LoadingSkeleton,
+  PermissionGuard
 } from '../components/admin/design-system';
 
-const INITIAL_MEMBER_FORM = {
-  id: null,
-  name: '',
-  position: '',
-  role_type: 'director',
-  workplace: '',
-  department: '',
-  image_url: '',
-  bio: '',
-  sort_order: 0,
-  is_chairperson: false,
-};
+const TAB_CONFIGS = [
+  { key: 'boards', label: 'คณะกรรมการ', icon: LandmarkIcon, desc: 'รายชื่อคณะกรรมการดำเนินการ ชุดปัจจุบันและวาระต่างๆ' },
+  { key: 'staff', label: 'ฝ่ายจัดการและเจ้าหน้าที่', icon: Users, desc: 'รายชื่อฝ่ายจัดการ ผู้จัดการ และเจ้าหน้าที่สหกรณ์' },
+  { key: 'advisors', label: 'ที่ปรึกษาสหกรณ์', icon: Award, desc: 'ที่ปรึกษากิตติมศักดิ์และที่ปรึกษาด้านต่างๆ' },
+  { key: 'auditors', label: 'ผู้ตรวจสอบกิจการ', icon: ShieldCheck, desc: 'ประธานและคณะผู้ตรวจสอบกิจการสหกรณ์' },
+  { key: 'groups', label: 'คณะกรรมการย่อย', icon: Layers, desc: 'คณะกรรมการอำนวยการ เงินกู้ และศึกษาประชาสัมพันธ์' },
+  { key: 'history', label: 'ประวัติและร่างรอเผยแพร่', icon: Clock, desc: 'ตรวจสอบร่างและประวัติการเผยแพร่ข้อมูลบุคลากร' }
+];
 
-const INITIAL_STAFF_FORM = {
-  id: null,
-  name: '',
-  position: '',
-  department: 'ฝ่ายบริหารทั่วไป',
-  email: '',
-  phone: '',
-  photo: '',
-  sort_order: 10,
-  status: 'active',
-};
+function LandmarkIcon(props) {
+  return <Briefcase {...props} />;
+}
 
-const BOARD_ROLE_LABELS = {
-  president: 'ประธานกรรมการ (President)',
-  vice_president: 'รองประธานกรรมการ (Vice President)',
-  treasurer: 'เหรัญญิก (Treasurer)',
-  secretary: 'เลขานุการ (Secretary)',
-  director: 'กรรมการ (Director)',
-  advisor: 'ที่ปรึกษา (Advisor)',
-  auditor: 'ผู้ตรวจสอบกิจการ (Auditor)',
-};
+const todayBangkok = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
 
 export default function AdminBoardPersonnelPage() {
-  // Main tabs: 'terms' (Board Terms & Governance) | 'staff' (Staff Management)
-  const [mainTab, setMainTab] = useState('terms');
-  const [boardCategory, setBoardCategory] = useState('director'); // 'director' | 'advisor' | 'auditor' | 'groups' | 'metadata'
+  const { reload: reloadPublicContent } = usePublicContent();
 
-  // Term state
-  const [terms, setTerms] = useState([]);
-  const [selectedTermId, setSelectedTermId] = useState(null);
-  const [termDetails, setTermDetails] = useState(null);
-  const [termsLoading, setTermsLoading] = useState(true);
-
-  // Staff state
-  const [staff, setStaff] = useState([]);
-  const [staffLoading, setStaffLoading] = useState(false);
-
-  // Refresh triggers
+  const [activeTab, setActiveTab] = useState('boards');
+  const [sectionsMeta, setSectionsMeta] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Modals & Drawers
-  const [memberDrawerOpen, setMemberDrawerOpen] = useState(false);
-  const [staffDrawerOpen, setStaffDrawerOpen] = useState(false);
-  const [termModalOpen, setTermModalOpen] = useState(false);
-  const [copyModalOpen, setCopyModalOpen] = useState(false);
-  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [groupModalOpen, setGroupModalOpen] = useState(false);
-  const [assignMemberModalOpen, setAssignMemberModalOpen] = useState(false);
+  // Loaded section data: { [key]: { value, version, history } }
+  const [sectionsData, setSectionsData] = useState({});
+  // Working editable draft copy: { [key]: Array }
+  const [draftCopies, setDraftCopies] = useState({});
 
-  // Form states
-  const [memberForm, setMemberForm] = useState(INITIAL_MEMBER_FORM);
-  const [staffForm, setStaffForm] = useState(INITIAL_STAFF_FORM);
-  const [termForm, setTermForm] = useState({ term_number: '', term_name: '', year_start_be: '', year_end_be: '', source_url: '', note: '' });
-  const [copyForm, setCopyForm] = useState({ term_number: '', term_name: '' });
-  const [scheduleForm, setScheduleForm] = useState({ publish_at: '' });
-  const [groupForm, setGroupForm] = useState({ id: null, title: '', description: '', sort_order: 0 });
-  const [assignForm, setAssignForm] = useState({ group_id: null, member_id: '', role_in_group: 'กรรมการ' });
+  // Filter / Search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTermFilter, setSelectedTermFilter] = useState('ALL');
 
+  // Form Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null); // null = create, number = index
+  const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
-  const [formBusy, setFormBusy] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
-  // 1. Fetch Terms List
+  // Detail Modal state
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  // Draft Save Modal state
+  const [saveDraftModalOpen, setSaveDraftModalOpen] = useState(false);
+  const [draftNote, setDraftNote] = useState('');
+  const [draftSourceUrl, setDraftSourceUrl] = useState('https://rayongcoop.com/');
+  const [draftEffectiveOn, setDraftEffectiveOn] = useState(todayBangkok());
+  const [draftExpiresOn, setDraftExpiresOn] = useState('');
+  const [savingDraft, setSavingDraft] = useState(false);
+
+  // Preview / Diff Modal state
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [publishingId, setPublishingId] = useState(null);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 1. Initial Load & Fetch Sections Meta
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     const controller = new AbortController();
-    setTermsLoading(true);
-
-    memberAdminApi('/api/admin/board-terms', { signal: controller.signal })
+    memberAdminApi('/api/admin/public-content/sections', { signal: controller.signal })
       .then((res) => {
-        if (!controller.signal.aborted) {
-          const list = res.data || [];
-          setTerms(list);
-          if (list.length > 0) {
-            // Select current published term or first term if none selected
-            setSelectedTermId((prev) => {
-              if (prev && list.some((t) => t.id === prev)) return prev;
-              const current = list.find((t) => t.is_current) || list[0];
-              return current ? current.id : null;
-            });
-          } else {
-            setSelectedTermId(null);
-            setTermDetails(null);
-          }
+        if (!controller.signal.aborted && res.sections) {
+          const map = {};
+          res.sections.forEach((s) => {
+            map[s.key] = s;
+          });
+          setSectionsMeta(map);
         }
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
-          alertService.toast({ icon: 'error', title: err.message || 'ไม่สามารถโหลดข้อมูลวาระได้' });
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setTermsLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [refreshKey]);
-
-  // 2. Fetch Selected Term Details
-  useEffect(() => {
-    if (!selectedTermId) {
-      setTermDetails(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    memberAdminApi(`/api/admin/board-terms/${selectedTermId}`, { signal: controller.signal })
-      .then((res) => {
-        if (!controller.signal.aborted) {
-          setTermDetails(res.data || null);
-        }
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          alertService.toast({ icon: 'error', title: err.message || 'ไม่สามารถโหลดรายละเอียดวาระได้' });
+          setError(err.message || 'ไม่สามารถโหลดข้อมูลสิทธิ์การจัดการได้');
         }
       });
 
     return () => controller.abort();
-  }, [selectedTermId, refreshKey]);
+  }, []);
 
-  // 3. Fetch Staff when on staff tab
-  useEffect(() => {
-    if (mainTab !== 'staff') return;
-    const controller = new AbortController();
-    setStaffLoading(true);
-
-    memberAdminApi('/api/admin/board-staff', { signal: controller.signal })
-      .then((res) => {
-        if (!controller.signal.aborted) {
-          setStaff(res.data?.staff || []);
-        }
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          alertService.toast({ icon: 'error', title: err.message || 'ไม่สามารถโหลดข้อมูลเจ้าหน้าที่ได้' });
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setStaffLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [mainTab, refreshKey]);
-
-  // Selected Term Object
-  const currentTerm = useMemo(() => {
-    return terms.find((t) => t.id === selectedTermId) || termDetails?.term || null;
-  }, [terms, selectedTermId, termDetails]);
-
-  // --- ACTIONS: Term Level ---
-
-  // Reconcile Term 38
-  const handleReconcileTerm38 = async (force = false) => {
-    const confirm = await alertService.confirm(
-      'เทียบข้อมูลวาระที่ 38 จากเว็บไซต์เดิม',
-      'ระบบจะนำเข้าข้อมูลคณะกรรมการชุดที่ 38, ที่ปรึกษา, ผู้ตรวจสอบกิจการ และคณะย่อยจากฐานข้อมูลเดิมอย่างปลอดภัย',
-      'ยืนยันนำเข้า',
-      'ยกเลิก'
-    );
-    if (!confirm) return;
+  // ─────────────────────────────────────────────────────────────────────────
+  // 2. Load Personnel Sections Data
+  // ─────────────────────────────────────────────────────────────────────────
+  const fetchAllPersonnelSections = useCallback(async (signal) => {
+    setLoading(true);
+    setError('');
 
     try {
-      alertService.showLoading('กำลังเทียบข้อมูลวาระที่ 38...');
-      const res = await memberAdminApi('/api/admin/board-terms/reconcile-38', {
-        method: 'POST',
-        data: { force },
+      const keys = ['boards', 'staff', 'advisors', 'auditors', 'groups'];
+      const responses = await Promise.all(
+        keys.map((k) =>
+          memberAdminApi(`/api/admin/public-content/sections/${k}`, { signal })
+            .then((data) => ({ key: k, data }))
+            .catch((err) => ({ key: k, error: err }))
+        )
+      );
+
+      const newData = {};
+      const newDrafts = {};
+
+      responses.forEach(({ key, data, error: reqErr }) => {
+        if (data && !reqErr) {
+          newData[key] = data;
+          newDrafts[key] = JSON.parse(JSON.stringify(data.value || []));
+        }
       });
-      alertService.closeLoading();
-      await alertService.success(res.message || 'เทียบข้อมูลวาระที่ 38 เรียบร้อยแล้ว');
-      setRefreshKey((k) => k + 1);
+
+      setSectionsData(newData);
+      setDraftCopies(newDrafts);
     } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'ไม่สามารถเทียบข้อมูลได้');
-    }
-  };
-
-  // Open Create Term Modal
-  const handleOpenCreateTerm = () => {
-    const maxTerm = terms.reduce((max, t) => Math.max(max, t.term_number || 0), 38);
-    const nextTerm = maxTerm + 1;
-    setTermForm({
-      term_number: nextTerm,
-      term_name: `ชุดที่ ${nextTerm}`,
-      year_start_be: 2568,
-      year_end_be: 2569,
-      source_url: '',
-      note: '',
-    });
-    setFormErrors({});
-    setTermModalOpen(true);
-  };
-
-  // Submit Create Term
-  const handleSubmitCreateTerm = async (e) => {
-    e.preventDefault();
-    if (!termForm.term_number || Number(termForm.term_number) <= 0) {
-      setFormErrors({ term_number: 'กรุณาระบุหมายเลขวาระที่ถูกต้อง' });
-      return;
-    }
-
-    setFormBusy(true);
-    alertService.showLoading('กำลังสร้างวาระใหม่...');
-
-    try {
-      const res = await memberAdminApi('/api/admin/board-terms', {
-        method: 'POST',
-        data: termForm,
-      });
-      alertService.closeLoading();
-      await alertService.success(res.message || 'สร้างวาระใหม่สำเร็จ');
-      setTermModalOpen(false);
-      setRefreshKey((k) => k + 1);
-      if (res.data?.term?.id) {
-        setSelectedTermId(res.data.term.id);
+      if (err.name !== 'AbortError') {
+        setError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลบุคลากร');
       }
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'สร้างวาระไม่สำเร็จ');
     } finally {
-      setFormBusy(false);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchAllPersonnelSections(controller.signal);
+    return () => controller.abort();
+  }, [fetchAllPersonnelSections, refreshKey]);
+
+  // Current tab metadata & dirty checking
+  const activeSectionKey = activeTab === 'history' ? 'boards' : activeTab;
+  const currentMeta = sectionsMeta[activeSectionKey] || { canEdit: true, canPublish: true };
+  const currentSectionData = sectionsData[activeSectionKey] || { value: [], version: '', history: [] };
+  const currentWorkingList = draftCopies[activeSectionKey] || [];
+
+  const isTabDirty = useMemo(() => {
+    if (activeTab === 'history') return false;
+    const published = JSON.stringify(currentSectionData.value || []);
+    const working = JSON.stringify(currentWorkingList);
+    return published !== working;
+  }, [activeTab, currentSectionData.value, currentWorkingList]);
+
+  // Available Terms in Boards (e.g. ["ชุดที่ 38"])
+  const availableTerms = useMemo(() => {
+    if (activeSectionKey !== 'boards') return [];
+    const set = new Set();
+    currentWorkingList.forEach((b) => {
+      if (b.term) set.add(b.term);
+    });
+    return Array.from(set);
+  }, [activeSectionKey, currentWorkingList]);
+
+  // Lookup board names by ID for board groups
+  const boardNamesMap = useMemo(() => {
+    const boards = draftCopies.boards || currentSectionData.value || [];
+    const map = {};
+    boards.forEach((b) => {
+      if (b.id) map[b.id] = b.name;
+    });
+    return map;
+  }, [draftCopies.boards, currentSectionData.value]);
+
+  // Find latest pending draft in history for active section
+  const latestPendingDraft = useMemo(() => {
+    const history = currentSectionData.history || [];
+    return history.find((h) => h.state === 'draft');
+  }, [currentSectionData.history]);
+
+  // Filtered list according to search term and board term filter
+  const filteredList = useMemo(() => {
+    if (activeTab === 'history') return [];
+    let list = currentWorkingList;
+
+    if (activeSectionKey === 'boards' && selectedTermFilter !== 'ALL') {
+      list = list.filter((b) => b.term === selectedTermFilter);
+    }
+
+    if (searchTerm.trim() !== '') {
+      const q = searchTerm.toLowerCase();
+      list = list.filter((item) => {
+        if (activeSectionKey === 'advisors' || activeSectionKey === 'auditors') {
+          return (item[0] || '').toLowerCase().includes(q) || (item[1] || '').toLowerCase().includes(q);
+        }
+        if (activeSectionKey === 'groups') {
+          return (item.title || '').toLowerCase().includes(q);
+        }
+        return (
+          (item.name || '').toLowerCase().includes(q) ||
+          (item.position || '').toLowerCase().includes(q) ||
+          (item.workplace || '').toLowerCase().includes(q) ||
+          (item.department || '').toLowerCase().includes(q)
+        );
+      });
+    }
+
+    return list;
+  }, [activeTab, currentWorkingList, activeSectionKey, selectedTermFilter, searchTerm]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 3. Item Reordering (Up / Down)
+  // ─────────────────────────────────────────────────────────────────────────
+  const handleMove = (indexInFiltered, direction) => {
+    if (!currentMeta.canEdit) return;
+    const targetItem = filteredList[indexInFiltered];
+    const actualIndex = currentWorkingList.indexOf(targetItem);
+    if (actualIndex === -1) return;
+
+    const newIndex = actualIndex + direction;
+    if (newIndex < 0 || newIndex >= currentWorkingList.length) return;
+
+    setDraftCopies((prev) => {
+      const copy = [...prev[activeSectionKey]];
+      const [moved] = copy.splice(actualIndex, 1);
+      copy.splice(newIndex, 0, moved);
+      return { ...prev, [activeSectionKey]: copy };
+    });
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 4. Form Drawer Handlers (Add / Edit)
+  // ─────────────────────────────────────────────────────────────────────────
+  const handleOpenCreate = () => {
+    setEditingIndex(null);
+    setFormErrors({});
+
+    if (activeSectionKey === 'boards') {
+      const maxId = Math.max(0, ...(currentWorkingList.map((b) => Number(b.id) || 0)));
+      setFormData({
+        id: maxId + 1,
+        name: '',
+        position: 'กรรมการ',
+        term: availableTerms[0] || 'ชุดที่ 38',
+        workplace: '',
+        image: ''
+      });
+    } else if (activeSectionKey === 'staff') {
+      const maxId = Math.max(0, ...(currentWorkingList.map((s) => Number(s.id) || 0)));
+      setFormData({
+        id: maxId + 1,
+        name: '',
+        position: 'เจ้าหน้าที่',
+        department: 'ฝ่ายจัดการ',
+        image: ''
+      });
+    } else if (activeSectionKey === 'advisors') {
+      setFormData({ name: '', position: 'ที่ปรึกษา' });
+    } else if (activeSectionKey === 'auditors') {
+      setFormData({ name: '', position: 'ผู้ตรวจสอบกิจการ' });
+    } else if (activeSectionKey === 'groups') {
+      setFormData({ title: '', members: [] });
+    }
+
+    setDrawerOpen(true);
+  };
+
+  const handleOpenEdit = (item) => {
+    const actualIndex = currentWorkingList.indexOf(item);
+    setEditingIndex(actualIndex);
+    setFormErrors({});
+
+    if (activeSectionKey === 'boards') {
+      setFormData({
+        id: item.id,
+        name: item.name || '',
+        position: item.position || '',
+        term: item.term || 'ชุดที่ 38',
+        workplace: item.workplace || '',
+        image: item.image || ''
+      });
+    } else if (activeSectionKey === 'staff') {
+      setFormData({
+        id: item.id,
+        name: item.name || '',
+        position: item.position || '',
+        department: item.department || '',
+        image: item.image || ''
+      });
+    } else if (activeSectionKey === 'advisors' || activeSectionKey === 'auditors') {
+      setFormData({
+        name: item[0] || '',
+        position: item[1] || ''
+      });
+    } else if (activeSectionKey === 'groups') {
+      setFormData({
+        title: item.title || '',
+        members: item.members ? JSON.parse(JSON.stringify(item.members)) : []
+      });
+    }
+
+    setDrawerOpen(true);
+  };
+
+  const handleFormChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (formErrors[field]) {
+      setFormErrors((prev) => ({ ...prev, [field]: null }));
     }
   };
 
-  // Open Copy Term Modal
-  const handleOpenCopyTerm = () => {
-    if (!currentTerm) return;
-    const maxTerm = terms.reduce((max, t) => Math.max(max, t.term_number || 0), 38);
-    const nextTerm = maxTerm + 1;
-    setCopyForm({
-      term_number: nextTerm,
-      term_name: `ชุดที่ ${nextTerm}`,
-    });
-    setFormErrors({});
-    setCopyModalOpen(true);
-  };
-
-  // Submit Copy Term
-  const handleSubmitCopyTerm = async (e) => {
+  const handleSaveForm = (e) => {
     e.preventDefault();
-    if (!copyForm.term_number || Number(copyForm.term_number) <= 0) {
-      setFormErrors({ term_number: 'กรุณาระบุหมายเลขวาระใหม่' });
+    const errors = {};
+
+    if (activeSectionKey === 'boards' || activeSectionKey === 'staff') {
+      if (!formData.name?.trim()) errors.name = 'กรุณาระบุชื่อ-นามสกุล';
+      if (!formData.position?.trim()) errors.position = 'กรุณาระบุตำแหน่ง';
+    } else if (activeSectionKey === 'advisors' || activeSectionKey === 'auditors') {
+      if (!formData.name?.trim()) errors.name = 'กรุณาระบุชื่อ-นามสกุล';
+      if (!formData.position?.trim()) errors.position = 'กรุณาระบุตำแหน่ง';
+    } else if (activeSectionKey === 'groups') {
+      if (!formData.title?.trim()) errors.title = 'กรุณาระบุชื่อคณะกรรมการย่อย';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
-    setFormBusy(true);
-    alertService.showLoading(`กำลังคัดลอกข้อมูลจาก ${currentTerm.term_name} ไปยังชุดที่ ${copyForm.term_number}...`);
+    let newItem;
+    if (activeSectionKey === 'boards') {
+      newItem = {
+        id: Number(formData.id),
+        name: formData.name.trim(),
+        position: formData.position.trim(),
+        term: formData.term ? formData.term.trim() : null,
+        workplace: formData.workplace ? formData.workplace.trim() : null,
+        image: formData.image ? formData.image.trim() : null
+      };
+    } else if (activeSectionKey === 'staff') {
+      newItem = {
+        id: Number(formData.id),
+        name: formData.name.trim(),
+        position: formData.position.trim(),
+        department: formData.department ? formData.department.trim() : null,
+        image: formData.image ? formData.image.trim() : null
+      };
+    } else if (activeSectionKey === 'advisors' || activeSectionKey === 'auditors') {
+      newItem = [formData.name.trim(), formData.position.trim()];
+    } else if (activeSectionKey === 'groups') {
+      newItem = {
+        title: formData.title.trim(),
+        members: formData.members || []
+      };
+    }
 
-    try {
-      const res = await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/copy`, {
-        method: 'POST',
-        data: copyForm,
-      });
-      alertService.closeLoading();
-      await alertService.success(res.message || 'คัดลอกวาระสำเร็จ');
-      setCopyModalOpen(false);
-      setRefreshKey((k) => k + 1);
-      if (res.data?.term?.id) {
-        setSelectedTermId(res.data.term.id);
+    setDraftCopies((prev) => {
+      const copy = [...prev[activeSectionKey]];
+      if (editingIndex !== null && editingIndex >= 0) {
+        copy[editingIndex] = newItem;
+      } else {
+        copy.push(newItem);
       }
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'คัดลอกวาระไม่สำเร็จ');
-    } finally {
-      setFormBusy(false);
-    }
-  };
-
-  // Publish Term
-  const handlePublishTerm = async () => {
-    if (!currentTerm) return;
-    const confirm = await alertService.confirm(
-      `ยืนยันเผยแพร่ ${currentTerm.term_name}`,
-      `การเผยแพร่นี้จะทำให้ ${currentTerm.term_name} แสดงเป็นคณะกรรมการปัจจุบันบนหน้าเว็บไซต์สาธารณะทันที และปรับวาระเดิมเข้าสู่สถานะเก็บถาวร (ประวัติ)`,
-      'อนุมัติและเผยแพร่ทันที',
-      'ยกเลิก'
-    );
-    if (!confirm) return;
-
-    try {
-      alertService.showLoading('กำลังเผยแพร่วาระ...');
-      const res = await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/publish`, {
-        method: 'POST',
-      });
-      alertService.closeLoading();
-      await alertService.success(res.message || 'เผยแพร่วาระสำเร็จ');
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'ไม่สามารถเผยแพร่วาระได้');
-    }
-  };
-
-  // Submit Schedule Term
-  const handleSubmitSchedule = async (e) => {
-    e.preventDefault();
-    if (!scheduleForm.publish_at) {
-      setFormErrors({ publish_at: 'กรุณาระบุวันและเวลา' });
-      return;
-    }
-
-    setFormBusy(true);
-    alertService.showLoading('กำลังตั้งเวลาเผยแพร่...');
-
-    try {
-      const res = await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/schedule`, {
-        method: 'POST',
-        data: scheduleForm,
-      });
-      alertService.closeLoading();
-      await alertService.success(res.message || 'ตั้งเวลาเผยแพร่สำเร็จ');
-      setScheduleModalOpen(false);
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'ไม่สามารถตั้งเวลาเผยแพร่ได้');
-    } finally {
-      setFormBusy(false);
-    }
-  };
-
-  // --- ACTIONS: Member Level (Directors, Advisors, Auditors) ---
-
-  const handleOpenAddMember = () => {
-    setMemberForm({
-      ...INITIAL_MEMBER_FORM,
-      sort_order: (termDetails?.[boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors']?.length || 0) + 1,
+      return { ...prev, [activeSectionKey]: copy };
     });
-    setFormErrors({});
-    setMemberDrawerOpen(true);
+
+    setDrawerOpen(false);
+    alertService.success(editingIndex !== null ? 'แก้ไขข้อมูลในร่างแล้ว' : 'เพิ่มรายการใหม่ในร่างแล้ว');
   };
 
-  const handleOpenEditMember = (member) => {
-    setMemberForm({
-      id: member.id,
-      name: member.name || '',
-      position: member.position || '',
-      role_type: member.role_type || 'director',
-      workplace: member.workplace || '',
-      department: member.department || '',
-      image_url: member.image_url || '',
-      bio: member.bio || '',
-      sort_order: member.sort_order ?? 0,
-      is_chairperson: Boolean(member.is_chairperson),
-    });
-    setFormErrors({});
-    setMemberDrawerOpen(true);
+  const handleDeleteItem = (item) => {
+    if (!currentMeta.canEdit) return;
+
+    if (activeSectionKey === 'boards') {
+      // Check if board member is in any sub-committee
+      const groups = draftCopies.groups || [];
+      const inGroups = groups.filter((g) => g.members && g.members.some(([id]) => Number(id) === Number(item.id)));
+      if (inGroups.length > 0) {
+        const groupTitles = inGroups.map((g) => g.title).join(', ');
+        alertService.error(`ไม่สามารถลบ "${item.name}" ได้ เนื่องจากยังมีตำแหน่งในคณะกรรมการย่อย: ${groupTitles}`);
+        return;
+      }
+    }
+
+    const itemName =
+      item.name || (Array.isArray(item) ? item[0] : item.title) || 'รายการนี้';
+
+    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการนำ "${itemName}" ออกจากร่าง? (ข้อมูลจริงจะไม่เปลี่ยนจนกว่าจะอนุมัติเผยแพร่)`)) {
+      setDraftCopies((prev) => {
+        const copy = prev[activeSectionKey].filter((i) => i !== item);
+        return { ...prev, [activeSectionKey]: copy };
+      });
+      alertService.info(`นำ "${itemName}" ออกจากร่างแล้ว`);
+    }
   };
 
-  // Handle Photo Upload
-  const handlePhotoUpload = async (e) => {
+  // Image Upload Handler
+  const handleUploadFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('photo', file);
-    formData.append('name', memberForm.name || 'personnel');
-
-    setUploadingPhoto(true);
+    setUploadingImage(true);
     try {
-      const res = await memberAdminApi('/api/admin/board-terms/upload-photo', {
+      const uploadForm = new FormData();
+      uploadForm.append('file', file);
+
+      const res = await memberAdminApi('/api/admin/public-content/upload', {
         method: 'POST',
-        data: formData,
+        data: uploadForm,
+        headers: {} // let browser set boundary
       });
-      if (res.data?.url) {
-        setMemberForm((prev) => ({ ...prev, image_url: res.data.url }));
-        alertService.toast({ icon: 'success', title: 'อัปโหลดรูปภาพสำเร็จ' });
+
+      if (res.success && res.data?.url) {
+        handleFormChange('image', res.data.url);
+        alertService.success('อัปโหลดรูปภาพสำเร็จ');
+      } else {
+        throw new Error(res.message || 'อัปโหลดไม่สำเร็จ');
       }
     } catch (err) {
-      alertService.error(err.message || 'อัปโหลดรูปถ่ายไม่สำเร็จ');
+      alertService.error(err.message || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
     } finally {
-      setUploadingPhoto(false);
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // Submit Member Form
-  const handleSubmitMember = async (e) => {
+  // ─────────────────────────────────────────────────────────────────────────
+  // 5. Draft Save Workflow (POST /api/admin/public-content/sections/{section}/drafts)
+  // ─────────────────────────────────────────────────────────────────────────
+  const handleOpenSaveDraftModal = () => {
+    setDraftNote(`ปรับปรุงข้อมูล ${TAB_CONFIGS.find((t) => t.key === activeSectionKey)?.label || ''}`);
+    setDraftSourceUrl('https://rayongcoop.com/');
+    setDraftEffectiveOn(todayBangkok());
+    setDraftExpiresOn('');
+    setSaveDraftModalOpen(true);
+  };
+
+  const handleConfirmSaveDraft = async (e) => {
     e.preventDefault();
-    if (!memberForm.name.trim()) {
-      setFormErrors({ name: 'กรุณากรอกชื่อ-นามสกุล' });
+    if (!draftNote.trim()) {
+      alertService.error('กรุณาระบุเหตุผลการแก้ไข');
       return;
     }
-    if (!memberForm.position.trim()) {
-      setFormErrors({ position: 'กรุณากรอกตำแหน่ง' });
+    if (!draftSourceUrl.trim() || !draftSourceUrl.startsWith('https://')) {
+      alertService.error('กรุณาระบุแหล่งอ้างอิง HTTPS ที่ถูกต้อง');
       return;
     }
 
-    const categoryKey = boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors';
-    const currentList = [...(termDetails?.[categoryKey] || [])];
-
-    if (memberForm.id) {
-      const idx = currentList.findIndex((m) => m.id === memberForm.id);
-      if (idx !== -1) currentList[idx] = { ...currentList[idx], ...memberForm };
-    } else {
-      currentList.push({ ...memberForm, id: null });
-    }
-
-    setFormBusy(true);
-    alertService.showLoading('กำลังบันทึกข้อมูล...');
-
+    setSavingDraft(true);
     try {
-      const res = await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/members`, {
-        method: 'PUT',
-        data: {
-          category: boardCategory,
-          members: currentList,
+      const payload = {
+        value: currentWorkingList,
+        version: currentSectionData.version,
+        note: draftNote.trim(),
+        source_url: draftSourceUrl.trim(),
+        effective_on: draftEffectiveOn,
+        expires_on: draftExpiresOn ? draftExpiresOn : null
+      };
+
+      const result = await memberAdminApi(
+        `/api/admin/public-content/sections/${activeSectionKey}/drafts`,
+        {
+          method: 'POST',
+          data: payload
+        }
+      );
+
+      setSaveDraftModalOpen(false);
+      alertService.success(`บันทึกร่าง #${result.id} เรียบร้อยแล้ว (ยังไม่เปลี่ยนข้อมูลหน้าเว็บจนกว่าจะเผยแพร่)`);
+      setRefreshKey((n) => n + 1);
+    } catch (err) {
+      alertService.error(err.message || 'บันทึกร่างไม่สำเร็จ');
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 6. Publication Workflow (POST /api/admin/public-content/revisions/{id}/publish)
+  // ─────────────────────────────────────────────────────────────────────────
+  const handlePublishRevision = async (revisionId) => {
+    if (!window.confirm(`ยืนยันการอนุมัติและเผยแพร่ร่าง #${revisionId}? ข้อมูลบนหน้าเว็บจริงจะอัปเดตทันที`)) {
+      return;
+    }
+
+    setPublishingId(revisionId);
+    try {
+      await memberAdminApi(`/api/admin/public-content/revisions/${revisionId}/publish`, {
+        method: 'POST',
+        data: {}
+      });
+
+      alertService.success('อนุมัติและเผยแพร่ข้อมูลสำเร็จ ข้อมูลแสดงบนหน้าเว็บแล้ว');
+      await reloadPublicContent();
+      setRefreshKey((n) => n + 1);
+    } catch (err) {
+      alertService.error(err.message || 'เกิดข้อผิดพลาดในการเผยแพร่ร่าง');
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    if (window.confirm('คุณต้องการทิ้งการเปลี่ยนแปลงร่างที่ยังไม่ได้บันทึก และโหลดข้อมูลเผยแพร่ล่าสุดใช่หรือไม่?')) {
+      setDraftCopies((prev) => ({
+        ...prev,
+        [activeSectionKey]: JSON.parse(JSON.stringify(currentSectionData.value || []))
+      }));
+      alertService.info('คืนค่าข้อมูลเผยแพร่ล่าสุดเรียบร้อยแล้ว');
+    }
+  };
+
+  const handleLoadRevisionAsDraft = (revision) => {
+    if (window.confirm(`คุณต้องการโหลดข้อมูลจากเวอร์ชัน #${revision.id} มาเป็นร่างที่กำลังแก้ไขหรือไม่?`)) {
+      try {
+        const payloadData = JSON.parse(revision.payload);
+        setDraftCopies((prev) => ({
+          ...prev,
+          [revision.section]: payloadData
+        }));
+        if (activeTab !== revision.section) {
+          setActiveTab(revision.section);
+        }
+        alertService.success(`โหลดข้อมูลจาก #${revision.id} เข้าสู่พื้นที่แก้ไขแล้ว`);
+      } catch (err) {
+        alertService.error('ไม่สามารถอ่านข้อมูลร่างได้: ' + err.message);
+      }
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 7. Render Columns for CrudDataTable
+  // ─────────────────────────────────────────────────────────────────────────
+  const tableColumns = useMemo(() => {
+    if (activeSectionKey === 'boards') {
+      return [
+        {
+          key: 'image',
+          label: 'รูปภาพ',
+          width: '70px',
+          render: (row) => (
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--primary-100)', background: 'var(--bg-subtle)' }}>
+              <SafeImage
+                src={row.image}
+                fallback="/assets/img/board_placeholder.jpg"
+                alt={row.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+          )
         },
-      });
-      alertService.closeLoading();
-      await alertService.success(res.message || 'บันทึกรายชื่อเรียบร้อยแล้ว');
-      setMemberDrawerOpen(false);
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'บันทึกข้อมูลไม่สำเร็จ');
-    } finally {
-      setFormBusy(false);
-    }
-  };
-
-  // Move member up/down
-  const handleMoveMember = async (member, direction) => {
-    const categoryKey = boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors';
-    const list = [...(termDetails?.[categoryKey] || [])];
-    const index = list.findIndex((m) => m.id === member.id);
-    if (index === -1) return;
-
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= list.length) return;
-
-    // Swap
-    const temp = list[index];
-    list[index] = list[targetIndex];
-    list[targetIndex] = temp;
-
-    // Re-index sort_order
-    const updated = list.map((m, idx) => ({ ...m, sort_order: idx }));
-
-    try {
-      alertService.showLoading('กำลังปรับลำดับ...');
-      await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/members`, {
-        method: 'PUT',
-        data: { category: boardCategory, members: updated },
-      });
-      alertService.closeLoading();
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'ปรับลำดับไม่สำเร็จ');
-    }
-  };
-
-  // Delete Member
-  const handleDeleteMember = async (member) => {
-    const confirmed = await alertService.confirmDelete(member.name, 'สมาชิกท่านนี้');
-    if (!confirmed) return;
-
-    const categoryKey = boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors';
-    const updated = (termDetails?.[categoryKey] || []).filter((m) => m.id !== member.id);
-
-    try {
-      alertService.showLoading('กำลังลบข้อมูล...');
-      const res = await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/members`, {
-        method: 'PUT',
-        data: { category: boardCategory, members: updated },
-      });
-      alertService.closeLoading();
-      await alertService.success(res.message || 'ลบรายชื่อเรียบร้อยแล้ว');
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'ลบไม่สำเร็จ');
-    }
-  };
-
-  // --- ACTIONS: Subgroups (คณะกรรมการย่อย) ---
-
-  const handleOpenAddGroup = () => {
-    setGroupForm({ id: null, title: '', description: '', sort_order: (termDetails?.groups?.length || 0) + 1 });
-    setGroupModalOpen(true);
-  };
-
-  const handleSaveGroup = async (e) => {
-    e.preventDefault();
-    if (!groupForm.title.trim()) {
-      alertService.error('กรุณาระบุชื่อคณะกรรมการย่อย');
-      return;
-    }
-
-    const currentGroups = [...(termDetails?.groups || [])];
-    if (groupForm.id) {
-      const idx = currentGroups.findIndex((g) => g.id === groupForm.id);
-      if (idx !== -1) currentGroups[idx] = { ...currentGroups[idx], ...groupForm };
-    } else {
-      currentGroups.push({ ...groupForm, members: [] });
-    }
-
-    // Prepare payload
-    const payload = currentGroups.map((g, idx) => ({
-      title: g.title,
-      description: g.description,
-      sort_order: idx,
-      members: (g.members || []).map((m) => [m.member_id || m.id, m.role_in_group || 'กรรมการ']),
-    }));
-
-    try {
-      alertService.showLoading('กำลังบันทึกคณะย่อย...');
-      await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/groups`, {
-        method: 'PUT',
-        data: { groups: payload },
-      });
-      alertService.closeLoading();
-      await alertService.success('บันทึกคณะกรรมการย่อยสำเร็จ');
-      setGroupModalOpen(false);
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'บันทึกคณะย่อยไม่สำเร็จ');
-    }
-  };
-
-  const handleDeleteGroup = async (group) => {
-    const confirm = await alertService.confirmDelete(group.title, 'คณะกรรมการย่อยนี้');
-    if (!confirm) return;
-
-    const remaining = (termDetails?.groups || []).filter((g) => g.id !== group.id);
-    const payload = remaining.map((g, idx) => ({
-      title: g.title,
-      description: g.description,
-      sort_order: idx,
-      members: (g.members || []).map((m) => [m.member_id || m.id, m.role_in_group || 'กรรมการ']),
-    }));
-
-    try {
-      alertService.showLoading('กำลังลบคณะย่อย...');
-      await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/groups`, {
-        method: 'PUT',
-        data: { groups: payload },
-      });
-      alertService.closeLoading();
-      await alertService.success('ลบคณะกรรมการย่อยเรียบร้อยแล้ว');
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'ลบไม่สำเร็จ');
-    }
-  };
-
-  // Open Assign Member to Group
-  const handleOpenAssignMember = (group) => {
-    setAssignForm({ group_id: group.id, member_id: '', role_in_group: 'กรรมการ' });
-    setAssignMemberModalOpen(true);
-  };
-
-  // Submit Assign Member to Group
-  const handleSaveAssignMember = async (e) => {
-    e.preventDefault();
-    if (!assignForm.member_id) {
-      alertService.error('กรุณาเลือกกรรมการ');
-      return;
-    }
-
-    const currentGroups = [...(termDetails?.groups || [])];
-    const group = currentGroups.find((g) => g.id === assignForm.group_id);
-    if (!group) return;
-
-    const memberIdNum = Number(assignForm.member_id);
-    if (group.members?.some((m) => (m.member_id || m.id) === memberIdNum)) {
-      alertService.error('กรรมการท่านนี้อยู่ในคณะย่อยนี้แล้ว');
-      return;
-    }
-
-    const director = termDetails?.directors?.find((d) => d.id === memberIdNum);
-    const newMembers = [...(group.members || []), {
-      member_id: memberIdNum,
-      name: director?.name || '',
-      position: director?.position || '',
-      role_in_group: assignForm.role_in_group,
-    }];
-    group.members = newMembers;
-
-    const payload = currentGroups.map((g, idx) => ({
-      title: g.title,
-      description: g.description,
-      sort_order: idx,
-      members: (g.members || []).map((m) => [m.member_id || m.id, m.role_in_group || 'กรรมการ']),
-    }));
-
-    try {
-      alertService.showLoading('กำลังเพิ่มกรรมการในคณะย่อย...');
-      await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/groups`, {
-        method: 'PUT',
-        data: { groups: payload },
-      });
-      alertService.closeLoading();
-      await alertService.success('เพิ่มกรรมการในคณะย่อยสำเร็จ');
-      setAssignMemberModalOpen(false);
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'เพิ่มกรรมการในคณะย่อยไม่สำเร็จ');
-    }
-  };
-
-  // Remove member from group
-  const handleRemoveMemberFromGroup = async (group, memberId) => {
-    const currentGroups = [...(termDetails?.groups || [])];
-    const g = currentGroups.find((item) => item.id === group.id);
-    if (!g) return;
-
-    g.members = (g.members || []).filter((m) => (m.member_id || m.id) !== memberId);
-
-    const payload = currentGroups.map((grp, idx) => ({
-      title: grp.title,
-      description: grp.description,
-      sort_order: idx,
-      members: (grp.members || []).map((m) => [m.member_id || m.id, m.role_in_group || 'กรรมการ']),
-    }));
-
-    try {
-      alertService.showLoading('กำลังนำออกจากคณะย่อย...');
-      await memberAdminApi(`/api/admin/board-terms/${currentTerm.id}/groups`, {
-        method: 'PUT',
-        data: { groups: payload },
-      });
-      alertService.closeLoading();
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      alertService.closeLoading();
-      alertService.error(err.message || 'ดำเนินการไม่สำเร็จ');
-    }
-  };
-
-  // Render Status Badge for a Term
-  const renderTermStatusBadge = (term) => {
-    if (!term) return null;
-    if (term.is_current || term.status === 'published') {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
-          <CheckCircle size={12} /> เผยแพร่แล้ว (สาธารณะ)
-        </span>
-      );
-    }
-    if (term.status === 'scheduled') {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, background: '#e0f2fe', color: '#0369a1', border: '1px solid #7dd3fc' }}>
-          <Clock size={12} /> ตั้งเวลา {term.publish_at ? new Date(term.publish_at).toLocaleDateString('th-TH') : ''}
-        </span>
-      );
-    }
-    if (term.status === 'archived') {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, background: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d' }}>
-          <Clock size={12} /> เก็บถาวร (ประวัติ)
-        </span>
-      );
-    }
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>
-        ฉบับร่าง
-      </span>
-    );
-  };
-
-  return (
-    <div className="admin-page-container" style={{ padding: '1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
-      <PageHeader
-        title="จัดการคณะกรรมการและเจ้าหน้าที่ (Personnel Management)"
-        subtitle="ระบบบริหารจัดการคณะกรรมการดำเนินงานหลายวาระ (Multi-Term Governance) และบุคลากรสหกรณ์"
-        icon={<Users size={24} />}
-        actions={
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {terms.length === 0 && (
+        {
+          key: 'name',
+          label: 'ชื่อ - นามสกุล',
+          render: (row) => (
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--primary-900)' }}>{row.name}</div>
+              {row.workplace && (
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Building size={13} />
+                  <span>{row.workplace}</span>
+                </div>
+              )}
+            </div>
+          )
+        },
+        {
+          key: 'position',
+          label: 'ตำแหน่ง',
+          render: (row) => (
+            <span style={{ fontWeight: 600, color: 'var(--accent-gold-dark)' }}>
+              {row.position}
+            </span>
+          )
+        },
+        {
+          key: 'term',
+          label: 'วาระ / ชุดที่',
+          render: (row) => (
+            <span className="badge badge-primary">{row.term || 'ชุดที่ 38'}</span>
+          )
+        },
+        {
+          key: 'order',
+          label: 'ลำดับ',
+          width: '90px',
+          render: (row, index) => (
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
               <button
                 type="button"
-                className="admin-btn-primary"
-                style={{ background: '#0284c7' }}
-                onClick={() => handleReconcileTerm38(false)}
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit || index === 0}
+                onClick={() => handleMove(index, -1)}
+                title="เลื่อนขึ้น"
+                style={{ padding: '0.25rem 0.4rem' }}
               >
-                <RefreshCw size={16} /> เทียบข้อมูลวาระที่ 38 จากเว็บเดิม
+                <ArrowUp size={14} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit || index === filteredList.length - 1}
+                onClick={() => handleMove(index, 1)}
+                title="เลื่อนลง"
+                style={{ padding: '0.25rem 0.4rem' }}
+              >
+                <ArrowDown size={14} />
+              </button>
+            </div>
+          )
+        },
+        {
+          key: 'actions',
+          label: 'จัดการ',
+          width: '110px',
+          render: (row) => (
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => {
+                  setSelectedItem(row);
+                  setDetailModalOpen(true);
+                }}
+                title="ดูรายละเอียด"
+              >
+                <Eye size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleOpenEdit(row)}
+                title="แก้ไข"
+              >
+                <Edit2 size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleDeleteItem(row)}
+                title="นำออก"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          )
+        }
+      ];
+    }
+
+    if (activeSectionKey === 'staff') {
+      return [
+        {
+          key: 'image',
+          label: 'รูปภาพ',
+          width: '70px',
+          render: (row) => (
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--accent-teal-subtle)', background: 'var(--bg-subtle)' }}>
+              <SafeImage
+                src={row.image}
+                fallback="/assets/img/board_placeholder.jpg"
+                alt={row.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+          )
+        },
+        {
+          key: 'name',
+          label: 'ชื่อ - นามสกุล',
+          render: (row) => (
+            <div style={{ fontWeight: 600, color: 'var(--primary-900)' }}>{row.name}</div>
+          )
+        },
+        {
+          key: 'position',
+          label: 'ตำแหน่ง',
+          render: (row) => (
+            <span style={{ fontWeight: 600, color: 'var(--accent-teal-dark)' }}>
+              {row.position}
+            </span>
+          )
+        },
+        {
+          key: 'department',
+          label: 'ฝ่าย / หน่วยงาน',
+          render: (row) => (
+            <span className="badge badge-teal">{row.department || 'ฝ่ายจัดการ'}</span>
+          )
+        },
+        {
+          key: 'order',
+          label: 'ลำดับ',
+          width: '90px',
+          render: (row, index) => (
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit || index === 0}
+                onClick={() => handleMove(index, -1)}
+                title="เลื่อนขึ้น"
+                style={{ padding: '0.25rem 0.4rem' }}
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit || index === filteredList.length - 1}
+                onClick={() => handleMove(index, 1)}
+                title="เลื่อนลง"
+                style={{ padding: '0.25rem 0.4rem' }}
+              >
+                <ArrowDown size={14} />
+              </button>
+            </div>
+          )
+        },
+        {
+          key: 'actions',
+          label: 'จัดการ',
+          width: '110px',
+          render: (row) => (
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => {
+                  setSelectedItem(row);
+                  setDetailModalOpen(true);
+                }}
+                title="ดูรายละเอียด"
+              >
+                <Eye size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleOpenEdit(row)}
+                title="แก้ไข"
+              >
+                <Edit2 size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleDeleteItem(row)}
+                title="นำออก"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          )
+        }
+      ];
+    }
+
+    if (activeSectionKey === 'advisors' || activeSectionKey === 'auditors') {
+      return [
+        {
+          key: 'index',
+          label: 'ลำดับ',
+          width: '60px',
+          render: (_, idx) => <span>{idx + 1}</span>
+        },
+        {
+          key: 'name',
+          label: 'ชื่อ - นามสกุล',
+          render: (row) => <span style={{ fontWeight: 600 }}>{row[0]}</span>
+        },
+        {
+          key: 'position',
+          label: 'ตำแหน่งหน้าที่',
+          render: (row) => <span className="badge badge-primary">{row[1]}</span>
+        },
+        {
+          key: 'order',
+          label: 'จัดลำดับ',
+          width: '90px',
+          render: (row, index) => (
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit || index === 0}
+                onClick={() => handleMove(index, -1)}
+                title="เลื่อนขึ้น"
+                style={{ padding: '0.25rem 0.4rem' }}
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit || index === filteredList.length - 1}
+                onClick={() => handleMove(index, 1)}
+                title="เลื่อนลง"
+                style={{ padding: '0.25rem 0.4rem' }}
+              >
+                <ArrowDown size={14} />
+              </button>
+            </div>
+          )
+        },
+        {
+          key: 'actions',
+          label: 'จัดการ',
+          width: '100px',
+          render: (row) => (
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleOpenEdit(row)}
+                title="แก้ไข"
+              >
+                <Edit2 size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleDeleteItem(row)}
+                title="นำออก"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          )
+        }
+      ];
+    }
+
+    if (activeSectionKey === 'groups') {
+      return [
+        {
+          key: 'title',
+          label: 'ชื่อคณะกรรมการย่อย',
+          render: (row) => (
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--primary-900)' }}>
+                {row.title}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                จำนวนกรรมการในคณะ: {row.members ? row.members.length : 0} คน
+              </div>
+            </div>
+          )
+        },
+        {
+          key: 'members',
+          label: 'รายชื่อกรรมการในคณะ',
+          render: (row) => (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+              {row.members && row.members.map(([id, pos], mIdx) => (
+                <span key={mIdx} className="badge badge-teal" style={{ fontSize: '0.78rem' }}>
+                  {boardNamesMap[id] || `กรรมการ #${id}`}: {pos}
+                </span>
+              ))}
+            </div>
+          )
+        },
+        {
+          key: 'actions',
+          label: 'จัดการ',
+          width: '100px',
+          render: (row) => (
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleOpenEdit(row)}
+                title="แก้ไขคณะกรรมการย่อย"
+              >
+                <Edit2 size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleDeleteItem(row)}
+                title="นำออก"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          )
+        }
+      ];
+    }
+
+    return [];
+  }, [
+    activeSectionKey,
+    currentMeta.canEdit,
+    filteredList.length,
+    boardNamesMap
+  ]);
+
+  return (
+    <div className="admin-board-staff-page">
+      {/* ─────────────────────────────────────────────────────────────
+          Page Header
+      ───────────────────────────────────────────────────────────── */}
+      <PageHeader
+        title="จัดการข้อมูลคณะกรรมการและเจ้าหน้าที่"
+        subtitle="แหล่งข้อมูลทางการชุดเดียวกับหน้าเว็บไซต์สาธารณะ รองรับการจัดทำร่าง ตรวจสอบก่อน-หลัง และอนุมัติเผยแพร่"
+        breadcrumbs={[
+          { label: 'Admin Control Center', path: '/admin/dashboard' },
+          { label: 'พื้นที่ทำงาน', path: '/admin/workspace' },
+          { label: 'คณะกรรมการและเจ้าหน้าที่' }
+        ]}
+        actions={
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              disabled={loading}
+              onClick={() => setRefreshKey((n) => n + 1)}
+              title="โหลดข้อมูลล่าสุดจากฐานข้อมูล"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+              <span>โหลดล่าสุด</span>
+            </button>
+
+            {isTabDirty && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleDiscardChanges}
+                title="ยกเลิกการแก้ไขและคืนค่าที่เผยแพร่"
+              >
+                <span>คืนค่าที่เผยแพร่</span>
               </button>
             )}
-            <PermissionGuard permission="people.create">
-              <button type="button" className="admin-btn-primary" onClick={handleOpenCreateTerm}>
-                <Plus size={16} /> สร้างวาระใหม่
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setPreviewModalOpen(true)}
+              title="ดูตัวอย่างเปรียบเทียบข้อมูลจริงกับร่าง"
+            >
+              <Eye size={15} />
+              <span>ดูตัวอย่างร่าง</span>
+            </button>
+
+            {currentMeta.canEdit && activeTab !== 'history' && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleOpenCreate}
+              >
+                <Plus size={16} />
+                <span>เพิ่มรายการ</span>
               </button>
-            </PermissionGuard>
+            )}
+
+            {isTabDirty && currentMeta.canEdit && (
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={handleOpenSaveDraftModal}
+              >
+                <FileText size={16} />
+                <span>บันทึกร่างรอเผยแพร่</span>
+              </button>
+            )}
           </div>
         }
       />
 
-      {/* Main Tabs (Board Terms vs Staff) */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #e2e8f0', marginBottom: '1.5rem' }}>
-        <button
-          type="button"
-          onClick={() => setMainTab('terms')}
+      {error && (
+        <div className="alert alert-danger" style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <AlertCircle size={18} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          Pending Draft Alert Banner
+      ───────────────────────────────────────────────────────────── */}
+      {latestPendingDraft && activeTab !== 'history' && (
+        <div
+          className="surface-card"
           style={{
+            borderLeft: '4px solid var(--accent-gold, #f59e0b)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.25rem',
+            background: 'var(--amber-50, #fffbeb)',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1.25rem',
-            fontWeight: 600,
-            fontSize: '0.95rem',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: mainTab === 'terms' ? '3px solid #2563eb' : '3px solid transparent',
-            color: mainTab === 'terms' ? '#2563eb' : '#64748b',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
           }}
         >
-          <Award size={18} /> คณะกรรมการและวาระการทำงาน ({terms.length} วาระ)
-        </button>
-        <button
-          type="button"
-          onClick={() => setMainTab('staff')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1.25rem',
-            fontWeight: 600,
-            fontSize: '0.95rem',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: mainTab === 'staff' ? '3px solid #2563eb' : '3px solid transparent',
-            color: mainTab === 'staff' ? '#2563eb' : '#64748b',
-          }}
-        >
-          <Briefcase size={18} /> ฝ่ายจัดการและเจ้าหน้าที่
-        </button>
-      </div>
-
-      {mainTab === 'terms' ? (
-        <div>
-          {/* Term Selector & Controls Card */}
-          <div
-            className="surface-card"
-            style={{
-              padding: '1.25rem',
-              marginBottom: '1.5rem',
-              background: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 600, color: '#334155', fontSize: '0.9rem' }}>เลือกวาระการทำงาน:</span>
-                <select
-                  className="admin-form-select"
-                  style={{ minWidth: '220px', padding: '0.5rem 0.75rem', fontWeight: 600 }}
-                  value={selectedTermId || ''}
-                  onChange={(e) => setSelectedTermId(Number(e.target.value))}
-                >
-                  {terms.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.term_name} ({t.is_current ? 'ปัจจุบัน' : t.status === 'draft' ? 'ร่าง' : t.status === 'scheduled' ? 'ตั้งเวลา' : 'เก็บถาวร'})
-                    </option>
-                  ))}
-                </select>
-
-                {currentTerm && renderTermStatusBadge(currentTerm)}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+            <Clock size={20} color="var(--amber-600, #d97706)" style={{ marginTop: '0.2rem' }} />
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--amber-900, #78350f)' }}>
+                มีร่างรออนุมัติเผยแพร่: ร่าง #{latestPendingDraft.id}
               </div>
-
-              {/* Action Buttons for Selected Term */}
-              {currentTerm && (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className="admin-btn-secondary"
-                    style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                    onClick={() => setPreviewModalOpen(true)}
-                  >
-                    <Eye size={15} /> ดูตัวอย่างหน้าเว็บจริง
-                  </button>
-
-                  <PermissionGuard permission="people.create">
-                    <button
-                      type="button"
-                      className="admin-btn-secondary"
-                      style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                      onClick={handleOpenCopyTerm}
-                    >
-                      <Copy size={15} /> คัดลอกสร้างร่างใหม่
-                    </button>
-                  </PermissionGuard>
-
-                  {!currentTerm.is_current && (
-                    <PermissionGuard permission="people.publish">
-                      <button
-                        type="button"
-                        className="admin-btn-secondary"
-                        style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                        onClick={() => {
-                          setScheduleForm({ publish_at: '' });
-                          setScheduleModalOpen(true);
-                        }}
-                      >
-                        <Clock size={15} /> ตั้งเวลาเผยแพร่
-                      </button>
-
-                      <button
-                        type="button"
-                        className="admin-btn-primary"
-                        style={{ fontSize: '0.85rem', background: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                        onClick={handlePublishTerm}
-                      >
-                        <ShieldCheck size={15} /> อนุมัติและเผยแพร่ทันที
-                      </button>
-                    </PermissionGuard>
-                  )}
-                </div>
-              )}
+              <div style={{ fontSize: '0.85rem', color: 'var(--amber-800, #92400e)', marginTop: '0.25rem' }}>
+                เหตุผล: "{latestPendingDraft.note}" | มีผลตั้งแต่วันที่ {latestPendingDraft.effective_on} | บันทึกเมื่อ {latestPendingDraft.created_at}
+              </div>
             </div>
-
-            {/* Term Summary info */}
-            {currentTerm && (
-              <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#64748b', flexWrap: 'wrap' }}>
-                <div><strong>ปีที่ดำรงตำแหน่ง:</strong> พ.ศ. {currentTerm.year_start_be || '-'} – {currentTerm.year_end_be || '-'}</div>
-                <div><strong>กรรมการ:</strong> {termDetails?.directors?.length || 0} ท่าน</div>
-                <div><strong>ที่ปรึกษา:</strong> {termDetails?.advisors?.length || 0} ท่าน</div>
-                <div><strong>ผู้ตรวจสอบ:</strong> {termDetails?.auditors?.length || 0} ท่าน</div>
-                <div><strong>คณะกรรมการย่อย:</strong> {termDetails?.groups?.length || 0} คณะ</div>
-                {currentTerm.note && <div><strong>หมายเหตุ:</strong> {currentTerm.note}</div>}
-              </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => handleLoadRevisionAsDraft(latestPendingDraft)}
+            >
+              โหลดมาแก้ไขต่อ
+            </button>
+            {currentMeta.canPublish && (
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                disabled={publishingId === latestPendingDraft.id}
+                onClick={() => handlePublishRevision(latestPendingDraft.id)}
+              >
+                {publishingId === latestPendingDraft.id ? 'กำลังเผยแพร่...' : 'อนุมัติและเผยแพร่ทันที'}
+              </button>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Sub-tabs: Category Navigation */}
-          {currentTerm && (
-            <div>
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid #cbd5e1' }}>
-                {[
-                  { key: 'director', label: 'คณะกรรมการดำเนินงาน', count: termDetails?.directors?.length },
-                  { key: 'advisor', label: 'ที่ปรึกษาสหกรณ์', count: termDetails?.advisors?.length },
-                  { key: 'auditor', label: 'ผู้ตรวจสอบกิจการ', count: termDetails?.auditors?.length },
-                  { key: 'groups', label: 'คณะกรรมการย่อย', count: termDetails?.groups?.length },
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setBoardCategory(tab.key)}
-                    style={{
-                      padding: '0.6rem 1rem',
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      borderBottom: boardCategory === tab.key ? '2px solid #2563eb' : '2px solid transparent',
-                      color: boardCategory === tab.key ? '#2563eb' : '#475569',
-                    }}
-                  >
-                    {tab.label} ({tab.count ?? 0})
-                  </button>
-                ))}
-              </div>
+      {/* ─────────────────────────────────────────────────────────────
+          Tab Navigation
+      ───────────────────────────────────────────────────────────── */}
+      <div
+        className="admin-tabs"
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderBottom: '2px solid var(--border-color)',
+          marginBottom: '1.25rem',
+          overflowX: 'auto',
+          paddingBottom: '0.25rem'
+        }}
+      >
+        {TAB_CONFIGS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          const count =
+            tab.key === 'history'
+              ? currentSectionData.history?.length || 0
+              : (draftCopies[tab.key] || []).length;
 
-              {/* Subgroups Tab */}
-              {boardCategory === 'groups' ? (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>คณะกรรมการย่อยใน{currentTerm.term_name}</h3>
-                    <PermissionGuard permission="people.create">
-                      <button type="button" className="admin-btn-primary" onClick={handleOpenAddGroup}>
-                        <Plus size={16} /> เพิ่มคณะกรรมการย่อย
-                      </button>
-                    </PermissionGuard>
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              className={`tab-btn ${isActive ? 'active' : ''}`}
+              onClick={() => {
+                if (isTabDirty && !window.confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึกร่าง ต้องการเปลี่ยนหมวดหรือไม่?')) {
+                  return;
+                }
+                setActiveTab(tab.key);
+                setSearchTerm('');
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.65rem 1rem',
+                border: 'none',
+                background: isActive ? 'var(--primary-50, #eff6ff)' : 'transparent',
+                color: isActive ? 'var(--primary-700, #1d4ed8)' : 'var(--text-muted)',
+                fontWeight: isActive ? 700 : 500,
+                borderRadius: '8px 8px 0 0',
+                borderBottom: isActive ? '3px solid var(--primary-600, #2563eb)' : '3px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Icon size={16} />
+              <span>{tab.label}</span>
+              <span
+                className="badge"
+                style={{
+                  fontSize: '0.75rem',
+                  background: isActive ? 'var(--primary-600)' : 'var(--bg-subtle)',
+                  color: isActive ? '#fff' : 'var(--text-muted)'
+                }}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          Main Content: Table or History View
+      ───────────────────────────────────────────────────────────── */}
+      {loading ? (
+        <LoadingSkeleton count={6} />
+      ) : activeTab === 'history' ? (
+        /* History & Draft View */
+        <div className="surface-card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.15rem', color: 'var(--primary-900)', marginBottom: '1rem' }}>
+            ประวัติการแก้ไขและสถานะการเผยแพร่ข้อมูลบุคลากร
+          </h3>
+          {(!currentSectionData.history || currentSectionData.history.length === 0) ? (
+            <EmptyState
+              title="ยังไม่มีประวัติการบันทึกร่างหรือเผยแพร่"
+              description="เมื่อมีการบันทึกร่างหรือเผยแพร่ข้อมูลบุคลากร ประวัติและการตรวจสอบย้อนหลังจะปรากฏที่นี่"
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {currentSectionData.history.map((rev) => (
+                <div
+                  key={rev.id}
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: '1rem 1.25rem',
+                    background: rev.state === 'draft' ? 'var(--amber-50, #fffbeb)' : 'var(--surface)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '1rem' }}>
+                        ร่าง #{rev.id} ({rev.section})
+                      </span>
+                      <StatusBadge
+                        status={rev.state === 'published' ? 'active' : rev.state === 'draft' ? 'pending' : 'inactive'}
+                        label={rev.state === 'published' ? 'เผยแพร่แล้ว' : rev.state === 'draft' ? 'รออนุมัติ' : 'ปฏิเสธ'}
+                      />
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                      มีผลวันที่: <strong>{rev.effective_on}</strong>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
-                    {(termDetails?.groups || []).map((grp) => (
-                      <div
-                        key={grp.id}
-                        className="surface-card"
-                        style={{
-                          padding: '1.25rem',
-                          background: '#ffffff',
-                          borderRadius: '10px',
-                          border: '1px solid #e2e8f0',
-                        }}
+                  <p style={{ margin: '0.5rem 0', color: 'var(--text-main)' }}>
+                    <strong>เหตุผล:</strong> {rev.note}
+                  </p>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    <div>
+                      ผู้บันทึก: #{rev.created_by} เมื่อ {rev.created_at}
+                      {rev.published_by && ` | ผู้อนุมัติ: #${rev.published_by} เมื่อ ${rev.published_at}`}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <a
+                        href={rev.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-sm btn-outline"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                          <div>
-                            <h4 style={{ margin: '0 0 0.25rem 0', color: '#0f172a', fontSize: '1.05rem' }}>{grp.title}</h4>
-                            {grp.description && <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>{grp.description}</p>}
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.25rem' }}>
-                            <button
-                              type="button"
-                              className="admin-btn-icon"
-                              title="ลบคณะย่อย"
-                              onClick={() => handleDeleteGroup(grp)}
-                              style={{ color: '#ef4444' }}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>
-                              รายชื่อกรรมการ ({grp.members?.length || 0})
-                            </span>
-                            <PermissionGuard permission="people.edit">
-                              <button
-                                type="button"
-                                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                                onClick={() => handleOpenAssignMember(grp)}
-                              >
-                                <Plus size={14} /> มอบหมายกรรมการ
-                              </button>
-                            </PermissionGuard>
-                          </div>
-
-                          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                            {(grp.members || []).map((m) => (
-                              <li
-                                key={m.link_id || m.member_id || m.id}
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  padding: '0.4rem 0',
-                                  borderBottom: '1px dashed #f1f5f9',
-                                  fontSize: '0.85rem',
-                                }}
-                              >
-                                <div>
-                                  <span style={{ fontWeight: 600, color: '#1e293b' }}>{m.name}</span>
-                                  <span style={{ color: '#64748b', marginLeft: '0.5rem' }}>— {m.role_in_group}</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveMemberFromGroup(grp, m.member_id || m.id)}
-                                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem' }}
-                                  title="นำออกจากคณะย่อย"
-                                >
-                                  <XCircle size={14} />
-                                </button>
-                              </li>
-                            ))}
-                            {(!grp.members || grp.members.length === 0) && (
-                              <li style={{ padding: '0.5rem 0', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>
-                                ยังไม่มีการมอบหมายกรรมการ
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      </div>
-                    ))}
+                        <ExternalLink size={13} />
+                        <span>เอกสารอ้างอิง</span>
+                      </a>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        onClick={() => handleLoadRevisionAsDraft(rev)}
+                      >
+                        นำข้อมูลมาแก้ไข
+                      </button>
+                      {rev.state === 'draft' && currentMeta.canPublish && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary"
+                          disabled={publishingId === rev.id}
+                          onClick={() => handlePublishRevision(rev.id)}
+                        >
+                          {publishingId === rev.id ? 'กำลังเผยแพร่...' : 'อนุมัติเผยแพร่'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                /* Member Lists: Directors, Advisors, Auditors */
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>
-                      {boardCategory === 'director' ? 'รายชื่อคณะกรรมการดำเนินงาน' : boardCategory === 'advisor' ? 'รายชื่อที่ปรึกษา' : 'รายชื่อผู้ตรวจสอบกิจการ'} ({termDetails?.[boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors']?.length || 0})
-                    </h3>
-                    <PermissionGuard permission="people.create">
-                      <button type="button" className="admin-btn-primary" onClick={handleOpenAddMember}>
-                        <Plus size={16} /> เพิ่ม{boardCategory === 'director' ? 'กรรมการ' : boardCategory === 'advisor' ? 'ที่ปรึกษา' : 'ผู้ตรวจสอบ'}
-                      </button>
-                    </PermissionGuard>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                    {(termDetails?.[boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors'] || []).map((m, index) => (
-                      <div
-                        key={m.id}
-                        className="surface-card"
-                        style={{
-                          padding: '1rem',
-                          background: '#ffffff',
-                          borderRadius: '10px',
-                          border: m.is_chairperson ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          position: 'relative',
-                        }}
-                      >
-                        {m.is_chairperson && (
-                          <span
-                            style={{
-                              position: 'absolute',
-                              top: '0.5rem',
-                              right: '0.5rem',
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '9999px',
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              border: '1px solid #bfdbfe',
-                            }}
-                          >
-                            ประธาน
-                          </span>
-                        )}
-
-                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <img
-                            src={resolveMediaUrl(m.image_url, '/assets/img/logo.webp')}
-                            alt={m.name}
-                            style={{
-                              width: '56px',
-                              height: '56px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              border: '2px solid #e2e8f0',
-                              background: '#f8fafc',
-                            }}
-                            onError={(e) => { e.currentTarget.src = '/assets/img/logo.webp'; }}
-                          />
-                          <div style={{ overflow: 'hidden' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ลำดับที่ {index + 1}</div>
-                            <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {m.name}
-                            </h4>
-                            <div style={{ fontSize: '0.85rem', color: '#2563eb', fontWeight: 600 }}>{m.position}</div>
-                          </div>
-                        </div>
-
-                        {m.workplace && (
-                          <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '0.5rem' }}>
-                            หน่วยงาน: {m.workplace}
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem', marginTop: 'auto' }}>
-                          <div style={{ display: 'flex', gap: '0.25rem' }}>
-                            <button
-                              type="button"
-                              className="admin-btn-icon"
-                              title="ย้ายขึ้น"
-                              disabled={index === 0}
-                              onClick={() => handleMoveMember(m, 'up')}
-                              style={{ opacity: index === 0 ? 0.3 : 1 }}
-                            >
-                              <ArrowUp size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              className="admin-btn-icon"
-                              title="ย้ายลง"
-                              disabled={index === (termDetails?.[boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors']?.length || 0) - 1}
-                              onClick={() => handleMoveMember(m, 'down')}
-                              style={{ opacity: index === (termDetails?.[boardCategory === 'director' ? 'directors' : boardCategory === 'advisor' ? 'advisors' : 'auditors']?.length || 0) - 1 ? 0.3 : 1 }}
-                            >
-                              <ArrowDown size={15} />
-                            </button>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '0.25rem' }}>
-                            <PermissionGuard permission="people.edit">
-                              <button
-                                type="button"
-                                className="admin-btn-icon"
-                                title="แก้ไข"
-                                onClick={() => handleOpenEditMember(m)}
-                              >
-                                <Edit2 size={15} />
-                              </button>
-                            </PermissionGuard>
-                            <PermissionGuard permission="people.delete">
-                              <button
-                                type="button"
-                                className="admin-btn-icon"
-                                title="ลบ"
-                                style={{ color: '#ef4444' }}
-                                onClick={() => handleDeleteMember(m)}
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </PermissionGuard>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
           )}
         </div>
       ) : (
-        /* Staff Management Tab */
+        /* Personnel List Table */
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>รายชื่อฝ่ายจัดการและเจ้าหน้าที่สหกรณ์ ({staff.length})</h3>
-            <PermissionGuard permission="people.create">
-              <button
-                type="button"
-                className="admin-btn-primary"
-                onClick={() => {
-                  setStaffForm(INITIAL_STAFF_FORM);
-                  setStaffDrawerOpen(true);
-                }}
-              >
-                <Plus size={16} /> เพิ่มเจ้าหน้าที่
-              </button>
-            </PermissionGuard>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {staff.map((s) => (
-              <div
-                key={s.id}
-                className="surface-card"
-                style={{
-                  padding: '1rem',
-                  background: '#ffffff',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                }}
-              >
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <img
-                    src={resolveMediaUrl(s.photo, '/assets/img/logo.webp')}
-                    alt={s.name}
-                    style={{
-                      width: '52px',
-                      height: '52px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid #e2e8f0',
-                      background: '#f8fafc',
-                    }}
-                    onError={(e) => { e.currentTarget.src = '/assets/img/logo.webp'; }}
-                  />
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>{s.name}</h4>
-                    <div style={{ fontSize: '0.85rem', color: '#2563eb', fontWeight: 600 }}>{s.position}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{s.department || '-'}</div>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '0.75rem' }}>
-                  {s.phone && <div><Phone size={12} style={{ display: 'inline', marginRight: '0.25rem' }} />{s.phone}</div>}
-                  {s.email && <div><Mail size={12} style={{ display: 'inline', marginRight: '0.25rem' }} />{s.email}</div>}
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
-                  <PermissionGuard permission="people.edit">
-                    <button
-                      type="button"
-                      className="admin-btn-icon"
-                      onClick={() => {
-                        setStaffForm(s);
-                        setStaffDrawerOpen(true);
-                      }}
-                    >
-                      <Edit2 size={15} />
-                    </button>
-                  </PermissionGuard>
-                  <PermissionGuard permission="people.delete">
-                    <button
-                      type="button"
-                      className="admin-btn-icon"
-                      style={{ color: '#ef4444' }}
-                      onClick={async () => {
-                        const confirm = await alertService.confirmDelete(s.name, 'เจ้าหน้าที่ท่านนี้');
-                        if (!confirm) return;
-                        try {
-                          await memberAdminApi(`/api/admin/board-staff/staff/${s.id}`, { method: 'DELETE' });
-                          alertService.toast({ icon: 'success', title: 'ลบข้อมูลสำเร็จ' });
-                          setRefreshKey((k) => k + 1);
-                        } catch (err) {
-                          alertService.error(err.message || 'ลบไม่สำเร็จ');
-                        }
-                      }}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </PermissionGuard>
-                </div>
+          {/* Toolbar & Filters */}
+          <div
+            className="surface-card"
+            style={{
+              padding: '1rem 1.25rem',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '360px' }}>
+                <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ paddingLeft: '2.2rem' }}
+                  placeholder="ค้นหาชื่อ, ตำแหน่ง, หน่วยงาน..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* --- DRAWERS & MODALS --- */}
-
-      {/* Member Form Drawer (Directors, Advisors, Auditors) */}
-      <CrudFormDrawer
-        isOpen={memberDrawerOpen}
-        onClose={() => setMemberDrawerOpen(false)}
-        title={memberForm.id ? `แก้ไข${boardCategory === 'director' ? 'กรรมการ' : boardCategory === 'advisor' ? 'ที่ปรึกษา' : 'ผู้ตรวจสอบ'}` : `เพิ่ม${boardCategory === 'director' ? 'กรรมการ' : boardCategory === 'advisor' ? 'ที่ปรึกษา' : 'ผู้ตรวจสอบ'}`}
-        onSubmit={handleSubmitMember}
-        isBusy={formBusy}
-      >
-        <div className="admin-form-group">
-          <label className="admin-form-label">ชื่อ-นามสกุล *</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={memberForm.name}
-            onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })}
-            placeholder="เช่น นางสาวสมใจ รักษ์ดี"
-            required
-          />
-          {formErrors.name && <span className="admin-form-error">{formErrors.name}</span>}
-        </div>
-
-        <div className="admin-form-group">
-          <label className="admin-form-label">ตำแหน่ง *</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={memberForm.position}
-            onChange={(e) => setMemberForm({ ...memberForm, position: e.target.value })}
-            placeholder="เช่น ประธานกรรมการ, รองประธาน, กรรมการ"
-            required
-          />
-          {formErrors.position && <span className="admin-form-error">{formErrors.position}</span>}
-        </div>
-
-        {boardCategory === 'director' && (
-          <div className="admin-form-group">
-            <label className="admin-form-label">บทบาทหลัก</label>
-            <select
-              className="admin-form-select"
-              value={memberForm.role_type}
-              onChange={(e) => setMemberForm({ ...memberForm, role_type: e.target.value })}
-            >
-              <option value="president">ประธานกรรมการ (President)</option>
-              <option value="vice_president">รองประธานกรรมการ (Vice President)</option>
-              <option value="treasurer">เหรัญญิก (Treasurer)</option>
-              <option value="secretary">เลขานุการ (Secretary)</option>
-              <option value="director">กรรมการ (Director)</option>
-            </select>
-          </div>
-        )}
-
-        <div className="admin-form-group">
-          <label className="admin-form-label">หน่วยงาน / ที่ทำงาน (Workplace)</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={memberForm.workplace || ''}
-            onChange={(e) => setMemberForm({ ...memberForm, workplace: e.target.value })}
-            placeholder="เช่น โรงพยาบาลระยอง, สสจ.ระยอง"
-          />
-        </div>
-
-        <div className="admin-form-group">
-          <label className="admin-form-label">รูปถ่ายบุคลากร</label>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              disabled={uploadingPhoto}
-              style={{ fontSize: '0.85rem' }}
-            />
-            {uploadingPhoto && <span style={{ fontSize: '0.8rem', color: '#2563eb' }}>กำลังอัปโหลด...</span>}
-          </div>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={memberForm.image_url || ''}
-            onChange={(e) => setMemberForm({ ...memberForm, image_url: e.target.value })}
-            placeholder="URL รูปภาพ เช่น /assets/img/committee/... หรือ /storage/uploads/..."
-          />
-          {memberForm.image_url && (
-            <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <img
-                src={resolveMediaUrl(memberForm.image_url)}
-                alt="Preview"
-                style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #cbd5e1' }}
-              />
-              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>ตัวอย่างรูปถ่าย</span>
+              {activeSectionKey === 'boards' && availableTerms.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Filter size={15} color="var(--text-muted)" />
+                  <select
+                    className="form-control"
+                    value={selectedTermFilter}
+                    onChange={(e) => setSelectedTermFilter(e.target.value)}
+                    style={{ minWidth: '130px' }}
+                  >
+                    <option value="ALL">ทุกวาระ</option>
+                    {availableTerms.map((term) => (
+                      <option key={term} value={term}>{term}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+              {isTabDirty ? (
+                <span className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <AlertCircle size={13} />
+                  <span>มีการแก้ไขในร่างที่ยังไม่ได้บันทึก</span>
+                </span>
+              ) : (
+                <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <CheckCircle2 size={13} />
+                  <span>ข้อมูลตรงตามที่เผยแพร่บนหน้าเว็บ</span>
+                </span>
+              )}
+              <span style={{ color: 'var(--text-muted)' }}>
+                แสดง {filteredList.length} รายการ
+              </span>
+            </div>
+          </div>
+
+          {/* Table */}
+          {filteredList.length === 0 ? (
+            <EmptyState
+              title="ไม่พบข้อมูลบุคลากรในหมวดนี้"
+              description={searchTerm ? 'ไม่พบข้อมูลที่ตรงกับคำค้นหา กรุณาลองค้นหาด้วยคำอื่น' : 'ยังไม่มีรายการบุคลากรในหมวดนี้ คลิก "เพิ่มรายการ" เพื่อเริ่มต้น'}
+            />
+          ) : (
+            <CrudDataTable
+              columns={tableColumns}
+              data={filteredList}
+              keyField={activeSectionKey === 'advisors' || activeSectionKey === 'auditors' ? undefined : 'id'}
+            />
           )}
         </div>
+      )}
 
-        {boardCategory === 'director' && (
-          <div className="admin-form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input
-              type="checkbox"
-              id="is_chairperson"
-              checked={memberForm.is_chairperson}
-              onChange={(e) => setMemberForm({ ...memberForm, is_chairperson: e.target.checked })}
-            />
-            <label htmlFor="is_chairperson" style={{ fontWeight: 600, color: '#1e293b', cursor: 'pointer' }}>
-              เป็นประธานกรรมการ (Chairperson)
-            </label>
-          </div>
+      {/* ─────────────────────────────────────────────────────────────
+          Form Drawer (Add / Edit)
+      ───────────────────────────────────────────────────────────── */}
+      <CrudFormDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={
+          editingIndex !== null
+            ? `แก้ไขข้อมูล: ${TAB_CONFIGS.find((t) => t.key === activeSectionKey)?.label}`
+            : `เพิ่ม: ${TAB_CONFIGS.find((t) => t.key === activeSectionKey)?.label}`
+        }
+        subtitle="การแก้ไขจะถูกนำเข้าสู่ร่างของหมวดนี้ และต้องบันทึกร่าง/เผยแพร่ก่อนแสดงบนหน้าเว็บจริง"
+        onSubmit={handleSaveForm}
+        isEdit={editingIndex !== null}
+      >
+        {activeSectionKey === 'boards' && (
+          <>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                ชื่อ - นามสกุล <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-control ${formErrors.name ? 'is-invalid' : ''}`}
+                value={formData.name || ''}
+                onChange={(e) => handleFormChange('name', e.target.value)}
+                placeholder="เช่น นางสาวอุษา อิศรางกูร ณ อยุธยา"
+                required
+              />
+              {formErrors.name && <div style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.name}</div>}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                ตำแหน่งในคณะกรรมการ <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-control ${formErrors.position ? 'is-invalid' : ''}`}
+                value={formData.position || ''}
+                onChange={(e) => handleFormChange('position', e.target.value)}
+                placeholder="เช่น ประธานกรรมการ, รองประธาน, กรรมการ, เหรัญญิก, เลขานุการ"
+                required
+              />
+              {formErrors.position && <div style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.position}</div>}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>วาระ / ชุดที่</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.term || ''}
+                onChange={(e) => handleFormChange('term', e.target.value)}
+                placeholder="เช่น ชุดที่ 38 หรือ ชุดที่ 39"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>หน่วยงานต้นสังกัด / ที่ทำงาน</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.workplace || ''}
+                onChange={(e) => handleFormChange('workplace', e.target.value)}
+                placeholder="เช่น โรงพยาบาลระยอง หรือ สำนักงานสาธารณสุขจังหวัดระยอง"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>รูปภาพประจำตัว</label>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.image || ''}
+                  onChange={(e) => handleFormChange('image', e.target.value)}
+                  placeholder="เช่น /assets/img/committee/... หรือ /storage/uploads/..."
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}
+                >
+                  <Upload size={15} />
+                  <span>{uploadingImage ? 'อัปโหลด...' : 'เลือกไฟล์'}</span>
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleUploadFile}
+                />
+              </div>
+              {formData.image && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border-color)' }}>
+                    <SafeImage src={formData.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>ตัวอย่างรูปภาพ</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeSectionKey === 'staff' && (
+          <>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                ชื่อ - นามสกุล <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-control ${formErrors.name ? 'is-invalid' : ''}`}
+                value={formData.name || ''}
+                onChange={(e) => handleFormChange('name', e.target.value)}
+                placeholder="เช่น นางนริศษา แย้มกลิ่น"
+                required
+              />
+              {formErrors.name && <div style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.name}</div>}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                ตำแหน่ง <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-control ${formErrors.position ? 'is-invalid' : ''}`}
+                value={formData.position || ''}
+                onChange={(e) => handleFormChange('position', e.target.value)}
+                placeholder="เช่น ผู้จัดการ, เจ้าหน้าที่การเงิน, เจ้าหน้าที่สินเชื่อ"
+                required
+              />
+              {formErrors.position && <div style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.position}</div>}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>ฝ่าย / แผนก</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.department || ''}
+                onChange={(e) => handleFormChange('department', e.target.value)}
+                placeholder="เช่น ฝ่ายจัดการ หรือ ฝ่ายสินเชื่อ"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>รูปภาพประจำตัว</label>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.image || ''}
+                  onChange={(e) => handleFormChange('image', e.target.value)}
+                  placeholder="เช่น /assets/img/officer/... หรือ /storage/uploads/..."
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}
+                >
+                  <Upload size={15} />
+                  <span>{uploadingImage ? 'อัปโหลด...' : 'เลือกไฟล์'}</span>
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleUploadFile}
+                />
+              </div>
+              {formData.image && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border-color)' }}>
+                    <SafeImage src={formData.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>ตัวอย่างรูปภาพ</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {(activeSectionKey === 'advisors' || activeSectionKey === 'auditors') && (
+          <>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                ชื่อ - นามสกุล <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-control ${formErrors.name ? 'is-invalid' : ''}`}
+                value={formData.name || ''}
+                onChange={(e) => handleFormChange('name', e.target.value)}
+                placeholder="เช่น นายแพทย์สุรวิทย์ ศักดานุภาพ"
+                required
+              />
+              {formErrors.name && <div style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.name}</div>}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                ตำแหน่งหน้าที่ <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-control ${formErrors.position ? 'is-invalid' : ''}`}
+                value={formData.position || ''}
+                onChange={(e) => handleFormChange('position', e.target.value)}
+                placeholder={activeSectionKey === 'advisors' ? 'เช่น ที่ปรึกษากิตติมศักดิ์, ที่ปรึกษา' : 'เช่น ประธานผู้ตรวจสอบกิจการ, ผู้ตรวจสอบกิจการ'}
+                required
+              />
+              {formErrors.position && <div style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.position}</div>}
+            </div>
+          </>
+        )}
+
+        {activeSectionKey === 'groups' && (
+          <>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                ชื่อคณะกรรมการย่อย <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-control ${formErrors.title ? 'is-invalid' : ''}`}
+                value={formData.title || ''}
+                onChange={(e) => handleFormChange('title', e.target.value)}
+                placeholder="เช่น คณะกรรมการเงินกู้, คณะกรรมการศึกษาและประชาสัมพันธ์"
+                required
+              />
+              {formErrors.title && <div style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.title}</div>}
+            </div>
+
+            <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>
+                  กรรมการในคณะย่อย ({formData.members ? formData.members.length : 0} ท่าน)
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  onClick={() => {
+                    const firstBoardId = draftCopies.boards?.[0]?.id || 1;
+                    const members = formData.members ? [...formData.members] : [];
+                    members.push([firstBoardId, 'กรรมการ']);
+                    handleFormChange('members', members);
+                  }}
+                >
+                  <Plus size={14} />
+                  <span>เพิ่มกรรมการ</span>
+                </button>
+              </div>
+
+              {formData.members && formData.members.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {formData.members.map(([boardId, roleInGroup], mIdx) => (
+                    <div
+                      key={mIdx}
+                      style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        alignItems: 'center',
+                        background: 'var(--bg-subtle)',
+                        padding: '0.5rem',
+                        borderRadius: '6px'
+                      }}
+                    >
+                      <select
+                        className="form-control"
+                        value={boardId}
+                        onChange={(e) => {
+                          const members = [...formData.members];
+                          members[mIdx] = [Number(e.target.value), roleInGroup];
+                          handleFormChange('members', members);
+                        }}
+                        style={{ flex: 1 }}
+                      >
+                        {(draftCopies.boards || []).map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.position})
+                          </option>
+                        ))}
+                      </select>
+
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={roleInGroup}
+                        onChange={(e) => {
+                          const members = [...formData.members];
+                          members[mIdx] = [boardId, e.target.value];
+                          handleFormChange('members', members);
+                        }}
+                        placeholder="ตำแหน่งในคณะย่อย"
+                        style={{ flex: 1 }}
+                      />
+
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => {
+                          const members = formData.members.filter((_, idx) => idx !== mIdx);
+                          handleFormChange('members', members);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  ยังไม่มีกรรมการในคณะนี้ คลิก "เพิ่มกรรมการ" ด้านบน
+                </p>
+              )}
+            </div>
+          </>
         )}
       </CrudFormDrawer>
 
-      {/* Staff Form Drawer */}
-      <CrudFormDrawer
-        isOpen={staffDrawerOpen}
-        onClose={() => setStaffDrawerOpen(false)}
-        title={staffForm.id ? 'แก้ไขเจ้าหน้าที่' : 'เพิ่มเจ้าหน้าที่ใหม่'}
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setFormBusy(true);
-          try {
-            const endpoint = staffForm.id ? `/api/admin/board-staff/staff/${staffForm.id}` : '/api/admin/board-staff/staff';
-            const method = staffForm.id ? 'PUT' : 'POST';
-            await memberAdminApi(endpoint, { method, data: staffForm });
-            alertService.toast({ icon: 'success', title: 'บันทึกข้อมูลเจ้าหน้าที่สำเร็จ' });
-            setStaffDrawerOpen(false);
-            setRefreshKey((k) => k + 1);
-          } catch (err) {
-            alertService.error(err.message || 'บันทึกไม่สำเร็จ');
-          } finally {
-            setFormBusy(false);
-          }
-        }}
-        isBusy={formBusy}
-      >
-        <div className="admin-form-group">
-          <label className="admin-form-label">ชื่อ-นามสกุล *</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={staffForm.name}
-            onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
-            required
-          />
-        </div>
-        <div className="admin-form-group">
-          <label className="admin-form-label">ตำแหน่ง *</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={staffForm.position}
-            onChange={(e) => setStaffForm({ ...staffForm, position: e.target.value })}
-            required
-          />
-        </div>
-        <div className="admin-form-group">
-          <label className="admin-form-label">ฝ่าย / กลุ่มงาน</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={staffForm.department || ''}
-            onChange={(e) => setStaffForm({ ...staffForm, department: e.target.value })}
-          />
-        </div>
-        <div className="admin-form-group">
-          <label className="admin-form-label">เบอร์โทรศัพท์</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={staffForm.phone || ''}
-            onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
-          />
-        </div>
-        <div className="admin-form-group">
-          <label className="admin-form-label">อีเมล</label>
-          <input
-            type="email"
-            className="admin-form-input"
-            value={staffForm.email || ''}
-            onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-          />
-        </div>
-        <div className="admin-form-group">
-          <label className="admin-form-label">URL รูปถ่าย</label>
-          <input
-            type="text"
-            className="admin-form-input"
-            value={staffForm.photo || ''}
-            onChange={(e) => setStaffForm({ ...staffForm, photo: e.target.value })}
-          />
-        </div>
-      </CrudFormDrawer>
-
-      {/* Create Term Modal */}
-      {termModalOpen && (
-        <div className="admin-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="surface-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '1.5rem', width: '90%', maxWidth: '500px' }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a' }}>สร้างวาระคณะกรรมการใหม่</h3>
-            <form onSubmit={handleSubmitCreateTerm}>
-              <div className="admin-form-group">
-                <label className="admin-form-label">หมายเลขวาระ (ตัวเลข) *</label>
-                <input
-                  type="number"
-                  className="admin-form-input"
-                  value={termForm.term_number}
-                  onChange={(e) => setTermForm({ ...termForm, term_number: e.target.value, term_name: `ชุดที่ ${e.target.value}` })}
-                  min={1}
-                  required
-                />
-              </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label">ชื่อวาระ *</label>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  value={termForm.term_name}
-                  onChange={(e) => setTermForm({ ...termForm, term_name: e.target.value })}
-                  required
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div className="admin-form-group">
-                  <label className="admin-form-label">ปีเริ่มต้น (พ.ศ.)</label>
-                  <input
-                    type="number"
-                    className="admin-form-input"
-                    value={termForm.year_start_be}
-                    onChange={(e) => setTermForm({ ...termForm, year_start_be: e.target.value })}
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label className="admin-form-label">ปีสิ้นสุด (พ.ศ.)</label>
-                  <input
-                    type="number"
-                    className="admin-form-input"
-                    value={termForm.year_end_be}
-                    onChange={(e) => setTermForm({ ...termForm, year_end_be: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label">หมายเหตุ</label>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  value={termForm.note}
-                  onChange={(e) => setTermForm({ ...termForm, note: e.target.value })}
-                  placeholder="เช่น เตรียมการสำหรับการเลือกตั้งประจำปี"
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-                <button type="button" className="admin-btn-secondary" onClick={() => setTermModalOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="admin-btn-primary" disabled={formBusy}>
-                  สร้างวาระ (ฉบับร่าง)
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Copy Term Modal */}
-      {copyModalOpen && (
-        <div className="admin-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="surface-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '1.5rem', width: '90%', maxWidth: '500px' }}>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>คัดลอกวาระไปยังฉบับร่างใหม่</h3>
-            <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#64748b' }}>
-              ระบบจะคัดลอกรายชื่อกรรมการ, ที่ปรึกษา, ผู้ตรวจสอบ และคณะย่อยจาก <strong>{currentTerm?.term_name}</strong> ไปยังวาระใหม่โดยสมบูรณ์
-            </p>
-            <form onSubmit={handleSubmitCopyTerm}>
-              <div className="admin-form-group">
-                <label className="admin-form-label">หมายเลขวาระใหม่ (ตัวเลข) *</label>
-                <input
-                  type="number"
-                  className="admin-form-input"
-                  value={copyForm.term_number}
-                  onChange={(e) => setCopyForm({ ...copyForm, term_number: e.target.value, term_name: `ชุดที่ ${e.target.value}` })}
-                  min={1}
-                  required
-                />
-              </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label">ชื่อวาระใหม่ *</label>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  value={copyForm.term_name}
-                  onChange={(e) => setCopyForm({ ...copyForm, term_name: e.target.value })}
-                  required
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-                <button type="button" className="admin-btn-secondary" onClick={() => setCopyModalOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="admin-btn-primary" disabled={formBusy}>
-                  ยืนยันการคัดลอก
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Modal */}
-      {scheduleModalOpen && (
-        <div className="admin-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="surface-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '1.5rem', width: '90%', maxWidth: '450px' }}>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>ตั้งเวลาเผยแพร่ {currentTerm?.term_name}</h3>
-            <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#64748b' }}>
-              เมื่อถึงเวลาที่กำหนด ระบบจะปรับวาระนี้ให้เป็นวาระที่เผยแพร่อัตโนมัติ
-            </p>
-            <form onSubmit={handleSubmitSchedule}>
-              <div className="admin-form-group">
-                <label className="admin-form-label">วันและเวลาที่ต้องการเผยแพร่ *</label>
-                <input
-                  type="datetime-local"
-                  className="admin-form-input"
-                  value={scheduleForm.publish_at}
-                  onChange={(e) => setScheduleForm({ publish_at: e.target.value })}
-                  required
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-                <button type="button" className="admin-btn-secondary" onClick={() => setScheduleModalOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="admin-btn-primary" disabled={formBusy}>
-                  บันทึกการตั้งเวลา
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Group Modal */}
-      {groupModalOpen && (
-        <div className="admin-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="surface-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '1.5rem', width: '90%', maxWidth: '480px' }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a' }}>เพิ่มคณะกรรมการย่อย</h3>
-            <form onSubmit={handleSaveGroup}>
-              <div className="admin-form-group">
-                <label className="admin-form-label">ชื่อคณะกรรมการย่อย *</label>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  value={groupForm.title}
-                  onChange={(e) => setGroupForm({ ...groupForm, title: e.target.value })}
-                  placeholder="เช่น คณะกรรมการเงินกู้"
-                  required
-                />
-              </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label">คำอธิบาย</label>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  value={groupForm.description}
-                  onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
-                  placeholder="รายละเอียดหน้าที่ความรับผิดชอบ"
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-                <button type="button" className="admin-btn-secondary" onClick={() => setGroupModalOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="admin-btn-primary">
-                  บันทึก
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Member to Group Modal */}
-      {assignMemberModalOpen && (
-        <div className="admin-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="surface-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '1.5rem', width: '90%', maxWidth: '450px' }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a' }}>มอบหมายกรรมการในคณะย่อย</h3>
-            <form onSubmit={handleSaveAssignMember}>
-              <div className="admin-form-group">
-                <label className="admin-form-label">เลือกกรรมการ *</label>
-                <select
-                  className="admin-form-select"
-                  value={assignForm.member_id}
-                  onChange={(e) => setAssignForm({ ...assignForm, member_id: e.target.value })}
-                  required
-                >
-                  <option value="">-- กรุณาเลือกกรรมการ --</option>
-                  {(termDetails?.directors || []).map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.position})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label">บทบาทในคณะย่อย *</label>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  value={assignForm.role_in_group}
-                  onChange={(e) => setAssignForm({ ...assignForm, role_in_group: e.target.value })}
-                  placeholder="เช่น ประธานคณะกรรมการ, กรรมการ, เลขานุการ"
-                  required
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-                <button type="button" className="admin-btn-secondary" onClick={() => setAssignMemberModalOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="admin-btn-primary">
-                  บันทึก
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Public Preview Modal */}
-      {previewModalOpen && currentTerm && (
-        <div className="admin-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '1rem' }}>
-          <div className="surface-card" style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '960px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-              <div>
-                <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  ตัวอย่างการแสดงผลหน้าสาธารณะ (/board_committee)
-                </span>
-                <h2 style={{ margin: '0.25rem 0 0 0', color: '#0f172a' }}>
-                  ทำเนียบคณะกรรมการดำเนินการ {currentTerm.term_name}
-                </h2>
-              </div>
+      {/* ─────────────────────────────────────────────────────────────
+          Save Draft Modal
+      ───────────────────────────────────────────────────────────── */}
+      {saveDraftModalOpen && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="surface-card"
+            style={{
+              width: 'min(100%, 540px)',
+              padding: '1.75rem',
+              borderRadius: '12px',
+              background: '#fff'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--primary-900)', margin: 0 }}>
+                บันทึกร่างข้อมูล: {TAB_CONFIGS.find((t) => t.key === activeSectionKey)?.label}
+              </h3>
               <button
                 type="button"
-                className="admin-btn-secondary"
+                className="btn btn-sm btn-outline"
+                onClick={() => setSaveDraftModalOpen(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmSaveDraft}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  เหตุผล / บันทึกการแก้ไข <span style={{ color: 'red' }}>*</span>
+                </label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={draftNote}
+                  onChange={(e) => setDraftNote(e.target.value)}
+                  placeholder="เช่น ปรับปรุงรายชื่อคณะกรรมการชุดที่ 38 ตามมติที่ประชุม..."
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  แหล่งอ้างอิงเอกสาร (HTTPS) <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="url"
+                  className="form-control"
+                  value={draftSourceUrl}
+                  onChange={(e) => setDraftSourceUrl(e.target.value)}
+                  placeholder="https://..."
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    วันที่มีผล (ค.ศ.) <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={draftEffectiveOn}
+                    onChange={(e) => setDraftEffectiveOn(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    วันสิ้นสุด (ไม่บังคับ)
+                  </label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={draftExpiresOn}
+                    min={draftEffectiveOn}
+                    onChange={(e) => setDraftExpiresOn(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={savingDraft}
+                  onClick={() => setSaveDraftModalOpen(false)}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={savingDraft}
+                >
+                  {savingDraft ? 'กำลังบันทึกร่าง...' : 'ยืนยันบันทึกร่าง'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          Preview / Diff Modal (Draft vs Published)
+      ───────────────────────────────────────────────────────────── */}
+      {previewModalOpen && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="surface-card"
+            style={{
+              width: 'min(100%, 960px)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '1.75rem',
+              borderRadius: '12px',
+              background: '#fff'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--primary-900)', margin: 0 }}>
+                ตัวอย่างเปรียบเทียบ: ข้อมูลที่เผยแพร่อยู่ vs ร่างที่กำลังแก้ไข
+              </h3>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => setPreviewModalOpen(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              {/* Published Column */}
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+                <h4 style={{ color: 'var(--success-700, #15803d)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginTop: 0 }}>
+                  ข้อมูลปัจจุบันที่เผยแพร่อยู่บนหน้าเว็บ ({currentSectionData.value?.length || 0} รายการ)
+                </h4>
+                <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                  {(currentSectionData.value || []).map((item, idx) => (
+                    <div key={idx} style={{ padding: '0.4rem 0', borderBottom: '1px solid var(--bg-subtle)', fontSize: '0.85rem' }}>
+                      <strong>{idx + 1}. {item.name || (Array.isArray(item) ? item[0] : item.title)}</strong>
+                      <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                        ({item.position || (Array.isArray(item) ? item[1] : `กรรมการ ${item.members?.length || 0} คน`)})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Working Draft Column */}
+              <div style={{ border: '1px solid var(--primary-200, #bfdbfe)', borderRadius: '8px', padding: '1rem', background: 'var(--primary-50, #f8fafc)' }}>
+                <h4 style={{ color: 'var(--primary-700, #1d4ed8)', borderBottom: '1px solid var(--primary-200)', paddingBottom: '0.5rem', marginTop: 0 }}>
+                  ร่างที่กำลังแก้ไข ({currentWorkingList.length} รายการ)
+                </h4>
+                <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                  {currentWorkingList.map((item, idx) => (
+                    <div key={idx} style={{ padding: '0.4rem 0', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                      <strong>{idx + 1}. {item.name || (Array.isArray(item) ? item[0] : item.title)}</strong>
+                      <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                        ({item.position || (Array.isArray(item) ? item[1] : `กรรมการ ${item.members?.length || 0} คน`)})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
                 onClick={() => setPreviewModalOpen(false)}
               >
                 ปิดหน้าต่าง
               </button>
-            </div>
-
-            {/* Simulated Public Layout */}
-            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px' }}>
-              <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                <h3 style={{ margin: 0, color: '#1e3a8a', fontSize: '1.35rem' }}>
-                  คณะกรรมการดำเนินงาน {currentTerm.term_name}
-                </h3>
-                <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>
-                  สหกรณ์ออมทรัพย์สาธารณสุขจังหวัดระยอง จำกัด
-                </p>
-              </div>
-
-              {/* Directors Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                {(termDetails?.directors || []).map((d) => (
-                  <div
-                    key={d.id}
-                    style={{
-                      background: '#ffffff',
-                      borderRadius: '10px',
-                      padding: '1rem',
-                      textAlign: 'center',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                    }}
-                  >
-                    <img
-                      src={resolveMediaUrl(d.image_url, '/assets/img/logo.webp')}
-                      alt={d.name}
-                      style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        margin: '0 auto 0.75rem auto',
-                        display: 'block',
-                        border: '2px solid #e2e8f0',
-                      }}
-                      onError={(e) => { e.currentTarget.src = '/assets/img/logo.webp'; }}
-                    />
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#0f172a' }}>{d.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#2563eb', marginTop: '0.2rem' }}>{d.position}</div>
-                    {d.workplace && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>{d.workplace}</div>}
-                  </div>
-                ))}
-              </div>
-
-              {/* Subgroups */}
-              {(termDetails?.groups || []).map((grp) => (
-                <div key={grp.id} style={{ background: '#ffffff', borderRadius: '10px', padding: '1.25rem', marginBottom: '1rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>{grp.title}</h4>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#475569', fontSize: '0.9rem' }}>
-                    {(grp.members || []).map((m) => (
-                      <li key={m.link_id || m.member_id || m.id} style={{ padding: '0.2rem 0' }}>
-                        {m.name} — {m.role_in_group}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-
-              {/* Advisors & Auditors */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                <div style={{ background: '#ffffff', borderRadius: '10px', padding: '1.25rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>ที่ปรึกษาสหกรณ์</h4>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#475569', fontSize: '0.9rem' }}>
-                    {(termDetails?.advisors || []).map((adv) => (
-                      <li key={adv.id} style={{ padding: '0.2rem 0' }}>
-                        {adv.name} — {adv.position}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div style={{ background: '#ffffff', borderRadius: '10px', padding: '1.25rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>คณะผู้ตรวจสอบกิจการสหกรณ์</h4>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#475569', fontSize: '0.9rem' }}>
-                    {(termDetails?.auditors || []).map((aud) => (
-                      <li key={aud.id} style={{ padding: '0.2rem 0' }}>
-                        {aud.name} — {aud.position}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              {isTabDirty && currentMeta.canEdit && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setPreviewModalOpen(false);
+                    handleOpenSaveDraftModal();
+                  }}
+                >
+                  บันทึกร่างชุดนี้
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          Detail Modal
+      ───────────────────────────────────────────────────────────── */}
+      <CrudDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        title="รายละเอียดบุคลากร"
+        subtitle={selectedItem?.name || ''}
+      >
+        {selectedItem && (
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--primary-200)', flexShrink: 0 }}>
+              <SafeImage
+                src={selectedItem.image}
+                fallback="/assets/img/board_placeholder.jpg"
+                alt={selectedItem.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            <div>
+              <h3 style={{ margin: '0 0 0.25rem 0', color: 'var(--primary-900)' }}>{selectedItem.name}</h3>
+              <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: 'var(--accent-gold-dark)' }}>{selectedItem.position}</p>
+              {selectedItem.term && (
+                <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem' }}>
+                  <strong>วาระ:</strong> {selectedItem.term}
+                </p>
+              )}
+              {selectedItem.workplace && (
+                <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem' }}>
+                  <strong>หน่วยงาน:</strong> {selectedItem.workplace}
+                </p>
+              )}
+              {selectedItem.department && (
+                <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem' }}>
+                  <strong>ฝ่าย:</strong> {selectedItem.department}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </CrudDetailModal>
     </div>
   );
 }

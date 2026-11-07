@@ -18,20 +18,43 @@ class BoardStaffController extends Controller
 {
     public function apiIndex(): void
     {
-        $boards = Database::query("SELECT * FROM boards WHERE deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
-        $staff = Database::query("SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
+        $catalog = \App\Services\PublicContentService::catalog();
 
-        $boards = array_map(function (array $item): array {
-            $item['photo'] = resolve_media_url($item['photo'] ?? null);
-            $item['version'] = \App\Services\AccessService::version($item);
-            return $item;
-        }, $boards);
+        $boards = array_map(function (array $item, int $index): array {
+            $photo = resolve_media_url($item['image'] ?? null);
+            return [
+                'id' => (int) $item['id'],
+                'name' => $item['name'],
+                'position' => $item['position'],
+                'role_type' => 'director',
+                'term_years' => $item['term'] ?? 'ชุดที่ 38',
+                'term_number' => (int) preg_replace('/\D/', '', $item['term'] ?? '38') ?: 38,
+                'photo' => $photo,
+                'image' => $item['image'] ?? null,
+                'workplace' => $item['workplace'] ?? null,
+                'bio' => '',
+                'sort_order' => $index + 1,
+                'status' => 'active',
+                'version' => \App\Services\AccessService::version($item),
+            ];
+        }, $catalog['boardMembers'], array_keys($catalog['boardMembers']));
 
-        $staff = array_map(function (array $item): array {
-            $item['photo'] = resolve_media_url($item['photo'] ?? null);
-            $item['version'] = \App\Services\AccessService::version($item);
-            return $item;
-        }, $staff);
+        $staff = array_map(function (array $item, int $index): array {
+            $photo = resolve_media_url($item['image'] ?? null);
+            return [
+                'id' => (int) $item['id'],
+                'name' => $item['name'],
+                'position' => $item['position'],
+                'department' => $item['department'] ?? 'ฝ่ายจัดการ',
+                'phone' => '',
+                'email' => '',
+                'photo' => $photo,
+                'image' => $item['image'] ?? null,
+                'sort_order' => $index + 1,
+                'status' => 'active',
+                'version' => \App\Services\AccessService::version($item),
+            ];
+        }, $catalog['staffMembers'], array_keys($catalog['staffMembers']));
 
         $terms = [];
         $activeTerm = null;
@@ -45,6 +68,9 @@ class BoardStaffController extends Controller
             'data' => [
                 'boards' => $boards,
                 'staff' => $staff,
+                'advisors' => $catalog['advisors'] ?? [],
+                'auditors' => $catalog['auditors'] ?? [],
+                'groups' => $catalog['boardGroups'] ?? [],
                 'terms' => $terms,
                 'active_term' => $activeTerm,
             ]
@@ -213,15 +239,40 @@ class BoardStaffController extends Controller
 
     public function index(): void
     {
+        $catalog = \App\Services\PublicContentService::catalog();
         $boards = Database::query("SELECT * FROM boards WHERE deleted_at IS NULL ORDER BY sort_order ASC");
+        if (empty($boards) && !empty($catalog['boardMembers'])) {
+            $boards = array_map(static function (array $item, int $index): array {
+                $item['photo'] = resolve_media_url($item['image'] ?? null);
+                $item['term_years'] = $item['term'] ?? 'ชุดที่ 38';
+                $item['sort_order'] = $index + 1;
+                $item['status'] = 'active';
+                return $item;
+            }, $catalog['boardMembers'], array_keys($catalog['boardMembers']));
+        } else {
+            $boards = array_map(static function (array $item): array { $item['photo'] = resolve_media_url($item['photo'] ?? null); return $item; }, $boards);
+        }
+
         $staff = Database::query("SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY sort_order ASC");
-        $boards = array_map(static function (array $item): array { $item['photo'] = resolve_media_url($item['photo'] ?? null); return $item; }, $boards);
-        $staff = array_map(static function (array $item): array { $item['photo'] = resolve_media_url($item['photo'] ?? null); return $item; }, $staff);
+        if (empty($staff) && !empty($catalog['staffMembers'])) {
+            $staff = array_map(static function (array $item, int $index): array {
+                $item['photo'] = resolve_media_url($item['image'] ?? null);
+                $item['department'] = $item['department'] ?? 'ฝ่ายจัดการ';
+                $item['sort_order'] = $index + 1;
+                $item['status'] = 'active';
+                return $item;
+            }, $catalog['staffMembers'], array_keys($catalog['staffMembers']));
+        } else {
+            $staff = array_map(static function (array $item): array { $item['photo'] = resolve_media_url($item['photo'] ?? null); return $item; }, $staff);
+        }
 
         $this->render('admin.board_staff.index', [
             'title' => 'จัดการคณะกรรมการและเจ้าหน้าที่',
             'boards' => $boards,
             'staff' => $staff,
+            'advisors' => $catalog['advisors'] ?? [],
+            'auditors' => $catalog['auditors'] ?? [],
+            'groups' => $catalog['boardGroups'] ?? [],
         ], 'layouts.admin');
     }
 

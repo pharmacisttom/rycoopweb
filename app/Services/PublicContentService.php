@@ -55,22 +55,6 @@ class PublicContentService
     {
         $base = self::setting();
         $catalog = $base ? json_decode($base['value'],true,512,JSON_THROW_ON_ERROR) : self::reference();
-        $today = date('Y-m-d');
-        $rows = Database::query("SELECT section,payload,source_url,effective_on,expires_on,id FROM public_content_revisions WHERE state='published' AND effective_on<=? AND (expires_on IS NULL OR expires_on>=?) ORDER BY effective_on,id",[$today,$today]);
-        $metadata = [];
-        foreach ($rows as $row) {
-            if (!isset(self::SECTIONS[$row['section']])) continue;
-            self::assign($catalog,$row['section'],json_decode($row['payload'],true,512,JSON_THROW_ON_ERROR));
-            $metadata[$row['section']] = ['sourceUrl'=>$row['source_url'],'effectiveOn'=>$row['effective_on'],'expiresOn'=>$row['expires_on'],'revision'=>(int)$row['id']];
-        }
-        foreach ($catalog['loanProducts'] as &$product) {
-            foreach ($catalog['interestRates']['loans'] as $rate) if ((!empty($rate['productId']) && $rate['productId']===$product['id']) || (empty($rate['productId']) && $rate['type']===$product['title'])) {
-                $product['rateValue']=(float)rtrim($rate['rate'],'%');
-                $product['interestRate']=$rate['rate'].' ต่อปี';
-                break;
-            }
-        }
-        $catalog['publication'] = $metadata;
 
         try {
             $activeTerm = BoardTermService::getPublicActiveTerm();
@@ -91,6 +75,23 @@ class PublicContentService
         } catch (\Throwable $e) {
             // Graceful fallback to legacyReference.json if board_terms is not available
         }
+
+        $today = date('Y-m-d');
+        $rows = Database::query("SELECT section,payload,source_url,effective_on,expires_on,id FROM public_content_revisions WHERE state='published' AND effective_on<=? AND (expires_on IS NULL OR expires_on>=?) ORDER BY effective_on,id",[$today,$today]);
+        $metadata = [];
+        foreach ($rows as $row) {
+            if (!isset(self::SECTIONS[$row['section']])) continue;
+            self::assign($catalog,$row['section'],json_decode($row['payload'],true,512,JSON_THROW_ON_ERROR));
+            $metadata[$row['section']] = ['sourceUrl'=>$row['source_url'],'effectiveOn'=>$row['effective_on'],'expiresOn'=>$row['expires_on'],'revision'=>(int)$row['id']];
+        }
+        foreach ($catalog['loanProducts'] as &$product) {
+            foreach ($catalog['interestRates']['loans'] as $rate) if ((!empty($rate['productId']) && $rate['productId']===$product['id']) || (empty($rate['productId']) && $rate['type']===$product['title'])) {
+                $product['rateValue']=(float)rtrim($rate['rate'],'%');
+                $product['interestRate']=$rate['rate'].' ต่อปี';
+                break;
+            }
+        }
+        $catalog['publication'] = $metadata;
 
         return $catalog;
     }
@@ -167,7 +168,7 @@ class PublicContentService
                 $item=['title'=>$title,'members'=>$members];continue;
             }
             $allowed=match($section){
-                'boards'=>['id','name','position','image','term','workplace'],
+                'boards'=>['id','name','position','image','term','workplace','is_chairperson'],
                 'staff'=>['id','name','position','image','department'],
                 'deposits'=>['type','rate','minDeposit','payFreq','highlight'],
                 'loan_rates'=>['type','rate','maxTerm','condition','productId'],
@@ -179,7 +180,7 @@ class PublicContentService
                 elseif ($key==='features') { if (!is_array($field) || !array_is_list($field) || count($field)>20) throw new InvalidArgumentException('รายละเอียดไม่ถูกต้อง');foreach($field as $line)self::text($line,1000,true); }
                 elseif ($section==='products' && in_array($key,['maxLimit','maxTerm'],true)) $item[$key]=self::integer($field,$key==='maxTerm'?600:999999999);
                 elseif ($key==='id' && $section!=='products') $item[$key]=self::integer($field,999999);
-                elseif ($key==='highlight') $item[$key]=(bool)$field;
+                elseif (in_array($key,['highlight','is_chairperson'],true)) $item[$key]=(bool)$field;
                 elseif (in_array($key,['rate','rateValue'],true)) { $number=rtrim((string)$field,'%');if (!preg_match('/^\d{1,3}(?:\.\d{1,3})?$/D',$number) || (float)$number>100) throw new InvalidArgumentException('ดอกเบี้ยต้องอยู่ระหว่าง 0–100% และทศนิยมไม่เกิน 3 ตำแหน่ง'); }
                 else $item[$key]=($field===null||$field==='')?null:self::text($field,1000);
             }

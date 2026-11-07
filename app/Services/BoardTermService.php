@@ -669,6 +669,11 @@ class BoardTermService
                 [$currentUserId, $termId]
             );
 
+            // Archive older boards revisions in public_content_revisions so newly published term takes effect
+            Database::execute(
+                "UPDATE public_content_revisions SET state = 'archived' WHERE section = 'boards' AND state = 'published'"
+            );
+
             $pdo->commit();
             AuditService::log('board_terms', 'publish', (string)$termId, $term, [
                 'term_number' => $term['term_number'],
