@@ -1,11 +1,11 @@
 # RYCOOPWEB — SECURE ADMIN MFA RE-ENROLLMENT DELIVERY REPORT
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Branch:** `feature/secure-admin-mfa-re-enrollment`  
-**Code Commit SHA:** `7071e4bcb4ddbc5504d76b9aec23e448ae5dd391`  
-**Remote Target:** [GitHub Branch](https://github.com/pharmacisttom/rycoopweb/tree/feature/secure-admin-mfa-re-enrollment)  
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
-**Target Account:** `admin` (ID: 1)  
+**Repository:** `pharmacisttom/rycoopweb`
+**Branch:** `feature/secure-admin-mfa-re-enrollment`
+**Code Commit SHA:** `7071e4bcb4ddbc5504d76b9aec23e448ae5dd391`
+**Remote Target:** [GitHub Branch](https://github.com/pharmacisttom/rycoopweb/tree/feature/secure-admin-mfa-re-enrollment)
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
+**Target Account:** `admin` (ID: 1)
 **Production Status:** STRICTLY FROZEN (No automatic deployment; Production untouched)
 
 ---
@@ -16,24 +16,24 @@
 An existing administrator (`admin`, ID 1) lost their physical Authenticator device. While they possess a valid single-use Recovery Code allowing initial login, they can no longer generate 6-digit TOTP codes and require a secure, audited workflow to replace the lost device with a new Authenticator device.
 
 ### Core Security Invariants Preserved
-1. **No Unauthenticated / Pending-MFA Re-enrollment:**  
+1. **No Unauthenticated / Pending-MFA Re-enrollment:**
    Re-enrollment cannot be initiated anonymously or by a session that is merely pending 2FA. The admin must first authenticate with password and a valid single-use Recovery Code (`Auth::check() === true`).
-2. **Fresh Password Re-Verification:**  
+2. **Fresh Password Re-Verification:**
    Before generating the new secret or QR code, the admin must confirm their account password (`POST /api/auth/mfa/re-enroll/start`), preventing session hijacking or unattended terminal exploits.
-3. **Old Secret Remains Active Until Confirmation:**  
+3. **Old Secret Remains Active Until Confirmation:**
    The existing encrypted TOTP secret in the database remains active throughout the challenge. If the admin cancels, closes their browser, or fails the challenge, the existing secret and recovery codes remain functional.
-4. **Zero Plaintext Secret Storage:**  
+4. **Zero Plaintext Secret Storage:**
    Plaintext secrets are never logged, stored in Git, persisted in browser localStorage, or exposed in audit logs. Database storage uses AES-256-GCM encryption.
-5. **Atomic Credential Replacement & Recovery Revocation:**  
+5. **Atomic Credential Replacement & Recovery Revocation:**
    Upon successful 6-digit confirmation of the new secret (`POST /api/auth/mfa/re-enroll/confirm`), a database transaction:
    - Updates `two_factor_secret` with the AES-256 encrypted new secret.
    - Updates `two_factor_last_used_slice` for replay prevention.
    - Bumps `session_version = session_version + 1` to immediately revoke all concurrent sessions on other devices.
    - Atomically deletes all prior recovery codes (`DELETE FROM user_mfa_recovery_codes WHERE user_id = ?`).
    - Issues 8 new single-use recovery codes (128-bit hashes) for one-time display.
-6. **Cancellation & Expiry Support:**  
+6. **Cancellation & Expiry Support:**
    `POST /api/auth/mfa/re-enroll/cancel` safely cleans up temporary session challenges without altering database credentials.
-7. **Strict Non-Destructive Isolation:**  
+7. **Strict Non-Destructive Isolation:**
    No member accounts, financial data, dividends, or member portal flags are altered.
 
 ---

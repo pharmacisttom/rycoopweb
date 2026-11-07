@@ -22,11 +22,11 @@ function it(desc, cond) {
 const dividendImportPath = path.join(__dirname, '../src/pages/AdminDividendImportPage.jsx');
 const dividendImportContent = fs.readFileSync(dividendImportPath, 'utf8');
 
-it('1. AdminDividendImportPage does NOT import AdminMemberShell', 
-  !dividendImportContent.includes("import AdminMemberShell") && 
+it('1. AdminDividendImportPage does NOT import AdminMemberShell',
+  !dividendImportContent.includes("import AdminMemberShell") &&
   !dividendImportContent.includes("<AdminMemberShell"));
 
-it('2. AdminDividendImportPage renders flat section.member-admin', 
+it('2. AdminDividendImportPage renders flat section.member-admin',
   dividendImportContent.includes('<section className="member-admin">') &&
   dividendImportContent.includes('</section>;'));
 

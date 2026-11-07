@@ -1,10 +1,10 @@
 # RYCOOPWEB — Legacy Website Gap Analysis & Migration Strategy
 
-**Document Version:** 1.0.0  
-**Target Environment:** TEST (`https://test.rayongcoop.org/`)  
-**Legacy Source Website:** `https://rayongcoop.com/`  
-**Application Target:** `pharmacisttom/rycoopweb`  
-**Target Database:** `rycoopweb_test`  
+**Document Version:** 1.0.0
+**Target Environment:** TEST (`https://test.rayongcoop.org/`)
+**Legacy Source Website:** `https://rayongcoop.com/`
+**Application Target:** `pharmacisttom/rycoopweb`
+**Target Database:** `rycoopweb_test`
 
 ---
 
@@ -68,4 +68,3 @@ The following table details the status of each system/content domain between the
 3. **Phase 3 (Verification & Hardening):**
    - ดำเนินการทดสอบ UAT ครอบคลุมทุกบทบาทบนสภาพแวดล้อม TEST
    - ยืนยันความปลอดภัยบนฐานข้อมูล `rycoopweb_test` โดยไม่กระทบ Production
-

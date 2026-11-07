@@ -1,10 +1,10 @@
 # ADMIN_UI_AUDIT.md
 ## RYCOOPWEB Administration UI/UX & Architecture Audit Report
 
-**Audit Target:** Administration Platform (`/admin/*`, `/staff/*`)  
-**Audit Baseline:** Commit `f97c72b` / `d9e6a44`  
-**Viewports Inspected:** Desktop (1440px), Tablet (1024px), Mobile (390px)  
-**Evaluator:** UI/UX Design Lead & Senior Frontend Architect  
+**Audit Target:** Administration Platform (`/admin/*`, `/staff/*`)
+**Audit Baseline:** Commit `f97c72b` / `d9e6a44`
+**Viewports Inspected:** Desktop (1440px), Tablet (1024px), Mobile (390px)
+**Evaluator:** UI/UX Design Lead & Senior Frontend Architect
 
 ---
 
@@ -60,4 +60,3 @@ Three distinct header implementations currently coexist:
 | **AUDIT-004** | Low | Accessibility | Mobile hamburger button touch target under 44px on small viewports | Sprint 1 |
 | **AUDIT-005** | High | Data Source | `AdminDashboardPage.jsx` contains 2,000 lines of dead prototype code | Sprint 1 |
 | **AUDIT-006** | Medium | Responsive | Missing visual scroll shadows on mobile tables | Sprint 2 |
-

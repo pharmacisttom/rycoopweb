@@ -1,9 +1,9 @@
 import HeroSlider from '../components/home/HeroSlider';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2, 
-  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall, 
+import {
+  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2,
+  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall,
   ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award, Calendar
 } from 'lucide-react';
 import { fetchHomeData, fetchCoopInfo } from '../services/api';
@@ -158,7 +158,7 @@ export default function HomePage() {
 
   return (
     <div>
-      
+
       {/* =========================================================================
           HERO PROMOTIONAL SLIDER (Modern White & Blue High-Impact Carousel)
           ========================================================================= */}
@@ -174,7 +174,7 @@ export default function HomePage() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
             gap: '1rem'
           }}>
-            
+
             {/* Card 1: เข้าสู่ระบบสมาชิก */}
             <Link to={memberPortalEnabled ? '/member/login' : '/eservice'} className="surface-card" style={{
               background: '#FFFFFF',
@@ -382,7 +382,7 @@ export default function HomePage() {
             gap: '2.5rem',
             alignItems: 'center'
           }} className="chairperson-welcome-grid">
-            
+
             {/* Left: Message & Vision */}
             <div>
               <div style={{
@@ -669,7 +669,7 @@ export default function HomePage() {
       {keyStats.length > 0 && (
       <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ฐานะความมั่นคง</span>
             <h2 className="section-title">สถิติและผลการดำเนินงานที่โดดเด่น</h2>
@@ -693,13 +693,13 @@ export default function HomePage() {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.25rem' }}>
                   {stat.unit}
                 </div>
-                <div style={{ 
-                  marginTop: '0.85rem', 
-                  display: 'inline-block', 
-                  fontSize: '0.75rem', 
-                  padding: '0.2rem 0.6rem', 
-                  borderRadius: 'var(--radius-full)', 
-                  background: 'var(--accent-emerald-light)', 
+                <div style={{
+                  marginTop: '0.85rem',
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--accent-emerald-light)',
                   color: 'var(--accent-emerald-dark)',
                   fontWeight: 600
                 }}>
@@ -718,7 +718,7 @@ export default function HomePage() {
           ========================================================================= */}
       <section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
             <h2 className="section-title">เงินกู้ของสหกรณ์</h2>
@@ -786,7 +786,7 @@ export default function HomePage() {
           ========================================================================= */}
       <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">สวัสดิการสมาชิก</span>
             <h2 className="section-title">ดูแลสมาชิกและครอบครัวในทุกช่วงชีวิต</h2>

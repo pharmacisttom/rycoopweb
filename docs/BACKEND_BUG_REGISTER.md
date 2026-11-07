@@ -1,9 +1,9 @@
 # RYCOOPWEB — BACKEND BUG REGISTER
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Branch:** `feature/backend-recovery-data-integrity`  
-**Environment:** TEST ONLY  
-**Date:** 2026-11-07  
+**Repository:** `pharmacisttom/rycoopweb`
+**Branch:** `feature/backend-recovery-data-integrity`
+**Environment:** TEST ONLY
+**Date:** 2026-11-07
 
 ---
 

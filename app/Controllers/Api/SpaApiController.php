@@ -229,15 +229,15 @@ class SpaApiController extends Controller
         try {
             $now = date('Y-m-d H:i:s');
             $popups = Database::query(
-                "SELECT id, title, content AS subtitle, desktop_image AS banner_image, 
-                        mascot_image, layout_mode, button_text, button_url, button_target, 
-                        priority_order AS priority, start_at, end_at, status 
-                 FROM popups 
-                 WHERE deleted_at IS NULL 
-                   AND status = 'active' 
-                   AND (start_at IS NULL OR start_at <= ?) 
-                   AND (end_at IS NULL OR end_at >= ?) 
-                 ORDER BY priority_order ASC, id ASC 
+                "SELECT id, title, content AS subtitle, desktop_image AS banner_image,
+                        mascot_image, layout_mode, button_text, button_url, button_target,
+                        priority_order AS priority, start_at, end_at, status
+                 FROM popups
+                 WHERE deleted_at IS NULL
+                   AND status = 'active'
+                   AND (start_at IS NULL OR start_at <= ?)
+                   AND (end_at IS NULL OR end_at >= ?)
+                 ORDER BY priority_order ASC, id ASC
                  LIMIT 3",
                 [$now, $now]
             );

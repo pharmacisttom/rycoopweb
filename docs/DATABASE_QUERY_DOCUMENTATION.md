@@ -1,8 +1,8 @@
 # RYCOOPWEB — DATABASE QUERY DOCUMENTATION (SPRINT 2B.1)
 
-**Target Environment:** TEST ONLY (`rayongcoop_db` / `rycoopweb_test`)  
-**Specification:** Sprint 2B.1 Member Administration Platform  
-**Architecture:** MySQL 8.0+ / MariaDB 10.4+, PHP 8.3 PDO Prepared Statements  
+**Target Environment:** TEST ONLY (`rayongcoop_db` / `rycoopweb_test`)
+**Specification:** Sprint 2B.1 Member Administration Platform
+**Architecture:** MySQL 8.0+ / MariaDB 10.4+, PHP 8.3 PDO Prepared Statements
 **Read-Only Guarantee:** Sprint 2B.1 operations are strictly read-only for member registration and dividend data.
 
 ---
@@ -24,7 +24,7 @@
 - **Method:** `App\Controllers\Admin\MemberManagementController::dashboard()`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     COUNT(*) AS total,
     SUM(status = 'active') AS active,
     SUM(status = 'suspended') AS suspended,
@@ -43,7 +43,7 @@ FROM members;
 - **Endpoint:** `GET /api/admin/members/dashboard`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     year,
     COUNT(*) AS records,
     SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(details_json, '$.total_income')) AS DECIMAL(18,2))) AS total_income,
@@ -65,7 +65,7 @@ ORDER BY year DESC;
 - **Endpoint:** `GET /api/admin/members/dashboard`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     i.*,
     u.name AS actor
 FROM member_import_runs i
@@ -83,7 +83,7 @@ LIMIT 20;
 - **Endpoint:** `GET /api/admin/members/dashboard`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     c.id,
     c.member_id,
     c.action,
@@ -113,8 +113,8 @@ LIMIT 20;
 - **Method:** `App\Controllers\Admin\MemberManagementController::index()`
 - **SQL Template:**
 ```sql
-SELECT COUNT(*) 
-FROM members m 
+SELECT COUNT(*)
+FROM members m
 WHERE (m.member_no LIKE ? OR m.id_card LIKE ? OR TRIM(CONCAT(COALESCE(m.prefix,''), COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))) LIKE ? OR m.department LIKE ?)
   AND m.status = ?
   AND m.user_id IS NOT NULL -- When account=linked
@@ -130,7 +130,7 @@ WHERE (m.member_no LIKE ? OR m.id_card LIKE ? OR TRIM(CONCAT(COALESCE(m.prefix,'
 - **Endpoint:** `GET /api/admin/members`
 - **SQL Template:**
 ```sql
-SELECT 
+SELECT
     m.id,
     m.member_no,
     TRIM(CONCAT(COALESCE(m.prefix,''), COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))) AS name,
@@ -164,7 +164,7 @@ LIMIT 25 OFFSET 0;
 - **Endpoint:** `GET /api/admin/members/{id}`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     id,
     user_id,
     member_no,
@@ -177,7 +177,7 @@ SELECT
     email,
     address,
     status
-FROM members 
+FROM members
 WHERE id = ?;
 ```
 - **Index:** `PRIMARY` (`id`)
@@ -200,14 +200,14 @@ SELECT COUNT(*) FROM members WHERE id_card = ? AND id <> ?;
 - **Endpoint:** `GET /api/admin/members/{id}`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     id,
     name,
     username,
     status,
     created_at,
     updated_at
-FROM users 
+FROM users
 WHERE id = ?;
 ```
 - **Security Constraint:** Never selects `password`, `totp_secret`, `session_token`, or `remember_token`.
@@ -218,12 +218,12 @@ WHERE id = ?;
 - **Endpoint:** `GET /api/admin/members/{id}`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     year,
     details_json,
     imported_at
-FROM member_dividends 
-WHERE member_id = ? 
+FROM member_dividends
+WHERE member_id = ?
 ORDER BY year DESC;
 ```
 - **Index:** `idx_member_id` on `member_dividends`
@@ -234,7 +234,7 @@ ORDER BY year DESC;
 - **Endpoint:** `GET /api/admin/members/{id}`
 - **SQL:**
 ```sql
-SELECT 
+SELECT
     c.id,
     c.action,
     c.reason,
@@ -242,10 +242,10 @@ SELECT
     c.after_json,
     c.created_at,
     u.name AS actor
-FROM member_data_changes c 
-LEFT JOIN users u ON u.id = c.user_id 
-WHERE c.member_id = ? 
-ORDER BY c.id DESC 
+FROM member_data_changes c
+LEFT JOIN users u ON u.id = c.user_id
+WHERE c.member_id = ?
+ORDER BY c.id DESC
 LIMIT 50;
 ```
 - **Index:** `idx_member_id` on `member_data_changes`

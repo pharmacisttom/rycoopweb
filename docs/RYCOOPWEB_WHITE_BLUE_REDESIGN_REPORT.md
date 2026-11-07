@@ -1,11 +1,11 @@
 # RYCOOPWEB — White & Blue Modern Cooperative UI/UX Redesign & Error Resolution Report
 
-**Project:** สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด (Rayong Public Health Savings and Credit Cooperative Limited)  
-**Repository:** `pharmacisttom/rycoopweb`  
-**Active Development Branch:** `feature/homepage-hero-slider-cms`  
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org/`)  
-**Production Guard:** `www.rayongcoop.org` and production database are 100% untouched.  
-**Completion Date:** November 2026  
+**Project:** สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด (Rayong Public Health Savings and Credit Cooperative Limited)
+**Repository:** `pharmacisttom/rycoopweb`
+**Active Development Branch:** `feature/homepage-hero-slider-cms`
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org/`)
+**Production Guard:** `www.rayongcoop.org` and production database are 100% untouched.
+**Completion Date:** November 2026
 
 ---
 
@@ -193,5 +193,3 @@ Every broken test across the test harness was investigated and fixed:
 | 12 | **สสธท. / กสธท.** | มีลิงก์และแบบฟอร์ม | ยังไม่ยืนยันความครบถ้วน | **เพิ่มการ์ดและเมนูเฉพาะ**: รองรับ สสธท., กสธท., และ สส.ชสอ. พร้อมเส้นทางตรง `/associations` และ `/mutual-aid` และเมนูนำทาง |
 | 13 | **กำหนดการยื่นกู้** | มีประกาศ | ยังไม่ยืนยันหน้าที่เผยแพร่ | **เพิ่มหน้าตารางกำหนดการ**: หน้า `LoanSchedulePage.jsx` (`/loan-schedule`) พร้อมปฏิทิน 12 เดือน ปี 2569 และดาวน์โหลด `pay2569.png` |
 | 14 | **เรื่องร้องเรียน** | มีช่องทาง | มีโครงสร้างระบบ | ทดสอบระบบรับเรื่องร้องเรียนและกล่องข้อเสนอแนะ พร้อมฟอร์มส่งเรื่องและระบบติดตามสถานะใน `ContactPage.jsx` (`/complaints`) |
-
-

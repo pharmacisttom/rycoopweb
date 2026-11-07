@@ -65,11 +65,11 @@ class DepositProductController extends Controller
             return;
         }
 
-        $sql = "UPDATE deposit_products SET 
-                name = ?, short_description = ?, full_description = ?, interest_rate = ?, 
-                min_deposit = ?, max_deposit = ?, withdrawal_condition = ?, eligibility = ?, 
-                required_documents = ?, is_featured = ?, sort_order = ?, status = ?, 
-                updated_by = ?, updated_at = NOW() 
+        $sql = "UPDATE deposit_products SET
+                name = ?, short_description = ?, full_description = ?, interest_rate = ?,
+                min_deposit = ?, max_deposit = ?, withdrawal_condition = ?, eligibility = ?,
+                required_documents = ?, is_featured = ?, sort_order = ?, status = ?,
+                updated_by = ?, updated_at = NOW()
                 WHERE id = ?";
 
         Database::execute($sql, [

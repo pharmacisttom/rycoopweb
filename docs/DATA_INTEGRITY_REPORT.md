@@ -1,10 +1,10 @@
 # RYCOOPWEB — DATA INTEGRITY & AUDIT REPORT
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Database:** `rayongcoop_db` (MySQL 8)  
-**Target Environment:** TEST ONLY (`test.rayongcoop.org`)  
-**Audit Timestamp:** 2026-11-07  
-**Production Status:** STRICTLY FROZEN  
+**Repository:** `pharmacisttom/rycoopweb`
+**Database:** `rayongcoop_db` (MySQL 8)
+**Target Environment:** TEST ONLY (`test.rayongcoop.org`)
+**Audit Timestamp:** 2026-11-07
+**Production Status:** STRICTLY FROZEN
 
 ---
 
@@ -47,7 +47,7 @@ This data integrity audit verified the real contents of `rayongcoop_db` using re
 The member identity architecture was inspected to verify the 1-to-1 relationship between `users` and `members`:
 
 ```sql
-SELECT 
+SELECT
     COUNT(m.id) AS total_members,
     COUNT(u.id) AS mapped_users,
     COUNT(CASE WHEN m.user_id IS NULL THEN 1 END) AS unmapped_members

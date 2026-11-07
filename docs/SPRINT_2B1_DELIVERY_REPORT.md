@@ -1,11 +1,11 @@
 # RYCOOPWEB — SPRINT 2B.1 MEMBER REGISTRY IMPLEMENTATION REPORT
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Development Branch:** `feature/admin-experience-transformation`  
-**Reference Baseline Commit:** `d428ea8`  
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
-**Production Status:** FROZEN & UNTOUCHED (`https://www.rayongcoop.org`)  
-**Delivery Date:** 6 พฤศจิกายน 2569  
+**Repository:** `pharmacisttom/rycoopweb`
+**Development Branch:** `feature/admin-experience-transformation`
+**Reference Baseline Commit:** `d428ea8`
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
+**Production Status:** FROZEN & UNTOUCHED (`https://www.rayongcoop.org`)
+**Delivery Date:** 6 พฤศจิกายน 2569
 
 ---
 

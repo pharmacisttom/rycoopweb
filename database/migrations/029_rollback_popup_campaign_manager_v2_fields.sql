@@ -7,10 +7,10 @@
 -- Safety Guard: Check if any populated V2 data exists before dropping columns
 SET @has_v2_data := 0;
 SET @col_chk := (
-    SELECT COUNT(*) 
-    FROM information_schema.COLUMNS 
-    WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'popups' 
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'popups'
       AND COLUMN_NAME = 'layout_mode'
 );
 

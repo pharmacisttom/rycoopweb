@@ -1,10 +1,10 @@
 # RYCOOPWEB — SPRINT 2 MODULE INVENTORY
 ## Content Standardization (Phase 2A) & Member Module Workflow Architecture (Phase 2B)
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Development Base Branch:** `feature/admin-experience-transformation`  
-**Baseline Commit:** `b17e6c6`  
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
+**Repository:** `pharmacisttom/rycoopweb`
+**Development Base Branch:** `feature/admin-experience-transformation`
+**Baseline Commit:** `b17e6c6`
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
 
 ---
 
@@ -39,4 +39,3 @@ The Member Administration domain operates under strict Protected Core rules. Pha
 | **New/Existing Reconciliation** | `/admin/members/health` | `members`, `member_dividends` | • Cross-check dividend records against registered member IDs.<br>• Identify unmapped records before committing import. | Prohibits creating new member accounts from dividend sheets. |
 | **Annual Dividend History** | `/admin/members/:id` | `member_dividends` (4,855 rows) | • Historical dividends view by fiscal year.<br>• Detailed breakdowns (Shares dividend, Loan refund). | Read-only view for cooperative officers and members. |
 | **Audit & Approval Workflow** | `/admin/approvals` | `audit_logs`, `approvals` | • Dual-Control Maker/Checker requests.<br>• Step-up MFA authorization on sensitive actions. | Immutable audit trail with actor ID, timestamp, and IP. |
-

@@ -73,10 +73,10 @@ class EServiceController extends Controller
             return;
         }
 
-        $sql = "UPDATE eservice_links SET 
-                name = ?, description = ?, url = ?, icon = ?, category = ?, 
-                is_internal = ?, open_new_tab = ?, confirm_before_redirect = ?, 
-                is_maintenance = ?, sort_order = ?, status = ?, updated_at = NOW() 
+        $sql = "UPDATE eservice_links SET
+                name = ?, description = ?, url = ?, icon = ?, category = ?,
+                is_internal = ?, open_new_tab = ?, confirm_before_redirect = ?,
+                is_maintenance = ?, sort_order = ?, status = ?, updated_at = NOW()
                 WHERE id = ?";
 
         Database::execute($sql, [

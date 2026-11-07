@@ -47,7 +47,7 @@ export default function VerifyReceiptPage() {
   return (
     <div className="section">
       <div className="container">
-        
+
         <div className="section-title-wrap">
           <span className="section-badge">ความโปร่งใสและปลอดภัย</span>
           <h1 className="section-title">ระบบตรวจสอบใบเสร็จรับเงินอิเล็กทรอนิกส์ (e-Receipt)</h1>
@@ -61,13 +61,13 @@ export default function VerifyReceiptPage() {
             <div className="form-group">
               <label className="form-label">กรอกเลขที่ใบเสร็จ หรือ รหัส Token จาก QR Code</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  placeholder="ระบุเลขที่ใบเสร็จรับเงินเพื่อตรวจสอบ..." 
-                  value={receiptToken} 
-                  onChange={(e) => setReceiptToken(e.target.value)} 
-                  required 
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="ระบุเลขที่ใบเสร็จรับเงินเพื่อตรวจสอบ..."
+                  value={receiptToken}
+                  onChange={(e) => setReceiptToken(e.target.value)}
+                  required
                 />
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   <Search size={16} />
@@ -96,7 +96,7 @@ export default function VerifyReceiptPage() {
         {/* Receipt Verification Result Card */}
         {verified && receiptData && (
           <div className="surface-card animate-fade-in" style={{ maxWidth: '750px', margin: '0 auto', padding: '2.5rem', borderRadius: 'var(--radius-xl)', border: '2px solid var(--accent-emerald-light)' }}>
-            
+
             {/* Status Banner */}
             <div style={{
               background: 'var(--accent-emerald-light)',

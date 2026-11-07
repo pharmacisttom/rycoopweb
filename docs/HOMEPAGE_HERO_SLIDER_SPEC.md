@@ -1,9 +1,9 @@
 # RYCOOPWEB — Homepage Hero Slider Technical Specification
 
-**Module:** Homepage Hero Promotional Slider (`HeroSlider.jsx`)  
-**Backend Entity:** `hero_slides`  
-**Target Environment:** TEST (`https://test.rayongcoop.org/`)  
-**Status:** Implementation Ready  
+**Module:** Homepage Hero Promotional Slider (`HeroSlider.jsx`)
+**Backend Entity:** `hero_slides`
+**Target Environment:** TEST (`https://test.rayongcoop.org/`)
+**Status:** Implementation Ready
 
 ---
 
@@ -107,4 +107,3 @@ CREATE TABLE IF NOT EXISTS `hero_slides` (
 ### 5.2 Security & Access Controls
 - Enforced with `AuthMiddleware`, `RoleMiddleware(['super_admin', 'pr_officer', 'staff', 'it_admin'])`, and `CsrfMiddleware`.
 - Mandatory Audit Logging via `AuditService::log('hero_slides', ...)` with old vs new state capture.
-

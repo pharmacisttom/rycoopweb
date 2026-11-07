@@ -1,8 +1,8 @@
 # RYCOOPWEB — FRONTEND–BACKEND INTEGRATION MAPPING
 
-**Project:** RYCOOPWEB  
-**Branch:** `fix/frontend-backend-data-consistency`  
-**Generated Date:** 6 พฤศจิกายน 2569  
+**Project:** RYCOOPWEB
+**Branch:** `fix/frontend-backend-data-consistency`
+**Generated Date:** 6 พฤศจิกายน 2569
 **Specification:** Master Prompt Section 5.4
 
 ---
@@ -59,4 +59,3 @@
 - **Evidence 2:** มีการ Hardcode ค่าจำลองในแบบฟอร์ม (บรรทัด 56-58):
   `memberId: user?.memberId || '04892'`, `name: user?.name || 'นายเกียรติศักดิ์ พูลเพิ่ม'`, `phone: '081-234-5678'`
 - **Evidence 3:** ฐานข้อมูลมีตาราง `eservice_links` และ Admin มีหน้า `/admin/eservices` (`AdminEServicesPage.jsx`) จัดการลิงก์บริการออนไลน์ แต่หน้าสาธารณะไม่ได้เชื่อมต่อ
-

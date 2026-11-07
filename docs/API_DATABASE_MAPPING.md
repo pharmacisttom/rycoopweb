@@ -1,9 +1,9 @@
 # RYCOOPWEB — API TO DATABASE MAPPING SPECIFICATION
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Database:** `rayongcoop_db` (MySQL 8)  
-**Environment:** TEST ONLY  
-**Audit Date:** 2026-11-07  
+**Repository:** `pharmacisttom/rycoopweb`
+**Database:** `rayongcoop_db` (MySQL 8)
+**Environment:** TEST ONLY
+**Audit Date:** 2026-11-07
 
 ---
 
@@ -101,11 +101,11 @@ flowchart LR
 
 ## 3. Discovered Schema Incompatibilities & Reconciliations
 
-1. **`document_categories` soft delete**:  
+1. **`document_categories` soft delete**:
    Schema uses `status enum('active','inactive')`. All queries referencing `deleted_at IS NULL` must be updated to omit `deleted_at` or filter by `status = 'active'`. Deletion must update `status = 'inactive'` or delete record if no child documents exist.
-2. **`document_categories.icon`**:  
+2. **`document_categories.icon`**:
    Column does not exist in schema. Controller must omit `icon` from INSERT/UPDATE statements.
-3. **`members.deleted_at`**:  
+3. **`members.deleted_at`**:
    `members` table uses `status enum('active','resigned','suspended')`. Any query referencing `WHERE deleted_at IS NULL` must filter by `status != 'resigned'` or total count.
-4. **`survey_responses.deleted_at`**:  
+4. **`survey_responses.deleted_at`**:
    `survey_responses` table does not have `deleted_at`; survey responses are tracked by `submitted_at`.

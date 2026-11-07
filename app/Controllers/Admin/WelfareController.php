@@ -75,10 +75,10 @@ class WelfareController extends Controller
             return;
         }
 
-        $sql = "UPDATE welfare SET 
-                category = ?, title = ?, short_description = ?, full_description = ?, 
-                benefit_amount = ?, eligibility = ?, contact_info = ?, status = ?, 
-                sort_order = ?, updated_by = ?, updated_at = NOW() 
+        $sql = "UPDATE welfare SET
+                category = ?, title = ?, short_description = ?, full_description = ?,
+                benefit_amount = ?, eligibility = ?, contact_info = ?, status = ?,
+                sort_order = ?, updated_by = ?, updated_at = NOW()
                 WHERE id = ?";
 
         Database::execute($sql, [

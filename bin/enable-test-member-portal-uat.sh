@@ -395,7 +395,7 @@ echo "[CHECK 2.1] Verifying runtime database connection to rycoopweb_test via ap
 cd "${UAT_BACKEND}"
 php -r "
     require '${UAT_BACKEND}/vendor/autoload.php';
-    
+
     // Requirement 3: Verify helper functions loaded by Composer Autoload (files autoloading)
     if (!function_exists('config') || !function_exists('env')) {
         fprintf(STDERR, 'Autoload Error: config() or env() helper functions missing after autoloading\n');
@@ -580,7 +580,7 @@ else
     echo " Status: Database Consistency Verification is 100% PASSED (all 2,508 members & 4,855 rows exist),"
     echo "         but External Source Reconciliation remains UNRESOLVED."
     echo "=============================================================================="
-    
+
     # Require explicit UAT authorization gate before proceeding without source reconciliation
     if [ "${ALLOW_UNRECONCILED_SOURCE:-false}" != "true" ]; then
         echo "" >&2
@@ -718,7 +718,7 @@ fi
 
 if [ -n "${GATEWAY_AUTH}" ]; then
     echo "[SMOKE TEST 5.4] Testing authenticated HTTP access across critical routes (credentials masked)..."
-    
+
     check_http_endpoint() {
         local path="$1"
         local expected="$2"

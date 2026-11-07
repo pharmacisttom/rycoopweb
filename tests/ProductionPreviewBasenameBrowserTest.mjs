@@ -171,7 +171,7 @@ async function runTests() {
       // Helper to assert no 404 or Global Error Boundary
       const assertCleanRoute = async (routeName) => {
         assert.equal(pageErrors.length, 0, `Uncaught JS errors on ${routeName}: ${pageErrors.join(', ')}`);
-        
+
         // Assert no Internal 404 page
         const internal404 = await page.locator('text=ไม่พบหน้าที่คุณต้องการ').count();
         assert.equal(internal404, 0, `Internal 404 detected on valid route ${routeName}!`);

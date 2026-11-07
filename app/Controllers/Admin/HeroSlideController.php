@@ -105,10 +105,10 @@ class HeroSlideController extends Controller
             $desktopImage = trim((string)$this->request->input('desktop_image'));
         }
 
-        $sql = "UPDATE hero_slides SET 
-                title = ?, subtitle = ?, description = ?, desktop_image = ?, 
-                button_text = ?, button_url = ?, button_target = ?, text_alignment = ?, 
-                overlay_opacity = ?, priority = ?, status = ?, updated_by = ?, updated_at = NOW() 
+        $sql = "UPDATE hero_slides SET
+                title = ?, subtitle = ?, description = ?, desktop_image = ?,
+                button_text = ?, button_url = ?, button_target = ?, text_alignment = ?,
+                overlay_opacity = ?, priority = ?, status = ?, updated_by = ?, updated_at = NOW()
                 WHERE id = ?";
 
         Database::execute($sql, [
@@ -245,20 +245,20 @@ class HeroSlideController extends Controller
             $desktopImage = $this->request->input('desktop_image');
         }
 
-        $sql = "UPDATE hero_slides SET 
-                title = ?, 
-                subtitle = ?, 
-                description = ?, 
-                desktop_image = ?, 
-                button_text = ?, 
-                button_url = ?, 
-                button_target = ?, 
-                text_alignment = ?, 
-                overlay_opacity = ?, 
-                priority = ?, 
-                status = ?, 
-                updated_by = ?, 
-                updated_at = NOW() 
+        $sql = "UPDATE hero_slides SET
+                title = ?,
+                subtitle = ?,
+                description = ?,
+                desktop_image = ?,
+                button_text = ?,
+                button_url = ?,
+                button_target = ?,
+                text_alignment = ?,
+                overlay_opacity = ?,
+                priority = ?,
+                status = ?,
+                updated_by = ?,
+                updated_at = NOW()
                 WHERE id = ?";
 
         Database::execute($sql, [

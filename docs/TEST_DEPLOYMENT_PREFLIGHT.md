@@ -1,9 +1,9 @@
 # RYCOOPWEB — TEST DEPLOYMENT PREFLIGHT CHECKLIST
 ## Pre-Flight Verification & Safety Audit for Candidate Release 01
-**Target Hostname:** `test.rayongcoop.org`  
-**Target Database:** `rycoopweb_test`  
-**Target Commit SHA:** `d9e6a44bc86e55b342bb47d58bc3f313933f5bb7`  
-**Release Directory:** `/var/www/rycoopweb/releases/d9e6a44bc86e55b342bb47d58bc3f313933f5bb7`  
+**Target Hostname:** `test.rayongcoop.org`
+**Target Database:** `rycoopweb_test`
+**Target Commit SHA:** `d9e6a44bc86e55b342bb47d58bc3f313933f5bb7`
+**Release Directory:** `/var/www/rycoopweb/releases/d9e6a44bc86e55b342bb47d58bc3f313933f5bb7`
 **Evaluation Status:** READY FOR EXECUTION (ALL GATES PASSED)
 
 ---
@@ -52,4 +52,3 @@ mysql --defaults-file=/root/.my.cnf rycoopweb_test < \
 # 6. Deploy atomic symlinks and reload test FPM
 bash bin/deploy-test-release.sh d9e6a44bc86e55b342bb47d58bc3f313933f5bb7
 ```
-

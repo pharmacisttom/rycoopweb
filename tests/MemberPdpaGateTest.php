@@ -246,7 +246,11 @@ function testDispatch(string $method, string $uri, array $input = [], array $hea
     $_POST = $input;
     foreach ($headers as $k => $v) {
         $serverKey = 'HTTP_' . strtoupper(str_replace('-', '_', $k));
-        $_SERVER[$serverKey] = $v;
+        if ($v === null || $v === '') {
+            unset($_SERVER[$serverKey]);
+        } else {
+            $_SERVER[$serverKey] = $v;
+        }
     }
     $req = new Request();
     $res = new PdpaTestResponse();
@@ -296,6 +300,8 @@ tAssert(!empty($nonceT02) && strlen($nonceT02) === 64, "T02: Cryptographically r
 // -------------------------------------------------------------------------
 $resT03 = testDispatch('GET', '/member/dashboard');
 tAssert($resT03->status === 403 && ($resT03->body['code'] ?? '') === 'PDPA_ACK_REQUIRED', "T03: Direct URL to /member/dashboard blocked with 403 PDPA_ACK_REQUIRED");
+$resT03Html = testDispatch('GET', '/member/dashboard', [], ['X-Requested-With' => '']);
+tAssert($resT03Html->status === 302 && str_contains((string)$resT03Html->redirectUrl, 'member/privacy-ack'), "T03: Browser HTML request to /member/dashboard redirects to /member/privacy-ack");
 
 // -------------------------------------------------------------------------
 // T04: API access before acknowledge -> 403 PDPA_ACK_REQUIRED

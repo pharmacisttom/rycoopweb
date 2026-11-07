@@ -1,8 +1,8 @@
 # RYCOOPWEB — ROLLBACK RUNBOOK & RECOVERY PLAN
 ## Emergency Recovery Procedure for Candidate Release 01 on TEST
-**Target Hostname:** `test.rayongcoop.org`  
-**Rollback Baseline:** Pre-Deployment Active Release (Commit `bd8f23a0bbffe7ebce2eed75996ae6ea907768bf` / `19e9c7d`)  
-**Target Database:** `rycoopweb_test`  
+**Target Hostname:** `test.rayongcoop.org`
+**Rollback Baseline:** Pre-Deployment Active Release (Commit `bd8f23a0bbffe7ebce2eed75996ae6ea907768bf` / `19e9c7d`)
+**Target Database:** `rycoopweb_test`
 
 ---
 
@@ -62,4 +62,3 @@ mysql --defaults-file=/root/.my.cnf rycoopweb_test < \
 1. Verify `curl -k -I https://test.rayongcoop.org` returns HTTP 200 or 401 (Basic auth).
 2. Verify Admin Login and Dividend Import page mount correctly.
 3. Confirm dedicated FPM is running: `systemctl status rycoop-test-fpm.service`.
-

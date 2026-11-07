@@ -12,7 +12,7 @@ export default function CampaignModal() {
   const triggerElementRef = useRef(null);
 
   // Safety rule: Never interrupt active Login, PDPA, member authentication, or administrative workflows
-  const isProtectedWorkflow = 
+  const isProtectedWorkflow =
     location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/staff') ||
     location.pathname.startsWith('/member') ||
@@ -266,7 +266,7 @@ export default function CampaignModal() {
             gridTemplateColumns: layoutMode === 'banner_only' ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
             flex: 1
           }}>
-            
+
             {/* Visual Media Area (Banner / Mascot) */}
             {layoutMode === 'banner_only' && (
               <div style={{

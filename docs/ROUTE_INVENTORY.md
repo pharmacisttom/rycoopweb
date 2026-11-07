@@ -1,8 +1,8 @@
 # RYCOOPWEB — COMPLETE ROUTE INVENTORY
 
-**Project:** RYCOOPWEB  
-**Branch:** `fix/frontend-backend-data-consistency`  
-**Generated Date:** 6 พฤศจิกายน 2569  
+**Project:** RYCOOPWEB
+**Branch:** `fix/frontend-backend-data-consistency`
+**Generated Date:** 6 พฤศจิกายน 2569
 **Status:** Verified against `src/App.jsx` and `config/routes.php`
 
 ---
@@ -123,4 +123,3 @@
 | `GET` | `/api/public/visitors/analytics`| `SpaApiController@visitorAnalytics`| `website_visits` |
 | `POST`| `/api/visits/record` | `SpaApiController@recordVisit` | `visitor_counters`, `website_visits` |
 | `GET` | `/api/public/content` | `PublicContentController@publicCatalog`| `PublicContentService::catalog()` |
-

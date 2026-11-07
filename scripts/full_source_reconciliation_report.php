@@ -32,9 +32,9 @@ foreach ($sourceRecords as $idx => $src) {
     $year = (int)$src['year'];
     $expectedNet = (string)$src['net'];
     $expectedMemberNo = (string)$src['member_no'];
-    
+
     $row = Database::first("
-        SELECT 
+        SELECT
             m.id as member_id,
             m.member_no,
             m.id_card,
@@ -107,4 +107,3 @@ if (count($mismatches) > 0) {
     echo " All 4,855 source financial records match MySQL rycoopweb_test database 100%.\n";
     echo "================================================================================\n";
 }
-

@@ -1,8 +1,8 @@
 # RYCOOPWEB — TEST UAT Checklist & Verification Matrix
 
-**Environment:** TEST ONLY (`https://test.rayongcoop.org/`)  
-**Target Database:** `rycoopweb_test`  
-**Execution Objective:** Comprehensive User Acceptance Testing (UAT)  
+**Environment:** TEST ONLY (`https://test.rayongcoop.org/`)
+**Target Database:** `rycoopweb_test`
+**Execution Objective:** Comprehensive User Acceptance Testing (UAT)
 
 ---
 
@@ -95,4 +95,3 @@
   - Confirm no member password change button, modal, or initial password reset prompt appears.
 - [ ] **TC-MEM-03: Financial Isolation**
   - Confirm all dividend and member inquiries run strictly against `rycoopweb_test`.
-

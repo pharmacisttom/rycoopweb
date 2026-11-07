@@ -1,7 +1,7 @@
 # RYCOOPWEB — Production & Test Rollback Runbook
 
-**Document Purpose:** Rapid Rollback Procedures for Application and Database Releases  
-**Environment Scope:** TEST (`test.rayongcoop.org`) / PROD (`www.rayongcoop.org`)  
+**Document Purpose:** Rapid Rollback Procedures for Application and Database Releases
+**Environment Scope:** TEST (`test.rayongcoop.org`) / PROD (`www.rayongcoop.org`)
 
 ---
 
@@ -52,4 +52,3 @@ UPDATE hero_slides SET status = 'active', deleted_at = NULL WHERE id <= 3;
 -- Verify snapshot table exists before rollback
 SELECT COUNT(*) FROM member_activation_snapshot_20261102;
 ```
-

@@ -50,11 +50,21 @@ class Database
         return self::connect();
     }
 
+    public static function resetTableCache(): void
+    {
+        self::$tablesCache = null;
+    }
+
     public static function hasTable(string $table): bool
     {
         if (self::$tablesCache === null) {
             try {
-                $tables = self::query("SHOW TABLES");
+                $driver = self::connect()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+                if ($driver === 'sqlite') {
+                    $tables = self::query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+                } else {
+                    $tables = self::query("SHOW TABLES");
+                }
                 self::$tablesCache = array_map(fn($t) => strtolower((string)array_values($t)[0]), $tables);
             } catch (\Throwable) {
                 return false;

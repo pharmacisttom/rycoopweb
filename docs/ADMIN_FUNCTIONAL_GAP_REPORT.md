@@ -2,8 +2,8 @@
 ## Gap Analysis Between Admin Forms, Backend APIs, and Public Data Representation
 ### Reconciled against Source Code (`src/App.jsx`, `config/routes.php`, Controllers, React API Calls)
 
-**Target Environment:** TEST (`test.rayongcoop.org`)  
-**Scope:** Administration Modules (`/admin/*`, `/staff/*`)  
+**Target Environment:** TEST (`test.rayongcoop.org`)
+**Scope:** Administration Modules (`/admin/*`, `/staff/*`)
 **Audit Baseline:** Commit `6b2eb2d` (Sprint 1B Reconciled)
 
 ---

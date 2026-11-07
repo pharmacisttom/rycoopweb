@@ -75,7 +75,7 @@ export default function DocumentsPage() {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const queryCat = searchParams.get('category');
   const initialCategory = CATEGORY_MAP.find(c => c.slug === queryCat)?.label || 'ทั้งหมด';
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
@@ -110,7 +110,7 @@ export default function DocumentsPage() {
   return (
     <div style={{ background: 'var(--background-main, #F4F8FD)', minHeight: '80vh', padding: '3rem 0 4rem 0' }}>
       <div className="container">
-        
+
         {/* Header */}
         <div className="section-title-wrap" style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <span className="section-badge" style={{ background: '#EDF5FF', color: '#1769C2' }}>ศูนย์ดาวน์โหลดสหกรณ์</span>
@@ -132,11 +132,11 @@ export default function DocumentsPage() {
           boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            
+
             {/* Search Input */}
             <div style={{ position: 'relative' }}>
               <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#718096' }} />
-              <input 
+              <input
                 type="text"
                 className="form-control"
                 placeholder="ค้นหาชื่อแบบฟอร์ม คำขอกู้ หรือประเภทเอกสาร..."
@@ -186,9 +186,9 @@ export default function DocumentsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {filteredDocs.length > 0 ? (
             filteredDocs.map((doc) => (
-              <div 
-                key={doc.id} 
-                className="surface-card" 
+              <div
+                key={doc.id}
+                className="surface-card"
                 style={{
                   background: '#FFFFFF',
                   border: '1px solid #DCE5F0',

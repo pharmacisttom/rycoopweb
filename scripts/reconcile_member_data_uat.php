@@ -39,7 +39,7 @@ echo "  [PASS] Exactly 2,508 member records exist in the database.\n\n";
 
 // 2. User Mapping Verification (1-to-1 Mapping)
 $stmt = $pdo->query("
-    SELECT 
+    SELECT
         COUNT(*) as total,
         COUNT(user_id) as mapped_count,
         SUM(CASE WHEN user_id IS NULL THEN 1 ELSE 0 END) as unmapped_count,
@@ -61,7 +61,7 @@ echo "  [PASS] 100% of 2,508 members are mapped to valid user accounts (0 unmapp
 
 // 3. Citizen ID & Member Number Format Validation
 $stmt = $pdo->query("
-    SELECT 
+    SELECT
         COUNT(*) as total,
         SUM(CASE WHEN id_card REGEXP '^[0-9]{13}$' THEN 1 ELSE 0 END) as valid_id_card,
         SUM(CASE WHEN member_no REGEXP '^[0-9]{5}$' THEN 1 ELSE 0 END) as valid_member_no,
@@ -83,7 +83,7 @@ echo "  [PASS] 100% of Citizen IDs (13-digit) and Member Numbers (5-digit padded
 
 // 4. Annual Financial Dividend Reconciliation (2567 & 2568)
 $stmt = $pdo->query("
-    SELECT 
+    SELECT
         year,
         COUNT(*) as record_count,
         COUNT(DISTINCT member_id) as unique_members
@@ -123,7 +123,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $maskedIdCard = MemberPiiMaskingService::maskCitizenId($rawIdCard);
     $maskedMemberNo = MemberPiiMaskingService::maskMemberNo($rawMemberNo);
     $maskedName = MemberPiiMaskingService::maskFullName($rawFullName);
-    
+
     // 5.1 Format Validation:
     // Masked citizen ID pattern: 3-****-*****-**-*
     $validId = (bool)preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedIdCard);
@@ -168,7 +168,7 @@ foreach ($sampleMembers as $m) {
     $divStmt = $pdo->prepare("SELECT member_id, details_json FROM member_dividends WHERE member_id = ?");
     $divStmt->execute([$mId]);
     $divRows = $divStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     foreach ($divRows as $dr) {
         if ((int)$dr['member_id'] !== $mId) {
             $leakageFound = true;

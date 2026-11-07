@@ -160,7 +160,7 @@ while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $maskedId = MemberPiiMaskingService::maskCitizenId($rawId);
     $maskedNo = MemberPiiMaskingService::maskMemberNo($rawNo);
     $maskedName = MemberPiiMaskingService::maskFullName($rawFullName);
-    
+
     // Format check: citizen ID, member no, name ending with xx/xxx
     if (!preg_match('/^\d-\*{4}-\*{5}-\*{2}-\*$/u', $maskedId) || !preg_match('/^\d{2}\*\d{2}$/u', $maskedNo) || !preg_match('/(?:xx|xxx|\*)/u', $maskedName)) {
         $piiFailures++;

@@ -1,10 +1,10 @@
 # RYCOOPWEB — RELEASE CANDIDATE 01 MANIFEST
 ## Smart Popup Campaign Manager V2 & Flat-Shell Dividend Import Fix
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
-**Production Status:** FROZEN & UNTOUCHED (`https://www.rayongcoop.org`)  
-**Release Type:** Incremental Modular Release  
-**Candidate Release Commit SHA:** `d9e6a44bc86e55b342bb47d58bc3f313933f5bb7`  
-**Candidate Source Branch:** `feature/smart-popup-campaign-manager-v2`  
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
+**Production Status:** FROZEN & UNTOUCHED (`https://www.rayongcoop.org`)
+**Release Type:** Incremental Modular Release
+**Candidate Release Commit SHA:** `d9e6a44bc86e55b342bb47d58bc3f313933f5bb7`
+**Candidate Source Branch:** `feature/smart-popup-campaign-manager-v2`
 **Parent / Baseline Commit:** `f97c72bd5a4aec04696d987a1950df7431413fc9` (merged `bd8f23a`)
 
 ---
@@ -39,4 +39,3 @@ The following components from the Admin Experience Transformation project are **
 - **Frontend Build Bundle Hash:** `index-BD37hSaE.js` (Built cleanly from commit `d9e6a44`)
 - **Backend Entrypoint:** `public/index.php`
 - **Migration Target:** `rycoopweb_test` (`database/migrations/029_add_popup_campaign_manager_v2_fields.sql`)
-

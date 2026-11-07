@@ -58,8 +58,8 @@ class MemberPortalService
      */
     public static function getDashboardSummary(int $memberId): array
     {
-        $member = Database::hasTable('members') 
-            ? Database::first("SELECT * FROM members WHERE id = ?", [$memberId]) 
+        $member = Database::hasTable('members')
+            ? Database::first("SELECT * FROM members WHERE id = ?", [$memberId])
             : null;
 
         // 1. Shares - verified database-driven data only
@@ -191,7 +191,7 @@ class MemberPortalService
         }
 
         $accounts = Database::query("SELECT * FROM deposit_accounts WHERE member_id = ? ORDER BY id ASC", [$memberId]);
-        
+
         $activeAccount = null;
         if ($accountNo) {
             $activeAccount = Database::first("SELECT * FROM deposit_accounts WHERE member_id = ? AND account_no = ?", [$memberId, $accountNo]);
@@ -237,7 +237,7 @@ class MemberPortalService
         }
 
         $loans = Database::query("SELECT * FROM loan_contracts WHERE member_id = ? ORDER BY id ASC", [$memberId]);
-        
+
         $activeLoan = null;
         if ($contractNo) {
             $activeLoan = Database::first("SELECT * FROM loan_contracts WHERE member_id = ? AND contract_no = ?", [$memberId, $contractNo]);
@@ -373,8 +373,8 @@ class MemberPortalService
 
                     if (move_uploaded_file($fileItem['tmp_name'], $targetPath) || copy($fileItem['tmp_name'], $targetPath)) {
                         $sizeBytes = file_exists($targetPath) ? (filesize($targetPath) ?: 0) : ($fileItem['size'] ?? 0);
-                        $formattedSize = $sizeBytes > 1048576 
-                            ? number_format($sizeBytes / 1048576, 2) . ' MB' 
+                        $formattedSize = $sizeBytes > 1048576
+                            ? number_format($sizeBytes / 1048576, 2) . ' MB'
                             : number_format($sizeBytes / 1024, 1) . ' KB';
 
                         $docName = $labelMap[$field] ?? ('เอกสารแนบ (' . pathinfo($origName, PATHINFO_FILENAME) . ')');
@@ -401,7 +401,7 @@ class MemberPortalService
         $docJson = json_encode($docs, JSON_UNESCAPED_UNICODE);
 
         $newId = Database::insert(
-            "INSERT INTO loan_applications (application_no, member_id, loan_type, request_amount, request_term, estimated_monthly, salary, purpose, guarantor_member_no, documents_json, status, current_step, created_at, updated_at) 
+            "INSERT INTO loan_applications (application_no, member_id, loan_type, request_amount, request_term, estimated_monthly, salary, purpose, guarantor_member_no, documents_json, status, current_step, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', 6, NOW(), NOW())",
             [$appNo, $memberId, $loanType, $amount, $term, $estimatedMonthly, $salary, $purpose, $guarantor, $docJson]
         );
@@ -517,7 +517,7 @@ class MemberPortalService
             );
         } else {
             Database::insert(
-                "INSERT INTO beneficiaries (member_id, first_name, last_name, relationship, id_card_masked, percentage, phone, priority_order, status) 
+                "INSERT INTO beneficiaries (member_id, first_name, last_name, relationship, id_card_masked, percentage, phone, priority_order, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'active')",
                 [$memberId, $firstName, $lastName, $rel, $idCard, $pct, $phone]
             );

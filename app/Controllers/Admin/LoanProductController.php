@@ -94,11 +94,11 @@ class LoanProductController extends Controller
             return;
         }
 
-        $sql = "UPDATE loan_products SET 
-                category = ?, name = ?, short_description = ?, full_description = ?, interest_rate = ?, 
-                min_loan_amount = ?, max_loan_limit = ?, max_term_months = ?, calculation_type = ?, 
-                eligibility = ?, guarantor_requirement = ?, is_featured = ?, is_calculator_enabled = ?, 
-                sort_order = ?, status = ?, updated_by = ?, updated_at = NOW() 
+        $sql = "UPDATE loan_products SET
+                category = ?, name = ?, short_description = ?, full_description = ?, interest_rate = ?,
+                min_loan_amount = ?, max_loan_limit = ?, max_term_months = ?, calculation_type = ?,
+                eligibility = ?, guarantor_requirement = ?, is_featured = ?, is_calculator_enabled = ?,
+                sort_order = ?, status = ?, updated_by = ?, updated_at = NOW()
                 WHERE id = ?";
 
         Database::execute($sql, [

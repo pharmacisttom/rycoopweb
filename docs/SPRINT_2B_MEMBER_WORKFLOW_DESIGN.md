@@ -1,8 +1,8 @@
 # RYCOOPWEB — SPRINT 2B: MEMBER MODULE WORKFLOW DESIGN SPECIFICATION
 ## Read-Only Architectural Specification, Identity Reconciliation & Audit Safeguards
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
-**Scope:** Member Administration, Dividend Processing & Identity Mapping  
-**Security Tier:** Protected Core (High Integrity)  
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
+**Scope:** Member Administration, Dividend Processing & Identity Mapping
+**Security Tier:** Protected Core (High Integrity)
 
 ---
 
@@ -70,4 +70,3 @@
 ### 3. Implementation Phasing & Next Steps
 - **Sprint 2 Execution:** Complete read-only UI components in `AdminMembersDashboardPage.jsx`, `AdminMembersPage.jsx`, and `AdminMembersHealthPage.jsx`.
 - **Sprint 3 (Future):** Authorized Maker-Checker dual control and enhanced batch exception resolution.
-

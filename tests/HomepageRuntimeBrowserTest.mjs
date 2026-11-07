@@ -177,7 +177,7 @@ try {
     sessionStorage.setItem('coop_campaign_shown', 'true');
   });
   const cmsPage = await cmsContext.newPage();
-  
+
   // Mock CMS responses so Promise.all([fetchHomeData(), fetchCoopInfo()]) resolves immediately
   await cmsPage.route('**/api/**', async (route) => {
     const url = route.request().url();

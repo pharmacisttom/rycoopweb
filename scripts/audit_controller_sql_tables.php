@@ -8,8 +8,8 @@ use App\Core\Database;
 // Fetch all tables and their columns in rayongcoop_db
 $tables = [];
 $cols = Database::query("
-    SELECT TABLE_NAME, COLUMN_NAME 
-    FROM information_schema.COLUMNS 
+    SELECT TABLE_NAME, COLUMN_NAME
+    FROM information_schema.COLUMNS
     WHERE TABLE_SCHEMA = 'rayongcoop_db'
 ");
 

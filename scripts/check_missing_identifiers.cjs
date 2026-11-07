@@ -26,7 +26,7 @@ const missingIcons = [];
 
 for (const file of files) {
   const content = fs.readFileSync(file, 'utf8');
-  
+
   // Find all JSX tags <TagName
   const matches = [...content.matchAll(/<([A-Z][a-zA-Z0-9]+)/g)];
   for (const m of matches) {
@@ -42,10 +42,10 @@ for (const file of files) {
           break;
         }
       }
-      
+
       // Check if tag is locally declared
       const isLocallyDeclared = new RegExp(`\\b(function|const|let|var|class)\\s+${tag}\\b`).test(content);
-      
+
       // Check if imported from another module
       const isImportedElsewhere = new RegExp(`\\bimport\\s+(?:\\{?[^}]*\\b${tag}\\b[^}]*\\}?|${tag})\\s+from`).test(content);
 

@@ -1,8 +1,8 @@
 # RYCOOPWEB — PUBLIC API CONTRACT STANDARDIZATION
 
-**Project:** RYCOOPWEB  
-**Branch:** `fix/frontend-backend-data-consistency`  
-**Generated Date:** 6 พฤศจิกายน 2569  
+**Project:** RYCOOPWEB
+**Branch:** `fix/frontend-backend-data-consistency`
+**Generated Date:** 6 พฤศจิกายน 2569
 **Specification:** Master Prompt Section 8
 
 ---
@@ -404,5 +404,3 @@ All endpoints require Staff Session Authentication, RBAC permission `members.vie
   "message": "ข้อมูลเงินปันผลรายปีได้รับการคุ้มครองความถูกต้อง (Read-Only) การแก้ไขตัวเลขย้อนหลังโดยตรงถูกปิดใช้งาน การปรับปรุงยอดเงินต้องดำเนินการผ่านระบบ Preflight & Import อย่างเป็นทางการ"
 }
 ```
-
-

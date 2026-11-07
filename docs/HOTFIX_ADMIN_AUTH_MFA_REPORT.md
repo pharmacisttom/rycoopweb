@@ -1,11 +1,11 @@
 # RYCOOPWEB — CRITICAL TEST HOTFIX REPORT: ADMIN LOGIN & TOTP MFA DECOUPLING
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Base Release Candidate:** `d9e6a44bc86e55b342bb47d58bc3f313933f5bb7` (Release 01 Candidate)  
-**Hotfix Branch:** `hotfix/test-admin-login-mfa-decoupling`  
-**Hotfix Commit SHA:** `b57c00236cba7634fbec2365c39a92406922b816`  
-**Remote Target:** `https://github.com/pharmacisttom/rycoopweb/tree/hotfix/test-admin-login-mfa-decoupling`  
-**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)  
+**Repository:** `pharmacisttom/rycoopweb`
+**Base Release Candidate:** `d9e6a44bc86e55b342bb47d58bc3f313933f5bb7` (Release 01 Candidate)
+**Hotfix Branch:** `hotfix/test-admin-login-mfa-decoupling`
+**Hotfix Commit SHA:** `b57c00236cba7634fbec2365c39a92406922b816`
+**Remote Target:** `https://github.com/pharmacisttom/rycoopweb/tree/hotfix/test-admin-login-mfa-decoupling`
+**Target Environment:** TEST ONLY (`https://test.rayongcoop.org`)
 **Production Status:** STRICTLY FROZEN (No changes made or deployed to Production)
 
 ---

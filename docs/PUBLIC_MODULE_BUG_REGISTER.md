@@ -1,8 +1,8 @@
 # RYCOOPWEB — PUBLIC MODULE BUG REGISTER
 
-**Project:** RYCOOPWEB  
-**Branch:** `fix/frontend-backend-data-consistency`  
-**Generated Date:** 6 พฤศจิกายน 2569  
+**Project:** RYCOOPWEB
+**Branch:** `fix/frontend-backend-data-consistency`
+**Generated Date:** 6 พฤศจิกายน 2569
 **Specification:** Master Prompt Section 12
 
 ---
@@ -129,4 +129,3 @@
   - ถอดค่าจำลองทั้งหมดออก ให้เริ่มต้นด้วยค่าว่าง `''` หรือดึงจาก `user` ที่ล็อกอินอยู่จริง
   - เชื่อมโยงรายการบริการออนไลน์เข้ากับตาราง `eservice_links`
 - **Final Status:** OPEN (Target for Phase 3)
-

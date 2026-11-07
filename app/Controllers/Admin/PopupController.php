@@ -22,11 +22,11 @@ class PopupController extends Controller
     public function apiIndex(): void
     {
         $popups = Database::query(
-            "SELECT id, title, content AS subtitle, desktop_image, mascot_image, layout_mode, 
-                    button_text, button_url, button_target, priority, priority_order, 
-                    start_at, end_at, status, impressions_count, clicks_count, created_at, updated_at 
-             FROM popups 
-             WHERE deleted_at IS NULL 
+            "SELECT id, title, content AS subtitle, desktop_image, mascot_image, layout_mode,
+                    button_text, button_url, button_target, priority, priority_order,
+                    start_at, end_at, status, impressions_count, clicks_count, created_at, updated_at
+             FROM popups
+             WHERE deleted_at IS NULL
              ORDER BY priority_order ASC, id ASC"
         );
 
@@ -121,12 +121,12 @@ class PopupController extends Controller
             }
 
             $sql = "INSERT INTO popups (
-                        title, type, content, desktop_image, mascot_image, layout_mode, 
-                        button_text, button_url, button_target, priority, priority_order, 
+                        title, type, content, desktop_image, mascot_image, layout_mode,
+                        button_text, button_url, button_target, priority, priority_order,
                         start_at, end_at, status, created_by, created_at, updated_at
                     ) VALUES (
-                        ?, 'image_text', ?, ?, ?, ?, 
-                        ?, ?, ?, 'normal', ?, 
+                        ?, 'image_text', ?, ?, ?, ?,
+                        ?, ?, ?, 'normal', ?,
                         ?, ?, ?, ?, NOW(), NOW()
                     )";
 
@@ -241,10 +241,10 @@ class PopupController extends Controller
             $priorityOrder = 1;
         }
 
-        $sql = "UPDATE popups SET 
-                    title = ?, content = ?, desktop_image = ?, mascot_image = ?, layout_mode = ?, 
-                    button_text = ?, button_url = ?, button_target = ?, priority_order = ?, 
-                    start_at = ?, end_at = ?, status = ?, updated_by = ?, updated_at = NOW() 
+        $sql = "UPDATE popups SET
+                    title = ?, content = ?, desktop_image = ?, mascot_image = ?, layout_mode = ?,
+                    button_text = ?, button_url = ?, button_target = ?, priority_order = ?,
+                    start_at = ?, end_at = ?, status = ?, updated_by = ?, updated_at = NOW()
                 WHERE id = ?";
 
         $startAt = $this->request->input('start_at', $popup['start_at']) ?: null;

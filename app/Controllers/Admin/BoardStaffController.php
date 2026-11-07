@@ -16,7 +16,7 @@ class BoardStaffController extends Controller
     {
         $boards = Database::query("SELECT * FROM boards WHERE deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
         $staff = Database::query("SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
-        
+
         $boards = array_map(function (array $item): array {
             $item['photo'] = resolve_media_url($item['photo'] ?? null);
             $item['version'] = \App\Services\AccessService::version($item);

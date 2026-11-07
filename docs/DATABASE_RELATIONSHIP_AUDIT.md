@@ -1,8 +1,8 @@
 # RYCOOPWEB — DATABASE RELATIONSHIP AUDIT
 
-**Project:** RYCOOPWEB  
-**Branch:** `fix/frontend-backend-data-consistency`  
-**Generated Date:** 6 พฤศจิกายน 2569  
+**Project:** RYCOOPWEB
+**Branch:** `fix/frontend-backend-data-consistency`
+**Generated Date:** 6 พฤศจิกายน 2569
 **Specification:** Master Prompt Section 5.3
 
 ---
@@ -65,4 +65,3 @@
 ### D. Historical vs Active Records
 - ตาราง `boards`, `news`, `announcements`, `hero_slides` รองรับคอลัมน์ `deleted_at` (Soft Delete) และ `status = 'active'` หรือ `workflow_status = 'published'`
 - การดึงข้อมูลสู่สาธารณะต้องกรองเฉพาะเรคคอร์ดที่มี `deleted_at IS NULL` และ `status = 'active'` เท่านั้น
-

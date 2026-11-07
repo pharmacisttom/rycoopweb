@@ -1,9 +1,9 @@
 # RYCOOPWEB — MEMBER IDENTITY MAPPING & DATA SAFETY DESIGN
 
-**Project:** RYCOOPWEB  
-**Specification:** Sprint 2B.1 Member Administration Platform  
-**Target Environment:** TEST ONLY (`test.rayongcoop.org`)  
-**Architecture:** Relational Identity Mapping, PDPA Masking, Dividend Immutability  
+**Project:** RYCOOPWEB
+**Specification:** Sprint 2B.1 Member Administration Platform
+**Target Environment:** TEST ONLY (`test.rayongcoop.org`)
+**Architecture:** Relational Identity Mapping, PDPA Masking, Dividend Immutability
 **Status:** Approved for Implementation
 
 ---
@@ -150,7 +150,7 @@ flowchart TD
     A["Excel File Upload (.xlsx)"] --> B["Stage 1: Preflight Analysis Engine"]
     B --> C["Parse Rows & Validate Types"]
     C --> D{"Classification Matrix"}
-    
+
     D --> E1["1. Existing Member Matched"]
     D --> E2["2. New Member Not Registered"]
     D --> E3["3. Identity Mismatch"]
@@ -158,7 +158,7 @@ flowchart TD
     D --> E5["5. Duplicate Citizen ID"]
     D --> E6["6. Inactive / Resigned Member"]
     D --> E7["7. Financial Calculation Discrepancy"]
-    
+
     E1 --> F["Generate Preflight Report & Diff Preview"]
     E2 --> F
     E3 --> F
@@ -166,7 +166,7 @@ flowchart TD
     E5 --> F
     E6 --> F
     E7 --> F
-    
+
     F --> G{"Officer Review & Approval"}
     G -- "Discrepancy Found / Reject" --> H["Cancel Import (Zero DB Changes)"]
     G -- "Approved" --> I["Stage 2: Atomic Execution"]

@@ -65,7 +65,7 @@ $resObj = new TestResponse();
 $controller = new PopupController(makeRequest('GET'), $resObj);
 $controller->apiIndex();
 
-it("1. Popup index API returns success and list of campaigns", 
+it("1. Popup index API returns success and list of campaigns",
     $resObj->body['success'] === true && isset($resObj->body['data']['count']));
 
 // 2. Insert Popup 1 (banner_only)
@@ -83,7 +83,7 @@ $res1 = new TestResponse();
 $c1 = new PopupController(makeRequest('POST', $post1), $res1);
 $c1->apiStore();
 
-it("2. Insert Popup 1 succeeds (banner_only)", 
+it("2. Insert Popup 1 succeeds (banner_only)",
     $res1->body['success'] === true && ($res1->body['data']['id'] ?? 0) > 0);
 
 // 3. Insert Popup 2 (mascot_only)
@@ -101,7 +101,7 @@ $res2 = new TestResponse();
 $c2 = new PopupController(makeRequest('POST', $post2), $res2);
 $c2->apiStore();
 
-it("3. Insert Popup 2 succeeds with mascot_only", 
+it("3. Insert Popup 2 succeeds with mascot_only",
     $res2->body['success'] === true && ($res2->body['data']['id'] ?? 0) > 0);
 
 // 4. Insert Popup 3 (banner_and_mascot)
@@ -119,7 +119,7 @@ $res3 = new TestResponse();
 $c3 = new PopupController(makeRequest('POST', $post3), $res3);
 $c3->apiStore();
 
-it("4. Insert Popup 3 succeeds (reaching max limit of 3)", 
+it("4. Insert Popup 3 succeeds (reaching max limit of 3)",
     $res3->body['success'] === true && ($res3->body['data']['id'] ?? 0) > 0);
 
 // 5. Index API shows can_create is false when 3 records exist
@@ -127,7 +127,7 @@ $resIndex2 = new TestResponse();
 $cIndex2 = new PopupController(makeRequest('GET'), $resIndex2);
 $cIndex2->apiIndex();
 
-it("5. Exactly 3 records configured, can_create is false", 
+it("5. Exactly 3 records configured, can_create is false",
     $resIndex2->body['data']['count'] >= 3 && $resIndex2->body['data']['can_create'] === false);
 
 // 6. Attempting 4th popup is strictly blocked
@@ -141,7 +141,7 @@ $res4 = new TestResponse();
 $c4 = new PopupController(makeRequest('POST', $post4), $res4);
 $c4->apiStore();
 
-it("6. Attempting 4th popup is strictly blocked with MAX_POPUPS_REACHED (422)", 
+it("6. Attempting 4th popup is strictly blocked with MAX_POPUPS_REACHED (422)",
     $res4->status === 422 && ($res4->body['code'] ?? '') === 'MAX_POPUPS_REACHED');
 
 // 7. Duplicate title check (updating Popup 2 with title of Popup 1)
@@ -154,7 +154,7 @@ $resDup = new TestResponse();
 $cDup = new PopupController(makeRequest('POST', $postDup), $resDup);
 $cDup->apiUpdate((string)$res2->body['data']['id']);
 
-it("7. Duplicate title is rejected", 
+it("7. Duplicate title is rejected",
     $resDup->body['success'] === false && str_contains($resDup->body['message'], 'มีป็อปอัปชื่อนี้อยู่ในระบบแล้ว'));
 
 // 8. Public API returns active popups ordered by priority
@@ -162,13 +162,13 @@ $resPub = new TestResponse();
 $spaController = new SpaApiController(makeRequest('GET'), $resPub);
 $spaController->popups();
 
-it("8. Public API returns active popups sorted by priority", 
+it("8. Public API returns active popups sorted by priority",
     $resPub->body['success'] === true && count($resPub->body['data']) === 3 && $resPub->body['data'][0]['priority'] === 1);
 
 // 9. Requirement 7: Mascot fallback provides approved official artwork /assets/img/logo.webp
 // Unapproved mascot-aomsuk.svg must NOT be published to the public endpoint
-it("9. Mascot fallback provides approved official artwork (/assets/img/logo.webp) and unapproved asset is disabled", 
-    $resPub->body['data'][1]['layout_mode'] === 'mascot_only' && 
+it("9. Mascot fallback provides approved official artwork (/assets/img/logo.webp) and unapproved asset is disabled",
+    $resPub->body['data'][1]['layout_mode'] === 'mascot_only' &&
     str_contains($resPub->body['data'][1]['mascot_image'], 'logo.webp') &&
     !str_contains($resPub->body['data'][1]['mascot_image'], 'mascot-aomsuk.svg'));
 
@@ -183,7 +183,7 @@ $resUp = new TestResponse();
 $cUpdate = new PopupController(makeRequest('POST', $postUp), $resUp);
 $cUpdate->apiUpdate((string)$res1->body['data']['id']);
 
-it("10. Update popup succeeds and can change status to inactive", 
+it("10. Update popup succeeds and can change status to inactive",
     $resUp->body['success'] === true && $resUp->body['data']['status'] === 'inactive');
 
 // 11. Public API now excludes inactive popup (should have 2 active)
@@ -191,7 +191,7 @@ $resPub2 = new TestResponse();
 $spa2 = new SpaApiController(makeRequest('GET'), $resPub2);
 $spa2->popups();
 
-it("11. Public API excludes inactive popups (now returns 2)", 
+it("11. Public API excludes inactive popups (now returns 2)",
     $resPub2->body['success'] === true && count($resPub2->body['data']) === 2);
 
 // 12. Soft-delete Popup 3
@@ -199,7 +199,7 @@ $resDel = new TestResponse();
 $cDel = new PopupController(makeRequest('POST'), $resDel);
 $cDel->apiDestroy((string)$res3->body['data']['id']);
 
-it("12. Soft-delete popup succeeds", 
+it("12. Soft-delete popup succeeds",
     $resDel->body['success'] === true);
 
 // 13. Count drops, can_create becomes true again
@@ -207,7 +207,7 @@ $resIndex3 = new TestResponse();
 $cIndex3 = new PopupController(makeRequest('GET'), $resIndex3);
 $cIndex3->apiIndex();
 
-it("13. Count drops to 2, can_create becomes true again", 
+it("13. Count drops to 2, can_create becomes true again",
     $resIndex3->body['data']['count'] === 2 && $resIndex3->body['data']['can_create'] === true);
 
 // 14. Protected Core Verification: Data intact

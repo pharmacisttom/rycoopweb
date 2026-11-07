@@ -56,20 +56,20 @@ foreach ($legacyCols as $lc) {
 assertCheck("2. All legacy columns preserved in popups table", empty($legacyMissing));
 
 // Check migration 029 columns
-assertCheck("3. Column 'mascot_image' exists (varchar)", 
+assertCheck("3. Column 'mascot_image' exists (varchar)",
     isset($columnMap['mascot_image']) && str_contains(strtolower($columnMap['mascot_image']['Type']), 'varchar'));
 
-assertCheck("4. Column 'layout_mode' exists (enum)", 
+assertCheck("4. Column 'layout_mode' exists (enum)",
     isset($columnMap['layout_mode']) && str_contains(strtolower($columnMap['layout_mode']['Type']), 'enum'));
 
-assertCheck("5. Column 'priority_order' exists (tinyint)", 
+assertCheck("5. Column 'priority_order' exists (tinyint)",
     isset($columnMap['priority_order']) && str_contains(strtolower($columnMap['priority_order']['Type']), 'tinyint'));
 
 // Default values check
-assertCheck("6. Default value for 'layout_mode' is 'banner_only'", 
+assertCheck("6. Default value for 'layout_mode' is 'banner_only'",
     ($columnMap['layout_mode']['Default'] ?? '') === 'banner_only');
 
-assertCheck("7. Default value for 'priority_order' is 1", 
+assertCheck("7. Default value for 'priority_order' is 1",
     (int)($columnMap['priority_order']['Default'] ?? 0) === 1);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,9 +82,9 @@ Database::execute("CREATE TEMPORARY TABLE popups_shadow_test LIKE popups");
 Database::execute("INSERT INTO popups_shadow_test (title, desktop_image, status, created_at, updated_at) VALUES ('[TEST] Legacy Record', 'legacy.jpg', 'active', NOW(), NOW())");
 $legacyRow = Database::first("SELECT * FROM popups_shadow_test WHERE title = '[TEST] Legacy Record'");
 
-assertCheck("8. Existing records inherit safe defaults (banner_only, priority_order=1, mascot_image=NULL)", 
-    $legacyRow['layout_mode'] === 'banner_only' && 
-    (int)$legacyRow['priority_order'] === 1 && 
+assertCheck("8. Existing records inherit safe defaults (banner_only, priority_order=1, mascot_image=NULL)",
+    $legacyRow['layout_mode'] === 'banner_only' &&
+    (int)$legacyRow['priority_order'] === 1 &&
     $legacyRow['mascot_image'] === null);
 
 // Test Rollback Guard against Silent Destruction:
@@ -109,9 +109,9 @@ Database::execute("ALTER TABLE popups_shadow_test DROP COLUMN `priority_order`, 
 $droppedCols = Database::query("DESCRIBE popups_shadow_test");
 $droppedColNames = array_map(fn($c) => $c['Field'], $droppedCols);
 
-assertCheck("12. Forced rollback cleanly drops V2 columns without breaking shadow table", 
-    !in_array('mascot_image', $droppedColNames, true) && 
-    !in_array('layout_mode', $droppedColNames, true) && 
+assertCheck("12. Forced rollback cleanly drops V2 columns without breaking shadow table",
+    !in_array('mascot_image', $droppedColNames, true) &&
+    !in_array('layout_mode', $droppedColNames, true) &&
     !in_array('priority_order', $droppedColNames, true) &&
     in_array('desktop_image', $droppedColNames, true));
 

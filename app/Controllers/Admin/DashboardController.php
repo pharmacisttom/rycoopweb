@@ -15,7 +15,7 @@ class DashboardController extends Controller
         $user = Auth::user();
 
         // Cooperative summary - genuine database data only
-        $totalMembers = Database::hasTable('members') 
+        $totalMembers = Database::hasTable('members')
             ? (int)(Database::value("SELECT COUNT(*) FROM members WHERE status != 'resigned'") ?: 0)
             : 0;
 
