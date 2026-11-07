@@ -223,7 +223,13 @@ class SpaApiController extends Controller
     {
         $links = [];
         try {
-            $links = Database::query("SELECT id, title, category, url, icon, is_external, is_featured, sort_order FROM eservice_links WHERE status = 'active' ORDER BY sort_order ASC, id ASC");
+            $links = Database::query(
+                "SELECT id, name, name AS title, description, category, url, icon,
+                        is_internal, open_new_tab, confirm_before_redirect, is_maintenance, sort_order
+                 FROM eservice_links
+                 WHERE status = 'active' AND deleted_at IS NULL
+                 ORDER BY sort_order ASC, id ASC"
+            );
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $links]);
