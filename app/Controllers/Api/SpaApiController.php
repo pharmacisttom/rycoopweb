@@ -186,8 +186,18 @@ class SpaApiController extends Controller
     {
         $docs = [];
         try {
-            $docs = Database::query("SELECT id, title, category, file_path, file_size, download_count, created_at FROM documents WHERE status = 'published' ORDER BY created_at DESC");
-            $docs = array_map(fn(array $doc): array => $this->withResolvedMediaUrls($doc, ['thumbnail', 'thumbnail_url', 'image_url']), $docs);
+            $docs = Database::query(
+                "SELECT d.id, d.title, d.slug, d.category_id, c.name as category, c.slug as category_slug,
+                        d.file_path, d.file_size, d.file_type, d.download_count, d.created_at
+                 FROM documents d
+                 LEFT JOIN document_categories c ON d.category_id = c.id
+                 WHERE d.status = 'active' AND d.deleted_at IS NULL
+                 ORDER BY d.sort_order ASC, d.id ASC"
+            );
+            $docs = array_map(function (array $doc): array {
+                $doc['file_url'] = resolve_media_url($doc['file_path']);
+                return $doc;
+            }, $docs);
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $docs]);
@@ -225,7 +235,7 @@ class SpaApiController extends Controller
     public function downloadDocument(string $id): void
     {
         $docId = (int)$id;
-        $doc = Database::first("SELECT * FROM documents WHERE id = ? AND status = 'published' AND deleted_at IS NULL", [$docId]);
+        $doc = Database::first("SELECT * FROM documents WHERE id = ? AND status = 'active' AND deleted_at IS NULL", [$docId]);
         if (!$doc) {
             $this->json(['success' => false, 'message' => 'ไม่พบเอกสาร'], 404);
             return;
