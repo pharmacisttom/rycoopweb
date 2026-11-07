@@ -27,6 +27,7 @@ import LoginPage from './pages/LoginPage';
 // Lazy-Loaded Route Chunks (Performance & Code Splitting)
 const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
 const MemberDividendsPage = lazy(() => import('./pages/MemberDividendsPage'));
+const MemberPrivacyAckPage = lazy(() => import('./pages/MemberPrivacyAckPage'));
 const AdminDividendImportPage = lazy(() => import('./pages/AdminDividendImportPage'));
 const AdminMembersDashboardPage = lazy(() => import('./pages/AdminMembersDashboardPage'));
 const AdminMembersPage = lazy(() => import('./pages/AdminMembersPage'));
@@ -39,10 +40,18 @@ const MfaPage = lazy(() => import('./pages/MfaPage'));
 const PublicContentAdminPage = lazy(() => import('./pages/PublicContentAdminPage'));
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'));
 const AdminWorkspacePage = lazy(() => import('./pages/AdminWorkspacePage'));
+const AdminHeroSlidesPage = lazy(() => import('./pages/AdminHeroSlidesPage'));
+const AdminWelfarePage = lazy(() => import('./pages/AdminWelfarePage'));
+const AdminEServicesPage = lazy(() => import('./pages/AdminEServicesPage'));
+const AdminBoardPersonnelPage = lazy(() => import('./pages/AdminBoardPersonnelPage'));
+const AdminProductsPage = lazy(() => import('./pages/AdminProductsPage'));
+const AdminDocumentCategoriesPage = lazy(() => import('./pages/AdminDocumentCategoriesPage'));
+const AdminPopupsPage = lazy(() => import('./pages/AdminPopupsPage'));
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const LoansPage = lazy(() => import('./pages/LoansPage'));
 const DepositsPage = lazy(() => import('./pages/DepositsPage'));
 const LoanChecklistPage = lazy(() => import('./pages/LoanChecklistPage'));
+const LoanSchedulePage = lazy(() => import('./pages/LoanSchedulePage'));
 const WelfarePage = lazy(() => import('./pages/WelfarePage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
@@ -98,12 +107,17 @@ const publicRoutes = [
   ['/deposits', DepositsPage],
   ['/rates', DepositsPage],
   ['/loans', LoansPage],
+  ['/loan-schedule', LoanSchedulePage],
+  ['/loans/schedule', LoanSchedulePage],
+  ['/loan-calendar', LoanSchedulePage],
   ['/calculator', CalculatorPage],
   ['/loan-checklist', LoanChecklistPage],
   ['/loan-readiness', LoanChecklistPage],
   ['/loans/checklist', LoanChecklistPage],
   ['/dividend-estimator', CalculatorPage],
   ['/welfare', WelfarePage],
+  ['/associations', WelfarePage],
+  ['/mutual-aid', WelfarePage],
   ['/eservice', EServicePage],
   ['/documents', DocumentsPage],
   ['/news', NewsPage],
@@ -151,11 +165,29 @@ function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
   return <AdminActionProvider><AdminAppShell title={null}>{children}</AdminAppShell></AdminActionProvider>;
 }
 
+function MemberProtectedRoute({ children }) {
+  if (!memberPortalEnabled) return <ServiceUnavailablePage />;
+  const { user, isLoggedIn, sessionStatus } = useAuth();
+  const location = useLocation();
+
+  if (sessionStatus === 'checking') return <PageSkeletonLoader />;
+  if (!isLoggedIn || !['online', 'offline'].includes(sessionStatus)) {
+    return <Navigate to="/member/login" replace state={{ sessionRequired: true }} />;
+  }
+  if (user?.role !== 'member') {
+    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'} replace />;
+  }
+  if (user?.pdpa_ack_required && location.pathname !== '/member/privacy-ack') {
+    return <Navigate to="/member/privacy-ack" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|login|2fa)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|login|2fa|hero-slides|welfare|eservices|board-staff|products|document-categories|popups)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -208,8 +240,8 @@ export default function App() {
             <Route path="/verify-receipt" element={<VerifyReceiptPage />} />
             <Route path="/verify-receipt/:token" element={<VerifyReceiptPage />} />
 
-            {memberRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberDashboardPage /> : <ServiceUnavailablePage />} />)}
-            {profileRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <ProfilePage /> : <ServiceUnavailablePage />} />)}
+            {memberRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberProtectedRoute><MemberDashboardPage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />)}
+            {profileRoutes.map((path) => <Route key={path} path={path} element={memberPortalEnabled ? <MemberProtectedRoute><ProfilePage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />)}
             <Route path="/service-unavailable" element={<ServiceUnavailablePage />} />
             <Route path="/staff" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
@@ -235,10 +267,17 @@ export default function App() {
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
 
-            <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
+            <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','boards.view','staff.view','rates.view','products.view','loan_products.view','deposit_products.view','settings.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/documents" element={<StaffProtectedRoute permission="documents.view"><AdminStoredContentPage/></StaffProtectedRoute>} />
             <Route path="/admin/settings/content" element={<StaffProtectedRoute permission="settings.view"><AdminStoredContentPage kind="settings"/></StaffProtectedRoute>} />
             <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view','faqs.view']}><ContentAdminPage /></StaffProtectedRoute>} />
+            <Route path="/admin/hero-slides" element={<StaffProtectedRoute anyPermissions={['hero_slides.view','news.view','content.view']}><AdminHeroSlidesPage /></StaffProtectedRoute>} />
+            <Route path="/admin/popups" element={<StaffProtectedRoute anyPermissions={['popups.view','news.view','content.view']}><AdminPopupsPage /></StaffProtectedRoute>} />
+            <Route path="/admin/welfare" element={<StaffProtectedRoute permission="welfare.view"><AdminWelfarePage /></StaffProtectedRoute>} />
+            <Route path="/admin/eservices" element={<StaffProtectedRoute anyPermissions={['eservice_links.view','settings.view','content.view']}><AdminEServicesPage /></StaffProtectedRoute>} />
+            <Route path="/admin/board-staff" element={<StaffProtectedRoute anyPermissions={['boards.view','staff.view','people.view']}><AdminBoardPersonnelPage /></StaffProtectedRoute>} />
+            <Route path="/admin/products" element={<StaffProtectedRoute anyPermissions={['loan_products.view','deposit_products.view','products.view']}><AdminProductsPage /></StaffProtectedRoute>} />
+            <Route path="/admin/document-categories" element={<StaffProtectedRoute permission="documents.view"><AdminDocumentCategoriesPage /></StaffProtectedRoute>} />
             <Route path="/admin/mfa/enroll" element={<MfaPage mode="enroll" />} />
             <Route path="/admin/mfa/verify" element={<MfaPage mode="verify" />} />
             <Route path="/admin/2fa" element={<MfaPage mode="verify" />} />
@@ -255,9 +294,10 @@ export default function App() {
             <Route path="/admin/led/batch" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedBatchPage /></StaffProtectedRoute>} />
             <Route path="/admin/led/schema" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminLedSchemaPage /></StaffProtectedRoute>} />
 
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/member/login" element={<LoginPage />} />
-            <Route path="/member/dividends" element={<MemberDividendsPage />} />
+            <Route path="/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/member/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/member/privacy-ack" element={memberPortalEnabled ? <MemberPrivacyAckPage /> : <ServiceUnavailablePage />} />
+            <Route path="/member/dividends" element={memberPortalEnabled ? <MemberProtectedRoute><MemberDividendsPage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />
             <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFoundPage />} />

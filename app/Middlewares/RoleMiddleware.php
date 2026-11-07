@@ -34,6 +34,18 @@ class RoleMiddleware
         }
 
         if (!empty($this->allowedRoles) && !Auth::hasRole($this->allowedRoles)) {
+            $user = Auth::user();
+            $role = (string)($user['role_slug'] ?? '');
+            $userId = (int)($user['id'] ?? 0);
+
+            if ($role === 'member') {
+                \App\Services\SecurityAuditService::recordMemberAccessDenied(
+                    $userId,
+                    'member',
+                    $request->uri(),
+                    'Member attempted access to restricted administrative route'
+                );
+            }
             if ($request->isAjax()) {
                 $response->json([
                     'success' => false,

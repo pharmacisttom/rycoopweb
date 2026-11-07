@@ -33,6 +33,27 @@ const DAY_RANGES = [
 ];
 
 export default function VisitorStatsPage() {
+  const isStaticMode = import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true';
+
+  if (isStaticMode) {
+    return (
+      <div className="section">
+        <div className="container" style={{ maxWidth: '800px', margin: '4rem auto', textAlign: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: '1rem', padding: '3rem 2rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 18px rgba(16,47,104,0.06)' }}>
+            <BarChart3 size={48} style={{ color: '#0b2545', margin: '0 auto 1.5rem auto' }} />
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0b2545', marginBottom: '0.75rem' }}>สถิติผู้เข้าชมเว็บไซต์</h1>
+            <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+              ระบบสถิติผู้เข้าชมเว็บไซต์แบบเรียลไทม์ยังไม่เปิดให้บริการในขณะนี้ (ระบบเผยแพร่ข้อมูลสาธารณะแบบคงที่)
+            </p>
+            <Link to="/" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>กลับสู่หน้าแรก</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [days, setDays] = useState(30);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);

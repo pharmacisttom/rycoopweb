@@ -220,6 +220,51 @@ class SpaApiController extends Controller
     }
 
     /**
+     * GET /api/public/popups
+     * Returns active, scheduled public popup campaigns (max 3, ordered by priority).
+     */
+    public function popups(): void
+    {
+        $popups = [];
+        try {
+            $now = date('Y-m-d H:i:s');
+            $popups = Database::query(
+                "SELECT id, title, content AS subtitle, desktop_image AS banner_image,
+                        mascot_image, layout_mode, button_text, button_url, button_target,
+                        priority_order AS priority, start_at, end_at, status
+                 FROM popups
+                 WHERE deleted_at IS NULL
+                   AND status = 'active'
+                   AND (start_at IS NULL OR start_at <= ?)
+                   AND (end_at IS NULL OR end_at >= ?)
+                 ORDER BY priority_order ASC, id ASC
+                 LIMIT 3",
+                [$now, $now]
+            );
+
+            $popups = array_map(function (array $p): array {
+                $p['banner_image'] = resolve_media_url($p['banner_image'] ?? null);
+                $mascot = resolve_media_url($p['mascot_image'] ?? null);
+
+                // Release Hardening: Keep unapproved mascot asset disabled for public publication.
+                // Replace proposed mascot fallback with cooperative's approved original artwork (/assets/img/logo.webp).
+                if (empty($mascot) || str_contains($mascot, 'mascot-aomsuk.svg')) {
+                    $mascot = in_array($p['layout_mode'] ?? 'banner_only', ['mascot_only', 'banner_and_mascot'], true)
+                        ? '/assets/img/logo.webp'
+                        : null;
+                }
+
+                $p['mascot_image'] = $mascot;
+                return $p;
+            }, $popups);
+        } catch (\Throwable $e) {
+            $popups = [];
+        }
+
+        $this->json(['success' => true, 'data' => $popups]);
+    }
+
+    /**
      * GET /api/public/board-members
      */
     public function boardMembers(): void
@@ -235,7 +280,9 @@ class SpaApiController extends Controller
     {
         $stats = [];
         try {
-            $stats = Database::query("SELECT year, month, total_members, total_assets, total_shares, total_deposits, total_loans, dividend_rate, loan_refund_rate FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 24");
+            if (Database::hasTable('financial_statistics')) {
+                $stats = Database::query("SELECT year, month, total_members, total_assets, share_capital, total_deposits, total_loans, reserve_fund, net_profit, dividend_rate, liquidity_ratio FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 24");
+            }
         } catch (\Throwable $e) {}
 
         $this->json(['success' => true, 'data' => $stats]);
@@ -330,7 +377,21 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'financial-summary', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
+        if (!empty($summary['member']) && is_array($summary['member'])) {
+            $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
+        }
         $notifications = MemberPortalService::getNotifications((int)$member['id']);
 
         $this->json([
@@ -367,9 +428,20 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $memberId = (int)$member['id'];
         $summary = MemberPortalService::getDashboardSummary($memberId);
         $requests = Database::query("SELECT * FROM share_change_requests WHERE member_id = ? ORDER BY created_at DESC", [$memberId]);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'shares', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json([
             'success' => true,
@@ -388,9 +460,20 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $accountNo = $this->request->query('account');
         $typeFilter = $this->request->query('type');
         $depositData = MemberPortalService::getDepositDetails((int)$member['id'], $accountNo, $typeFilter);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'deposits', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json(['success' => true, 'data' => $depositData]);
     }
@@ -403,8 +486,19 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $contractNo = $this->request->query('contract');
         $loanData = MemberPortalService::getLoanDetails((int)$member['id'], $contractNo);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'loans', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
 
         $this->json(['success' => true, 'data' => $loanData]);
     }
@@ -429,6 +523,16 @@ class SpaApiController extends Controller
     {
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
+
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
 
         $memberId = (int)$member['id'];
         $year = (int)($this->request->query('year') ?? date('Y'));
@@ -475,7 +579,21 @@ class SpaApiController extends Controller
         $member = $this->getAuthenticatedMember();
         if (!$member) return;
 
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)\App\Core\Auth::id())) {
+            \App\Core\Session::set('requires_password_change', true);
+            $this->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
+            return;
+        }
+
         $summary = MemberPortalService::getDashboardSummary((int)$member['id']);
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)\App\Core\Auth::id(), 'financial-summary', \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']));
+        if (!empty($summary['member']) && is_array($summary['member'])) {
+            $summary['member'] = \App\Services\MemberPiiMaskingService::sanitizeMemberData($summary['member']);
+        }
 
         $this->json(['success' => true, 'data' => $summary]);
     }
@@ -589,9 +707,29 @@ class SpaApiController extends Controller
             ],
         ];
 
-        if ($member) {
-            $userData['member_no'] = $member['member_no'] ?? '';
-            $userData['phone'] = $member['phone'] ?? '';
+        $isPdpaAcked = true;
+        if ($roleSlug === 'member') {
+            $isPdpaAcked = \App\Services\MemberPdpaService::isAcknowledged((int) $user['id']);
+            $userData['pdpa_ack_required'] = !$isPdpaAcked;
+            if (!$isPdpaAcked) {
+                $userData['redirect'] = '/member/privacy-ack';
+            }
+            // Enforce PII masking on member identity fields (never expose raw 13-digit citizen ID)
+            $userData['username'] = \App\Services\MemberPiiMaskingService::maskCitizenId($user['username'] ?? '');
+            $userData['name'] = \App\Services\MemberPiiMaskingService::maskFullName($user['name'] ?? '');
+        } else {
+            $userData['pdpa_ack_required'] = false;
+        }
+
+        if ($member && ($roleSlug !== 'member' || $isPdpaAcked)) {
+            if ($roleSlug === 'member') {
+                $userData['member_no'] = \App\Services\MemberPiiMaskingService::maskMemberNo((string)($member['member_no'] ?? ''));
+                $userData['memberId'] = $userData['member_no'];
+                $userData['phone'] = \App\Services\MemberPiiMaskingService::maskPhone((string)($member['phone'] ?? ''));
+            } else {
+                $userData['member_no'] = $member['member_no'] ?? '';
+                $userData['phone'] = $member['phone'] ?? '';
+            }
             $userData['department'] = $member['org_name'] ?? ($userData['department'] ?? '');
             $userData['position'] = $member['position'] ?? '';
         }
@@ -925,22 +1063,6 @@ class SpaApiController extends Controller
 
     private function sanitizeMember(array $member): array
     {
-        // Provide PDPA compliant masked identity before unsetting
-        $rawIdCard = $member['id_card'] ?? '';
-        $rawName = trim(($member['prefix'] ?? '') . ' ' . ($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? ''));
-        if ($rawName === '') {
-            $rawName = $member['name'] ?? '';
-        }
-
-        $member['id_card_pdpa'] = \App\Services\PdpaService::maskIdCard($rawIdCard);
-        $member['name_pdpa'] = \App\Services\PdpaService::maskName($rawName);
-
-        // Remove PII that should not be sent in raw form
-        unset($member['id_card']);
-        unset($member['password']);
-        if (array_key_exists('avatar', $member)) {
-            $member['avatar'] = resolve_media_url($member['avatar']);
-        }
-        return $member;
+        return \App\Services\MemberPiiMaskingService::sanitizeMemberData($member);
     }
 }

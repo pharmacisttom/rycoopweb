@@ -69,6 +69,7 @@ $pdo->exec("
         email TEXT,
         status TEXT,
         password TEXT,
+        must_change_password INTEGER DEFAULT 0,
         session_version INTEGER DEFAULT 1,
         created_at TEXT,
         updated_at TEXT,

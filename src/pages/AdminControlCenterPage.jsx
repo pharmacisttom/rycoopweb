@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Copy,
   Database,
   Download,
   ExternalLink,
@@ -19,10 +20,12 @@ import {
   KeyRound,
   Layers,
   Lock,
+  QrCode,
   RefreshCw,
   Server,
   ShieldAlert,
   ShieldCheck,
+  Smartphone,
   UserCheck,
   Users,
   XCircle
@@ -354,6 +357,122 @@ export default function AdminControlCenterPage({ section: propSection }) {
   const [auditSeverity, setAuditSeverity] = useState('');
   const [auditQuery, setAuditQuery] = useState('');
   const [auditPage, setAuditPage] = useState(1);
+  const [auditActorType, setAuditActorType] = useState('all');
+  const [auditResult, setAuditResult] = useState('all');
+  const [auditDateFrom, setAuditDateFrom] = useState('');
+  const [auditDateTo, setAuditDateTo] = useState('');
+  const [showMfaExportModal, setShowMfaExportModal] = useState(false);
+  const [mfaExportCode, setMfaExportCode] = useState('');
+  const [mfaExportError, setMfaExportError] = useState('');
+  const [mfaExportLoading, setMfaExportLoading] = useState(false);
+
+  // MFA Re-enrollment state
+  const [showReEnrollModal, setShowReEnrollModal] = useState(false);
+  const [reEnrollStep, setReEnrollStep] = useState('password'); // 'password' | 'scan' | 'success'
+  const [reEnrollPassword, setReEnrollPassword] = useState('');
+  const [reEnrollData, setReEnrollData] = useState(null);
+  const [reEnrollOtp, setReEnrollOtp] = useState('');
+  const [reEnrollRecoveryCodes, setReEnrollRecoveryCodes] = useState([]);
+  const [reEnrollLoading, setReEnrollLoading] = useState(false);
+  const [reEnrollError, setReEnrollError] = useState('');
+  const [reEnrollCopied, setReEnrollCopied] = useState(false);
+
+  const handleOpenReEnroll = () => {
+    setShowReEnrollModal(true);
+    setReEnrollStep('password');
+    setReEnrollPassword('');
+    setReEnrollOtp('');
+    setReEnrollError('');
+    setReEnrollData(null);
+    setReEnrollRecoveryCodes([]);
+    setReEnrollCopied(false);
+  };
+
+  const handleCloseReEnroll = () => {
+    setShowReEnrollModal(false);
+    setReEnrollPassword('');
+    setReEnrollError('');
+  };
+
+  const handleStartReEnroll = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setReEnrollLoading(true);
+    setReEnrollError('');
+    try {
+      const res = await memberAdminApi('/api/auth/mfa/re-enroll/start', {
+        data: { password: reEnrollPassword },
+      });
+      setReEnrollData(res);
+      setReEnrollStep('scan');
+    } catch (err) {
+      setReEnrollError(err.message || 'รหัสผ่านไม่ถูกต้อง');
+    } finally {
+      setReEnrollLoading(false);
+    }
+  };
+
+  const handleConfirmReEnroll = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setReEnrollLoading(true);
+    setReEnrollError('');
+    try {
+      const res = await memberAdminApi('/api/auth/mfa/re-enroll/confirm', {
+        data: { code: reEnrollOtp.trim() },
+      });
+      setReEnrollRecoveryCodes(res.recovery_codes || []);
+      setReEnrollStep('success');
+    } catch (err) {
+      setReEnrollError(err.message || 'รหัส TOTP ไม่ถูกต้องหรือหมดอายุ');
+    } finally {
+      setReEnrollLoading(false);
+    }
+  };
+
+  const handleCancelReEnroll = async () => {
+    try {
+      await memberAdminApi('/api/auth/mfa/re-enroll/cancel', { data: {} });
+    } catch {
+      // ignore
+    }
+    setShowReEnrollModal(false);
+    setReEnrollStep('password');
+    setReEnrollData(null);
+    setReEnrollOtp('');
+    setReEnrollError('');
+  };
+
+  const handleFinishReEnroll = () => {
+    setShowReEnrollModal(false);
+    setReEnrollStep('password');
+    setReEnrollData(null);
+    setReEnrollOtp('');
+    setReEnrollError('');
+    // Refresh MFA data
+    memberAdminApi('/api/admin/security/mfa')
+      .then((mfa) => setMfaData(mfa))
+      .catch(() => {});
+  };
+
+  const handleCopyRecoveryCodes = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(reEnrollRecoveryCodes.join('\n'));
+      setReEnrollCopied(true);
+      setTimeout(() => setReEnrollCopied(false), 2000);
+    }
+  };
+
+  const handleDownloadRecoveryCodes = () => {
+    if (typeof window === 'undefined') return;
+    const blob = new Blob([reEnrollRecoveryCodes.join('\r\n')], {
+      type: 'text/plain;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rayongcoop-mfa-recovery-codes.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const cat = searchParams.get('category') || '';
@@ -403,6 +522,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
         });
         if (auditCategory) params.set('category', auditCategory);
         if (auditSeverity) params.set('severity', auditSeverity);
+        if (auditActorType && auditActorType !== 'all') params.set('actor_type', auditActorType);
+        if (auditResult && auditResult !== 'all') params.set('result', auditResult);
+        if (auditDateFrom) params.set('from', auditDateFrom);
+        if (auditDateTo) params.set('to', auditDateTo);
         if (auditQuery.trim()) params.set('q', auditQuery.trim());
         const logs = await memberAdminApi(`/api/admin/audit-logs/center?${params.toString()}`, { signal });
         setAuditData(logs);
@@ -432,19 +555,77 @@ export default function AdminControlCenterPage({ section: propSection }) {
     } catch (err) {
       if (err?.name !== 'AbortError') {
         setError(err?.message || 'ไม่สามารถโหลดข้อมูลได้');
+        if (section === 'audit-logs') {
+          setAuditData(null);
+        }
       }
     } finally {
       if (!signal?.aborted) {
         setLoading(false);
       }
     }
-  }, [authorized, section, days, auditPage, auditCategory, auditSeverity, auditQuery, user?.role]);
+  }, [authorized, section, days, auditPage, auditCategory, auditSeverity, auditQuery, auditActorType, auditResult, auditDateFrom, auditDateTo, user?.role]);
 
   useEffect(() => {
     const controller = new AbortController();
     loadSectionData(controller.signal);
     return () => controller.abort();
   }, [loadSectionData, refreshTick]);
+
+  const handlePrivilegedExport = async (e) => {
+    e.preventDefault();
+    setMfaExportError('');
+    setMfaExportLoading(true);
+    try {
+      // 1. Fetch fresh CSRF token
+      const csrfRes = await fetch('/csrf-token', {
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
+      });
+      const csrfData = csrfRes.ok ? await csrfRes.json() : {};
+      const csrfToken = csrfData.token || '';
+
+      // 2. Submit privileged export via POST body only (prohibit TOTP in URL)
+      const res = await fetch('/api/admin/audit-logs/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/csv',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          totp_code: mfaExportCode.trim(),
+          _csrf_token: csrfToken,
+          actor_type: auditActorType,
+          result: auditResult,
+          from: auditDateFrom,
+          to: auditDateTo,
+          category: auditCategory,
+          q: auditQuery.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'รหัสยืนยัน 2FA ไม่ถูกต้องหรือไม่มีสิทธิ์ส่งออก');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `security_audit_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setShowMfaExportModal(false);
+      setMfaExportCode('');
+    } catch (err) {
+      setMfaExportError(err.message || 'เกิดข้อผิดพลาดในการส่งออกข้อมูล');
+    } finally {
+      setMfaExportLoading(false);
+    }
+  };
 
   const handleRevokeStaffSessions = async (targetUserId, targetName) => {
     setNotice('');setError('');
@@ -1082,9 +1263,93 @@ export default function AdminControlCenterPage({ section: propSection }) {
       {/* ===================================================================
           5. AUDIT & ACTIVITY LOGS (/admin/audit-logs)
          =================================================================== */}
+      {!loading && section === 'audit-logs' && error && !auditData && (
+        <AdminErrorState
+          message={error}
+          onRetry={() => setRefreshTick((v) => v + 1)}
+        />
+      )}
       {!loading && section === 'audit-logs' && auditData && (
         <>
-          <div className="acc-filter-bar">
+          {/* Administrative Audit Dashboard KPIs */}
+          <div className="acc-kpi-grid" style={{ marginBottom: 20 }}>
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมความปลอดภัยทั้งหมด</span>
+                <span className="acc-kpi-icon teal"><Activity size={18} /></span>
+              </div>
+              <div className="acc-kpi-value">{formatNumber(auditData.stats?.total_events ?? auditData.total ?? 0)}</div>
+              <div className="acc-kpi-sub">
+                <span>บันทึกใน security_audit_logs</span>
+              </div>
+            </article>
+
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมสมาชิก (Member)</span>
+                <span className="acc-kpi-icon emerald"><Users size={18} /></span>
+              </div>
+              <div className="acc-kpi-value">{formatNumber(auditData.stats?.member_events ?? 0)}</div>
+              <div className="acc-kpi-sub">
+                <span>เข้าสู่ระบบ ยินยอม PDPA ดูข้อมูลส่วนบุคคล</span>
+              </div>
+            </article>
+
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมเจ้าหน้าที่ (Staff)</span>
+                <span className="acc-kpi-icon primary"><ShieldCheck size={18} /></span>
+              </div>
+              <div className="acc-kpi-value">{formatNumber(auditData.stats?.staff_events ?? 0)}</div>
+              <div className="acc-kpi-sub">
+                <span>ผู้ดูแลระบบและเจ้าหน้าที่ผ่านการยืนยัน 2FA</span>
+              </div>
+            </article>
+
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมล้มเหลว / ปฏิเสธ</span>
+                <span className="acc-kpi-icon rose"><ShieldAlert size={18} /></span>
+              </div>
+              <div className="acc-kpi-value" style={{ color: ((auditData.stats?.failed_events || 0) + (auditData.stats?.denied_events || 0)) > 0 ? '#ef4444' : undefined }}>
+                {formatNumber((auditData.stats?.failed_events ?? 0) + (auditData.stats?.denied_events ?? 0))}
+              </div>
+              <div className="acc-kpi-sub">
+                <span>ล้มเหลว: {formatNumber(auditData.stats?.failed_events ?? 0)} · ปฏิเสธ: {formatNumber(auditData.stats?.denied_events ?? 0)}</span>
+              </div>
+            </article>
+          </div>
+
+          <div className="acc-filter-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+            <select
+              className="acc-select"
+              aria-label="ประเภทผู้ใช้"
+              value={auditActorType}
+              onChange={(e) => {
+                setAuditActorType(e.target.value);
+                setAuditPage(1);
+              }}
+            >
+              <option value="all">ทุกประเภทผู้ใช้ (All Actors)</option>
+              <option value="member">สมาชิก (Member)</option>
+              <option value="staff">เจ้าหน้าที่ (Staff)</option>
+            </select>
+
+            <select
+              className="acc-select"
+              aria-label="ผลลัพธ์กิจกรรม"
+              value={auditResult}
+              onChange={(e) => {
+                setAuditResult(e.target.value);
+                setAuditPage(1);
+              }}
+            >
+              <option value="all">ทุกผลลัพธ์ (All Results)</option>
+              <option value="success">สำเร็จ (Success)</option>
+              <option value="failure">ล้มเหลว (Failure)</option>
+              <option value="denied">ถูกปฏิเสธ (Denied)</option>
+            </select>
+
             <select
               className="acc-select"
               aria-label="หมวดหมู่บันทึก"
@@ -1098,13 +1363,11 @@ export default function AdminControlCenterPage({ section: propSection }) {
               }}
             >
               <option value="">ทุกหมวดหมู่ (All Categories)</option>
-              <option value="authentication">Authentication Logs (เข้าสู่ระบบ/MFA)</option>
-              <option value="security">Security Events (ความปลอดภัย)</option>
-              <option value="access">User & Role Changes (สิทธิ์และบทบาท)</option>
-              <option value="members">Member Operations (ข้อมูลสมาชิก)</option>
-              <option value="finance">Financial & Dividends (การเงินและปันผล)</option>
-              <option value="content">Content Management (ข่าวสารและเนื้อหา)</option>
-              <option value="export">Export History (ประวัติการส่งออกข้อมูล)</option>
+              <option value="authentication">Authentication & MFA</option>
+              <option value="pdpa">PDPA & Consent</option>
+              <option value="finance">Financial & Export</option>
+              <option value="access">Authorization & RBAC</option>
+              <option value="backup">Backup Operations</option>
             </select>
 
             <select
@@ -1116,57 +1379,94 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 setAuditPage(1);
               }}
             >
-              <option value="">ทุกระดับความรุนแรง (All Severities)</option>
+              <option value="">ทุกระดับความรุนแรง</option>
               <option value="info">Info (ปกติ)</option>
               <option value="warning">Warning (เฝ้าระวัง)</option>
               <option value="critical">Critical (วิกฤต)</option>
             </select>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input
+                type="date"
+                className="acc-input"
+                aria-label="ตั้งแต่วันที่"
+                value={auditDateFrom}
+                onChange={(e) => {
+                  setAuditDateFrom(e.target.value);
+                  setAuditPage(1);
+                }}
+                style={{ width: 140 }}
+              />
+              <span style={{ color: 'var(--text-muted)' }}>-</span>
+              <input
+                type="date"
+                className="acc-input"
+                aria-label="ถึงวันที่"
+                value={auditDateTo}
+                onChange={(e) => {
+                  setAuditDateTo(e.target.value);
+                  setAuditPage(1);
+                }}
+                style={{ width: 140 }}
+              />
+            </div>
+
             <input
               type="search"
               className="acc-input"
-              placeholder="ค้นหาผู้ใช้, โมดูล, กิจกรรม หรือ Target ID..."
+              placeholder="ค้นหาผู้ใช้, Event Type, Correlation ID หรือ Target..."
               aria-label="ค้นหาบันทึกการตรวจสอบ"
               value={auditQuery}
               onChange={(e) => {
                 setAuditQuery(e.target.value);
                 setAuditPage(1);
               }}
-              style={{ minWidth: 240, flex: 1 }}
+              style={{ minWidth: 200, flex: 1 }}
             />
 
             <button
               type="button"
-              className="acc-btn primary"
+              className="acc-btn"
               onClick={() =>
                 downloadCsv(
                   `audit-logs-page-${auditPage}.csv`,
-                  ['Timestamp', 'Actor', 'Role', 'Category', 'Module', 'Action', 'Target', 'IP', 'Severity', 'CorrelationID'],
+                  ['Timestamp', 'Actor', 'ActorType', 'Role', 'Category', 'EventType', 'Target', 'Result', 'IP', 'Severity', 'CorrelationID'],
                   (auditData.records || []).map((it) => [
                     it.created_at,
                     it.actor_name,
+                    it.actor_type,
                     it.actor_role,
                     it.category,
-                    it.module,
-                    it.action,
+                    it.event_type || it.action,
                     it.target_resource,
+                    it.result,
                     it.ip_address,
                     it.severity,
                     it.correlation_id,
                   ])
                 )
               }
+              title="ส่งออกบันทึกหน้าปัจจุบัน"
             >
-              <Download size={15} /> ส่งออก CSV
+              <Download size={15} /> CSV หน้านี้
+            </button>
+
+            <button
+              type="button"
+              className="acc-btn primary"
+              onClick={() => setShowMfaExportModal(true)}
+              title="ส่งออกไฟล์ตรวจสอบสิทธิ์สูงพร้อมยืนยัน Step-Up MFA"
+            >
+              <Lock size={15} /> ส่งออกรายงานระดับสูง (MFA)
             </button>
           </div>
 
           <section className="acc-card">
             <div className="acc-card-header">
               <div>
-                <h2 className="acc-card-title">รายการบันทึกการตรวจสอบ (Audit Trail & Security Events)</h2>
+                <h2 className="acc-card-title">รายการบันทึกการตรวจสอบ (Security Audit Trail & Compliance)</h2>
                 <p className="acc-card-subtitle">
-                  แสดงหน้า {auditData.page || 1} (ทั้งหมด {formatNumber(auditData.total)} รายการ) • ระบบปกปิดรหัสผ่านและคีย์ลับอัตโนมัติ ([REDACTED])
+                  แสดงหน้า {auditData.page || 1} (ทั้งหมด {formatNumber(auditData.total)} รายการ) • ระบบปกปิดข้อมูลส่วนบุคคลและข้อมูลลับอัตโนมัติตามมาตรฐาน PDPA
                 </p>
               </div>
             </div>
@@ -1178,11 +1478,12 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th scope="col">วัน-เวลา</th>
+                      <th scope="col">วัน-เวลา / Correlation ID</th>
                       <th scope="col">ผู้ดำเนินการ (Actor)</th>
-                      <th scope="col">หมวดหมู่</th>
-                      <th scope="col">โมดูล / การกระทำ</th>
+                      <th scope="col">ประเภท / หมวดหมู่</th>
+                      <th scope="col">เหตุการณ์ความปลอดภัย (Event Type)</th>
                       <th scope="col">เป้าหมาย (Target)</th>
+                      <th scope="col">ผลลัพธ์ (Result)</th>
                       <th scope="col">IP Address</th>
                       <th scope="col">ระดับ</th>
                     </tr>
@@ -1200,11 +1501,21 @@ export default function AdminControlCenterPage({ section: propSection }) {
                           <br />
                           <small>{item.actor_role_name || item.actor_role}</small>
                         </td>
-                        <td><span className="acc-badge-pill">{item.category}</span></td>
                         <td>
-                          <strong>{item.module}</strong> : <code>{item.action}</code>
+                          <span className={`acc-badge-pill ${item.actor_type === 'member' ? 'warning' : 'primary'}`} style={{ marginRight: 6 }}>
+                            {item.actor_type === 'member' ? 'สมาชิก' : 'เจ้าหน้าที่'}
+                          </span>
+                          <span className="acc-badge-pill">{item.category}</span>
+                        </td>
+                        <td>
+                          <code>{item.event_type || item.action}</code>
                         </td>
                         <td>{item.target_resource}</td>
+                        <td>
+                          <span className={`acc-badge-pill ${item.result === 'success' ? 'success' : item.result === 'failure' ? 'warning' : 'danger'}`}>
+                            {item.result === 'success' ? 'สำเร็จ' : item.result === 'failure' ? 'ล้มเหลว' : 'ปฏิเสธ'}
+                          </span>
+                        </td>
                         <td><code>{item.ip_address || '-'}</code></td>
                         <td>
                           <span
@@ -1248,6 +1559,66 @@ export default function AdminControlCenterPage({ section: propSection }) {
               </button>
             </div>
           </section>
+
+          {/* Step-Up MFA Export Modal */}
+          {showMfaExportModal && (
+            <div className="acc-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <div className="acc-modal-content" style={{ background: '#fff', borderRadius: 8, padding: 24, maxWidth: 440, width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <span className="acc-kpi-icon primary"><Lock size={20} /></span>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem' }}>ยืนยัน Step-Up MFA เพื่อส่งออกข้อมูล</h3>
+                </div>
+                <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: 16 }}>
+                  การส่งออกบันทึกการตรวจสอบความปลอดภัยเป็นสิทธิ์ควบคุมพิเศษ กรุณาระบุรหัส Authenticator 6 หลักเพื่อยืนยันตัวตน
+                </p>
+                {mfaExportError && (
+                  <div style={{ padding: '8px 12px', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, fontSize: '0.85rem', marginBottom: 14 }}>
+                    {mfaExportError}
+                  </div>
+                )}
+                <form onSubmit={handlePrivilegedExport}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>
+                      รหัส Authenticator (TOTP)
+                    </label>
+                    <input
+                      type="text"
+                      className="acc-input"
+                      placeholder="000000"
+                      maxLength={6}
+                      pattern="[0-9]{6}"
+                      required
+                      autoFocus
+                      value={mfaExportCode}
+                      onChange={(e) => setMfaExportCode(e.target.value.replace(/\D/g, ''))}
+                      style={{ width: '100%', fontSize: '1.25rem', letterSpacing: '0.25em', textAlign: 'center' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                    <button
+                      type="button"
+                      className="acc-btn"
+                      disabled={mfaExportLoading}
+                      onClick={() => {
+                        setShowMfaExportModal(false);
+                        setMfaExportCode('');
+                        setMfaExportError('');
+                      }}
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      className="acc-btn primary"
+                      disabled={mfaExportLoading || mfaExportCode.length !== 6}
+                    >
+                      {mfaExportLoading ? 'กำลังตรวจสอบ...' : 'ยืนยันและดาวน์โหลด'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1477,10 +1848,21 @@ export default function AdminControlCenterPage({ section: propSection }) {
           </div>
 
           <section className="acc-card">
-            <div className="acc-card-header">
+            <div className="acc-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <h2 className="acc-card-title">สถานะการลงทะเบียน MFA รายบุคคล (Staff MFA Enrollment Status)</h2>
                 <p className="acc-card-subtitle">{mfaData.policy_note}</p>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  className="acc-btn primary"
+                  id="btn-re-enroll-mfa"
+                  onClick={handleOpenReEnroll}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Smartphone size={16} /> เปลี่ยนอุปกรณ์ Authenticator
+                </button>
               </div>
             </div>
             <div className="acc-table-wrap">
@@ -1493,6 +1875,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
                     <th scope="col">สถานะ MFA</th>
                     <th scope="col">วันที่ยืนยันตัวตน (Confirmed At)</th>
                     <th scope="col">รหัสกู้คืนคงเหลือ (Recovery Codes)</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1508,12 +1891,218 @@ export default function AdminControlCenterPage({ section: propSection }) {
                       </td>
                       <td>{st.enrolled_at || 'ยังไม่มีข้อมูล'}</td>
                       <td>{st.mfa_enabled ? `${st.recovery_codes_remaining} รหัส` : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        {st.mfa_enabled && (
+                          <button
+                            type="button"
+                            className="acc-btn"
+                            onClick={handleOpenReEnroll}
+                            title="เปลี่ยนอุปกรณ์ Authenticator หรือลงทะเบียนใหม่"
+                            style={{ padding: '4px 8px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <RefreshCw size={12} /> เปลี่ยนอุปกรณ์
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </section>
+
+          {/* Secure MFA Re-enrollment Modal */}
+          {showReEnrollModal && (
+            <div className="acc-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, backdropFilter: 'blur(3px)' }}>
+              <div className="acc-modal-content" style={{ background: '#fff', borderRadius: 12, padding: 28, maxWidth: 540, width: '92%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                {/* Step 1: Re-authenticate with account password */}
+                {reEnrollStep === 'password' && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                      <span className="acc-kpi-icon warning" style={{ background: '#fef3c7', color: '#d97706', padding: 8, borderRadius: 8 }}><ShieldAlert size={22} /></span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#1e293b' }}>เปลี่ยนอุปกรณ์ Authenticator (MFA)</h3>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>ขั้นตอนที่ 1 จาก 3: ยืนยันรหัสผ่านบัญชีเพื่อความปลอดภัย</p>
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px 16px', background: '#fffbeb', borderLeft: '4px solid #f59e0b', borderRadius: 6, fontSize: '0.875rem', color: '#92400e', marginBottom: 18, lineHeight: 1.5 }}>
+                      <strong>คำเตือนความปลอดภัย:</strong> รหัส 2FA และอุปกรณ์เดิมจะยังคงใช้งานได้ จนกว่าท่านจะสแกน QR Code ใหม่และกรอกรหัส 6 หลักยืนยันสำเร็จ เมื่อยืนยันสำเร็จ รหัสสำรองชุดเก่าจะถูกยกเลิก และเซสชันในอุปกรณ์อื่นจะถูกตัดการเชื่อมต่อทันที
+                    </div>
+                    {reEnrollError && (
+                      <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, fontSize: '0.875rem', marginBottom: 14 }}>
+                        {reEnrollError}
+                      </div>
+                    )}
+                    <form onSubmit={handleStartReEnroll}>
+                      <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                          รหัสผ่านปัจจุบันของบัญชี (Current Password)
+                        </label>
+                        <input
+                          type="password"
+                          className="acc-input"
+                          id="re-enroll-password"
+                          placeholder="กรอกรหัสผ่านเพื่อยืนยันสิทธิ์"
+                          required
+                          autoFocus
+                          value={reEnrollPassword}
+                          onChange={(e) => setReEnrollPassword(e.target.value)}
+                          style={{ width: '100%', padding: '10px 14px' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                        <button
+                          type="button"
+                          className="acc-btn"
+                          disabled={reEnrollLoading}
+                          onClick={handleCloseReEnroll}
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          type="submit"
+                          id="btn-re-enroll-next"
+                          className="acc-btn primary"
+                          disabled={reEnrollLoading || !reEnrollPassword.trim()}
+                        >
+                          {reEnrollLoading ? 'กำลังตรวจสอบ...' : 'ถัดไป: สแกน QR Code ใหม่ →'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 2: Scan QR Code & Enter 6-digit OTP */}
+                {reEnrollStep === 'scan' && reEnrollData && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                      <span className="acc-kpi-icon primary" style={{ background: '#e0f2fe', color: '#0284c7', padding: 8, borderRadius: 8 }}><QrCode size={22} /></span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#1e293b' }}>สแกน QR Code ด้วยอุปกรณ์ใหม่</h3>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>ขั้นตอนที่ 2 จาก 3: เปิดแอป Authenticator แล้วสแกน</p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', marginBottom: 18, background: '#f8fafc', padding: '16px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <img
+                        src={reEnrollData.qr_code_uri}
+                        alt="MFA QR Code"
+                        id="re-enroll-qr-image"
+                        style={{ width: 220, height: 220, margin: '0 auto', display: 'block', borderRadius: 6, background: '#fff', padding: 8, border: '1px solid #cbd5e1' }}
+                      />
+                      <div style={{ marginTop: 12, fontSize: '0.825rem', color: '#64748b' }}>
+                        หรือกรอกรหัสด้วยตนเอง (Manual Secret):
+                        <div style={{ marginTop: 4, fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', letterSpacing: '0.15em', color: '#0f172a' }}>
+                          {reEnrollData.formatted_secret}
+                        </div>
+                      </div>
+                    </div>
+                    {reEnrollError && (
+                      <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, fontSize: '0.875rem', marginBottom: 14 }}>
+                        {reEnrollError}
+                      </div>
+                    )}
+                    <form onSubmit={handleConfirmReEnroll}>
+                      <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: 6, textAlign: 'center' }}>
+                          กรอกรหัสความปลอดภัย 6 หลักจากอุปกรณ์ใหม่ (TOTP)
+                        </label>
+                        <input
+                          type="text"
+                          id="re-enroll-otp"
+                          className="acc-input"
+                          placeholder="000000"
+                          maxLength={6}
+                          pattern="[0-9]{6}"
+                          required
+                          autoFocus
+                          value={reEnrollOtp}
+                          onChange={(e) => setReEnrollOtp(e.target.value.replace(/\D/g, ''))}
+                          style={{ width: 200, margin: '0 auto', display: 'block', fontSize: '1.5rem', letterSpacing: '0.35em', textAlign: 'center', fontFamily: 'monospace' }}
+                        />
+                        <p style={{ margin: '6px 0 0', textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>
+                          รหัสจะเปลี่ยนใหม่ทุก 30 วินาที
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                        <button
+                          type="button"
+                          className="acc-btn"
+                          disabled={reEnrollLoading}
+                          onClick={handleCancelReEnroll}
+                        >
+                          ยกเลิกการเปลี่ยนอุปกรณ์
+                        </button>
+                        <button
+                          type="submit"
+                          id="btn-re-enroll-confirm"
+                          className="acc-btn primary"
+                          disabled={reEnrollLoading || reEnrollOtp.length !== 6}
+                        >
+                          {reEnrollLoading ? 'กำลังตรวจสอบ...' : 'ยืนยันและเปิดใช้งานอุปกรณ์ใหม่'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 3: Success & Download New Recovery Codes */}
+                {reEnrollStep === 'success' && (
+                  <div>
+                    <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                      <span style={{ display: 'inline-flex', padding: 12, borderRadius: '50%', background: '#dcfce7', color: '#16a34a', marginBottom: 8 }}>
+                        <CheckCircle2 size={36} />
+                      </span>
+                      <h3 style={{ margin: '0 0 6px', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+                        เปลี่ยนอุปกรณ์ Authenticator สำเร็จ
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
+                        อุปกรณ์ใหม่พร้อมใช้งานแล้ว และระบบได้ยกเลิกรหัสสำรองชุดเดิมเรียบร้อยแล้ว
+                      </p>
+                    </div>
+                    <div style={{ padding: '12px 16px', background: '#fef2f2', borderLeft: '4px solid #ef4444', borderRadius: 6, fontSize: '0.85rem', color: '#991b1b', marginBottom: 16, lineHeight: 1.5 }}>
+                      <strong>คำเตือนสำคัญ:</strong> กรุณาบันทึกหรือคัดลอกรหัสสำรอง (Recovery Codes) ชุดใหม่ 8 รหัสนี้เก็บไว้ในที่ปลอดภัยทันที รหัสแต่ละตัวใช้ได้เพียงครั้งเดียวเมื่ออุปกรณ์สูญหาย
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 18 }}>
+                      {reEnrollRecoveryCodes.map((code, idx) => (
+                        <div key={idx} style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.875rem', color: '#1e293b', background: '#fff', padding: '6px 10px', borderRadius: 4, border: '1px solid #cbd5e1', textAlign: 'center' }}>
+                          {code}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
+                      <button
+                        type="button"
+                        className="acc-btn"
+                        onClick={handleCopyRecoveryCodes}
+                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      >
+                        <Copy size={15} /> {reEnrollCopied ? 'คัดลอกแล้ว!' : 'คัดลอกรหัสทั้งหมด'}
+                      </button>
+                      <button
+                        type="button"
+                        className="acc-btn"
+                        onClick={handleDownloadRecoveryCodes}
+                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      >
+                        <Download size={15} /> ดาวน์โหลด (.txt)
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        id="btn-re-enroll-finish"
+                        className="acc-btn primary"
+                        onClick={handleFinishReEnroll}
+                        style={{ width: '100%' }}
+                      >
+                        เสร็จสิ้นและกลับสู่หน้าควบคุม
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
 

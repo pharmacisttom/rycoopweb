@@ -272,6 +272,10 @@ class ControlCenterApiController extends Controller
                     'q' => $this->request->query('q', ''),
                     'from' => $this->request->query('from', ''),
                     'to' => $this->request->query('to', ''),
+                    'actor_type' => $this->request->query('actor_type', 'all'),
+                    'event_type' => $this->request->query('event_type', 'all'),
+                    'result' => $this->request->query('result', 'all'),
+                    'source' => $this->request->query('source', 'security'),
                 ];
                 return AdminControlCenterService::getAuditLogs($filters);
             }

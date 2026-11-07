@@ -48,7 +48,7 @@ export default function WelfarePage() {
                 </div>
 
                 <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
-                  <Link to="/documents" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary-600)' }}>
+                  <Link to="/documents?category=welfare" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary-600)' }}>
                     <Download size={14} />
                     <span>ดาวน์โหลดแบบขอรับสวัสดิการ</span>
                   </Link>
@@ -56,6 +56,158 @@ export default function WelfarePage() {
               </div>
             );
           })}
+        </div>
+
+        {/* =========================================================================
+            PARTNER ASSOCIATIONS SECTION (สสธท. / กสธท. / สส.ชสอ.)
+            ========================================================================= */}
+        <div id="associations" style={{ marginTop: '2.5rem', marginBottom: '3rem' }}>
+          <div className="section-title-wrap" style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+            <span className="section-badge" style={{ background: '#EDF5FF', color: '#1769C2' }}>พันธมิตรและสมาคมฌาปนกิจสงเคราะห์</span>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#17315A', margin: '0.5rem 0' }}>
+              สมาคมฌาปนกิจสงเคราะห์และกองทุนสวัสดิการ
+            </h2>
+            <p style={{ color: '#526783', fontSize: '0.95rem', margin: 0 }}>
+              ลิงก์ตรวจสอบข้อมูลและแบบฟอร์มสมาคมฌาปนกิจสงเคราะห์ที่สหกรณ์ร่วมดำเนินงาน
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '1.5rem'
+          }}>
+            {/* Card 1: สสธท. */}
+            <div className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.875rem',
+              padding: '1.75rem',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '0.2rem 0.6rem',
+                  background: '#EDF5FF',
+                  color: '#1769C2',
+                  borderRadius: '9999px',
+                  marginBottom: '0.75rem'
+                }}>สสธท.</span>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#17315A', marginBottom: '0.5rem' }}>
+                  สมาคมฌาปนกิจสงเคราะห์สมาชิก สสธท.
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#526783', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                  สมาคมฌาปนกิจสงเคราะห์สมาชิกสหกรณ์ออมทรัพย์สาธารณสุขไทย มอบความคุ้มครองและเงินสงเคราะห์ครอบครัว
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <a
+                  href="https://ss-th.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary btn-sm"
+                  style={{ background: '#1769C2', color: '#FFFFFF', padding: '0.45rem 0.95rem' }}
+                >
+                  เข้าสู่เว็บไซต์ สสธท.
+                </a>
+                <Link
+                  to="/documents?category=associations"
+                  className="btn btn-outline btn-sm"
+                  style={{ borderColor: '#DCE5F0', color: '#1769C2', padding: '0.45rem 0.95rem' }}
+                >
+                  แบบฟอร์ม
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 2: กสธท. */}
+            <div className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.875rem',
+              padding: '1.75rem',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '0.2rem 0.6rem',
+                  background: '#EDF5FF',
+                  color: '#1769C2',
+                  borderRadius: '9999px',
+                  marginBottom: '0.75rem'
+                }}>กสธท.</span>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#17315A', marginBottom: '0.5rem' }}>
+                  กองทุนสวัสดิการสมาชิก กสธท.
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#526783', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                  กองทุนสวัสดิการสมาชิกสหกรณ์ออมทรัพย์สาธารณสุขไทย เสริมสร้างความมั่นคงและสวัสดิการระยะยาวแก่สมาชิก
+                </p>
+              </div>
+              <div>
+                <a
+                  href="https://matpf.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary btn-sm"
+                  style={{ background: '#1769C2', color: '#FFFFFF', padding: '0.45rem 0.95rem' }}
+                >
+                  เข้าสู่เว็บไซต์ กสธท.
+                </a>
+              </div>
+            </div>
+
+            {/* Card 3: สส.ชสอ. */}
+            <div className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.875rem',
+              padding: '1.75rem',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '0.2rem 0.6rem',
+                  background: '#EDF5FF',
+                  color: '#1769C2',
+                  borderRadius: '9999px',
+                  marginBottom: '0.75rem'
+                }}>สส.ชสอ.</span>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#17315A', marginBottom: '0.5rem' }}>
+                  สมาคมฌาปนกิจสงเคราะห์ สส.ชสอ.
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#526783', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                  สมาคมฌาปนกิจสงเคราะห์สมาชิกชุมนุมสหกรณ์ออมทรัพย์แห่งประเทศไทย บริการสงเคราะห์ครอบครัวสมาชิก
+                </p>
+              </div>
+              <div>
+                <Link
+                  to="/documents?category=associations"
+                  className="btn btn-outline btn-sm"
+                  style={{ borderColor: '#DCE5F0', color: '#1769C2', padding: '0.45rem 0.95rem' }}
+                >
+                  ดาวน์โหลดแบบฟอร์ม
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Claim Procedure Guide */}

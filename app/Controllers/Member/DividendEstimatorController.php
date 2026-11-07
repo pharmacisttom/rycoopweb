@@ -42,22 +42,36 @@ class DividendEstimatorController extends Controller
         }
         $notifications = MemberPortalService::getNotifications($this->memberId);
 
-        // Fetch member shares
-        $shares = Database::first("SELECT * FROM member_shares WHERE member_id = ?", [$this->memberId]);
-        $totalShareAmount = $shares ? (float)$shares['total_amount'] : 245000.00;
+        // Fetch verified member shares from database
+        $totalShareAmount = 0.0;
+        if (Database::hasTable('member_shares')) {
+            $shares = Database::first("SELECT * FROM member_shares WHERE member_id = ?", [$this->memberId]);
+            if ($shares) {
+                $totalShareAmount = (float)($shares['total_amount'] ?? 0.0);
+            }
+        }
 
-        // Fetch member annual loan interest paid
-        $receiptsInterest = Database::first(
-            "SELECT SUM(loan_interest) as total_interest FROM receipts WHERE member_id = ? AND billing_year = YEAR(CURDATE())",
-            [$this->memberId]
-        );
-        $totalInterestPaid = ($receiptsInterest && $receiptsInterest['total_interest'] !== null) 
-            ? (float)$receiptsInterest['total_interest'] 
-            : 39000.00;
+        // Fetch member annual loan interest paid from receipts table
+        $totalInterestPaid = 0.0;
+        if (Database::hasTable('receipts')) {
+            $receiptsInterest = Database::first(
+                "SELECT SUM(loan_interest) as total_interest FROM receipts WHERE member_id = ? AND billing_year = YEAR(CURDATE())",
+                [$this->memberId]
+            );
+            if ($receiptsInterest && $receiptsInterest['total_interest'] !== null) {
+                $totalInterestPaid = (float)$receiptsInterest['total_interest'];
+            }
+        }
 
-        // Get latest approved stats
-        $latestStats = Database::first("SELECT * FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 1");
-        $defaultDividendRate = $latestStats ? (float)$latestStats['dividend_rate'] : 5.10;
+        // Get latest approved stats from official financial_statistics table
+        $latestStats = null;
+        $defaultDividendRate = 0.0;
+        if (Database::hasTable('financial_statistics')) {
+            $latestStats = Database::first("SELECT * FROM financial_statistics ORDER BY year DESC, month DESC LIMIT 1");
+            if ($latestStats) {
+                $defaultDividendRate = (float)$latestStats['dividend_rate'];
+            }
+        }
         $defaultRefundRate = 12.50; // Standard cooperative patronage refund rate
 
         $this->render('member.dividend_estimator', [

@@ -149,10 +149,14 @@ function shouldSuppressDuplicateHit(cleanPath) {
  * - Uses CSPRNG pseudonymous visitor & session identifiers
  */
 export function useVisitorTracker() {
+  const isStaticMode = import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true';
   const location = useLocation();
   const lastTrackedRef = useRef({ path: '', ts: 0 });
 
   useEffect(() => {
+    if (isStaticMode) {
+      return undefined;
+    }
     const pathname = location.pathname || '/';
     if (!isTrackablePublicPath(pathname)) {
       return undefined;

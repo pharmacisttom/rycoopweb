@@ -80,6 +80,10 @@ export function VisitorCounter({
   showLinkToStats = true,
   className = '',
 }) {
+  const isStaticMode = import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true';
+  if (isStaticMode) {
+    return null;
+  }
   const isControlled = externalStats !== null || externalLoading !== null || externalError !== null;
   const [stats, setStats] = useState(() => normalizeVisitorSummary(externalStats));
   const [loading, setLoading] = useState(isControlled ? Boolean(externalLoading) : true);

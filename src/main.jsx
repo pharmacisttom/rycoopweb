@@ -10,10 +10,14 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import './index.css';
 import './styles/mobile-responsive.css';
 
+// Derive BrowserRouter basename from Vite's import.meta.env.BASE_URL
+// Normalizes '/app/' -> '/app', while preserving '/' in development mode
+const routerBasename = import.meta.env.BASE_URL?.replace(/\/+$/, '') || '/';
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <BrowserRouter basename={routerBasename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>

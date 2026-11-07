@@ -203,11 +203,25 @@ export default function Navbar() {
             </button>
           </div>
 
+          {/* 6. ติดต่อเรา */}
+          <Link
+            to="/contact"
+            className={`nav-link ${isActive('/contact') ? 'active' : ''}`}
+            style={navLinkStyle(isActive('/contact'))}
+            onMouseEnter={() => setActiveMegaMenu(null)}
+          >
+            ติดต่อเรา
+          </Link>
+
         </nav>
 
         {/* Right Action: User Profile Pill / Login */}
         <div className="navbar-actions">
-          <Link to={user?.role === 'member' ? '/member/dividends' : '/member/login'} className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก"><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
+          {import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true' ? (
+            <Link to={user?.role === 'member' ? '/member/dividends' : '/member/login'} className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก"><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
+          ) : (
+            <Link to="/eservice" className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก (เร็วๆ นี้)" title="ระบบสมาชิกออนไลน์อยู่ระหว่างเตรียมความพร้อม" style={{ opacity: 0.85 }}><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
+          )}
 
           {isLoggedIn ? (
             /* Logged-In User Pill with Dropdown matching user screenshot */
@@ -557,6 +571,19 @@ export default function Navbar() {
                       </div>
                     </Link>
 
+                    <Link to="/loan-schedule" className="mega-menu-card-item">
+                      <div className="mega-menu-icon-wrap" style={{ background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
+                        <Calendar size={18} />
+                      </div>
+                      <div>
+                        <div className="mega-menu-item-title">
+                          <span>กำหนดการยื่นกู้ประจำปี 2569</span>
+                          <span className="badge badge-gold" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>ปฏิทิน 2569</span>
+                        </div>
+                        <div className="mega-menu-item-desc">วันปิดรับคำขอกู้ วันประชุม และวันจ่ายเงินกู้ตลอดทั้งปี</div>
+                      </div>
+                    </Link>
+
                     <Link to="/loan-checklist" className="mega-menu-card-item">
                       <div className="mega-menu-icon-wrap" style={{ background: 'var(--bg-subtle)', color: 'var(--text-main)' }}>
                         <CheckSquare size={18} />
@@ -658,12 +685,12 @@ export default function Navbar() {
                       </div>
                     </Link>
 
-                    <Link to="/welfare" className="mega-menu-card-item">
+                    <Link to="/associations" className="mega-menu-card-item">
                       <div className="mega-menu-icon-wrap" style={{ background: 'var(--primary-100)', color: 'var(--primary-700)' }}>
                         <Shield size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">คุ้มครองหนี้ & ฌาปนกิจ (สสธท.)</div>
+                        <div className="mega-menu-item-title">สมาคมฌาปนกิจ (สสธท. / กสธท. / สส.ชสอ.)</div>
                         <div className="mega-menu-item-desc">ปกป้องครอบครัวและทายาท วงเงินสงเคราะห์สูงสุด</div>
                       </div>
                     </Link>
@@ -779,6 +806,16 @@ export default function Navbar() {
                       <div>
                         <div className="mega-menu-item-title">ศูนย์บริการออนไลน์ e-Services</div>
                         <div className="mega-menu-item-desc">ยื่นคำขอออนไลน์ ปรับค่าหุ้น ขอหนังสือรับรองภาษี</div>
+                      </div>
+                    </Link>
+
+                    <Link to="/complaints" className="mega-menu-card-item">
+                      <div className="mega-menu-icon-wrap" style={{ background: 'var(--accent-rose-light)', color: 'var(--accent-rose)' }}>
+                        <HelpCircle size={18} />
+                      </div>
+                      <div>
+                        <div className="mega-menu-item-title">ช่องทางรับเรื่องร้องเรียน / ร้องทุกข์</div>
+                        <div className="mega-menu-item-desc">แจ้งเรื่องร้องเรียน ข้อเสนอแนะ และติดตามผล</div>
                       </div>
                     </Link>
 
@@ -948,6 +985,7 @@ export default function Navbar() {
                 <Link to="/loans" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ผลิตภัณฑ์สินเชื่อทุกประเภท</Link>
                 <Link to="/loans" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ข้อมูลผลิตภัณฑ์สินเชื่อ</Link>
                 <Link to="/calculator" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• โปรแกรมคำนวณเงินกู้</Link>
+                <Link to="/loan-schedule" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• กำหนดการยื่นกู้ประจำปี 2569</Link>
                 <Link to="/loan-checklist" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• เช็คความพร้อมการกู้</Link>
                 <Link to="/dividend-estimator" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ประมาณการเงินปันผล-เฉลี่ยคืน</Link>
               </div>
@@ -969,7 +1007,7 @@ export default function Navbar() {
                 <Link to="/welfare" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ทุนการศึกษาบุตรสมาชิก</Link>
                 <Link to="/welfare" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• สวัสดิการค่ารักษาพยาบาล/เจ็บป่วย</Link>
                 <Link to="/welfare" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• สวัสดิการสมาชิกผู้สูงอายุ</Link>
-                <Link to="/welfare" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• คุ้มครองหนี้ & ฌาปนกิจ (สสธท.)</Link>
+                <Link to="/associations" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• สมาคมฌาปนกิจ (สสธท./กสธท./สส.ชสอ.)</Link>
               </div>
             )}
           </div>
@@ -988,10 +1026,16 @@ export default function Navbar() {
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ข่าวประชาสัมพันธ์ & กิจกรรม</Link>
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ประกาศทางการสหกรณ์</Link>
                 <Link to="/documents" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ดาวน์โหลดแบบฟอร์ม & รายงาน</Link>
+                <Link to="/complaints" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• แจ้งเรื่องร้องเรียน / ข้อเสนอแนะ</Link>
                 <span style={mobileSubItemStyle}>• ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
               </div>
             )}
           </div>
+
+          {/* 6. ติดต่อเรา */}
+          <Link to="/contact" style={mobileItemStyle} onClick={() => setMobileMenuOpen(false)}>
+            <span>ติดต่อเรา</span>
+          </Link>
 
         </div>
       )}
