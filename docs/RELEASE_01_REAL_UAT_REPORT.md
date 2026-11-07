@@ -62,4 +62,4 @@ rm -f "${COOKIE_JAR}"
 - **Fixture Tests Passed:** All visual screenshots captured with 0 horizontal overflow and exactly 1 Topbar/Sidebar.
 - **E2E & Concurrency Tests Passed:** 12/12 passed with dedicated disposable DBs.
 - **Database Safety Passed:** Zero shared database rows dropped; real member and dividend counts preserved.
-- **Rollback Readiness:** Automatic symlink reversion script (`bin/deploy-test-release.sh`) and database rollback script (`029_rollback_popup_campaign_manager_v2_fields.sql`) verified and standing by.
+- **Rollback Readiness:** Automatic symlink reversion script (`bin/deploy-test-release.sh`) and database rollback script (`database/rollbacks/029_rollback_popup_campaign_manager_v2_fields.sql`) verified and standing by.

@@ -29,6 +29,17 @@ function assertCheck(string $desc, bool $cond): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Requirement 0: Forward Migration and Rollback Script Directory Isolation
+// ─────────────────────────────────────────────────────────────────────────────
+$forward029Path = __DIR__ . '/../database/migrations/029_add_popup_campaign_manager_v2_fields.sql';
+$rollback029MigPath = __DIR__ . '/../database/migrations/029_rollback_popup_campaign_manager_v2_fields.sql';
+$rollback029DedicatedPath = __DIR__ . '/../database/rollbacks/029_rollback_popup_campaign_manager_v2_fields.sql';
+
+assertCheck("0a. Forward migration 029 resides in database/migrations/", file_exists($forward029Path));
+assertCheck("0b. Rollback script is NOT present in autodiscovered database/migrations/", !file_exists($rollback029MigPath));
+assertCheck("0c. Rollback script resides in dedicated database/rollbacks/", file_exists($rollback029DedicatedPath));
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Requirement 4: Verify Actual Database Engine & Version
 // ─────────────────────────────────────────────────────────────────────────────
 $verInfo = Database::first("SELECT VERSION() AS ver, @@version_comment AS comment");

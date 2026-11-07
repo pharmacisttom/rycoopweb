@@ -41,7 +41,7 @@ All 3 critical findings from the latest release hardening review have been fully
 
 ### Critical Finding 3: Cross-Engine Migration 029 & Release Safety Validation
 - **Engine Verified:** Tested on `10.4.32-MariaDB` and verified ANSI/MySQL 8.0 compatible.
-- **Schema-Aware Syntax:** Uses `information_schema.COLUMNS` with dynamic `PREPARE / EXECUTE` statements in both `029_add_popup_campaign_manager_v2_fields.sql` and `029_rollback_popup_campaign_manager_v2_fields.sql`.
+- **Schema-Aware Syntax:** Uses `information_schema.COLUMNS` with dynamic `PREPARE / EXECUTE` statements in both `029_add_popup_campaign_manager_v2_fields.sql` and `database/rollbacks/029_rollback_popup_campaign_manager_v2_fields.sql`.
 - **Data Loss Prevention Gate:** Rollback checks for populated V2 data (`mascot_image IS NOT NULL OR layout_mode != 'banner_only' OR priority_order > 1`) and blocks column drop unless `@force_rollback_destroy_v2_data := 1` is explicitly set.
 - **Branding Artwork Compliance:** Unapproved vector asset `mascot-aomsuk.svg` is disabled from public publication. `SpaApiController@popups` and `CampaignModal.jsx` fallback safely to the approved official cooperative logo (`/assets/img/logo.webp`).
 - **Protected Core Shielding:** Popups are strictly suppressed on all `/member/*`, `/admin/*`, `/staff/*`, `/login`, `/dashboard/*`, and `/profile/*` routes.
@@ -62,7 +62,7 @@ All 3 critical findings from the latest release hardening review have been fully
 | `src/components/common/CampaignModal.jsx` | UI/UX & Security | 1000px max width, internal scroll, 3 layout modes, sequential cycling, protected route suppression, approved logo fallback |
 | `src/pages/AdminPopupsPage.jsx` | Admin CMS | Dedicated Admin CMS for popups with 3-slot quota badge, desktop/mobile preview, approved logo default |
 | `database/migrations/029_add_popup_campaign_manager_v2_fields.sql` | Schema DDL | Version-compatible, schema-aware additive migration (`information_schema` + `PREPARE`) |
-| `database/migrations/029_rollback_popup_campaign_manager_v2_fields.sql` | Safety DDL | Data-loss guarded rollback script preventing silent destruction of populated V2 columns |
+| `database/rollbacks/029_rollback_popup_campaign_manager_v2_fields.sql` | Safety DDL | Data-loss guarded rollback script preventing silent destruction of populated V2 columns |
 | `tests/PopupCampaignManagerV2Test.php` | Test Suite | 16/16 Unit & integration tests with non-destructive cleanup and approved logo assertions |
 | `tests/PopupMigration029ValidationTest.php` | Test Suite | 12/12 Engine detection, schema-aware DDL, and data-loss prevention gate tests |
 
@@ -129,7 +129,7 @@ If any regression occurs during UAT:
 2. **Database Schema Rollback:**
    ```sql
    SET @force_rollback_destroy_v2_data := 1;
-   SOURCE database/migrations/029_rollback_popup_campaign_manager_v2_fields.sql;
+   SOURCE database/rollbacks/029_rollback_popup_campaign_manager_v2_fields.sql;
    ```
 3. **Cache Flush:** Restart PHP-FPM service to clear opcode cache.
 

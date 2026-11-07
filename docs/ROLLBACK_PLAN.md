@@ -49,7 +49,7 @@ mysql --defaults-file=/root/.my.cnf -e "DESCRIBE popups;" rycoopweb_test
 
 # 2. Execute hardened rollback script
 mysql --defaults-file=/root/.my.cnf rycoopweb_test < \
-  /var/www/rycoopweb/releases/d9e6a44bc86e55b342bb47d58bc3f313933f5bb7/database/migrations/029_rollback_popup_campaign_manager_v2_fields.sql
+  /var/www/rycoopweb/releases/d9e6a44bc86e55b342bb47d58bc3f313933f5bb7/database/rollbacks/029_rollback_popup_campaign_manager_v2_fields.sql
 
 # 3. Alternatively, restore pre-migration backup if table state needs full reset
 mysql --defaults-file=/root/.my.cnf rycoopweb_test < \
