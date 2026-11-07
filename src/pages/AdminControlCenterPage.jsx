@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Copy,
   Database,
   Download,
   ExternalLink,
@@ -19,10 +20,12 @@ import {
   KeyRound,
   Layers,
   Lock,
+  QrCode,
   RefreshCw,
   Server,
   ShieldAlert,
   ShieldCheck,
+  Smartphone,
   UserCheck,
   Users,
   XCircle
@@ -362,6 +365,114 @@ export default function AdminControlCenterPage({ section: propSection }) {
   const [mfaExportCode, setMfaExportCode] = useState('');
   const [mfaExportError, setMfaExportError] = useState('');
   const [mfaExportLoading, setMfaExportLoading] = useState(false);
+
+  // MFA Re-enrollment state
+  const [showReEnrollModal, setShowReEnrollModal] = useState(false);
+  const [reEnrollStep, setReEnrollStep] = useState('password'); // 'password' | 'scan' | 'success'
+  const [reEnrollPassword, setReEnrollPassword] = useState('');
+  const [reEnrollData, setReEnrollData] = useState(null);
+  const [reEnrollOtp, setReEnrollOtp] = useState('');
+  const [reEnrollRecoveryCodes, setReEnrollRecoveryCodes] = useState([]);
+  const [reEnrollLoading, setReEnrollLoading] = useState(false);
+  const [reEnrollError, setReEnrollError] = useState('');
+  const [reEnrollCopied, setReEnrollCopied] = useState(false);
+
+  const handleOpenReEnroll = () => {
+    setShowReEnrollModal(true);
+    setReEnrollStep('password');
+    setReEnrollPassword('');
+    setReEnrollOtp('');
+    setReEnrollError('');
+    setReEnrollData(null);
+    setReEnrollRecoveryCodes([]);
+    setReEnrollCopied(false);
+  };
+
+  const handleCloseReEnroll = () => {
+    setShowReEnrollModal(false);
+    setReEnrollPassword('');
+    setReEnrollError('');
+  };
+
+  const handleStartReEnroll = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setReEnrollLoading(true);
+    setReEnrollError('');
+    try {
+      const res = await memberAdminApi('/api/auth/mfa/re-enroll/start', {
+        data: { password: reEnrollPassword },
+      });
+      setReEnrollData(res);
+      setReEnrollStep('scan');
+    } catch (err) {
+      setReEnrollError(err.message || 'รหัสผ่านไม่ถูกต้อง');
+    } finally {
+      setReEnrollLoading(false);
+    }
+  };
+
+  const handleConfirmReEnroll = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setReEnrollLoading(true);
+    setReEnrollError('');
+    try {
+      const res = await memberAdminApi('/api/auth/mfa/re-enroll/confirm', {
+        data: { code: reEnrollOtp.trim() },
+      });
+      setReEnrollRecoveryCodes(res.recovery_codes || []);
+      setReEnrollStep('success');
+    } catch (err) {
+      setReEnrollError(err.message || 'รหัส TOTP ไม่ถูกต้องหรือหมดอายุ');
+    } finally {
+      setReEnrollLoading(false);
+    }
+  };
+
+  const handleCancelReEnroll = async () => {
+    try {
+      await memberAdminApi('/api/auth/mfa/re-enroll/cancel', { data: {} });
+    } catch {
+      // ignore
+    }
+    setShowReEnrollModal(false);
+    setReEnrollStep('password');
+    setReEnrollData(null);
+    setReEnrollOtp('');
+    setReEnrollError('');
+  };
+
+  const handleFinishReEnroll = () => {
+    setShowReEnrollModal(false);
+    setReEnrollStep('password');
+    setReEnrollData(null);
+    setReEnrollOtp('');
+    setReEnrollError('');
+    // Refresh MFA data
+    memberAdminApi('/api/admin/security/mfa')
+      .then((mfa) => setMfaData(mfa))
+      .catch(() => {});
+  };
+
+  const handleCopyRecoveryCodes = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(reEnrollRecoveryCodes.join('\n'));
+      setReEnrollCopied(true);
+      setTimeout(() => setReEnrollCopied(false), 2000);
+    }
+  };
+
+  const handleDownloadRecoveryCodes = () => {
+    if (typeof window === 'undefined') return;
+    const blob = new Blob([reEnrollRecoveryCodes.join('\r\n')], {
+      type: 'text/plain;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rayongcoop-mfa-recovery-codes.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const cat = searchParams.get('category') || '';
@@ -1737,10 +1848,21 @@ export default function AdminControlCenterPage({ section: propSection }) {
           </div>
 
           <section className="acc-card">
-            <div className="acc-card-header">
+            <div className="acc-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <h2 className="acc-card-title">สถานะการลงทะเบียน MFA รายบุคคล (Staff MFA Enrollment Status)</h2>
                 <p className="acc-card-subtitle">{mfaData.policy_note}</p>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  className="acc-btn primary"
+                  id="btn-re-enroll-mfa"
+                  onClick={handleOpenReEnroll}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Smartphone size={16} /> เปลี่ยนอุปกรณ์ Authenticator
+                </button>
               </div>
             </div>
             <div className="acc-table-wrap">
@@ -1753,6 +1875,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
                     <th scope="col">สถานะ MFA</th>
                     <th scope="col">วันที่ยืนยันตัวตน (Confirmed At)</th>
                     <th scope="col">รหัสกู้คืนคงเหลือ (Recovery Codes)</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1768,12 +1891,218 @@ export default function AdminControlCenterPage({ section: propSection }) {
                       </td>
                       <td>{st.enrolled_at || 'ยังไม่มีข้อมูล'}</td>
                       <td>{st.mfa_enabled ? `${st.recovery_codes_remaining} รหัส` : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        {st.mfa_enabled && (
+                          <button
+                            type="button"
+                            className="acc-btn"
+                            onClick={handleOpenReEnroll}
+                            title="เปลี่ยนอุปกรณ์ Authenticator หรือลงทะเบียนใหม่"
+                            style={{ padding: '4px 8px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <RefreshCw size={12} /> เปลี่ยนอุปกรณ์
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </section>
+
+          {/* Secure MFA Re-enrollment Modal */}
+          {showReEnrollModal && (
+            <div className="acc-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, backdropFilter: 'blur(3px)' }}>
+              <div className="acc-modal-content" style={{ background: '#fff', borderRadius: 12, padding: 28, maxWidth: 540, width: '92%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                {/* Step 1: Re-authenticate with account password */}
+                {reEnrollStep === 'password' && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                      <span className="acc-kpi-icon warning" style={{ background: '#fef3c7', color: '#d97706', padding: 8, borderRadius: 8 }}><ShieldAlert size={22} /></span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#1e293b' }}>เปลี่ยนอุปกรณ์ Authenticator (MFA)</h3>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>ขั้นตอนที่ 1 จาก 3: ยืนยันรหัสผ่านบัญชีเพื่อความปลอดภัย</p>
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px 16px', background: '#fffbeb', borderLeft: '4px solid #f59e0b', borderRadius: 6, fontSize: '0.875rem', color: '#92400e', marginBottom: 18, lineHeight: 1.5 }}>
+                      <strong>คำเตือนความปลอดภัย:</strong> รหัส 2FA และอุปกรณ์เดิมจะยังคงใช้งานได้ จนกว่าท่านจะสแกน QR Code ใหม่และกรอกรหัส 6 หลักยืนยันสำเร็จ เมื่อยืนยันสำเร็จ รหัสสำรองชุดเก่าจะถูกยกเลิก และเซสชันในอุปกรณ์อื่นจะถูกตัดการเชื่อมต่อทันที
+                    </div>
+                    {reEnrollError && (
+                      <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, fontSize: '0.875rem', marginBottom: 14 }}>
+                        {reEnrollError}
+                      </div>
+                    )}
+                    <form onSubmit={handleStartReEnroll}>
+                      <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                          รหัสผ่านปัจจุบันของบัญชี (Current Password)
+                        </label>
+                        <input
+                          type="password"
+                          className="acc-input"
+                          id="re-enroll-password"
+                          placeholder="กรอกรหัสผ่านเพื่อยืนยันสิทธิ์"
+                          required
+                          autoFocus
+                          value={reEnrollPassword}
+                          onChange={(e) => setReEnrollPassword(e.target.value)}
+                          style={{ width: '100%', padding: '10px 14px' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                        <button
+                          type="button"
+                          className="acc-btn"
+                          disabled={reEnrollLoading}
+                          onClick={handleCloseReEnroll}
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          type="submit"
+                          id="btn-re-enroll-next"
+                          className="acc-btn primary"
+                          disabled={reEnrollLoading || !reEnrollPassword.trim()}
+                        >
+                          {reEnrollLoading ? 'กำลังตรวจสอบ...' : 'ถัดไป: สแกน QR Code ใหม่ →'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 2: Scan QR Code & Enter 6-digit OTP */}
+                {reEnrollStep === 'scan' && reEnrollData && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                      <span className="acc-kpi-icon primary" style={{ background: '#e0f2fe', color: '#0284c7', padding: 8, borderRadius: 8 }}><QrCode size={22} /></span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#1e293b' }}>สแกน QR Code ด้วยอุปกรณ์ใหม่</h3>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>ขั้นตอนที่ 2 จาก 3: เปิดแอป Authenticator แล้วสแกน</p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', marginBottom: 18, background: '#f8fafc', padding: '16px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <img
+                        src={reEnrollData.qr_code_uri}
+                        alt="MFA QR Code"
+                        id="re-enroll-qr-image"
+                        style={{ width: 220, height: 220, margin: '0 auto', display: 'block', borderRadius: 6, background: '#fff', padding: 8, border: '1px solid #cbd5e1' }}
+                      />
+                      <div style={{ marginTop: 12, fontSize: '0.825rem', color: '#64748b' }}>
+                        หรือกรอกรหัสด้วยตนเอง (Manual Secret):
+                        <div style={{ marginTop: 4, fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', letterSpacing: '0.15em', color: '#0f172a' }}>
+                          {reEnrollData.formatted_secret}
+                        </div>
+                      </div>
+                    </div>
+                    {reEnrollError && (
+                      <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, fontSize: '0.875rem', marginBottom: 14 }}>
+                        {reEnrollError}
+                      </div>
+                    )}
+                    <form onSubmit={handleConfirmReEnroll}>
+                      <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: 6, textAlign: 'center' }}>
+                          กรอกรหัสความปลอดภัย 6 หลักจากอุปกรณ์ใหม่ (TOTP)
+                        </label>
+                        <input
+                          type="text"
+                          id="re-enroll-otp"
+                          className="acc-input"
+                          placeholder="000000"
+                          maxLength={6}
+                          pattern="[0-9]{6}"
+                          required
+                          autoFocus
+                          value={reEnrollOtp}
+                          onChange={(e) => setReEnrollOtp(e.target.value.replace(/\D/g, ''))}
+                          style={{ width: 200, margin: '0 auto', display: 'block', fontSize: '1.5rem', letterSpacing: '0.35em', textAlign: 'center', fontFamily: 'monospace' }}
+                        />
+                        <p style={{ margin: '6px 0 0', textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>
+                          รหัสจะเปลี่ยนใหม่ทุก 30 วินาที
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                        <button
+                          type="button"
+                          className="acc-btn"
+                          disabled={reEnrollLoading}
+                          onClick={handleCancelReEnroll}
+                        >
+                          ยกเลิกการเปลี่ยนอุปกรณ์
+                        </button>
+                        <button
+                          type="submit"
+                          id="btn-re-enroll-confirm"
+                          className="acc-btn primary"
+                          disabled={reEnrollLoading || reEnrollOtp.length !== 6}
+                        >
+                          {reEnrollLoading ? 'กำลังตรวจสอบ...' : 'ยืนยันและเปิดใช้งานอุปกรณ์ใหม่'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 3: Success & Download New Recovery Codes */}
+                {reEnrollStep === 'success' && (
+                  <div>
+                    <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                      <span style={{ display: 'inline-flex', padding: 12, borderRadius: '50%', background: '#dcfce7', color: '#16a34a', marginBottom: 8 }}>
+                        <CheckCircle2 size={36} />
+                      </span>
+                      <h3 style={{ margin: '0 0 6px', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+                        เปลี่ยนอุปกรณ์ Authenticator สำเร็จ
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
+                        อุปกรณ์ใหม่พร้อมใช้งานแล้ว และระบบได้ยกเลิกรหัสสำรองชุดเดิมเรียบร้อยแล้ว
+                      </p>
+                    </div>
+                    <div style={{ padding: '12px 16px', background: '#fef2f2', borderLeft: '4px solid #ef4444', borderRadius: 6, fontSize: '0.85rem', color: '#991b1b', marginBottom: 16, lineHeight: 1.5 }}>
+                      <strong>คำเตือนสำคัญ:</strong> กรุณาบันทึกหรือคัดลอกรหัสสำรอง (Recovery Codes) ชุดใหม่ 8 รหัสนี้เก็บไว้ในที่ปลอดภัยทันที รหัสแต่ละตัวใช้ได้เพียงครั้งเดียวเมื่ออุปกรณ์สูญหาย
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 18 }}>
+                      {reEnrollRecoveryCodes.map((code, idx) => (
+                        <div key={idx} style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.875rem', color: '#1e293b', background: '#fff', padding: '6px 10px', borderRadius: 4, border: '1px solid #cbd5e1', textAlign: 'center' }}>
+                          {code}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
+                      <button
+                        type="button"
+                        className="acc-btn"
+                        onClick={handleCopyRecoveryCodes}
+                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      >
+                        <Copy size={15} /> {reEnrollCopied ? 'คัดลอกแล้ว!' : 'คัดลอกรหัสทั้งหมด'}
+                      </button>
+                      <button
+                        type="button"
+                        className="acc-btn"
+                        onClick={handleDownloadRecoveryCodes}
+                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      >
+                        <Download size={15} /> ดาวน์โหลด (.txt)
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        id="btn-re-enroll-finish"
+                        className="acc-btn primary"
+                        onClick={handleFinishReEnroll}
+                        style={{ width: '100%' }}
+                      >
+                        เสร็จสิ้นและกลับสู่หน้าควบคุม
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
 
