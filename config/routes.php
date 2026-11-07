@@ -257,6 +257,10 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/board-terms/upload-photo', 'Admin\\BoardStaffController@apiUploadPhoto', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
     $r->get('/board-terms/{id}', 'Admin\\BoardStaffController@apiTermShow', [new PermissionMiddleware(['people', 'boards'], 'view')]);
     $r->get('/board-terms/{id}/preview', 'Admin\\BoardStaffController@apiTermPreview', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->get('/board-terms/{id}/selection-candidates', 'Admin\\BoardStaffController@apiSelectionCandidates', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->get('/board-terms/{id}/selective-copy/preview', 'Admin\\BoardStaffController@apiSelectiveCopyPreview', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->post('/board-terms/{id}/selective-copy/preview', 'Admin\\BoardStaffController@apiSelectiveCopyPreview', [new PermissionMiddleware(['people', 'boards'], 'view'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/selective-copy', 'Admin\\BoardStaffController@apiSelectiveCopy', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
     $r->get('/board-terms/{id}/selective-transfer/preview', 'Admin\\BoardStaffController@apiSelectiveTransferPreview', [new PermissionMiddleware(['people', 'boards'], 'view')]);
     $r->post('/board-terms/{id}/selective-transfer', 'Admin\\BoardStaffController@apiSelectiveTransfer', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
     $r->post('/board-terms/{id}/members/{memberId}/photo', 'Admin\\BoardStaffController@apiUploadMemberPhoto', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);

@@ -808,4 +808,22 @@ assertThrows(function () use ($labRunner025) {
     $labRunner025->resolveMigrationFile('030_rollback_board_term_management_tables.sql');
 }, 'Rollback script `030_rollback_board_term_management_tables.sql` cannot be executed as a forward migration', '18.6 MigrationRunner strictly rejects rollback script from forward migration execution');
 
+// =========================================================================
+// 19. Migration 031 (Source Member ID & Transfer Lineage) & Rollback 031 Guard
+// =========================================================================
+$migration031File = $migrationsDir . '/031_add_source_member_id_to_board_term_members.sql';
+assertTrue(file_exists($migration031File), '19.1 Migration 031 forward migration file exists in database/migrations/');
+
+$migration031Analysis = $labRunner025->analyzeSql((string) file_get_contents($migration031File));
+assertTrue($migration031Analysis['is_destructive'] === false, '19.2 Migration 031 is strictly non-destructive');
+assertTrue($migration031Analysis['is_financial'] === false, '19.3 Migration 031 is strictly non-financial');
+
+$rollback031File = $rollbackDir . '/031_rollback_term_member_source_id.sql';
+assertTrue(file_exists($rollback031File), '19.4 Rollback 031 script resides in dedicated database/rollbacks/');
+assertTrue(!file_exists($migrationsDir . '/031_rollback_term_member_source_id.sql'), '19.5 Rollback 031 is completely absent from database/migrations/');
+
+assertThrows(function () use ($labRunner025) {
+    $labRunner025->resolveMigrationFile('031_rollback_term_member_source_id.sql');
+}, 'Rollback script `031_rollback_term_member_source_id.sql` cannot be executed as a forward migration', '19.6 MigrationRunner strictly rejects rollback script from forward migration execution');
+
 echo "All MigrationRunner Unit, Safety & Security tests PASSED successfully!\n";

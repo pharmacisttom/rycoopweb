@@ -582,9 +582,9 @@ class BoardTermService
     }
 
     /**
-     * Get preview data for transferring selected personnel to target term (e.g. Term 39).
+     * Get candidate list from source term with lineage status against target term.
      */
-    public static function getSelectiveTransferPreview(int $sourceTermId, int $targetTermNumber = 39): array
+    public static function getSelectionCandidates(int $sourceTermId, int $targetTermNumber = 39): array
     {
         $source = self::getTerm($sourceTermId);
         if (!$source) {
@@ -593,6 +593,8 @@ class BoardTermService
 
         $target = Database::first("SELECT * FROM board_terms WHERE term_number = ?", [$targetTermNumber]);
         $targetDetails = null;
+        $targetMembersMap = [];
+
         if ($target) {
             $targetDetails = [
                 'id' => (int)$target['id'],
@@ -603,7 +605,51 @@ class BoardTermService
                 'existing_members_count' => (int)Database::value("SELECT COUNT(*) FROM board_term_members WHERE term_id = ?", [$target['id']]),
                 'existing_groups_count' => (int)Database::value("SELECT COUNT(*) FROM board_term_groups WHERE term_id = ?", [$target['id']]),
             ];
+
+            $targetMembers = Database::query("SELECT * FROM board_term_members WHERE term_id = ?", [$target['id']]);
+            foreach ($targetMembers as $tm) {
+                if (!empty($tm['source_member_id'])) {
+                    $targetMembersMap['source_' . $tm['source_member_id']] = $tm;
+                }
+                if (!empty($tm['person_id'])) {
+                    $targetMembersMap['person_' . $tm['person_id']] = $tm;
+                }
+                $targetMembersMap['name_' . $tm['category'] . '_' . $tm['name']] = $tm;
+            }
         }
+
+        $enrichCandidates = static function (array $members) use ($targetMembersMap): array {
+            return array_map(static function (array $m) use ($targetMembersMap): array {
+                $mId = (int)$m['id'];
+                $personId = !empty($m['person_id']) ? (int)$m['person_id'] : null;
+                $cat = $m['category'] ?? 'director';
+                $name = $m['name'] ?? '';
+
+                $targetMember = $targetMembersMap['source_' . $mId]
+                    ?? ($personId ? ($targetMembersMap['person_' . $personId] ?? null) : null)
+                    ?? ($targetMembersMap['name_' . $cat . '_' . $name] ?? null);
+
+                $photoResolved = resolve_media_url($m['image_url'] ?? null);
+
+                return array_merge($m, [
+                    'photo_resolved' => $photoResolved,
+                    'already_transferred' => $targetMember !== null,
+                    'target_member' => $targetMember ? [
+                        'id' => (int)$targetMember['id'],
+                        'position' => $targetMember['position'],
+                        'role_type' => $targetMember['role_type'],
+                        'category' => $targetMember['category'],
+                        'image_url' => $targetMember['image_url'],
+                        'photo_resolved' => resolve_media_url($targetMember['image_url'] ?? null),
+                        'source_member_id' => !empty($targetMember['source_member_id']) ? (int)$targetMember['source_member_id'] : null,
+                    ] : null,
+                ]);
+            }, $members);
+        };
+
+        $directors = $enrichCandidates($source['directors']);
+        $advisors = $enrichCandidates($source['advisors']);
+        $auditors = $enrichCandidates($source['auditors']);
 
         return [
             'source_term' => [
@@ -611,25 +657,168 @@ class BoardTermService
                 'term_number' => (int)$source['term']['term_number'],
                 'term_name' => $source['term']['term_name'],
                 'status' => $source['term']['status'],
-                'directors_count' => count($source['directors']),
-                'advisors_count' => count($source['advisors']),
-                'auditors_count' => count($source['auditors']),
+                'directors_count' => count($directors),
+                'advisors_count' => count($advisors),
+                'auditors_count' => count($auditors),
                 'groups_count' => count($source['groups']),
             ],
             'target_term_number' => $targetTermNumber,
             'target_term' => $targetDetails,
             'candidates' => [
-                'directors' => $source['directors'],
-                'advisors' => $source['advisors'],
-                'auditors' => $source['auditors'],
+                'directors' => $directors,
+                'advisors' => $advisors,
+                'auditors' => $auditors,
             ],
             'groups' => $source['groups'],
         ];
     }
 
     /**
+     * Get preview diff for selective copying with customized positions/roles.
+     */
+    public static function getSelectiveCopyPreview(
+        int $sourceTermId,
+        int $targetTermNumber = 39,
+        array $selections = [],
+        array $options = []
+    ): array {
+        $candidateData = self::getSelectionCandidates($sourceTermId, $targetTermNumber);
+        $sourceTerm = $candidateData['source_term'];
+        $targetTerm = $candidateData['target_term'];
+        $groups = $candidateData['groups'];
+
+        // If no explicit selections passed, return full candidate overview
+        if (empty($selections)) {
+            return array_merge($candidateData, [
+                'selected_count' => 0,
+                'items' => [],
+                'remapped_groups' => [],
+                'omitted_members_count' => 0,
+                'warnings' => [],
+            ]);
+        }
+
+        // Normalize selections into map [source_member_id => customization]
+        $selectionMap = [];
+        $selectedIds = [];
+        foreach ($selections as $sel) {
+            if (is_numeric($sel)) {
+                $id = (int)$sel;
+                $selectionMap[$id] = ['id' => $id];
+                $selectedIds[] = $id;
+            } elseif (is_array($sel)) {
+                $id = (int)($sel['source_member_id'] ?? $sel['id'] ?? 0);
+                if ($id > 0) {
+                    $selectionMap[$id] = $sel;
+                    $selectedIds[] = $id;
+                }
+            }
+        }
+
+        // Flatten all candidates for lookup
+        $allCandidates = [];
+        foreach (['directors', 'advisors', 'auditors'] as $cat) {
+            foreach ($candidateData['candidates'][$cat] as $cand) {
+                $allCandidates[(int)$cand['id']] = $cand;
+            }
+        }
+
+        $items = [];
+        $chairpersonCount = 0;
+        $warnings = [];
+
+        foreach ($selectedIds as $sId) {
+            if (!isset($allCandidates[$sId])) {
+                continue;
+            }
+            $cand = $allCandidates[$sId];
+            $custom = $selectionMap[$sId];
+
+            $newPosition = trim((string)($custom['position'] ?? $cand['position']));
+            $newRoleType = trim((string)($custom['role_type'] ?? $cand['role_type']));
+            $newCategory = trim((string)($custom['category'] ?? $cand['category']));
+            $isChair = isset($custom['is_chairperson']) ? (bool)$custom['is_chairperson'] : (bool)$cand['is_chairperson'];
+
+            if ($isChair || $newRoleType === 'president') {
+                $chairpersonCount++;
+            }
+
+            $isUpdate = $cand['already_transferred'];
+            $items[] = [
+                'source_member_id' => $sId,
+                'name' => $cand['name'],
+                'category' => $newCategory,
+                'original_position' => $cand['position'],
+                'target_position' => $newPosition,
+                'original_role_type' => $cand['role_type'],
+                'target_role_type' => $newRoleType,
+                'is_chairperson' => $isChair,
+                'image_url' => $cand['image_url'],
+                'photo_resolved' => $cand['photo_resolved'],
+                'action' => $isUpdate ? 'update' : 'create',
+                'target_member_id' => $cand['target_member']['id'] ?? null,
+            ];
+        }
+
+        if ($chairpersonCount > 1) {
+            $warnings[] = "มีตำแหน่งประธานกรรมการมากกว่า 1 ท่านในรายการที่เลือก ({$chairpersonCount} ท่าน)";
+        }
+
+        // Group remapping analysis
+        $transferGroups = (bool)($options['transfer_groups'] ?? true);
+        $remappedGroups = [];
+        $omittedMembersCount = 0;
+
+        if ($transferGroups && !empty($groups)) {
+            foreach ($groups as $g) {
+                $included = [];
+                $omitted = [];
+                foreach ($g['members'] as $gm) {
+                    $mId = (int)($gm['member_id'] ?? 0);
+                    if (in_array($mId, $selectedIds, true)) {
+                        $included[] = $gm;
+                    } else {
+                        $omitted[] = $gm;
+                        $omittedMembersCount++;
+                    }
+                }
+                $remappedGroups[] = [
+                    'group_title' => $g['title'],
+                    'total_members' => count($g['members']),
+                    'included_members' => $included,
+                    'omitted_members' => $omitted,
+                ];
+            }
+        }
+
+        return [
+            'source_term' => $sourceTerm,
+            'target_term_number' => $targetTermNumber,
+            'target_term' => $targetTerm,
+            'selected_count' => count($items),
+            'items' => $items,
+            'remapped_groups' => $remappedGroups,
+            'omitted_members_count' => $omittedMembersCount,
+            'warnings' => $warnings,
+        ];
+    }
+
+    /**
+     * Get preview data for transferring selected personnel to target term (e.g. Term 39).
+     */
+    public static function getSelectiveTransferPreview(int $sourceTermId, int $targetTermNumber = 39, array $selections = [], array $options = []): array
+    {
+        if (!empty($selections)) {
+            return self::getSelectiveCopyPreview($sourceTermId, $targetTermNumber, $selections, $options);
+        }
+
+        return self::getSelectionCandidates($sourceTermId, $targetTermNumber);
+    }
+
+    /**
      * Selectively transfer personnel from source term to target term draft.
      * Guarantees subgroup referential integrity by omitting unselected members.
+     * Records source_member_id and preserves Term 38 immutability.
      */
     public static function selectiveTransfer(
         int $sourceTermId,
@@ -663,6 +852,28 @@ class BoardTermService
             throw new InvalidArgumentException("ไม่สามารถถ่ายโอนไปยังวาระชุดที่ {$targetTermNumber} ได้ เนื่องจากวาระดังกล่าวเผยแพร่อยู่แล้ว");
         }
 
+        // Normalize selection IDs and customization overrides
+        $cleanIds = [];
+        $customizationsMap = (array)($options['customizations'] ?? []);
+
+        foreach ($selectedMemberIds as $sel) {
+            if (is_numeric($sel)) {
+                $id = (int)$sel;
+                $cleanIds[] = $id;
+            } elseif (is_array($sel)) {
+                $id = (int)($sel['source_member_id'] ?? $sel['id'] ?? 0);
+                if ($id > 0) {
+                    $cleanIds[] = $id;
+                    $customizationsMap[$id] = array_merge($customizationsMap[$id] ?? [], $sel);
+                }
+            }
+        }
+
+        $cleanIds = array_values(array_unique(array_filter($cleanIds, fn($id) => $id > 0)));
+        if (empty($cleanIds)) {
+            throw new InvalidArgumentException('กรุณาเลือกกรรมการอย่างน้อย 1 ท่านสำหรับถ่ายโอน');
+        }
+
         $pdo = Database::connect();
         $pdo->beginTransaction();
 
@@ -688,7 +899,6 @@ class BoardTermService
             }
 
             // Fetch source members to transfer
-            $cleanIds = array_map('intval', $selectedMemberIds);
             $placeholders = implode(',', array_fill(0, count($cleanIds), '?'));
             $params = array_merge([$sourceTermId], $cleanIds);
             $membersToTransfer = Database::query(
@@ -704,6 +914,9 @@ class BoardTermService
             $existingTargetMembers = Database::query("SELECT * FROM board_term_members WHERE term_id = ?", [$targetTermId]);
             $targetMemberMap = [];
             foreach ($existingTargetMembers as $etm) {
+                if (!empty($etm['source_member_id'])) {
+                    $targetMemberMap['s_' . $etm['source_member_id']] = (int)$etm['id'];
+                }
                 if (!empty($etm['person_id'])) {
                     $targetMemberMap['p_' . $etm['person_id']] = (int)$etm['id'];
                 }
@@ -719,45 +932,59 @@ class BoardTermService
                 $cat = $m['category'];
                 $name = $m['name'];
 
+                $cust = $customizationsMap[$oldId] ?? [];
+                $finalCategory = trim((string)($cust['category'] ?? $cat));
+                $finalPosition = trim((string)($cust['position'] ?? $m['position']));
+                $finalRoleType = trim((string)($cust['role_type'] ?? $m['role_type']));
+                $finalWorkplace = array_key_exists('workplace', $cust) ? $cust['workplace'] : $m['workplace'];
+                $finalDepartment = array_key_exists('department', $cust) ? $cust['department'] : $m['department'];
+                $finalSortOrder = isset($cust['sort_order']) ? (int)$cust['sort_order'] : (int)$m['sort_order'];
+                $finalChairperson = isset($cust['is_chairperson']) ? (bool)$cust['is_chairperson'] : (bool)$m['is_chairperson'];
+                $finalImageUrl = !empty($cust['image_url']) ? $cust['image_url'] : $m['image_url'];
+
                 $existingNewId = null;
-                if ($personId && isset($targetMemberMap['p_' . $personId])) {
+                if (isset($targetMemberMap['s_' . $oldId])) {
+                    $existingNewId = $targetMemberMap['s_' . $oldId];
+                } elseif ($personId && isset($targetMemberMap['p_' . $personId])) {
                     $existingNewId = $targetMemberMap['p_' . $personId];
-                } elseif (isset($targetMemberMap['n_' . $cat . '_' . $name])) {
-                    $existingNewId = $targetMemberMap['n_' . $cat . '_' . $name];
+                } elseif (isset($targetMemberMap['n_' . $finalCategory . '_' . $name])) {
+                    $existingNewId = $targetMemberMap['n_' . $finalCategory . '_' . $name];
                 }
 
                 if ($existingNewId) {
                     Database::execute(
                         "UPDATE board_term_members
-                         SET position = ?, role_type = ?, workplace = ?, department = ?, image_url = ?, bio = ?, is_chairperson = ?, updated_at = NOW()
+                         SET source_member_id = ?, category = ?, position = ?, role_type = ?, workplace = ?, department = ?, image_url = ?, bio = ?, sort_order = ?, is_chairperson = ?, updated_at = NOW()
                          WHERE id = ?",
-                        [$m['position'], $m['role_type'], $m['workplace'], $m['department'], $m['image_url'], $m['bio'], $m['is_chairperson'] ? 1 : 0, $existingNewId]
+                        [$oldId, $finalCategory, $finalPosition, $finalRoleType, $finalWorkplace, $finalDepartment, $finalImageUrl, $m['bio'], $finalSortOrder, $finalChairperson ? 1 : 0, $existingNewId]
                     );
                     $memberIdMap[$oldId] = $existingNewId;
                 } else {
                     $newMemId = (int)Database::insert(
-                        "INSERT INTO board_term_members (term_id, person_id, category, name, position, role_type, workplace, department, image_url, bio, sort_order, is_chairperson, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
+                        "INSERT INTO board_term_members (term_id, person_id, source_member_id, category, name, position, role_type, workplace, department, image_url, bio, sort_order, is_chairperson, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
                         [
                             $targetTermId,
                             $personId,
-                            $cat,
+                            $oldId,
+                            $finalCategory,
                             $name,
-                            $m['position'],
-                            $m['role_type'],
-                            $m['workplace'],
-                            $m['department'],
-                            $m['image_url'],
+                            $finalPosition,
+                            $finalRoleType,
+                            $finalWorkplace,
+                            $finalDepartment,
+                            $finalImageUrl,
                             $m['bio'],
-                            $m['sort_order'],
-                            $m['is_chairperson'] ? 1 : 0
+                            $finalSortOrder,
+                            $finalChairperson ? 1 : 0
                         ]
                     );
                     $memberIdMap[$oldId] = $newMemId;
+                    $targetMemberMap['s_' . $oldId] = $newMemId;
                     if ($personId) {
                         $targetMemberMap['p_' . $personId] = $newMemId;
                     }
-                    $targetMemberMap['n_' . $cat . '_' . $name] = $newMemId;
+                    $targetMemberMap['n_' . $finalCategory . '_' . $name] = $newMemId;
                 }
                 $transferredCount++;
             }
@@ -819,6 +1046,7 @@ class BoardTermService
             ]);
 
             return [
+                'success' => true,
                 'status' => 'success',
                 'target_term_id' => $targetTermId,
                 'target_term_number' => $targetTermNumber,

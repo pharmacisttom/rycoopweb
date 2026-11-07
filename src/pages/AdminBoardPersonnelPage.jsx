@@ -124,6 +124,7 @@ export default function AdminBoardPersonnelPage() {
   const [transferPreviewLoading, setTransferPreviewLoading] = useState(false);
   const [transferPreviewData, setTransferPreviewData] = useState(null);
   const [selectedTransferIds, setSelectedTransferIds] = useState(new Set());
+  const [transferRoleCustomizations, setTransferRoleCustomizations] = useState({});
   const [transferGroups, setTransferGroups] = useState(true);
   const [transferring, setTransferring] = useState(false);
 
@@ -278,7 +279,7 @@ export default function AdminBoardPersonnelPage() {
     setTransferModalOpen(true);
     setTransferPreviewLoading(true);
     try {
-      const res = await memberAdminApi(`/api/admin/board-terms/${sourceId}/selective-transfer/preview?target_term=39`);
+      const res = await memberAdminApi(`/api/admin/board-terms/${sourceId}/selection-candidates?target_term=39`);
       if (res.success && res.data) {
         setTransferPreviewData(res.data);
         const allCandidates = [
@@ -287,6 +288,15 @@ export default function AdminBoardPersonnelPage() {
           ...(res.data.candidates?.auditors || []),
         ];
         setSelectedTransferIds(new Set(allCandidates.map((c) => c.id)));
+        const initialCustom = {};
+        allCandidates.forEach((c) => {
+          initialCustom[c.id] = {
+            position: c.target_member?.position || c.position,
+            role_type: c.target_member?.role_type || c.role_type,
+            is_chairperson: c.is_chairperson,
+          };
+        });
+        setTransferRoleCustomizations(initialCustom);
       }
     } catch (err) {
       alertService.error(err.message || 'ไม่สามารถโหลดข้อมูลถ่ายโอนได้');
@@ -332,11 +342,20 @@ export default function AdminBoardPersonnelPage() {
 
     setTransferring(true);
     try {
+      const selections = Array.from(selectedTransferIds).map((id) => ({
+        source_member_id: id,
+        position: transferRoleCustomizations[id]?.position,
+        role_type: transferRoleCustomizations[id]?.role_type,
+        is_chairperson: transferRoleCustomizations[id]?.is_chairperson,
+      }));
+
       const res = await memberAdminApi(`/api/admin/board-terms/${sourceId}/selective-transfer`, {
         method: 'POST',
         data: {
           target_term_number: 39,
           selected_member_ids: Array.from(selectedTransferIds),
+          selections,
+          customizations: transferRoleCustomizations,
           transfer_groups: transferGroups,
         }
       });
@@ -2504,6 +2523,7 @@ export default function AdminBoardPersonnelPage() {
                             <th style={{ padding: '0.5rem 0.75rem', width: '50px' }}>รูปภาพ</th>
                             <th style={{ padding: '0.5rem 0.75rem' }}>ชื่อ - นามสกุล</th>
                             <th style={{ padding: '0.5rem 0.75rem' }}>ตำแหน่งในชุดที่ 38</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>ตำแหน่งในชุดที่ 39 (ปรับแต่งได้)</th>
                             <th style={{ padding: '0.5rem 0.75rem' }}>หมวดหมู่</th>
                           </tr>
                         </thead>
@@ -2542,8 +2562,40 @@ export default function AdminBoardPersonnelPage() {
                                     />
                                   </div>
                                 </td>
-                                <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{cand.name}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>
+                                  {cand.name}
+                                  {cand.already_transferred && (
+                                    <span className="badge badge-warning" style={{ marginLeft: '0.4rem', fontSize: '0.7rem', padding: '0.15rem 0.35rem' }}>
+                                      มีในชุด 39 แล้ว
+                                    </span>
+                                  )}
+                                </td>
                                 <td style={{ padding: '0.5rem 0.75rem', color: 'var(--accent-gold-dark)' }}>{cand.position}</td>
+                                <td style={{ padding: '0.5rem 0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                                  {isSelected ? (
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      style={{ fontSize: '0.82rem', padding: '0.25rem 0.5rem', width: '100%', maxWidth: '180px' }}
+                                      value={transferRoleCustomizations[cand.id]?.position ?? cand.position}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setTransferRoleCustomizations((prev) => ({
+                                          ...prev,
+                                          [cand.id]: {
+                                            ...(prev[cand.id] || {}),
+                                            position: val,
+                                            role_type: val.includes('ประธาน') && !val.includes('รอง') ? 'president' : (val.includes('รองประธาน') ? 'vice_president' : (val.includes('เหรัญญิก') ? 'treasurer' : (val.includes('เลขานุการ') ? 'secretary' : cand.role_type || 'director'))),
+                                            is_chairperson: val.includes('ประธาน') && !val.includes('รอง')
+                                          }
+                                        }));
+                                      }}
+                                      placeholder="ระบุตำแหน่งในชุดที่ 39"
+                                    />
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>-</span>
+                                  )}
+                                </td>
                                 <td style={{ padding: '0.5rem 0.75rem' }}>
                                   <span className="badge badge-outline">
                                     {cand.category === 'director' ? 'กรรมการ' : cand.category === 'advisor' ? 'ที่ปรึกษา' : 'ผู้ตรวจสอบ'}

@@ -578,14 +578,40 @@ class BoardStaffController extends Controller
     }
 
     /**
-     * GET /api/admin/board-terms/{id}/selective-transfer/preview
+     * GET /api/admin/board-terms/{id}/selection-candidates
+     */
+    public function apiSelectionCandidates(string $id): void
+    {
+        try {
+            $sourceId = (int)$id;
+            $targetTerm = (int)$this->request->input('target_term', $this->request->input('target_term_number', 39));
+            $candidates = BoardTermService::getSelectionCandidates($sourceId, $targetTerm);
+            $this->response->json([
+                'success' => true,
+                'data' => $candidates,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET/POST /api/admin/board-terms/{id}/selective-transfer/preview
+     * POST /api/admin/board-terms/{id}/selective-copy/preview
      */
     public function apiSelectiveTransferPreview(string $id): void
     {
         try {
             $sourceId = (int)$id;
-            $targetTerm = (int)$this->request->input('target_term', 39);
-            $preview = BoardTermService::getSelectiveTransferPreview($sourceId, $targetTerm);
+            $targetTerm = (int)$this->request->input('target_term', $this->request->input('target_term_number', 39));
+            $selections = (array)$this->request->input('selections', $this->request->input('selected_member_ids', []));
+            $options = [
+                'transfer_groups' => (bool)$this->request->input('transfer_groups', true),
+                'term_name' => $this->request->input('term_name'),
+            ];
+            $preview = BoardTermService::getSelectiveTransferPreview($sourceId, $targetTerm, $selections, $options);
             $this->response->json([
                 'success' => true,
                 'data' => $preview,
@@ -598,17 +624,27 @@ class BoardStaffController extends Controller
     }
 
     /**
+     * POST /api/admin/board-terms/{id}/selective-copy/preview
+     */
+    public function apiSelectiveCopyPreview(string $id): void
+    {
+        $this->apiSelectiveTransferPreview($id);
+    }
+
+    /**
      * POST /api/admin/board-terms/{id}/selective-transfer
+     * POST /api/admin/board-terms/{id}/selective-copy
      */
     public function apiSelectiveTransfer(string $id): void
     {
         try {
             $sourceId = (int)$id;
-            $targetTerm = (int)$this->request->input('target_term_number', 39);
-            $selectedIds = (array)$this->request->input('selected_member_ids', []);
+            $targetTerm = (int)$this->request->input('target_term_number', $this->request->input('target_term', 39));
+            $selectedIds = (array)$this->request->input('selections', $this->request->input('selected_member_ids', []));
             $options = [
                 'transfer_groups' => (bool)$this->request->input('transfer_groups', true),
                 'term_name' => $this->request->input('term_name'),
+                'customizations' => (array)$this->request->input('customizations', []),
             ];
 
             $result = BoardTermService::selectiveTransfer($sourceId, $targetTerm, $selectedIds, $options, Auth::id());
@@ -622,6 +658,14 @@ class BoardStaffController extends Controller
         } catch (Throwable $e) {
             $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * POST /api/admin/board-terms/{id}/selective-copy
+     */
+    public function apiSelectiveCopy(string $id): void
+    {
+        $this->apiSelectiveTransfer($id);
     }
 
     /**
