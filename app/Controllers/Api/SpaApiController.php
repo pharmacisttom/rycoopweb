@@ -274,6 +274,17 @@ class SpaApiController extends Controller
     }
 
     /**
+     * GET /api/public/board-terms/history
+     */
+    public function boardTermsHistory(): void
+    {
+        $this->json([
+            'success' => true,
+            'data' => \App\Services\BoardTermService::getHistoricalTerms(),
+        ]);
+    }
+
+    /**
      * GET /api/public/statistics
      */
     public function statistics(): void

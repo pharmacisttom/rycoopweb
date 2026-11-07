@@ -9,6 +9,10 @@ use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Session;
 use App\Services\AuditService;
+use App\Services\BoardTermService;
+use App\Services\MediaService;
+use InvalidArgumentException;
+use Throwable;
 
 class BoardStaffController extends Controller
 {
@@ -29,11 +33,20 @@ class BoardStaffController extends Controller
             return $item;
         }, $staff);
 
+        $terms = [];
+        $activeTerm = null;
+        if (BoardTermService::isTableAvailable()) {
+            $terms = BoardTermService::getAllTerms();
+            $activeTerm = BoardTermService::getPublicActiveTerm();
+        }
+
         $this->response->json([
             'success' => true,
             'data' => [
                 'boards' => $boards,
                 'staff' => $staff,
+                'terms' => $terms,
+                'active_term' => $activeTerm,
             ]
         ]);
     }
@@ -239,6 +252,271 @@ class BoardStaffController extends Controller
         } else {
             Session::flash('success', 'ลบกรรมการเรียบร้อยแล้ว');
             $this->redirect(url('admin/board-staff'));
+        }
+    }
+
+    /**
+     * GET /api/admin/board-terms
+     */
+    public function apiTermsIndex(): void
+    {
+        try {
+            $terms = BoardTermService::getAllTerms();
+            $this->response->json([
+                'success' => true,
+                'data' => $terms,
+            ]);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/admin/board-terms/{id}
+     */
+    public function apiTermShow(string $id): void
+    {
+        try {
+            $term = BoardTermService::getTerm((int)$id);
+            if (!$term) {
+                $this->response->json(['success' => false, 'message' => 'ไม่พบวาระที่ต้องการ'], 404);
+                return;
+            }
+            $this->response->json([
+                'success' => true,
+                'data' => $term,
+            ]);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/admin/board-terms/{id}/preview
+     */
+    public function apiTermPreview(string $id): void
+    {
+        try {
+            $preview = BoardTermService::getTermPreview((int)$id);
+            if (!$preview) {
+                $this->response->json(['success' => false, 'message' => 'ไม่พบวาระที่ต้องการ'], 404);
+                return;
+            }
+            $this->response->json([
+                'success' => true,
+                'data' => $preview,
+            ]);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms
+     */
+    public function apiTermStore(): void
+    {
+        try {
+            $id = BoardTermService::createTerm($this->request->all(), Auth::id());
+            $term = BoardTermService::getTerm($id);
+            $this->response->json([
+                'success' => true,
+                'message' => 'สร้างวาระใหม่สำเร็จ',
+                'data' => $term,
+            ], 201);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/{id}/copy
+     */
+    public function apiTermCopy(string $id): void
+    {
+        try {
+            $sourceId = (int)$id;
+            $newTermNumber = (int)$this->request->input('term_number');
+            $newTermName = $this->request->input('term_name');
+
+            $newId = BoardTermService::copyTerm($sourceId, $newTermNumber, $newTermName, Auth::id());
+            $term = BoardTermService::getTerm($newId);
+            $this->response->json([
+                'success' => true,
+                'message' => "คัดลอกวาระไปยังชุดที่ {$newTermNumber} สำเร็จ",
+                'data' => $term,
+            ], 201);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * PUT/POST /api/admin/board-terms/{id}
+     */
+    public function apiTermUpdate(string $id): void
+    {
+        try {
+            $termId = (int)$id;
+            BoardTermService::updateTerm($termId, $this->request->all(), Auth::id());
+            $term = BoardTermService::getTerm($termId);
+            $this->response->json([
+                'success' => true,
+                'message' => 'บันทึกการแก้ไขข้อมูลวาระสำเร็จ',
+                'data' => $term,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * PUT/POST /api/admin/board-terms/{id}/members
+     */
+    public function apiTermSaveMembers(string $id): void
+    {
+        try {
+            $termId = (int)$id;
+            $members = (array)$this->request->input('members', []);
+            $category = (string)$this->request->input('category', 'director');
+
+            BoardTermService::saveTermMembers($termId, $members, $category, Auth::id());
+            $term = BoardTermService::getTerm($termId);
+            $this->response->json([
+                'success' => true,
+                'message' => 'บันทึกรายชื่อสำเร็จ',
+                'data' => $term,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * PUT/POST /api/admin/board-terms/{id}/groups
+     */
+    public function apiTermSaveGroups(string $id): void
+    {
+        try {
+            $termId = (int)$id;
+            $groups = (array)$this->request->input('groups', []);
+
+            BoardTermService::saveTermGroups($termId, $groups, Auth::id());
+            $term = BoardTermService::getTerm($termId);
+            $this->response->json([
+                'success' => true,
+                'message' => 'บันทึกคณะกรรมการย่อยสำเร็จ',
+                'data' => $term,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/{id}/publish
+     */
+    public function apiTermPublish(string $id): void
+    {
+        try {
+            $termId = (int)$id;
+            BoardTermService::publishTerm($termId, Auth::id());
+            $term = BoardTermService::getTerm($termId);
+            $this->response->json([
+                'success' => true,
+                'message' => 'เผยแพร่วาระสำเร็จ และอัปเดตหน้าสาธารณะแล้ว',
+                'data' => $term,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/{id}/schedule
+     */
+    public function apiTermSchedule(string $id): void
+    {
+        try {
+            $termId = (int)$id;
+            $publishAt = (string)$this->request->input('publish_at');
+            if (trim($publishAt) === '') {
+                $this->response->json(['success' => false, 'message' => 'กรุณาระบุวันและเวลาที่ต้องการเผยแพร่'], 422);
+                return;
+            }
+
+            BoardTermService::scheduleTerm($termId, $publishAt, Auth::id());
+            $term = BoardTermService::getTerm($termId);
+            $this->response->json([
+                'success' => true,
+                'message' => 'ตั้งเวลาเผยแพร่วาระสำเร็จ',
+                'data' => $term,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/reconcile-38
+     */
+    public function apiReconcileTerm38(): void
+    {
+        try {
+            $force = (bool)$this->request->input('force', false);
+            $result = BoardTermService::reconcileTerm38($force);
+            $this->response->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result,
+            ]);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/upload-photo
+     */
+    public function apiUploadPhoto(): void
+    {
+        try {
+            $file = $this->request->file('photo') ?? $this->request->file('file') ?? $this->request->file('image');
+            if (!$file) {
+                $this->response->json(['success' => false, 'message' => 'ไม่พบไฟล์รูปภาพ'], 422);
+                return;
+            }
+
+            $name = trim((string)$this->request->input('name', 'personnel'));
+            $result = MediaService::upload($file, 'personnel', $name);
+
+            $this->response->json([
+                'success' => true,
+                'message' => 'อัปโหลดรูปภาพสำเร็จ',
+                'data' => [
+                    'url' => $result['url'],
+                    'relative_path' => $result['path'],
+                    'full_url' => resolve_media_url($result['url']),
+                ],
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

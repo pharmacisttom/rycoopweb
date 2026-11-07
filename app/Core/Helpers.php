@@ -165,6 +165,9 @@ if (!function_exists('resolve_media_url')) {
         }
 
         $path = str_replace('\\', '/', $path);
+        if (str_starts_with($path, './')) {
+            $path = substr($path, 2);
+        }
         if (preg_match('#^https?://#i', $path) === 1 || str_starts_with($path, '/')) {
             return $path;
         }

@@ -98,6 +98,7 @@ $router->get('/api/public/welfare', 'Api\\SpaApiController@welfare');
 $router->get('/api/public/faqs', 'Api\\SpaApiController@faqs');
 $router->get('/api/public/popups', 'Api\\SpaApiController@popups');
 $router->get('/api/public/board-members', 'Api\\SpaApiController@boardMembers');
+$router->get('/api/public/board-terms/history', 'Api\\SpaApiController@boardTermsHistory');
 $router->get('/api/public/statistics', 'Api\\SpaApiController@statistics');
 $router->post('/api/visits/record', 'Api\\SpaApiController@recordVisit');
 $router->get('/api/visits/stats', 'Api\\SpaApiController@visitorStats');
@@ -241,6 +242,23 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->put('/board-staff/staff/{id}', 'Admin\\BoardStaffController@apiUpdateStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
     $r->post('/board-staff/staff/{id}/delete', 'Admin\\BoardStaffController@apiDestroyStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
     $r->delete('/board-staff/staff/{id}', 'Admin\\BoardStaffController@apiDestroyStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
+
+    // Board Term Management
+    $r->get('/board-terms', 'Admin\\BoardStaffController@apiTermsIndex', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->get('/board-terms/{id}', 'Admin\\BoardStaffController@apiTermShow', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->get('/board-terms/{id}/preview', 'Admin\\BoardStaffController@apiTermPreview', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->post('/board-terms', 'Admin\\BoardStaffController@apiTermStore', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/reconcile-38', 'Admin\\BoardStaffController@apiReconcileTerm38', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/upload-photo', 'Admin\\BoardStaffController@apiUploadPhoto', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/copy', 'Admin\\BoardStaffController@apiTermCopy', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-terms/{id}', 'Admin\\BoardStaffController@apiTermUpdate', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/update', 'Admin\\BoardStaffController@apiTermUpdate', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-terms/{id}/members', 'Admin\\BoardStaffController@apiTermSaveMembers', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/members', 'Admin\\BoardStaffController@apiTermSaveMembers', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-terms/{id}/groups', 'Admin\\BoardStaffController@apiTermSaveGroups', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/groups', 'Admin\\BoardStaffController@apiTermSaveGroups', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/publish', 'Admin\\BoardStaffController@apiTermPublish', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/schedule', 'Admin\\BoardStaffController@apiTermSchedule', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
 
     // Document Categories
     $r->get('/document-categories', 'Admin\\DocumentController@apiCategories', [new PermissionMiddleware('documents', 'view')]);
