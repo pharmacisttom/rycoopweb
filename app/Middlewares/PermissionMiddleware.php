@@ -9,11 +9,28 @@ use App\Core\Response;
 
 class PermissionMiddleware
 {
+    private string $module;
     private array $modules;
 
     public function __construct(string|array $module, private string $action)
     {
-        $this->modules = is_array($module) ? $module : [$module];
+        $this->modules = is_array($module) ? array_values($module) : [$module];
+        $this->module = (string)($this->modules[0] ?? '');
+    }
+
+    public function getModule(): string
+    {
+        return $this->module;
+    }
+
+    public function getModules(): array
+    {
+        return $this->modules;
+    }
+
+    public function getAction(): string
+    {
+        return $this->action;
     }
 
     public function handle(Request $request, Response $response): bool

@@ -199,7 +199,7 @@ export default function AdminWorkspacePage() {
   const query = filterText.trim().toLowerCase();
 
   return (
-    <section className="admin-module" style={{ maxWidth: '1440px', margin: '0 auto', paddingBottom: '3rem' }}>
+    <section className="admin-module" style={{ maxWidth: '100%', margin: '0 auto', paddingBottom: '3rem', boxSizing: 'border-box' }}>
       <PageHeader
         title="พื้นที่ทำงานเจ้าหน้าที่ (Officer Workspace)"
         subtitle={`${user?.name || 'เจ้าหน้าที่สหกรณ์'} • ${user?.role_name || user?.role || 'Staff'}`}
@@ -220,8 +220,10 @@ export default function AdminWorkspacePage() {
           backgroundColor: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          padding: '16px 20px',
+          padding: '14px 16px',
           margin: '1.25rem 0',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
           boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
         }}
       >
@@ -234,6 +236,7 @@ export default function AdminWorkspacePage() {
                 borderRadius: '50%',
                 backgroundColor: healthStatus === 'healthy' ? '#10b981' : '#f59e0b',
                 display: 'inline-block',
+                flexShrink: 0,
               }}
             />
             <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>
@@ -249,7 +252,7 @@ export default function AdminWorkspacePage() {
         </div>
 
         {/* Quick Filter Input */}
-        <div style={{ position: 'relative', minWidth: '260px' }}>
+        <div style={{ position: 'relative', minWidth: 'min(100%, 240px)', flex: '1 1 auto', maxWidth: '100%', boxSizing: 'border-box' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: 11, color: '#94a3b8' }} />
           <input
             type="search"
@@ -259,6 +262,8 @@ export default function AdminWorkspacePage() {
             aria-label="ค้นหาโมดูลการทำงาน"
             style={{
               width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
               padding: '8px 12px 8px 36px',
               borderRadius: '8px',
               border: '1px solid #cbd5e1',
@@ -306,7 +311,7 @@ export default function AdminWorkspacePage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
                 gap: '1rem',
               }}
             >
@@ -426,10 +431,12 @@ export default function AdminWorkspacePage() {
           alignItems: 'center',
           paddingTop: '1.5rem',
           borderTop: '1px solid #e2e8f0',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
         }}
       >
-        <Link to="/admin/dashboard" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={16} />
+        <Link to="/admin/dashboard" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', maxWidth: '100%', whiteSpace: 'normal', textAlign: 'center' }}>
+          <Activity size={16} style={{ flexShrink: 0 }} />
           <span>ศูนย์ควบคุมผู้ดูแลระบบ (Executive Dashboard)</span>
         </Link>
 
@@ -437,9 +444,9 @@ export default function AdminWorkspacePage() {
           type="button"
           className="btn btn-outline"
           onClick={() => setPasswordOpen(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', maxWidth: '100%', whiteSpace: 'normal' }}
         >
-          <Lock size={15} />
+          <Lock size={15} style={{ flexShrink: 0 }} />
           <span>เปลี่ยนรหัสผ่านของฉัน</span>
         </button>
 
@@ -455,13 +462,13 @@ export default function AdminWorkspacePage() {
               setLogoutBusy(false);
             }
           }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#dc2626', borderColor: '#fca5a5' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#dc2626', borderColor: '#fca5a5', maxWidth: '100%', whiteSpace: 'normal' }}
         >
-          <LogOut size={15} />
+          <LogOut size={15} style={{ flexShrink: 0 }} />
           <span>{logoutBusy ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}</span>
         </button>
 
-        <Link to="/" className="btn btn-outline" style={{ marginLeft: 'auto' }}>
+        <Link to="/" className="btn btn-outline" style={{ marginLeft: 'auto', maxWidth: '100%', whiteSpace: 'normal' }}>
           <span>กลับสู่หน้าเว็บไซต์</span>
         </Link>
       </div>

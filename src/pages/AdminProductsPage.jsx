@@ -197,7 +197,7 @@ export default function AdminProductsPage() {
 
     setFormBusy(true);
     const label = activeTab === 'loan' ? 'ผลิตภัณฑ์สินเชื่อ' : 'ผลิตภัณฑ์เงินฝาก';
-    alertService.loading(isEdit ? `กำลังบันทึกการแก้ไข${label}...` : `กำลังเพิ่ม${label}ใหม่...`);
+    alertService.showLoading(isEdit ? `กำลังบันทึกการแก้ไข${label}...` : `กำลังเพิ่ม${label}ใหม่...`);
 
     try {
       let endpoint = '';
@@ -215,7 +215,7 @@ export default function AdminProductsPage() {
         body: JSON.stringify(formData),
       });
 
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success(
         isEdit ? `บันทึกการแก้ไข${label}เรียบร้อยแล้ว` : `เพิ่ม${label}ใหม่เรียบร้อยแล้ว`,
         'ดำเนินการสำเร็จ'
@@ -225,7 +225,7 @@ export default function AdminProductsPage() {
       setFormDirty(false);
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'บันทึกไม่สำเร็จ');
     } finally {
       setFormBusy(false);
@@ -239,7 +239,7 @@ export default function AdminProductsPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังเปลี่ยนสถานะ...');
+      alertService.showLoading('กำลังเปลี่ยนสถานะ...');
       const endpoint = activeTab === 'loan'
         ? `/api/admin/loans/${item.id}`
         : `/api/admin/deposits/${item.id}`;
@@ -253,11 +253,11 @@ export default function AdminProductsPage() {
         }),
       });
 
-      alertService.close();
-      alertService.toastSuccess(`เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดบริการ' : 'ปิดบริการ'} เรียบร้อยแล้ว`);
+      alertService.closeLoading();
+      alertService.toast({ icon: 'success', title: `เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดบริการ' : 'ปิดบริการ'} เรียบร้อยแล้ว` });
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถเปลี่ยนสถานะได้');
     }
   };
@@ -269,17 +269,17 @@ export default function AdminProductsPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังลบผลิตภัณฑ์...');
+      alertService.showLoading('กำลังลบผลิตภัณฑ์...');
       const endpoint = activeTab === 'loan'
         ? `/api/admin/loans/${item.id}`
         : `/api/admin/deposits/${item.id}`;
 
       await memberAdminApi(endpoint, { method: 'DELETE' });
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success('ลบผลิตภัณฑ์เรียบร้อยแล้ว', 'ลบสำเร็จ');
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถลบผลิตภัณฑ์ได้');
     }
   };

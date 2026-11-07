@@ -75,7 +75,7 @@ export default function ContentAdminPage() {
       await memberAdminApi(path, { data: edit });
       setEdit(null);
       const successMsg = tab === 'news' ? 'บันทึกร่าง / ส่งตรวจแล้ว ยังไม่เผยแพร่' : 'บันทึกคำถามแล้ว';
-      alertService.toastSuccess(successMsg);
+      alertService.toast({ icon: 'success', title: tab === 'news' ? 'บันทึกข่าวเรียบร้อย' : 'บันทึกข้อมูลเรียบร้อย' });
       setMessage(successMsg);
       setRevision((v) => v + 1);
     } catch (e) {
@@ -94,7 +94,7 @@ export default function ContentAdminPage() {
       await memberAdminApi(`/api/admin/${tab}/${item.id}/delete`, { data: { version: item.version } });
       setEdit(null);
       setPreview(null);
-      alertService.toastSuccess('ปิดรายการแล้ว');
+      alertService.toast({ icon: 'success', title: 'ปิดรายการเรียบร้อยแล้ว' });
       setMessage('ปิดรายการแล้ว');
       setRevision((v) => v + 1);
     } catch (e) {
@@ -116,7 +116,7 @@ export default function ContentAdminPage() {
     try {
       await memberAdminApi(`/api/admin/news/${item.id}/publish`, { data: { version: item.version } });
       setPreview(null);
-      alertService.toastSuccess('เผยแพร่ข่าวสู่หน้าเว็บไซต์แล้ว');
+      alertService.toast({ icon: 'success', title: 'เผยแพร่ข่าวสู่หน้าเว็บไซต์แล้ว' });
       setMessage('เผยแพร่ข่าวแล้ว');
       setRevision((v) => v + 1);
     } catch (e) {

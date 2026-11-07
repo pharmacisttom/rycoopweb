@@ -152,7 +152,7 @@ export default function AdminEServicesPage() {
     }
 
     setFormBusy(true);
-    alertService.loading(isEdit ? 'กำลังบันทึกการแก้ไขบริการ...' : 'กำลังเพิ่มลิงก์บริการใหม่...');
+    alertService.showLoading(isEdit ? 'กำลังบันทึกการแก้ไขบริการ...' : 'กำลังเพิ่มลิงก์บริการใหม่...');
 
     try {
       const endpoint = isEdit
@@ -180,7 +180,7 @@ export default function AdminEServicesPage() {
         body: JSON.stringify(payload),
       });
 
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success(
         isEdit ? 'บันทึกการแก้ไขบริการเรียบร้อยแล้ว' : 'เพิ่มลิงก์บริการเรียบร้อยแล้ว',
         'ดำเนินการสำเร็จ'
@@ -190,7 +190,7 @@ export default function AdminEServicesPage() {
       setFormDirty(false);
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'บันทึกไม่สำเร็จ');
     } finally {
       setFormBusy(false);
@@ -208,7 +208,7 @@ export default function AdminEServicesPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังเปลี่ยนสถานะบริการ...');
+      alertService.showLoading('กำลังเปลี่ยนสถานะบริการ...');
       await memberAdminApi(`/api/admin/eservices/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -218,11 +218,11 @@ export default function AdminEServicesPage() {
           status: newStatus,
         }),
       });
-      alertService.close();
-      alertService.toastSuccess(`เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'} เรียบร้อยแล้ว`);
+      alertService.closeLoading();
+      alertService.toast({ icon: 'success', title: `เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'} เรียบร้อยแล้ว` });
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถเปลี่ยนสถานะได้');
     }
   };
@@ -233,15 +233,15 @@ export default function AdminEServicesPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังลบลิงก์บริการ...');
+      alertService.showLoading('กำลังลบลิงก์บริการ...');
       await memberAdminApi(`/api/admin/eservices/${item.id}`, {
         method: 'DELETE',
       });
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success('ลบลิงก์บริการเรียบร้อยแล้ว', 'ลบสำเร็จ');
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถลบลิงก์บริการได้');
     }
   };

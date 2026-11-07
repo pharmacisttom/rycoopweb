@@ -172,7 +172,7 @@ export default function AdminBoardPersonnelPage() {
 
     setFormBusy(true);
     const targetTypeLabel = activeTab === 'board' ? 'คณะกรรมการ' : 'เจ้าหน้าที่';
-    alertService.loading(isEdit ? `กำลังบันทึกข้อมูล${targetTypeLabel}...` : `กำลังเพิ่ม${targetTypeLabel}ใหม่...`);
+    alertService.showLoading(isEdit ? `กำลังบันทึกข้อมูล${targetTypeLabel}...` : `กำลังเพิ่ม${targetTypeLabel}ใหม่...`);
 
     try {
       let endpoint = '';
@@ -190,7 +190,7 @@ export default function AdminBoardPersonnelPage() {
         body: JSON.stringify(formData),
       });
 
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success(
         isEdit ? `บันทึกข้อมูล${targetTypeLabel}เรียบร้อยแล้ว` : `เพิ่ม${targetTypeLabel}เรียบร้อยแล้ว`,
         'ดำเนินการสำเร็จ'
@@ -200,7 +200,7 @@ export default function AdminBoardPersonnelPage() {
       setFormDirty(false);
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'บันทึกไม่สำเร็จ');
     } finally {
       setFormBusy(false);
@@ -214,7 +214,7 @@ export default function AdminBoardPersonnelPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังเปลี่ยนสถานะ...');
+      alertService.showLoading('กำลังเปลี่ยนสถานะ...');
       const endpoint = activeTab === 'board'
         ? `/api/admin/board-staff/board/${item.id}`
         : `/api/admin/board-staff/staff/${item.id}`;
@@ -228,11 +228,11 @@ export default function AdminBoardPersonnelPage() {
         }),
       });
 
-      alertService.close();
-      alertService.toastSuccess(`เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'} เรียบร้อยแล้ว`);
+      alertService.closeLoading();
+      alertService.toast({ icon: 'success', title: `เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'} เรียบร้อยแล้ว` });
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถเปลี่ยนสถานะได้');
     }
   };
@@ -244,17 +244,17 @@ export default function AdminBoardPersonnelPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังลบข้อมูล...');
+      alertService.showLoading('กำลังลบข้อมูล...');
       const endpoint = activeTab === 'board'
         ? `/api/admin/board-staff/board/${item.id}`
         : `/api/admin/board-staff/staff/${item.id}`;
 
       await memberAdminApi(endpoint, { method: 'DELETE' });
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success('ลบข้อมูลเรียบร้อยแล้ว', 'ลบสำเร็จ');
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถลบข้อมูลได้');
     }
   };

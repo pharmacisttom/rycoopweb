@@ -125,7 +125,7 @@ export default function AdminDocumentCategoriesPage() {
     }
 
     setFormBusy(true);
-    alertService.loading(isEdit ? 'กำลังบันทึกการแก้ไขหมวดหมู่...' : 'กำลังเพิ่มหมวดหมู่ใหม่...');
+    alertService.showLoading(isEdit ? 'กำลังบันทึกการแก้ไขหมวดหมู่...' : 'กำลังเพิ่มหมวดหมู่ใหม่...');
 
     try {
       const endpoint = isEdit
@@ -139,7 +139,7 @@ export default function AdminDocumentCategoriesPage() {
         body: JSON.stringify(formData),
       });
 
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success(
         isEdit ? 'บันทึกการแก้ไขหมวดหมู่เรียบร้อยแล้ว' : 'เพิ่มหมวดหมู่ใหม่เรียบร้อยแล้ว',
         'ดำเนินการสำเร็จ'
@@ -149,7 +149,7 @@ export default function AdminDocumentCategoriesPage() {
       setFormDirty(false);
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'บันทึกไม่สำเร็จ');
     } finally {
       setFormBusy(false);
@@ -163,7 +163,7 @@ export default function AdminDocumentCategoriesPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังเปลี่ยนสถานะหมวดหมู่...');
+      alertService.showLoading('กำลังเปลี่ยนสถานะหมวดหมู่...');
       await memberAdminApi(`/api/admin/document-categories/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -173,11 +173,11 @@ export default function AdminDocumentCategoriesPage() {
         }),
       });
 
-      alertService.close();
-      alertService.toastSuccess(`เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} เรียบร้อยแล้ว`);
+      alertService.closeLoading();
+      alertService.toast({ icon: 'success', title: `เปลี่ยนสถานะเป็น ${newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} เรียบร้อยแล้ว` });
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถเปลี่ยนสถานะได้');
     }
   };
@@ -188,16 +188,16 @@ export default function AdminDocumentCategoriesPage() {
     if (!confirmed) return;
 
     try {
-      alertService.loading('กำลังลบหมวดหมู่...');
+      alertService.showLoading('กำลังลบหมวดหมู่...');
       await memberAdminApi(`/api/admin/document-categories/${item.id}`, {
         method: 'DELETE',
       });
 
-      alertService.close();
+      alertService.closeLoading();
       await alertService.success('ลบหมวดหมู่เอกสารเรียบร้อยแล้ว', 'ลบสำเร็จ');
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      alertService.close();
+      alertService.closeLoading();
       alertService.error(err.message || 'ไม่สามารถลบหมวดหมู่นี้ได้ อาจมีเอกสารผูกอยู่');
     }
   };

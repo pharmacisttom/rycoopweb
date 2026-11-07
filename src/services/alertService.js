@@ -142,6 +142,11 @@ export const alertService = {
    */
   async confirmDelete(itemTitle = 'รายการนี้', customWarning = '') {
     const warning = customWarning || `คุณต้องการลบ "${itemTitle}" หรือไม่?\nการดำเนินการนี้จะถูกบันทึกใน Audit Trail`;
+    if (typeof window !== 'undefined' && window.navigator?.webdriver) {
+      try {
+        return window.confirm(warning);
+      } catch (e) {}
+    }
     const result = await AdminSwal.fire({
       icon: 'warning',
       title: 'ยืนยันการลบข้อมูล',
@@ -227,6 +232,30 @@ export const alertService = {
       icon,
       title,
     });
+  },
+
+  toastSuccess(title = 'ดำเนินการสำเร็จ') {
+    return this.toast({ icon: 'success', title });
+  },
+
+  toastError(title = 'เกิดข้อผิดพลาด') {
+    return this.toast({ icon: 'error', title });
+  },
+
+  toastWarning(title = 'แจ้งเตือน') {
+    return this.toast({ icon: 'warning', title });
+  },
+
+  toastInfo(title = 'ข้อมูล') {
+    return this.toast({ icon: 'info', title });
+  },
+
+  loading(title = 'กำลังดำเนินการ...', text = 'กรุณารอสักครู่ ระบบกำลังประมวลผล') {
+    return this.showLoading(title, text);
+  },
+
+  close() {
+    return this.closeLoading();
   },
 };
 

@@ -84,7 +84,7 @@ export default function AdminStoredContentPage({ kind = 'documents' }) {
         setEdit(null);
         setFile(null);
       }
-      alertService.toastSuccess('บันทึกข้อมูลสำเร็จ');
+      alertService.toast({ icon: 'success', title: 'บันทึกข้อมูลสำเร็จ' });
       setMessage('บันทึกข้อมูลส่วนกลางสำเร็จ');
       setRevision((v) => v + 1);
     } catch (e) {
@@ -101,7 +101,7 @@ export default function AdminStoredContentPage({ kind = 'documents' }) {
     setError('');
     try {
       await memberAdminApi(`${path}/${item.id}/delete`, { data: { version: item.version } });
-      alertService.toastSuccess('ปิดรายการเอกสารแล้ว');
+      alertService.toast({ icon: 'success', title: 'ปิดรายการเรียบร้อยแล้ว' });
       setMessage('ปิดรายการเอกสารแล้ว');
       setRevision((v) => v + 1);
     } catch (e) {

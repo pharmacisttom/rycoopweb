@@ -506,7 +506,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
       } else if (section === 'users') {
         if(user?.role==='super_admin') {
           setStaffDirData(null);
-          const staffResult=await memberAdminApi('/api/admin/staff',{signal});
+          const staffResult=await memberAdminApi('/api/admin/staff/',{signal});
           if(!Array.isArray(staffResult.staff)||!Array.isArray(staffResult.invitations)||!Array.isArray(staffResult.roles))throw new Error('เซิร์ฟเวอร์ส่งรายชื่อเจ้าหน้าที่ไม่ครบถ้วน');
           setStaffDirData(staffResult);
         }
