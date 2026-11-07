@@ -1,9 +1,9 @@
 # RYCOOPWEB — PUBLIC / ADMIN ROUTE & API ARCHITECTURE MATRIX
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Branch:** `feature/full-data-consistency-recovery`  
-**Environment:** TEST ONLY  
-**Design System:** Modern Design System 3.1  
+**Repository:** `pharmacisttom/rycoopweb`
+**Branch:** `feature/full-data-consistency-recovery`
+**Environment:** TEST ONLY
+**Design System:** Modern Design System 3.1
 
 ---
 

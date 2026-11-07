@@ -1,8 +1,8 @@
 # RYCOOPWEB — CONTENT PUBLICATION ARCHITECTURE
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Branch:** `feature/full-data-consistency-recovery`  
-**Environment:** TEST ONLY  
+**Repository:** `pharmacisttom/rycoopweb`
+**Branch:** `feature/full-data-consistency-recovery`
+**Environment:** TEST ONLY
 
 ---
 

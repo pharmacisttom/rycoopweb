@@ -1,9 +1,9 @@
 # RYCOOPWEB — CRITICAL BUG REGISTER & REMEDIATION LOG
 
-**Repository:** `pharmacisttom/rycoopweb`  
-**Branch:** `feature/full-data-consistency-recovery`  
-**Environment:** TEST ONLY  
-**Date:** 2026-11-07  
+**Repository:** `pharmacisttom/rycoopweb`
+**Branch:** `feature/full-data-consistency-recovery`
+**Environment:** TEST ONLY
+**Date:** 2026-11-07
 
 ---
 
