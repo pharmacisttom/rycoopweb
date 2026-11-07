@@ -16,11 +16,11 @@ class DashboardController extends Controller
 
         // Cooperative summary - genuine database data only
         $totalMembers = Database::hasTable('members') 
-            ? (int)(Database::value("SELECT COUNT(*) FROM members WHERE deleted_at IS NULL") ?: Database::value("SELECT COUNT(*) FROM members") ?: 0)
+            ? (int)(Database::value("SELECT COUNT(*) FROM members WHERE status != 'resigned'") ?: 0)
             : 0;
 
         $newMembersMonth = Database::hasTable('members')
-            ? (int)(Database::value("SELECT COUNT(*) FROM members WHERE deleted_at IS NULL AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())") ?: 0)
+            ? (int)(Database::value("SELECT COUNT(*) FROM members WHERE status != 'resigned' AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())") ?: 0)
             : 0;
 
         $latestStats = Database::hasTable('financial_statistics')

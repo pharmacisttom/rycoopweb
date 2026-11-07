@@ -19,7 +19,7 @@ final class DocumentController extends \App\Core\Controller
         }
         Crud::respond($this->response, fn() => [
             'data' => Crud::listing('documents'),
-            'categories' => Database::query("SELECT * FROM document_categories WHERE deleted_at IS NULL ORDER BY sort_order, id")
+            'categories' => Database::query("SELECT * FROM document_categories WHERE status = 'active' ORDER BY sort_order, id")
         ]);
     }
 
@@ -54,7 +54,7 @@ final class DocumentController extends \App\Core\Controller
 
     public function apiCategories(): void
     {
-        $categories = Database::query("SELECT * FROM document_categories WHERE deleted_at IS NULL ORDER BY sort_order ASC, id ASC");
+        $categories = Database::query("SELECT * FROM document_categories ORDER BY sort_order ASC, id ASC");
         $categories = array_map(function (array $c): array {
             $c['version'] = \App\Services\AccessService::version($c);
             return $c;
@@ -71,14 +71,13 @@ final class DocumentController extends \App\Core\Controller
             return;
         }
 
-        $sql = "INSERT INTO document_categories (name, slug, description, icon, sort_order, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
+        $sql = "INSERT INTO document_categories (name, slug, description, sort_order, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, NOW(), NOW())";
 
         $id = (int)Database::insert($sql, [
             $name,
             str_slug($name) . '-' . time(),
             $this->request->input('description', ''),
-            $this->request->input('icon', 'folder'),
             (int)$this->request->input('sort_order', 0),
             $this->request->input('status', 'active'),
         ]);
@@ -92,7 +91,7 @@ final class DocumentController extends \App\Core\Controller
     public function apiUpdateCategory(string $id): void
     {
         $catId = (int)$id;
-        $old = Database::first("SELECT * FROM document_categories WHERE id = ? AND deleted_at IS NULL", [$catId]);
+        $old = Database::first("SELECT * FROM document_categories WHERE id = ?", [$catId]);
         if (!$old) {
             $this->response->json(['success' => false, 'message' => 'ไม่พบข้อมูลหมวดหมู่เอกสาร'], 404);
             return;
@@ -104,11 +103,10 @@ final class DocumentController extends \App\Core\Controller
             return;
         }
 
-        $sql = "UPDATE document_categories SET name = ?, description = ?, icon = ?, sort_order = ?, status = ?, updated_at = NOW() WHERE id = ?";
+        $sql = "UPDATE document_categories SET name = ?, description = ?, sort_order = ?, status = ?, updated_at = NOW() WHERE id = ?";
         Database::execute($sql, [
             $name,
             $this->request->input('description', $old['description']),
-            $this->request->input('icon', $old['icon'] ?? 'folder'),
             (int)$this->request->input('sort_order', $old['sort_order']),
             $this->request->input('status', $old['status'] ?? 'active'),
             $catId
@@ -123,7 +121,7 @@ final class DocumentController extends \App\Core\Controller
     public function apiDestroyCategory(string $id): void
     {
         $catId = (int)$id;
-        $old = Database::first("SELECT * FROM document_categories WHERE id = ? AND deleted_at IS NULL", [$catId]);
+        $old = Database::first("SELECT * FROM document_categories WHERE id = ?", [$catId]);
         if (!$old) {
             $this->response->json(['success' => false, 'message' => 'ไม่พบข้อมูลหมวดหมู่เอกสาร'], 404);
             return;
@@ -135,8 +133,8 @@ final class DocumentController extends \App\Core\Controller
             return;
         }
 
-        Database::execute("UPDATE document_categories SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?", [$catId]);
+        Database::execute("UPDATE document_categories SET status = 'inactive', updated_at = NOW() WHERE id = ?", [$catId]);
         AuditService::log('document_categories', 'delete', (string)$catId, $old);
-        $this->response->json(['success' => true, 'message' => 'ลบหมวดหมู่เอกสารเรียบร้อยแล้ว']);
+        $this->response->json(['success' => true, 'message' => 'ปิดใช้งานหมวดหมู่เอกสารเรียบร้อยแล้ว']);
     }
 }

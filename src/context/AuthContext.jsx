@@ -8,7 +8,6 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    if (import.meta.env.VITE_FEATURE_MEMBER_PORTAL !== 'true') return null;
     try {
       const saved = localStorage.getItem('coop_auth_user');
       return saved ? JSON.parse(saved) : null;
@@ -33,12 +32,6 @@ export function AuthProvider({ children }) {
   // localStorage only remembers the UI state. The PHP session remains the source
   // of truth for protected actions such as publishing news.
   useEffect(() => {
-    // In public-only production mode, skip session checks and polling completely
-    if (import.meta.env.VITE_FEATURE_MEMBER_PORTAL !== 'true') {
-      setSessionStatus('offline');
-      return;
-    }
-
     let cancelled = false;
     let checking = false;
     let lastCheckStarted = 0;

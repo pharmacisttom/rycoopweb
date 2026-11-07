@@ -102,7 +102,7 @@ class BackupController extends Controller
             SUM(data_length + index_length) AS db_size,
             COUNT(*) as table_count
             FROM information_schema.TABLES 
-            WHERE table_schema = ?", [$dbName]);
+            WHERE table_schema = DATABASE()");
 
         $this->render('admin.backups.index', [
             'title' => 'ระบบสำรองและกู้คืนข้อมูล (System Backup & Restore)',

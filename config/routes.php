@@ -197,55 +197,83 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/announcements/{id}/delete','Admin\\AnnouncementController@destroy',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','delete'),CsrfMiddleware::class]);
 
     // Hero Slides
-    $r->get('/hero-slides', 'Admin\\HeroSlideController@apiIndex', [new PermissionMiddleware('news', 'view')]);
-    $r->post('/hero-slides', 'Admin\\HeroSlideController@apiStore', [new PermissionMiddleware('news', 'create'), CsrfMiddleware::class]);
-    $r->post('/hero-slides/{id}/update', 'Admin\\HeroSlideController@apiUpdate', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
-    $r->post('/hero-slides/{id}/delete', 'Admin\\HeroSlideController@apiDestroy', [new PermissionMiddleware('news', 'delete'), CsrfMiddleware::class]);
+    $r->get('/hero-slides', 'Admin\\HeroSlideController@apiIndex', [new PermissionMiddleware(['news', 'hero_slides'], 'view')]);
+    $r->post('/hero-slides', 'Admin\\HeroSlideController@apiStore', [new PermissionMiddleware(['news', 'hero_slides'], 'create'), CsrfMiddleware::class]);
+    $r->post('/hero-slides/{id}/update', 'Admin\\HeroSlideController@apiUpdate', [new PermissionMiddleware(['news', 'hero_slides'], 'edit'), CsrfMiddleware::class]);
+    $r->put('/hero-slides/{id}', 'Admin\\HeroSlideController@apiUpdate', [new PermissionMiddleware(['news', 'hero_slides'], 'edit'), CsrfMiddleware::class]);
+    $r->post('/hero-slides/{id}/delete', 'Admin\\HeroSlideController@apiDestroy', [new PermissionMiddleware(['news', 'hero_slides'], 'delete'), CsrfMiddleware::class]);
+    $r->delete('/hero-slides/{id}', 'Admin\\HeroSlideController@apiDestroy', [new PermissionMiddleware(['news', 'hero_slides'], 'delete'), CsrfMiddleware::class]);
 
     // Popup Campaign Manager V2
-    $r->get('/popups', 'Admin\\PopupController@apiIndex', [new PermissionMiddleware('news', 'view')]);
-    $r->post('/popups', 'Admin\\PopupController@apiStore', [new PermissionMiddleware('news', 'create'), CsrfMiddleware::class]);
-    $r->post('/popups/{id}/update', 'Admin\\PopupController@apiUpdate', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
-    $r->put('/popups/{id}', 'Admin\\PopupController@apiUpdate', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
-    $r->post('/popups/{id}/delete', 'Admin\\PopupController@apiDestroy', [new PermissionMiddleware('news', 'delete'), CsrfMiddleware::class]);
-    $r->delete('/popups/{id}', 'Admin\\PopupController@apiDestroy', [new PermissionMiddleware('news', 'delete'), CsrfMiddleware::class]);
-    $r->post('/popups/upload', 'Admin\\PopupController@apiUpload', [new PermissionMiddleware('news', 'edit'), CsrfMiddleware::class]);
+    $r->get('/popups', 'Admin\\PopupController@apiIndex', [new PermissionMiddleware(['news', 'popups'], 'view')]);
+    $r->post('/popups', 'Admin\\PopupController@apiStore', [new PermissionMiddleware(['news', 'popups'], 'create'), CsrfMiddleware::class]);
+    $r->post('/popups/{id}/update', 'Admin\\PopupController@apiUpdate', [new PermissionMiddleware(['news', 'popups'], 'edit'), CsrfMiddleware::class]);
+    $r->put('/popups/{id}', 'Admin\\PopupController@apiUpdate', [new PermissionMiddleware(['news', 'popups'], 'edit'), CsrfMiddleware::class]);
+    $r->post('/popups/{id}/delete', 'Admin\\PopupController@apiDestroy', [new PermissionMiddleware(['news', 'popups'], 'delete'), CsrfMiddleware::class]);
+    $r->delete('/popups/{id}', 'Admin\\PopupController@apiDestroy', [new PermissionMiddleware(['news', 'popups'], 'delete'), CsrfMiddleware::class]);
+    $r->post('/popups/upload', 'Admin\\PopupController@apiUpload', [new PermissionMiddleware(['news', 'popups'], 'edit'), CsrfMiddleware::class]);
 
     // Welfare
     $r->get('/welfare', 'Admin\\WelfareController@apiIndex', [new PermissionMiddleware('welfare', 'view')]);
     $r->post('/welfare', 'Admin\\WelfareController@apiStore', [new PermissionMiddleware('welfare', 'create'), CsrfMiddleware::class]);
     $r->post('/welfare/{id}/update', 'Admin\\WelfareController@apiUpdate', [new PermissionMiddleware('welfare', 'edit'), CsrfMiddleware::class]);
+    $r->put('/welfare/{id}', 'Admin\\WelfareController@apiUpdate', [new PermissionMiddleware('welfare', 'edit'), CsrfMiddleware::class]);
     $r->post('/welfare/{id}/delete', 'Admin\\WelfareController@apiDestroy', [new PermissionMiddleware('welfare', 'delete'), CsrfMiddleware::class]);
+    $r->delete('/welfare/{id}', 'Admin\\WelfareController@apiDestroy', [new PermissionMiddleware('welfare', 'delete'), CsrfMiddleware::class]);
 
     // E-Services
-    $r->get('/eservices', 'Admin\\EServiceController@apiIndex', [new PermissionMiddleware('settings', 'view')]);
-    $r->post('/eservices', 'Admin\\EServiceController@apiStore', [new PermissionMiddleware('settings', 'update'), CsrfMiddleware::class]);
-    $r->post('/eservices/{id}/update', 'Admin\\EServiceController@apiUpdate', [new PermissionMiddleware('settings', 'update'), CsrfMiddleware::class]);
-    $r->post('/eservices/{id}/delete', 'Admin\\EServiceController@apiDestroy', [new PermissionMiddleware('settings', 'update'), CsrfMiddleware::class]);
+    $r->get('/eservices', 'Admin\\EServiceController@apiIndex', [new PermissionMiddleware(['settings', 'eservice_links'], 'view')]);
+    $r->post('/eservices', 'Admin\\EServiceController@apiStore', [new PermissionMiddleware(['settings', 'eservice_links'], 'update'), CsrfMiddleware::class]);
+    $r->post('/eservices/{id}/update', 'Admin\\EServiceController@apiUpdate', [new PermissionMiddleware(['settings', 'eservice_links'], 'update'), CsrfMiddleware::class]);
+    $r->put('/eservices/{id}', 'Admin\\EServiceController@apiUpdate', [new PermissionMiddleware(['settings', 'eservice_links'], 'update'), CsrfMiddleware::class]);
+    $r->post('/eservices/{id}/delete', 'Admin\\EServiceController@apiDestroy', [new PermissionMiddleware(['settings', 'eservice_links'], 'update'), CsrfMiddleware::class]);
+    $r->delete('/eservices/{id}', 'Admin\\EServiceController@apiDestroy', [new PermissionMiddleware(['settings', 'eservice_links'], 'update'), CsrfMiddleware::class]);
 
     // Board & Staff (Personnel)
-    $r->get('/board-staff', 'Admin\\BoardStaffController@apiIndex', [new PermissionMiddleware('people', 'view')]);
-    $r->post('/board-staff/board', 'Admin\\BoardStaffController@apiStoreBoard', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
-    $r->post('/board-staff/board/{id}/update', 'Admin\\BoardStaffController@apiUpdateBoard', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
-    $r->post('/board-staff/board/{id}/delete', 'Admin\\BoardStaffController@apiDestroyBoard', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
-    $r->post('/board-staff/staff', 'Admin\\BoardStaffController@apiStoreStaff', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
-    $r->post('/board-staff/staff/{id}/update', 'Admin\\BoardStaffController@apiUpdateStaff', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
-    $r->post('/board-staff/staff/{id}/delete', 'Admin\\BoardStaffController@apiDestroyStaff', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
+    $r->get('/board-staff', 'Admin\\BoardStaffController@apiIndex', [new PermissionMiddleware(['people', 'boards', 'staff'], 'view')]);
+    $r->post('/board-staff/board', 'Admin\\BoardStaffController@apiStoreBoard', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-staff/board/{id}/update', 'Admin\\BoardStaffController@apiUpdateBoard', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-staff/board/{id}', 'Admin\\BoardStaffController@apiUpdateBoard', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-staff/board/{id}/delete', 'Admin\\BoardStaffController@apiDestroyBoard', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->delete('/board-staff/board/{id}', 'Admin\\BoardStaffController@apiDestroyBoard', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-staff/staff', 'Admin\\BoardStaffController@apiStoreStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-staff/staff/{id}/update', 'Admin\\BoardStaffController@apiUpdateStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-staff/staff/{id}', 'Admin\\BoardStaffController@apiUpdateStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-staff/staff/{id}/delete', 'Admin\\BoardStaffController@apiDestroyStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
+    $r->delete('/board-staff/staff/{id}', 'Admin\\BoardStaffController@apiDestroyStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
 
     // Document Categories
     $r->get('/document-categories', 'Admin\\DocumentController@apiCategories', [new PermissionMiddleware('documents', 'view')]);
     $r->post('/document-categories', 'Admin\\DocumentController@apiStoreCategory', [new PermissionMiddleware('documents', 'create'), CsrfMiddleware::class]);
     $r->post('/document-categories/{id}/update', 'Admin\\DocumentController@apiUpdateCategory', [new PermissionMiddleware('documents', 'edit'), CsrfMiddleware::class]);
+    $r->put('/document-categories/{id}', 'Admin\\DocumentController@apiUpdateCategory', [new PermissionMiddleware('documents', 'edit'), CsrfMiddleware::class]);
     $r->post('/document-categories/{id}/delete', 'Admin\\DocumentController@apiDestroyCategory', [new PermissionMiddleware('documents', 'delete'), CsrfMiddleware::class]);
+    $r->delete('/document-categories/{id}', 'Admin\\DocumentController@apiDestroyCategory', [new PermissionMiddleware('documents', 'delete'), CsrfMiddleware::class]);
 
     // Product Reference Data (Loans & Deposits)
-    $r->get('/products', 'Admin\\LoanProductController@apiIndex', [new PermissionMiddleware('products', 'view')]);
-    $r->post('/products/deposits', 'Admin\\DepositProductController@apiStore', [new PermissionMiddleware('products', 'update'), CsrfMiddleware::class]);
-    $r->post('/products/deposits/{id}/update', 'Admin\\DepositProductController@apiUpdate', [new PermissionMiddleware('products', 'update'), CsrfMiddleware::class]);
-    $r->post('/products/deposits/{id}/delete', 'Admin\\DepositProductController@apiDestroy', [new PermissionMiddleware('products', 'update'), CsrfMiddleware::class]);
-    $r->post('/products/loans', 'Admin\\LoanProductController@apiStore', [new PermissionMiddleware('products', 'update'), CsrfMiddleware::class]);
-    $r->post('/products/loans/{id}/update', 'Admin\\LoanProductController@apiUpdate', [new PermissionMiddleware('products', 'update'), CsrfMiddleware::class]);
-    $r->post('/products/loans/{id}/delete', 'Admin\\LoanProductController@apiDestroy', [new PermissionMiddleware('products', 'update'), CsrfMiddleware::class]);
+    $r->get('/products', 'Admin\\LoanProductController@apiIndex', [new PermissionMiddleware(['products', 'loan_products', 'deposit_products'], 'view')]);
+    $r->get('/loans', 'Admin\\LoanProductController@apiIndex', [new PermissionMiddleware(['products', 'loan_products', 'deposit_products'], 'view')]);
+    $r->post('/products/deposits', 'Admin\\DepositProductController@apiStore', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/products/deposits/{id}/update', 'Admin\\DepositProductController@apiUpdate', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->put('/products/deposits/{id}', 'Admin\\DepositProductController@apiUpdate', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/products/deposits/{id}/delete', 'Admin\\DepositProductController@apiDestroy', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->delete('/products/deposits/{id}', 'Admin\\DepositProductController@apiDestroy', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/deposits', 'Admin\\DepositProductController@apiStore', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/deposits/{id}/update', 'Admin\\DepositProductController@apiUpdate', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->put('/deposits/{id}', 'Admin\\DepositProductController@apiUpdate', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/deposits/{id}/delete', 'Admin\\DepositProductController@apiDestroy', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+    $r->delete('/deposits/{id}', 'Admin\\DepositProductController@apiDestroy', [new PermissionMiddleware(['products', 'deposit_products'], 'update'), CsrfMiddleware::class]);
+
+    $r->post('/products/loans', 'Admin\\LoanProductController@apiStore', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/products/loans/{id}/update', 'Admin\\LoanProductController@apiUpdate', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->put('/products/loans/{id}', 'Admin\\LoanProductController@apiUpdate', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/products/loans/{id}/delete', 'Admin\\LoanProductController@apiDestroy', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->delete('/products/loans/{id}', 'Admin\\LoanProductController@apiDestroy', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/loans', 'Admin\\LoanProductController@apiStore', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/loans/{id}/update', 'Admin\\LoanProductController@apiUpdate', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->put('/loans/{id}', 'Admin\\LoanProductController@apiUpdate', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->post('/loans/{id}/delete', 'Admin\\LoanProductController@apiDestroy', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
+    $r->delete('/loans/{id}', 'Admin\\LoanProductController@apiDestroy', [new PermissionMiddleware(['products', 'loan_products'], 'update'), CsrfMiddleware::class]);
 
     $r->get('/announcements','Admin\\AnnouncementController@index',[new PermissionMiddleware('announcements','view')]);
     $r->post('/announcements','Admin\\AnnouncementController@store',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','create'),CsrfMiddleware::class]);

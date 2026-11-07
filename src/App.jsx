@@ -146,7 +146,6 @@ const staffRoles = [
 ];
 
 function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
-  if (!memberPortalEnabled) return <ServiceUnavailablePage />;
   const { user, isLoggedIn, sessionStatus, can } = useAuth();
 
   if (sessionStatus === 'checking') return <PageSkeletonLoader />;
@@ -268,16 +267,16 @@ export default function App() {
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
 
-            <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
+            <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','boards.view','staff.view','rates.view','products.view','loan_products.view','deposit_products.view','settings.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/documents" element={<StaffProtectedRoute permission="documents.view"><AdminStoredContentPage/></StaffProtectedRoute>} />
             <Route path="/admin/settings/content" element={<StaffProtectedRoute permission="settings.view"><AdminStoredContentPage kind="settings"/></StaffProtectedRoute>} />
             <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view','faqs.view']}><ContentAdminPage /></StaffProtectedRoute>} />
-            <Route path="/admin/hero-slides" element={<StaffProtectedRoute permission="content.view"><AdminHeroSlidesPage /></StaffProtectedRoute>} />
-            <Route path="/admin/popups" element={<StaffProtectedRoute permission="content.view"><AdminPopupsPage /></StaffProtectedRoute>} />
+            <Route path="/admin/hero-slides" element={<StaffProtectedRoute anyPermissions={['hero_slides.view','news.view','content.view']}><AdminHeroSlidesPage /></StaffProtectedRoute>} />
+            <Route path="/admin/popups" element={<StaffProtectedRoute anyPermissions={['popups.view','news.view','content.view']}><AdminPopupsPage /></StaffProtectedRoute>} />
             <Route path="/admin/welfare" element={<StaffProtectedRoute permission="welfare.view"><AdminWelfarePage /></StaffProtectedRoute>} />
-            <Route path="/admin/eservices" element={<StaffProtectedRoute permission="content.view"><AdminEServicesPage /></StaffProtectedRoute>} />
-            <Route path="/admin/board-staff" element={<StaffProtectedRoute permission="people.view"><AdminBoardPersonnelPage /></StaffProtectedRoute>} />
-            <Route path="/admin/products" element={<StaffProtectedRoute permission="products.view"><AdminProductsPage /></StaffProtectedRoute>} />
+            <Route path="/admin/eservices" element={<StaffProtectedRoute anyPermissions={['eservice_links.view','settings.view','content.view']}><AdminEServicesPage /></StaffProtectedRoute>} />
+            <Route path="/admin/board-staff" element={<StaffProtectedRoute anyPermissions={['boards.view','staff.view','people.view']}><AdminBoardPersonnelPage /></StaffProtectedRoute>} />
+            <Route path="/admin/products" element={<StaffProtectedRoute anyPermissions={['loan_products.view','deposit_products.view','products.view']}><AdminProductsPage /></StaffProtectedRoute>} />
             <Route path="/admin/document-categories" element={<StaffProtectedRoute permission="documents.view"><AdminDocumentCategoriesPage /></StaffProtectedRoute>} />
             <Route path="/admin/mfa/enroll" element={<MfaPage mode="enroll" />} />
             <Route path="/admin/mfa/verify" element={<MfaPage mode="verify" />} />
@@ -299,7 +298,7 @@ export default function App() {
             <Route path="/member/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
             <Route path="/member/privacy-ack" element={memberPortalEnabled ? <MemberPrivacyAckPage /> : <ServiceUnavailablePage />} />
             <Route path="/member/dividends" element={memberPortalEnabled ? <MemberProtectedRoute><MemberDividendsPage /></MemberProtectedRoute> : <ServiceUnavailablePage />} />
-            <Route path="/admin/login" element={memberPortalEnabled ? <LoginPage /> : <ServiceUnavailablePage />} />
+            <Route path="/admin/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

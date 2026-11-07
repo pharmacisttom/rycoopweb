@@ -97,9 +97,6 @@ const isPortalEnabled = () => import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'tr
 
 /** Check if current user is authenticated */
 export const fetchCurrentUser = () => {
-  if (!isPortalEnabled()) {
-    return Promise.resolve({ success: false, authenticated: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
-  }
   return apiFetch('/api/auth/me', { cache: 'no-store' });
 };
 

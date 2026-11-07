@@ -182,6 +182,26 @@ class Auth
                 WHERE ur.user_id = ? AND p.module = ? AND p.action = ?";
 
         $count = (int) Database::value($sql, [$user['id'], $module, $action]);
-        return $count > 0;
+        if ($count > 0) {
+            return true;
+        }
+
+        $synonyms = [
+            'people' => ['boards', 'staff', 'users'],
+            'products' => ['loan_products', 'deposit_products', 'interest_rates'],
+            'content' => ['news', 'announcements', 'hero_slides', 'popups'],
+            'settings' => ['settings', 'eservice_links'],
+        ];
+
+        if (isset($synonyms[$module])) {
+            foreach ($synonyms[$module] as $altModule) {
+                $altCount = (int) Database::value($sql, [$user['id'], $altModule, $action]);
+                if ($altCount > 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
