@@ -24,7 +24,9 @@ import {
   Search,
   Filter,
   Layers,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Camera,
+  Download
 } from 'lucide-react';
 import { memberAdminApi } from '../services/memberAdminApi';
 import alertService from '../services/alertService';
@@ -105,6 +107,34 @@ export default function AdminBoardPersonnelPage() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [publishingId, setPublishingId] = useState(null);
 
+  // Board Terms State
+  const [boardTerms, setBoardTerms] = useState([]);
+  const [selectedTermId, setSelectedTermId] = useState(null);
+
+  // Import Term 38 Modal State
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importPreviewLoading, setImportPreviewLoading] = useState(false);
+  const [importPreviewData, setImportPreviewData] = useState(null);
+  const [preservePhotos, setPreservePhotos] = useState(true);
+  const [preserveEdits, setPreserveEdits] = useState(true);
+  const [importing, setImporting] = useState(false);
+
+  // Selective Transfer Modal State
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferPreviewLoading, setTransferPreviewLoading] = useState(false);
+  const [transferPreviewData, setTransferPreviewData] = useState(null);
+  const [selectedTransferIds, setSelectedTransferIds] = useState(new Set());
+  const [transferGroups, setTransferGroups] = useState(true);
+  const [transferring, setTransferring] = useState(false);
+
+  // Photograph Upload Modal State
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [photoTargetMember, setPhotoTargetMember] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoFileInputRef = useRef(null);
+
   // ─────────────────────────────────────────────────────────────────────────
   // 1. Initial Load & Fetch Sections Meta
   // ─────────────────────────────────────────────────────────────────────────
@@ -172,6 +202,245 @@ export default function AdminBoardPersonnelPage() {
     fetchAllPersonnelSections(controller.signal);
     return () => controller.abort();
   }, [fetchAllPersonnelSections, refreshKey]);
+
+  // Fetch Board Terms
+  const fetchBoardTerms = useCallback(async (signal) => {
+    try {
+      const res = await memberAdminApi('/api/admin/board-terms', { signal });
+      if (res.success && Array.isArray(res.data)) {
+        setBoardTerms(res.data);
+        const currentTerm = res.data.find((t) => t.is_current) || res.data[0];
+        if (currentTerm && !selectedTermId) {
+          setSelectedTermId(currentTerm.id);
+        }
+      }
+    } catch (err) {
+      // Graceful fallback
+    }
+  }, [selectedTermId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchBoardTerms(controller.signal);
+    return () => controller.abort();
+  }, [fetchBoardTerms, refreshKey]);
+
+  // Import Term 38 Handlers
+  const handleOpenImport38Modal = async () => {
+    setImportModalOpen(true);
+    setImportPreviewLoading(true);
+    try {
+      const res = await memberAdminApi('/api/admin/board-terms/import-38/preview');
+      if (res.success && res.data) {
+        setImportPreviewData(res.data);
+      }
+    } catch (err) {
+      alertService.error(err.message || 'ไม่สามารถโหลดข้อมูลเปรียบเทียบชุดที่ 38 ได้');
+    } finally {
+      setImportPreviewLoading(false);
+    }
+  };
+
+  const handleConfirmImport38 = async () => {
+    setImporting(true);
+    try {
+      const res = await memberAdminApi('/api/admin/board-terms/import-38', {
+        method: 'POST',
+        data: {
+          preserve_custom_photos: preservePhotos,
+          preserve_admin_edits: preserveEdits,
+        }
+      });
+      if (res.success) {
+        alertService.success(res.message || 'นำเข้าข้อมูลกรรมการชุดที่ 38 สำเร็จแล้ว');
+        setImportModalOpen(false);
+        await reloadPublicContent();
+        setRefreshKey((k) => k + 1);
+      } else {
+        throw new Error(res.message || 'นำเข้าข้อมูลไม่สำเร็จ');
+      }
+    } catch (err) {
+      alertService.error(err.message || 'เกิดข้อผิดพลาดในการนำเข้าชุดที่ 38');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // Selective Transfer Handlers
+  const handleOpenSelectiveTransferModal = async () => {
+    const term38 = boardTerms.find((t) => t.term_number === 38) || boardTerms[0];
+    const sourceId = term38 ? term38.id : selectedTermId;
+    if (!sourceId) {
+      alertService.error('กรุณานำเข้าข้อมูลชุดที่ 38 ก่อนดำเนินการถ่ายโอน');
+      return;
+    }
+
+    setTransferModalOpen(true);
+    setTransferPreviewLoading(true);
+    try {
+      const res = await memberAdminApi(`/api/admin/board-terms/${sourceId}/selective-transfer/preview?target_term=39`);
+      if (res.success && res.data) {
+        setTransferPreviewData(res.data);
+        const allCandidates = [
+          ...(res.data.candidates?.directors || []),
+          ...(res.data.candidates?.advisors || []),
+          ...(res.data.candidates?.auditors || []),
+        ];
+        setSelectedTransferIds(new Set(allCandidates.map((c) => c.id)));
+      }
+    } catch (err) {
+      alertService.error(err.message || 'ไม่สามารถโหลดข้อมูลถ่ายโอนได้');
+    } finally {
+      setTransferPreviewLoading(false);
+    }
+  };
+
+  const handleToggleTransferMember = (id) => {
+    setSelectedTransferIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllTransfer = (all) => {
+    if (!transferPreviewData) return;
+    if (all) {
+      const allCandidates = [
+        ...(transferPreviewData.candidates?.directors || []),
+        ...(transferPreviewData.candidates?.advisors || []),
+        ...(transferPreviewData.candidates?.auditors || []),
+      ];
+      setSelectedTransferIds(new Set(allCandidates.map((c) => c.id)));
+    } else {
+      setSelectedTransferIds(new Set());
+    }
+  };
+
+  const handleConfirmSelectiveTransfer = async () => {
+    if (selectedTransferIds.size === 0) {
+      alertService.error('กรุณาเลือกกรรมการอย่างน้อย 1 ท่าน');
+      return;
+    }
+
+    const sourceId = transferPreviewData?.source_term?.id;
+    if (!sourceId) return;
+
+    setTransferring(true);
+    try {
+      const res = await memberAdminApi(`/api/admin/board-terms/${sourceId}/selective-transfer`, {
+        method: 'POST',
+        data: {
+          target_term_number: 39,
+          selected_member_ids: Array.from(selectedTransferIds),
+          transfer_groups: transferGroups,
+        }
+      });
+      if (res.success) {
+        alertService.success(res.message || 'ถ่ายโอนกรรมการไปยังชุดที่ 39 (ฉบับร่าง) สำเร็จแล้ว');
+        setTransferModalOpen(false);
+        setRefreshKey((k) => k + 1);
+      } else {
+        throw new Error(res.message || 'ถ่ายโอนไม่สำเร็จ');
+      }
+    } catch (err) {
+      alertService.error(err.message || 'เกิดข้อผิดพลาดในการถ่ายโอนกรรมการ');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  // Photograph Upload Handlers
+  const handleOpenPhotoModal = (member) => {
+    setPhotoTargetMember(member);
+    setPhotoFile(null);
+    setPhotoPreview(member.image || member.photo || null);
+    setPhotoModalOpen(true);
+  };
+
+  const handleSelectPhotoFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alertService.error('ขนาดไฟล์รูปภาพเกิน 5 MB');
+      return;
+    }
+
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleConfirmPhotoUpload = async () => {
+    if (!photoFile || !photoTargetMember) {
+      alertService.error('กรุณาเลือกไฟล์รูปภาพ');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const term38 = boardTerms.find((t) => t.term_number === 38) || boardTerms[0];
+      const termId = term38 ? term38.id : (selectedTermId || 1);
+      const memberId = photoTargetMember.id;
+
+      const form = new FormData();
+      form.append('photo', photoFile);
+
+      const res = await memberAdminApi(`/api/admin/board-terms/${termId}/members/${memberId}/photo`, {
+        method: 'POST',
+        data: form,
+      });
+
+      if (res.success && res.data?.url) {
+        alertService.success('อัปโหลดรูปถ่ายกรรมการเรียบร้อยแล้ว');
+        setPhotoModalOpen(false);
+        setDraftCopies((prev) => {
+          const boards = (prev.boards || []).map((b) =>
+            b.id === photoTargetMember.id ? { ...b, image: res.data.url } : b
+          );
+          return { ...prev, boards };
+        });
+        await reloadPublicContent();
+        setRefreshKey((k) => k + 1);
+      } else {
+        throw new Error(res.message || 'อัปโหลดรูปภาพไม่สำเร็จ');
+      }
+    } catch (err) {
+      try {
+        const form = new FormData();
+        form.append('file', photoFile);
+        const res2 = await memberAdminApi('/api/admin/public-content/upload', {
+          method: 'POST',
+          data: form,
+        });
+        if (res2.success && res2.data?.url) {
+          alertService.success('อัปโหลดรูปถ่ายกรรมการเรียบร้อยแล้ว');
+          setPhotoModalOpen(false);
+          setDraftCopies((prev) => {
+            const boards = (prev.boards || []).map((b) =>
+              b.id === photoTargetMember.id ? { ...b, image: res2.data.url } : b
+            );
+            return { ...prev, boards };
+          });
+          setRefreshKey((k) => k + 1);
+        } else {
+          throw new Error(res2.message || 'อัปโหลดไม่สำเร็จ');
+        }
+      } catch (err2) {
+        alertService.error(err2.message || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+      }
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   // Current tab metadata & dirty checking
   const activeSectionKey = activeTab === 'history' ? 'boards' : activeTab;
@@ -574,7 +843,20 @@ export default function AdminBoardPersonnelPage() {
           label: 'รูปภาพ',
           width: '70px',
           render: (row) => (
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--primary-100)', background: 'var(--bg-subtle)' }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '2px solid var(--primary-100)',
+                background: 'var(--bg-subtle)',
+                cursor: currentMeta.canEdit ? 'pointer' : 'default',
+                position: 'relative'
+              }}
+              onClick={() => currentMeta.canEdit && handleOpenPhotoModal(row)}
+              title={currentMeta.canEdit ? 'คลิกเพื่อเปลี่ยนรูปถ่าย' : undefined}
+            >
               <SafeImage
                 src={row.image}
                 fallback="/assets/img/board_placeholder.jpg"
@@ -647,9 +929,18 @@ export default function AdminBoardPersonnelPage() {
         {
           key: 'actions',
           label: 'จัดการ',
-          width: '110px',
+          width: '145px',
           render: (row) => (
             <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleOpenPhotoModal(row)}
+                title="เปลี่ยนรูปถ่ายกรรมการ"
+              >
+                <Camera size={15} />
+              </button>
               <button
                 type="button"
                 className="btn btn-sm btn-outline"
@@ -757,9 +1048,18 @@ export default function AdminBoardPersonnelPage() {
         {
           key: 'actions',
           label: 'จัดการ',
-          width: '110px',
+          width: '145px',
           render: (row) => (
             <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={!currentMeta.canEdit}
+                onClick={() => handleOpenPhotoModal(row)}
+                title="เปลี่ยนรูปถ่ายเจ้าหน้าที่"
+              >
+                <Camera size={15} />
+              </button>
               <button
                 type="button"
                 className="btn btn-sm btn-outline"
@@ -986,6 +1286,29 @@ export default function AdminBoardPersonnelPage() {
               <span>ดูตัวอย่างร่าง</span>
             </button>
 
+            {activeSectionKey === 'boards' && currentMeta.canEdit && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleOpenImport38Modal}
+                  title="นำเข้าและเทียบข้อมูลกรรมการชุดที่ 38 จากหน้าเว็บไซต์"
+                >
+                  <Download size={15} />
+                  <span>นำเข้าข้อมูลชุดที่ 38</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleOpenSelectiveTransferModal}
+                  title="เลือกกรรมการจากชุดที่ 38 ไปชุดที่ 39 (ฉบับร่าง)"
+                >
+                  <UserCheck size={15} />
+                  <span>เลือกกรรมการไปชุดที่ 39</span>
+                </button>
+              </>
+            )}
+
             {currentMeta.canEdit && activeTab !== 'history' && (
               <button
                 type="button"
@@ -1015,6 +1338,46 @@ export default function AdminBoardPersonnelPage() {
         <div className="alert alert-danger" style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <AlertCircle size={18} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          Term 38 Missing Alert Banner
+      ───────────────────────────────────────────────────────────── */}
+      {(!boardTerms || boardTerms.length === 0 || !boardTerms.some((t) => t.term_number === 38)) && activeTab === 'boards' && (
+        <div
+          className="surface-card"
+          style={{
+            borderLeft: '4px solid var(--accent-gold, #f59e0b)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.25rem',
+            background: 'var(--amber-50, #fffbeb)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+            <AlertCircle size={22} color="var(--amber-600, #d97706)" style={{ marginTop: '0.2rem' }} />
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--amber-900, #78350f)' }}>
+                ยังไม่มีข้อมูลวาระในฐานข้อมูล หน้าเว็บแสดงชุดที่ 38 จากข้อมูลอ้างอิง
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--amber-800, #92400e)', marginTop: '0.25rem' }}>
+                คลิกปุ่มนำเข้าเพื่อซิงค์ข้อมูลกรรมการชุดที่ 38 (15 ท่าน) เข้าสู่ฐานข้อมูล และเปิดใช้งานระบบจัดการวาระ
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleOpenImport38Modal}
+          >
+            <Download size={15} />
+            <span>นำเข้าข้อมูลกรรมการชุดที่ 38 จากข้อมูลหน้าบ้าน</span>
+          </button>
         </div>
       )}
 
@@ -1893,6 +2256,462 @@ export default function AdminBoardPersonnelPage() {
           </div>
         )}
       </CrudDetailModal>
+
+      {/* ─────────────────────────────────────────────────────────────
+          Import Term 38 Modal
+      ───────────────────────────────────────────────────────────── */}
+      {importModalOpen && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="modal-content surface-card"
+            style={{
+              width: '100%',
+              maxWidth: '850px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '12px',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-900)' }}>
+                  นำเข้าและเทียบข้อมูลกรรมการชุดที่ 38 จากหน้าเว็บไซต์สาธารณะ
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  เทียบเคียงข้อมูลอ้างอิงหน้าเว็บสาธารณะกับฐานข้อมูล ตรวจจับรายการซ้ำ และรักษาภาพถ่าย/ข้อมูลที่แก้ไข
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => setImportModalOpen(false)}
+                disabled={importing}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+              {importPreviewLoading ? (
+                <LoadingSkeleton count={4} />
+              ) : importPreviewData ? (
+                <>
+                  {/* Summary Badges */}
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                    <span className="badge badge-primary" style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}>
+                      คณะกรรมการ: {importPreviewData.source_summary?.directors_count || 15} ท่าน
+                    </span>
+                    <span className="badge badge-teal" style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}>
+                      ที่ปรึกษา: {importPreviewData.source_summary?.advisors_count || 3} ท่าน
+                    </span>
+                    <span className="badge badge-teal" style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}>
+                      ผู้ตรวจสอบกิจการ: {importPreviewData.source_summary?.auditors_count || 3} ท่าน
+                    </span>
+                    <span className="badge badge-primary" style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}>
+                      คณะกรรมการย่อย: {importPreviewData.source_summary?.groups_count || 3} คณะ
+                    </span>
+                    <span className="badge badge-success" style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}>
+                      ตรวจพบรายการซ้ำ: {importPreviewData.duplicates_detected || 0} รายการ
+                    </span>
+                  </div>
+
+                  {/* Options */}
+                  <div style={{ background: 'var(--bg-subtle)', padding: '1rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>ตัวเลือกการนำเข้าและการรักษาข้อมูล:</div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={preservePhotos}
+                        onChange={(e) => setPreservePhotos(e.target.checked)}
+                      />
+                      <span>รักษาภาพถ่ายที่เคยอัปโหลดไว้ (Preserve custom photos)</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={preserveEdits}
+                        onChange={(e) => setPreserveEdits(e.target.checked)}
+                      />
+                      <span>รักษาข้อมูลหน่วยงาน/ประวัติที่เจ้าหน้าที่เคยแก้ไขไว้ (Preserve admin edits)</span>
+                    </label>
+                  </div>
+
+                  {/* Preview Table */}
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                        <thead>
+                          <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                            <th style={{ padding: '0.5rem 0.75rem', width: '50px' }}>ลำดับ</th>
+                            <th style={{ padding: '0.5rem 0.75rem', width: '60px' }}>รูปภาพ</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>ชื่อ - นามสกุล</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>ตำแหน่ง</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>สถานะในฐานข้อมูล</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(importPreviewData.director_comparisons || []).map((dir, idx) => (
+                            <tr key={dir.person_id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                              <td style={{ padding: '0.5rem 0.75rem' }}>{idx + 1}</td>
+                              <td style={{ padding: '0.5rem 0.75rem' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden' }}>
+                                  <SafeImage
+                                    src={dir.custom_photo_url || dir.image}
+                                    fallback="/assets/img/board_placeholder.jpg"
+                                    alt={dir.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{dir.name}</td>
+                              <td style={{ padding: '0.5rem 0.75rem', color: 'var(--accent-gold-dark)' }}>{dir.position}</td>
+                              <td style={{ padding: '0.5rem 0.75rem' }}>
+                                {dir.existing ? (
+                                  <span className="badge badge-success">มีในระบบแล้ว (จะปรับปรุง)</span>
+                                ) : (
+                                  <span className="badge badge-primary">รายการใหม่</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>ไม่สามารถดึงข้อมูลพรีวิวได้</div>
+              )}
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setImportModalOpen(false)}
+                disabled={importing}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmImport38}
+                disabled={importing || importPreviewLoading}
+              >
+                {importing ? 'กำลังนำเข้าข้อมูล...' : 'ยืนยันนำเข้าข้อมูลชุดที่ 38'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          Selective Transfer Modal (Term 38 -> Term 39)
+      ───────────────────────────────────────────────────────────── */}
+      {transferModalOpen && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="modal-content surface-card"
+            style={{
+              width: '100%',
+              maxWidth: '850px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '12px',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-900)' }}>
+                  เลือกกรรมการจากชุดที่ 38 ไปยังชุดที่ 39 (ฉบับร่าง)
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  ข้อมูลชุดที่ 39 จะถูกจัดเก็บเป็นฉบับร่าง ไม่ส่งผลกระทบต่อชุดที่ 38 และหน้าเว็บไซต์สาธารณะจนกว่าจะอนุมัติเผยแพร่
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => setTransferModalOpen(false)}
+                disabled={transferring}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+              {transferPreviewLoading ? (
+                <LoadingSkeleton count={4} />
+              ) : transferPreviewData ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        onClick={() => handleSelectAllTransfer(true)}
+                      >
+                        เลือกทั้งหมด
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        onClick={() => handleSelectAllTransfer(false)}
+                      >
+                        ยกเลิกทั้งหมด
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--primary-700)' }}>
+                      เลือกแล้ว {selectedTransferIds.size} ท่าน
+                    </div>
+                  </div>
+
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', marginBottom: '1.25rem' }}>
+                    <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                        <thead>
+                          <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                            <th style={{ padding: '0.5rem 0.75rem', width: '40px' }}>เลือก</th>
+                            <th style={{ padding: '0.5rem 0.75rem', width: '50px' }}>รูปภาพ</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>ชื่อ - นามสกุล</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>ตำแหน่งในชุดที่ 38</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>หมวดหมู่</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ...(transferPreviewData.candidates?.directors || []),
+                            ...(transferPreviewData.candidates?.advisors || []),
+                            ...(transferPreviewData.candidates?.auditors || []),
+                          ].map((cand) => {
+                            const isSelected = selectedTransferIds.has(cand.id);
+                            return (
+                              <tr
+                                key={cand.id}
+                                style={{
+                                  borderBottom: '1px solid var(--border-color)',
+                                  background: isSelected ? 'var(--primary-50, #eff6ff)' : 'transparent',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => handleToggleTransferMember(cand.id)}
+                              >
+                                <td style={{ padding: '0.5rem 0.75rem' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleTransferMember(cand.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>
+                                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden' }}>
+                                    <SafeImage
+                                      src={cand.photo_resolved || cand.image_url}
+                                      fallback="/assets/img/board_placeholder.jpg"
+                                      alt={cand.name}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  </div>
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{cand.name}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', color: 'var(--accent-gold-dark)' }}>{cand.position}</td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>
+                                  <span className="badge badge-outline">
+                                    {cand.category === 'director' ? 'กรรมการ' : cand.category === 'advisor' ? 'ที่ปรึกษา' : 'ผู้ตรวจสอบ'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-subtle)', padding: '0.85rem 1rem', borderRadius: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={transferGroups}
+                        onChange={(e) => setTransferGroups(e.target.checked)}
+                      />
+                      <span>คัดลอกคณะกรรมการย่อยด้วย (เฉพาะกรรมการที่ถูกเลือก เพื่อรักษาความถูกต้องของข้อมูล)</span>
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div>ไม่สามารถดึงข้อมูลผู้มีสิทธิ์ถ่ายโอนได้</div>
+              )}
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setTransferModalOpen(false)}
+                disabled={transferring}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmSelectiveTransfer}
+                disabled={transferring || transferPreviewLoading || selectedTransferIds.size === 0}
+              >
+                {transferring ? 'กำลังถ่ายโอน...' : `ยืนยันถ่ายโอน ${selectedTransferIds.size} ท่าน ไปชุดที่ 39 (ฉบับร่าง)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          Photograph Upload Modal
+      ───────────────────────────────────────────────────────────── */}
+      {photoModalOpen && photoTargetMember && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="modal-content surface-card"
+            style={{
+              width: '100%',
+              maxWidth: '480px',
+              borderRadius: '12px',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--primary-900)' }}>
+                  เปลี่ยนรูปถ่ายบุคลากร
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {photoTargetMember.name} ({photoTargetMember.position})
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={() => setPhotoModalOpen(false)}
+                disabled={uploadingPhoto}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+              {/* Image Preview */}
+              <div
+                style={{
+                  width: '140px',
+                  height: '140px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  margin: '0 auto 1.25rem',
+                  border: '4px solid var(--primary-100)',
+                  boxShadow: 'var(--shadow-md)',
+                  background: 'var(--bg-subtle)'
+                }}
+              >
+                <SafeImage
+                  src={photoPreview}
+                  fallback="/assets/img/board_placeholder.jpg"
+                  alt={photoTargetMember.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+
+              <input
+                type="file"
+                ref={photoFileInputRef}
+                style={{ display: 'none' }}
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleSelectPhotoFile}
+              />
+
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => photoFileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                style={{ marginBottom: '0.75rem' }}
+              >
+                <Upload size={15} />
+                <span>{photoFile ? 'เลือกไฟล์ใหม่' : 'เลือกไฟล์รูปภาพจากเครื่อง'}</span>
+              </button>
+
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                รองรับไฟล์ JPG, PNG และ WEBP | ขนาดไม่เกิน 5 MB | สัดส่วนที่แนะนำ 1:1 (อย่างน้อย 100x100 พิกเซล)
+              </div>
+              {photoFile && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--primary-700)', fontWeight: 600 }}>
+                  ไฟล์ที่เลือก: {photoFile.name} ({(photoFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setPhotoModalOpen(false)}
+                disabled={uploadingPhoto}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmPhotoUpload}
+                disabled={uploadingPhoto || !photoFile}
+              >
+                {uploadingPhoto ? 'กำลังบันทึกรูปถ่าย...' : 'บันทึกรูปถ่าย'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

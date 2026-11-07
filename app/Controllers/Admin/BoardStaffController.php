@@ -541,6 +541,117 @@ class BoardStaffController extends Controller
     }
 
     /**
+     * GET /api/admin/board-terms/import-38/preview
+     */
+    public function apiImportTerm38Preview(): void
+    {
+        try {
+            $preview = BoardTermService::getTerm38ImportPreview();
+            $this->response->json([
+                'success' => true,
+                'data' => $preview,
+            ]);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/import-38
+     */
+    public function apiImportTerm38(): void
+    {
+        try {
+            $options = [
+                'preserve_custom_photos' => (bool)$this->request->input('preserve_custom_photos', true),
+                'preserve_admin_edits' => (bool)$this->request->input('preserve_admin_edits', true),
+            ];
+            $result = BoardTermService::importTerm38($options, Auth::id());
+            $this->response->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result,
+            ]);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/admin/board-terms/{id}/selective-transfer/preview
+     */
+    public function apiSelectiveTransferPreview(string $id): void
+    {
+        try {
+            $sourceId = (int)$id;
+            $targetTerm = (int)$this->request->input('target_term', 39);
+            $preview = BoardTermService::getSelectiveTransferPreview($sourceId, $targetTerm);
+            $this->response->json([
+                'success' => true,
+                'data' => $preview,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/{id}/selective-transfer
+     */
+    public function apiSelectiveTransfer(string $id): void
+    {
+        try {
+            $sourceId = (int)$id;
+            $targetTerm = (int)$this->request->input('target_term_number', 39);
+            $selectedIds = (array)$this->request->input('selected_member_ids', []);
+            $options = [
+                'transfer_groups' => (bool)$this->request->input('transfer_groups', true),
+                'term_name' => $this->request->input('term_name'),
+            ];
+
+            $result = BoardTermService::selectiveTransfer($sourceId, $targetTerm, $selectedIds, $options, Auth::id());
+            $this->response->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/board-terms/{id}/members/{memberId}/photo
+     */
+    public function apiUploadMemberPhoto(string $id, string $memberId): void
+    {
+        try {
+            $termId = (int)$id;
+            $mId = (int)$memberId;
+            $file = $this->request->file('photo') ?? $this->request->file('file') ?? $this->request->file('image');
+            if (!$file) {
+                $this->response->json(['success' => false, 'message' => 'ไม่พบไฟล์รูปภาพที่อัปโหลด'], 422);
+                return;
+            }
+
+            $result = BoardTermService::uploadMemberPhoto($termId, $mId, $file, Auth::id());
+            $this->response->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            $this->response->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * POST /api/admin/board-terms/upload-photo
      */
     public function apiUploadPhoto(): void

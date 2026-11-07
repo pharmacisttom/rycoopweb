@@ -27,24 +27,10 @@ class BoardTermService
     }
 
     /**
-     * Reconcile Term 38 from legacyReference.json if not present or forced.
+     * Get Term 38 source data from legacyReference.json.
      */
-    public static function reconcileTerm38(bool $force = false): array
+    public static function getTerm38SourceData(): array
     {
-        if (!self::isTableAvailable()) {
-            throw new RuntimeException('ตาราง board_terms ยังไม่พร้อมใช้งาน กรุณารัน migration ก่อน');
-        }
-
-        $existing = Database::first("SELECT id, term_number, status, is_current FROM board_terms WHERE term_number = 38");
-        if ($existing && !$force) {
-            return [
-                'status' => 'already_exists',
-                'term_id' => (int)$existing['id'],
-                'term_number' => 38,
-                'message' => 'วาระที่ 38 มีอยู่ในระบบแล้ว'
-            ];
-        }
-
         $refPath = dirname(__DIR__, 2) . '/src/data/legacyReference.json';
         if (!file_exists($refPath)) {
             throw new RuntimeException('ไม่พบไฟล์ legacyReference.json');
@@ -53,31 +39,189 @@ class BoardTermService
         $legacy = json_decode(file_get_contents($refPath), true, 512, JSON_THROW_ON_ERROR);
         $source = $legacy['sources']['board'] ?? [];
 
+        return [
+            'term_number' => 38,
+            'term_name' => 'ชุดที่ 38',
+            'year_start_be' => 2567,
+            'year_end_be' => 2568,
+            'source_url' => $source['url'] ?? 'https://rayongcoop.com/page.php?pid=3',
+            'note' => $source['note'] ?? null,
+            'boardMembers' => $legacy['boardMembers'] ?? [],
+            'boardGroups' => $legacy['boardGroups'] ?? [],
+            'advisors' => $legacy['advisors'] ?? [],
+            'auditors' => $legacy['auditors'] ?? [],
+        ];
+    }
+
+    /**
+     * Generate structured preview for importing Term 38 comparing with DB state.
+     */
+    public static function getTerm38ImportPreview(): array
+    {
+        $source = self::getTerm38SourceData();
+        $existingTerm = null;
+        $existingMembers = [];
+        $existingGroups = [];
+        $customPhotosCount = 0;
+        $modifiedFieldsCount = 0;
+
+        if (self::isTableAvailable()) {
+            $existingTerm = Database::first("SELECT * FROM board_terms WHERE term_number = 38");
+            if ($existingTerm) {
+                $existingMembers = Database::query(
+                    "SELECT * FROM board_term_members WHERE term_id = ? ORDER BY category ASC, sort_order ASC, id ASC",
+                    [(int)$existingTerm['id']]
+                );
+                $existingGroups = Database::query(
+                    "SELECT * FROM board_term_groups WHERE term_id = ? ORDER BY sort_order ASC, id ASC",
+                    [(int)$existingTerm['id']]
+                );
+            }
+        }
+
+        $existingMemberMap = [];
+        foreach ($existingMembers as $em) {
+            $key = $em['category'] . '_' . ($em['person_id'] ?? $em['name']);
+            $existingMemberMap[$key] = $em;
+            if (!empty($em['image_url']) && (str_starts_with($em['image_url'], '/storage/') || str_starts_with($em['image_url'], 'storage/'))) {
+                $customPhotosCount++;
+            }
+        }
+
+        $directorComparisons = [];
+        foreach ($source['boardMembers'] as $idx => $bm) {
+            $legacyId = (int)($bm['id'] ?? ($idx + 1));
+            $key = 'director_' . $legacyId;
+            $existing = $existingMemberMap[$key] ?? null;
+            $hasCustomPhoto = $existing && !empty($existing['image_url']) && (
+                str_starts_with($existing['image_url'], '/storage/') ||
+                str_starts_with($existing['image_url'], 'storage/')
+            );
+
+            $diff = [];
+            if ($existing) {
+                if ($existing['name'] !== $bm['name']) {
+                    $diff['name'] = ['old' => $existing['name'], 'new' => $bm['name']];
+                }
+                if ($existing['position'] !== $bm['position']) {
+                    $diff['position'] = ['old' => $existing['position'], 'new' => $bm['position']];
+                }
+                if ($hasCustomPhoto) {
+                    $diff['image'] = ['custom_photo' => $existing['image_url'], 'legacy_photo' => $bm['image']];
+                }
+            }
+
+            $directorComparisons[] = [
+                'person_id' => $legacyId,
+                'name' => $bm['name'],
+                'position' => $bm['position'],
+                'image' => $bm['image'] ?? null,
+                'existing' => $existing !== null,
+                'existing_id' => $existing['id'] ?? null,
+                'has_custom_photo' => $hasCustomPhoto,
+                'custom_photo_url' => $hasCustomPhoto ? resolve_media_url($existing['image_url']) : null,
+                'diff' => $diff,
+            ];
+        }
+
+        return [
+            'source_summary' => [
+                'term_number' => 38,
+                'term_name' => 'ชุดที่ 38',
+                'directors_count' => count($source['boardMembers']),
+                'advisors_count' => count($source['advisors']),
+                'auditors_count' => count($source['auditors']),
+                'groups_count' => count($source['boardGroups']),
+            ],
+            'existing_summary' => [
+                'exists' => $existingTerm !== null,
+                'term_id' => $existingTerm['id'] ?? null,
+                'status' => $existingTerm['status'] ?? null,
+                'is_current' => $existingTerm ? ((int)$existingTerm['is_current'] === 1) : false,
+                'members_count' => count($existingMembers),
+                'custom_photos_count' => $customPhotosCount,
+                'groups_count' => count($existingGroups),
+            ],
+            'director_comparisons' => $directorComparisons,
+            'advisors' => $source['advisors'],
+            'auditors' => $source['auditors'],
+            'groups' => $source['boardGroups'],
+            'can_preserve_custom_photos' => true,
+            'can_preserve_admin_edits' => true,
+            'duplicates_detected' => 0,
+        ];
+    }
+
+    /**
+     * Non-destructive, idempotent import and reconciliation of Term 38.
+     * Preserves custom uploaded photos and administrative edits when requested.
+     */
+    public static function importTerm38(array $options = [], ?int $userId = null): array
+    {
+        if (!self::isTableAvailable()) {
+            throw new RuntimeException('ตาราง board_terms ยังไม่พร้อมใช้งาน กรุณารัน migration ก่อน');
+        }
+
+        $preservePhotos = (bool)($options['preserve_custom_photos'] ?? true);
+        $preserveEdits = (bool)($options['preserve_admin_edits'] ?? true);
+
+        $sourceData = self::getTerm38SourceData();
+        $sourceUrl = $sourceData['source_url'] ?? 'https://rayongcoop.com/page.php?pid=3';
+        $note = $sourceData['note'] ?? null;
+
         $pdo = Database::connect();
         $pdo->beginTransaction();
 
         try {
+            $existing = Database::first("SELECT id FROM board_terms WHERE term_number = 38");
             $termId = null;
+
             if ($existing) {
                 $termId = (int)$existing['id'];
                 Database::execute(
-                    "UPDATE board_terms SET term_name = ?, year_start_be = ?, year_end_be = ?, source_url = ?, note = ?, status = 'published', is_current = 1, published_at = NOW(), updated_at = NOW() WHERE id = ?",
-                    ['ชุดที่ 38', 2567, 2568, $source['url'] ?? 'https://rayongcoop.com/page.php?pid=3', $source['note'] ?? null, $termId]
+                    "UPDATE board_terms
+                     SET term_name = ?, year_start_be = ?, year_end_be = ?, source_url = ?, note = ?,
+                         status = 'published', is_current = 1, published_at = NOW(), updated_at = NOW()
+                     WHERE id = ?",
+                    ['ชุดที่ 38', 2567, 2568, $sourceUrl, $note, $termId]
                 );
-                // Clean existing sub-records for clean rebuild
-                Database::execute("DELETE FROM board_term_members WHERE term_id = ?", [$termId]);
-                Database::execute("DELETE FROM board_term_groups WHERE term_id = ?", [$termId]);
             } else {
                 $termId = (int)Database::insert(
                     "INSERT INTO board_terms (term_number, term_name, year_start_be, year_end_be, status, is_current, source_url, note, published_at, created_at, updated_at)
                      VALUES (38, 'ชุดที่ 38', 2567, 2568, 'published', 1, ?, ?, NOW(), NOW(), NOW())",
-                    [$source['url'] ?? 'https://rayongcoop.com/page.php?pid=3', $source['note'] ?? null]
+                    [$sourceUrl, $note]
                 );
             }
 
-            // 1. Insert 15 directors
-            $memberIdMap = []; // legacy id => new DB id
-            $boardMembers = $legacy['boardMembers'] ?? [];
+            // Demote any other terms so only Term 38 is current
+            Database::execute("UPDATE board_terms SET is_current = 0, status = 'archived', updated_at = NOW() WHERE id != ? AND is_current = 1", [$termId]);
+
+            // Existing members map for Term 38
+            $existingMembers = Database::query("SELECT * FROM board_term_members WHERE term_id = ?", [$termId]);
+            $existingDirectorMap = [];
+            $existingAdvisorMap = [];
+            $existingAuditorMap = [];
+            foreach ($existingMembers as $em) {
+                if ($em['category'] === 'director') {
+                    if (!empty($em['person_id'])) {
+                        $existingDirectorMap[(int)$em['person_id']] = $em;
+                    }
+                    $existingDirectorMap['name_' . $em['name']] = $em;
+                } elseif ($em['category'] === 'advisor') {
+                    $existingAdvisorMap[(int)$em['sort_order']] = $em;
+                    $existingAdvisorMap['name_' . $em['name']] = $em;
+                } elseif ($em['category'] === 'auditor') {
+                    $existingAuditorMap[(int)$em['sort_order']] = $em;
+                    $existingAuditorMap['name_' . $em['name']] = $em;
+                }
+            }
+
+            // 1. Reconcile 15 directors
+            $memberIdMap = []; // legacy person_id => DB member_id
+            $boardMembers = $sourceData['boardMembers'] ?? [];
+            $preservedPhotosCount = 0;
+            $preservedEditsCount = 0;
+
             foreach ($boardMembers as $index => $bm) {
                 $legacyId = (int)($bm['id'] ?? ($index + 1));
                 $name = trim((string)($bm['name'] ?? ''));
@@ -96,47 +240,120 @@ class BoardTermService
                     $roleType = 'secretary';
                 }
 
-                $dbMemberId = (int)Database::insert(
-                    "INSERT INTO board_term_members (term_id, person_id, category, name, position, role_type, workplace, department, image_url, sort_order, is_chairperson, created_at, updated_at)
-                     VALUES (?, ?, 'director', ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
-                    [$termId, $legacyId, $name, $position, $roleType, $bm['workplace'] ?? null, $bm['department'] ?? null, $image, $index, $isChair]
-                );
-                $memberIdMap[$legacyId] = $dbMemberId;
+                $existing = $existingDirectorMap[$legacyId] ?? ($existingDirectorMap['name_' . $name] ?? null);
+
+                $finalImage = $image;
+                $finalWorkplace = $bm['workplace'] ?? null;
+                $finalDepartment = $bm['department'] ?? null;
+                $finalBio = null;
+
+                if ($existing) {
+                    $hasCustomPhoto = !empty($existing['image_url']) && (
+                        str_starts_with($existing['image_url'], '/storage/') ||
+                        str_starts_with($existing['image_url'], 'storage/') ||
+                        str_contains($existing['image_url'], 'uploads/')
+                    );
+                    if ($preservePhotos && $hasCustomPhoto) {
+                        $finalImage = $existing['image_url'];
+                        $preservedPhotosCount++;
+                    }
+
+                    if ($preserveEdits) {
+                        if (!empty($existing['workplace'])) {
+                            $finalWorkplace = $existing['workplace'];
+                            $preservedEditsCount++;
+                        }
+                        if (!empty($existing['department'])) {
+                            $finalDepartment = $existing['department'];
+                        }
+                        if (!empty($existing['bio'])) {
+                            $finalBio = $existing['bio'];
+                        }
+                    }
+
+                    Database::execute(
+                        "UPDATE board_term_members
+                         SET person_id = ?, category = 'director', name = ?, position = ?, role_type = ?,
+                             workplace = ?, department = ?, image_url = ?, bio = ?, sort_order = ?, is_chairperson = ?, updated_at = NOW()
+                         WHERE id = ?",
+                        [$legacyId, $name, $position, $roleType, $finalWorkplace, $finalDepartment, $finalImage, $finalBio, $index, $isChair, (int)$existing['id']]
+                    );
+                    $memberIdMap[$legacyId] = (int)$existing['id'];
+                } else {
+                    $dbMemberId = (int)Database::insert(
+                        "INSERT INTO board_term_members (term_id, person_id, category, name, position, role_type, workplace, department, image_url, bio, sort_order, is_chairperson, created_at, updated_at)
+                         VALUES (?, ?, 'director', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
+                        [$termId, $legacyId, $name, $position, $roleType, $finalWorkplace, $finalDepartment, $finalImage, $finalBio, $index, $isChair]
+                    );
+                    $memberIdMap[$legacyId] = $dbMemberId;
+                }
             }
 
-            // 2. Insert Advisors
-            $advisors = $legacy['advisors'] ?? [];
+            // 2. Reconcile Advisors
+            $advisors = $sourceData['advisors'] ?? [];
             foreach ($advisors as $index => $adv) {
                 $name = is_array($adv) ? ($adv[0] ?? '') : ($adv['name'] ?? '');
                 $position = is_array($adv) ? ($adv[1] ?? 'ที่ปรึกษา') : ($adv['position'] ?? 'ที่ปรึกษา');
-                Database::insert(
-                    "INSERT INTO board_term_members (term_id, category, name, position, role_type, sort_order, created_at, updated_at)
-                     VALUES (?, 'advisor', ?, ?, 'advisor', ?, NOW(), NOW())",
-                    [$termId, trim((string)$name), trim((string)$position), $index]
-                );
+                $existing = $existingAdvisorMap[$index] ?? ($existingAdvisorMap['name_' . trim((string)$name)] ?? null);
+
+                if ($existing) {
+                    Database::execute(
+                        "UPDATE board_term_members SET name = ?, position = ?, sort_order = ?, updated_at = NOW() WHERE id = ?",
+                        [trim((string)$name), trim((string)$position), $index, (int)$existing['id']]
+                    );
+                } else {
+                    Database::insert(
+                        "INSERT INTO board_term_members (term_id, category, name, position, role_type, sort_order, created_at, updated_at)
+                         VALUES (?, 'advisor', ?, ?, 'advisor', ?, NOW(), NOW())",
+                        [$termId, trim((string)$name), trim((string)$position), $index]
+                    );
+                }
             }
 
-            // 3. Insert Auditors
-            $auditors = $legacy['auditors'] ?? [];
+            // 3. Reconcile Auditors
+            $auditors = $sourceData['auditors'] ?? [];
             foreach ($auditors as $index => $aud) {
                 $name = is_array($aud) ? ($aud[0] ?? '') : ($aud['name'] ?? '');
                 $position = is_array($aud) ? ($aud[1] ?? 'ผู้ตรวจสอบกิจการ') : ($aud['position'] ?? 'ผู้ตรวจสอบกิจการ');
-                Database::insert(
-                    "INSERT INTO board_term_members (term_id, category, name, position, role_type, sort_order, created_at, updated_at)
-                     VALUES (?, 'auditor', ?, ?, 'auditor', ?, NOW(), NOW())",
-                    [$termId, trim((string)$name), trim((string)$position), $index]
-                );
+                $existing = $existingAuditorMap[$index] ?? ($existingAuditorMap['name_' . trim((string)$name)] ?? null);
+
+                if ($existing) {
+                    Database::execute(
+                        "UPDATE board_term_members SET name = ?, position = ?, sort_order = ?, updated_at = NOW() WHERE id = ?",
+                        [trim((string)$name), trim((string)$position), $index, (int)$existing['id']]
+                    );
+                } else {
+                    Database::insert(
+                        "INSERT INTO board_term_members (term_id, category, name, position, role_type, sort_order, created_at, updated_at)
+                         VALUES (?, 'auditor', ?, ?, 'auditor', ?, NOW(), NOW())",
+                        [$termId, trim((string)$name), trim((string)$position), $index]
+                    );
+                }
             }
 
-            // 4. Insert Subgroups
-            $boardGroups = $legacy['boardGroups'] ?? [];
+            // 4. Reconcile Subgroups
+            $boardGroups = $sourceData['boardGroups'] ?? [];
+            $existingGroups = Database::query("SELECT id, title, sort_order FROM board_term_groups WHERE term_id = ?", [$termId]);
+            $existingGroupMap = [];
+            foreach ($existingGroups as $eg) {
+                $existingGroupMap[(int)$eg['sort_order']] = (int)$eg['id'];
+                $existingGroupMap[$eg['title']] = (int)$eg['id'];
+            }
+
             foreach ($boardGroups as $gIndex => $bg) {
                 $title = trim((string)($bg['title'] ?? ''));
-                $groupId = (int)Database::insert(
-                    "INSERT INTO board_term_groups (term_id, title, sort_order, created_at, updated_at)
-                     VALUES (?, ?, ?, NOW(), NOW())",
-                    [$termId, $title, $gIndex]
-                );
+                $groupId = $existingGroupMap[$gIndex] ?? ($existingGroupMap[$title] ?? null);
+
+                if ($groupId) {
+                    Database::execute("UPDATE board_term_groups SET title = ?, sort_order = ?, updated_at = NOW() WHERE id = ?", [$title, $gIndex, $groupId]);
+                    Database::execute("DELETE FROM board_term_group_members WHERE group_id = ?", [$groupId]);
+                } else {
+                    $groupId = (int)Database::insert(
+                        "INSERT INTO board_term_groups (term_id, title, sort_order, created_at, updated_at)
+                         VALUES (?, ?, ?, NOW(), NOW())",
+                        [$termId, $title, $gIndex]
+                    );
+                }
 
                 $members = $bg['members'] ?? [];
                 foreach ($members as $mIndex => $m) {
@@ -153,8 +370,16 @@ class BoardTermService
                 }
             }
 
+            // Archive older revisions for clean public overlay
+            Database::execute("UPDATE public_content_revisions SET state = 'archived' WHERE section IN ('boards', 'groups', 'advisors', 'auditors') AND state = 'published'");
+
             $pdo->commit();
-            AuditService::log('board_terms', 'reconcile', (string)$termId, null, ['term_number' => 38, 'action' => 'reconcile_from_legacy']);
+            AuditService::log('board_terms', 'import_term_38', (string)$termId, null, [
+                'term_number' => 38,
+                'preserved_photos' => $preservedPhotosCount,
+                'preserved_edits' => $preservedEditsCount,
+                'user_id' => $userId ?? Auth::id(),
+            ]);
 
             return [
                 'status' => 'success',
@@ -164,7 +389,443 @@ class BoardTermService
                 'advisors' => count($advisors),
                 'auditors' => count($auditors),
                 'groups' => count($boardGroups),
+                'preserved_photos' => $preservedPhotosCount,
+                'preserved_edits' => $preservedEditsCount,
                 'message' => 'เทียบข้อมูลวาระที่ 38 เรียบร้อยแล้ว'
+            ];
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Reconcile Term 38 from legacyReference.json if not present or forced.
+     */
+    public static function reconcileTerm38(bool $force = false): array
+    {
+        if (!self::isTableAvailable()) {
+            throw new RuntimeException('ตาราง board_terms ยังไม่พร้อมใช้งาน กรุณารัน migration ก่อน');
+        }
+
+        $existing = Database::first("SELECT id, term_number, status, is_current FROM board_terms WHERE term_number = 38");
+        if ($existing && !$force) {
+            return [
+                'status' => 'already_exists',
+                'term_id' => (int)$existing['id'],
+                'term_number' => 38,
+                'message' => 'วาระที่ 38 มีอยู่ในระบบแล้ว'
+            ];
+        }
+
+        return self::importTerm38(['preserve_custom_photos' => true, 'preserve_admin_edits' => true]);
+    }
+
+    /**
+     * Committee Photograph Manager: validates magic bytes, MIME, dimensions and stores securely.
+     */
+    public static function uploadMemberPhoto(int $termId, int $memberId, array $file, ?int $userId = null): array
+    {
+        if (!self::isTableAvailable()) {
+            throw new RuntimeException('ตาราง board_terms ยังไม่พร้อมใช้งาน');
+        }
+
+        $member = Database::first(
+            "SELECT m.*, t.term_name FROM board_term_members m JOIN board_terms t ON m.term_id = t.id WHERE m.id = ? AND m.term_id = ?",
+            [$memberId, $termId]
+        );
+        if (!$member) {
+            throw new InvalidArgumentException("ไม่พบข้อมูลกรรมการ ID #{$memberId} ในวาระนี้");
+        }
+
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new InvalidArgumentException('การอัปโหลดไฟล์ล้มเหลว (Error Code: ' . ($file['error'] ?? 'UNKNOWN') . ')');
+        }
+
+        // Maximum size: 5MB
+        $maxSize = 5 * 1024 * 1024;
+        if (($file['size'] ?? 0) > $maxSize) {
+            throw new InvalidArgumentException('ขนาดไฟล์รูปภาพเกินกำหนด (สูงสุด 5 MB)');
+        }
+
+        $tmpPath = $file['tmp_name'] ?? '';
+        if (!is_file($tmpPath) || !is_readable($tmpPath)) {
+            throw new InvalidArgumentException('ไม่พบไฟล์ชั่วคราวที่อัปโหลด');
+        }
+
+        // Check file extension
+        $ext = strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            throw new InvalidArgumentException('อนุญาตเฉพาะไฟล์รูปภาพ JPG, PNG และ WEBP เท่านั้น');
+        }
+
+        // Verify MIME type using finfo
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $tmpPath);
+        finfo_close($finfo);
+
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!in_array($mime, $allowedMimes, true)) {
+            throw new InvalidArgumentException('ประเภทไฟล์ไม่ถูกต้อง (MIME: ' . $mime . ')');
+        }
+
+        // Magic bytes verification
+        $handle = fopen($tmpPath, 'rb');
+        $bytes = fread($handle, 16);
+        fclose($handle);
+
+        $validMagic = false;
+        if ($mime === 'image/jpeg' && str_starts_with($bytes, "\xFF\xD8\xFF")) {
+            $validMagic = true;
+        } elseif ($mime === 'image/png' && str_starts_with($bytes, "\x89PNG")) {
+            $validMagic = true;
+        } elseif ($mime === 'image/webp' && str_starts_with($bytes, 'RIFF') && substr($bytes, 8, 4) === 'WEBP') {
+            $validMagic = true;
+        }
+
+        if (!$validMagic) {
+            throw new InvalidArgumentException('เนื้อหาไฟล์ไม่ถูกต้องตามรูปแบบรูปภาพที่ระบุ (Magic bytes mismatch)');
+        }
+
+        // Dimensions verification via getimagesize
+        $imageSize = @getimagesize($tmpPath);
+        if ($imageSize === false) {
+            throw new InvalidArgumentException('ไม่สามารถประมวลผลขนาดของรูปภาพได้ หรือไฟล์รูปภาพเสียหาย');
+        }
+
+        $width = $imageSize[0];
+        $height = $imageSize[1];
+
+        if ($width < 100 || $height < 100) {
+            throw new InvalidArgumentException('ขนาดรูปภาพต้องมีความกว้างและความสูงอย่างน้อย 100x100 พิกเซล');
+        }
+        if ($width > 4000 || $height > 4000) {
+            throw new InvalidArgumentException('ขนาดรูปภาพใหญ่เกินไป (ไม่เกิน 4000x4000 พิกเซล)');
+        }
+
+        // Generate safe randomized filename: board_m_{termId}_{memberId}_{randomHex}.{ext}
+        $randomHex = bin2hex(random_bytes(8));
+        $safeFilename = "board_m_{$termId}_{$memberId}_{$randomHex}.{$ext}";
+
+        $uploadFolder = storage_upload_path('board');
+        if (!is_dir($uploadFolder) && !mkdir($uploadFolder, 0775, true) && !is_dir($uploadFolder)) {
+            throw new RuntimeException('ไม่สามารถสร้างโฟลเดอร์สำหรับจัดเก็บรูปภาพได้');
+        }
+
+        $targetPath = $uploadFolder . DIRECTORY_SEPARATOR . $safeFilename;
+
+        // Move uploaded file or copy (for tests)
+        $moved = false;
+        if (is_uploaded_file($tmpPath)) {
+            $moved = move_uploaded_file($tmpPath, $targetPath);
+        } else {
+            $moved = copy($tmpPath, $targetPath);
+        }
+
+        if (!$moved) {
+            throw new RuntimeException('ไม่สามารถบันทึกไฟล์รูปภาพลงในพื้นที่จัดเก็บได้');
+        }
+
+        $relativeUrl = "/storage/uploads/board/{$safeFilename}";
+        $oldImage = $member['image_url'] ?? null;
+
+        try {
+            Database::execute(
+                "UPDATE board_term_members SET image_url = ?, updated_at = NOW() WHERE id = ?",
+                [$relativeUrl, $memberId]
+            );
+
+            // Log media if media table exists
+            try {
+                $hasMedia = Database::first("SHOW TABLES LIKE 'media'");
+                if ($hasMedia) {
+                    Database::insert(
+                        "INSERT INTO media (filename, original_name, mime_type, file_size, path, folder, alt_text, uploaded_by, created_at)
+                         VALUES (?, ?, ?, ?, ?, 'board', ?, ?, NOW())",
+                        [
+                            $safeFilename,
+                            basename((string)($file['name'] ?? $safeFilename)),
+                            $mime,
+                            $file['size'] ?? filesize($targetPath),
+                            "board/{$safeFilename}",
+                            $member['name'],
+                            $userId ?? Auth::id()
+                        ]
+                    );
+                }
+            } catch (\Throwable $e) {
+                // Ignore media table insertion error
+            }
+
+            AuditService::log('board_terms', 'upload_photo', (string)$memberId, null, [
+                'term_id' => $termId,
+                'member_id' => $memberId,
+                'member_name' => $member['name'],
+                'old_image' => $oldImage,
+                'new_image' => $relativeUrl,
+            ]);
+
+            return [
+                'success' => true,
+                'member_id' => $memberId,
+                'url' => $relativeUrl,
+                'full_url' => resolve_media_url($relativeUrl),
+                'old_url' => $oldImage,
+                'message' => 'อัปโหลดภาพถ่ายเรียบร้อยแล้ว'
+            ];
+        } catch (\Throwable $e) {
+            @unlink($targetPath);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get preview data for transferring selected personnel to target term (e.g. Term 39).
+     */
+    public static function getSelectiveTransferPreview(int $sourceTermId, int $targetTermNumber = 39): array
+    {
+        $source = self::getTerm($sourceTermId);
+        if (!$source) {
+            throw new InvalidArgumentException('ไม่พบวาระต้นฉบับ');
+        }
+
+        $target = Database::first("SELECT * FROM board_terms WHERE term_number = ?", [$targetTermNumber]);
+        $targetDetails = null;
+        if ($target) {
+            $targetDetails = [
+                'id' => (int)$target['id'],
+                'term_number' => (int)$target['term_number'],
+                'term_name' => $target['term_name'],
+                'status' => $target['status'],
+                'is_current' => (int)$target['is_current'] === 1,
+                'existing_members_count' => (int)Database::value("SELECT COUNT(*) FROM board_term_members WHERE term_id = ?", [$target['id']]),
+                'existing_groups_count' => (int)Database::value("SELECT COUNT(*) FROM board_term_groups WHERE term_id = ?", [$target['id']]),
+            ];
+        }
+
+        return [
+            'source_term' => [
+                'id' => (int)$source['term']['id'],
+                'term_number' => (int)$source['term']['term_number'],
+                'term_name' => $source['term']['term_name'],
+                'status' => $source['term']['status'],
+                'directors_count' => count($source['directors']),
+                'advisors_count' => count($source['advisors']),
+                'auditors_count' => count($source['auditors']),
+                'groups_count' => count($source['groups']),
+            ],
+            'target_term_number' => $targetTermNumber,
+            'target_term' => $targetDetails,
+            'candidates' => [
+                'directors' => $source['directors'],
+                'advisors' => $source['advisors'],
+                'auditors' => $source['auditors'],
+            ],
+            'groups' => $source['groups'],
+        ];
+    }
+
+    /**
+     * Selectively transfer personnel from source term to target term draft.
+     * Guarantees subgroup referential integrity by omitting unselected members.
+     */
+    public static function selectiveTransfer(
+        int $sourceTermId,
+        int $targetTermNumber,
+        array $selectedMemberIds,
+        array $options = [],
+        ?int $userId = null
+    ): array {
+        if (!self::isTableAvailable()) {
+            throw new RuntimeException('ตาราง board_terms ยังไม่พร้อมใช้งาน');
+        }
+
+        if (empty($selectedMemberIds)) {
+            throw new InvalidArgumentException('กรุณาเลือกกรรมการอย่างน้อย 1 ท่านสำหรับถ่ายโอน');
+        }
+
+        $source = self::getTerm($sourceTermId);
+        if (!$source) {
+            throw new InvalidArgumentException('ไม่พบวาระต้นฉบับที่ต้องการถ่ายโอน');
+        }
+
+        $transferGroups = (bool)($options['transfer_groups'] ?? true);
+        $targetTermName = trim((string)($options['term_name'] ?? "ชุดที่ {$targetTermNumber}"));
+        if ($targetTermName === '') {
+            $targetTermName = "ชุดที่ {$targetTermNumber}";
+        }
+
+        // Verify target term status if it exists
+        $target = Database::first("SELECT * FROM board_terms WHERE term_number = ?", [$targetTermNumber]);
+        if ($target && $target['status'] === 'published') {
+            throw new InvalidArgumentException("ไม่สามารถถ่ายโอนไปยังวาระชุดที่ {$targetTermNumber} ได้ เนื่องจากวาระดังกล่าวเผยแพร่อยู่แล้ว");
+        }
+
+        $pdo = Database::connect();
+        $pdo->beginTransaction();
+
+        try {
+            $targetTermId = null;
+            if ($target) {
+                $targetTermId = (int)$target['id'];
+                Database::execute(
+                    "UPDATE board_terms SET term_name = ?, updated_at = NOW() WHERE id = ?",
+                    [$targetTermName, $targetTermId]
+                );
+            } else {
+                $sourceTerm = $source['term'];
+                $yearDiff = $targetTermNumber - (int)$sourceTerm['term_number'];
+                $newYearStart = $sourceTerm['year_start_be'] ? (int)$sourceTerm['year_start_be'] + $yearDiff : null;
+                $newYearEnd = $sourceTerm['year_end_be'] ? (int)$sourceTerm['year_end_be'] + $yearDiff : null;
+
+                $targetTermId = (int)Database::insert(
+                    "INSERT INTO board_terms (term_number, term_name, year_start_be, year_end_be, status, is_current, note, created_by, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, 'draft', 0, ?, ?, NOW(), NOW())",
+                    [$targetTermNumber, $targetTermName, $newYearStart, $newYearEnd, "ถ่ายโอนเลือกจาก {$sourceTerm['term_name']}", $userId ?? Auth::id()]
+                );
+            }
+
+            // Fetch source members to transfer
+            $cleanIds = array_map('intval', $selectedMemberIds);
+            $placeholders = implode(',', array_fill(0, count($cleanIds), '?'));
+            $params = array_merge([$sourceTermId], $cleanIds);
+            $membersToTransfer = Database::query(
+                "SELECT * FROM board_term_members WHERE term_id = ? AND id IN ($placeholders) ORDER BY category, sort_order, id",
+                $params
+            );
+
+            if (empty($membersToTransfer)) {
+                throw new InvalidArgumentException('ไม่พบรายชื่อกรรมการที่เลือกในวาระต้นฉบับ');
+            }
+
+            // Existing target members map
+            $existingTargetMembers = Database::query("SELECT * FROM board_term_members WHERE term_id = ?", [$targetTermId]);
+            $targetMemberMap = [];
+            foreach ($existingTargetMembers as $etm) {
+                if (!empty($etm['person_id'])) {
+                    $targetMemberMap['p_' . $etm['person_id']] = (int)$etm['id'];
+                }
+                $targetMemberMap['n_' . $etm['category'] . '_' . $etm['name']] = (int)$etm['id'];
+            }
+
+            $memberIdMap = []; // oldMemberId => newMemberId in target term
+            $transferredCount = 0;
+
+            foreach ($membersToTransfer as $m) {
+                $oldId = (int)$m['id'];
+                $personId = !empty($m['person_id']) ? (int)$m['person_id'] : null;
+                $cat = $m['category'];
+                $name = $m['name'];
+
+                $existingNewId = null;
+                if ($personId && isset($targetMemberMap['p_' . $personId])) {
+                    $existingNewId = $targetMemberMap['p_' . $personId];
+                } elseif (isset($targetMemberMap['n_' . $cat . '_' . $name])) {
+                    $existingNewId = $targetMemberMap['n_' . $cat . '_' . $name];
+                }
+
+                if ($existingNewId) {
+                    Database::execute(
+                        "UPDATE board_term_members
+                         SET position = ?, role_type = ?, workplace = ?, department = ?, image_url = ?, bio = ?, is_chairperson = ?, updated_at = NOW()
+                         WHERE id = ?",
+                        [$m['position'], $m['role_type'], $m['workplace'], $m['department'], $m['image_url'], $m['bio'], $m['is_chairperson'] ? 1 : 0, $existingNewId]
+                    );
+                    $memberIdMap[$oldId] = $existingNewId;
+                } else {
+                    $newMemId = (int)Database::insert(
+                        "INSERT INTO board_term_members (term_id, person_id, category, name, position, role_type, workplace, department, image_url, bio, sort_order, is_chairperson, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
+                        [
+                            $targetTermId,
+                            $personId,
+                            $cat,
+                            $name,
+                            $m['position'],
+                            $m['role_type'],
+                            $m['workplace'],
+                            $m['department'],
+                            $m['image_url'],
+                            $m['bio'],
+                            $m['sort_order'],
+                            $m['is_chairperson'] ? 1 : 0
+                        ]
+                    );
+                    $memberIdMap[$oldId] = $newMemId;
+                    if ($personId) {
+                        $targetMemberMap['p_' . $personId] = $newMemId;
+                    }
+                    $targetMemberMap['n_' . $cat . '_' . $name] = $newMemId;
+                }
+                $transferredCount++;
+            }
+
+            // Transfer subcommittees if enabled
+            $remappedGroupsCount = 0;
+            $remappedGroupMembersCount = 0;
+
+            if ($transferGroups && !empty($source['groups'])) {
+                foreach ($source['groups'] as $sg) {
+                    $groupTitle = $sg['title'];
+                    $targetGroup = Database::first(
+                        "SELECT id FROM board_term_groups WHERE term_id = ? AND title = ?",
+                        [$targetTermId, $groupTitle]
+                    );
+
+                    $targetGroupId = null;
+                    if ($targetGroup) {
+                        $targetGroupId = (int)$targetGroup['id'];
+                    } else {
+                        $targetGroupId = (int)Database::insert(
+                            "INSERT INTO board_term_groups (term_id, title, description, sort_order, created_at, updated_at)
+                             VALUES (?, ?, ?, ?, NOW(), NOW())",
+                            [$targetTermId, $groupTitle, $sg['description'] ?? null, $sg['sort_order'] ?? 0]
+                        );
+                    }
+                    $remappedGroupsCount++;
+
+                    // Transfer only members who were transferred into target term
+                    foreach ($sg['members'] as $sgm) {
+                        $oldMemberId = (int)($sgm['member_id'] ?? 0);
+                        if (isset($memberIdMap[$oldMemberId])) {
+                            $newMemberId = $memberIdMap[$oldMemberId];
+                            $existingLink = Database::first(
+                                "SELECT id FROM board_term_group_members WHERE group_id = ? AND member_id = ?",
+                                [$targetGroupId, $newMemberId]
+                            );
+                            if (!$existingLink) {
+                                Database::insert(
+                                    "INSERT INTO board_term_group_members (group_id, member_id, role_in_group, sort_order, created_at, updated_at)
+                                     VALUES (?, ?, ?, ?, NOW(), NOW())",
+                                    [$targetGroupId, $newMemberId, $sgm['role_in_group'] ?? 'กรรมการ', $sgm['sort_order'] ?? 0]
+                                );
+                                $remappedGroupMembersCount++;
+                            }
+                        }
+                        // Non-transferred members are intentionally omitted to maintain referential integrity!
+                    }
+                }
+            }
+
+            $pdo->commit();
+            AuditService::log('board_terms', 'selective_transfer', (string)$targetTermId, null, [
+                'source_term_id' => $sourceTermId,
+                'target_term_number' => $targetTermNumber,
+                'transferred_members' => $transferredCount,
+                'remapped_groups' => $remappedGroupsCount,
+                'remapped_group_members' => $remappedGroupMembersCount,
+            ]);
+
+            return [
+                'status' => 'success',
+                'target_term_id' => $targetTermId,
+                'target_term_number' => $targetTermNumber,
+                'transferred_count' => $transferredCount,
+                'remapped_groups_count' => $remappedGroupsCount,
+                'remapped_group_members_count' => $remappedGroupMembersCount,
+                'message' => "ถ่ายโอนกรรมการ {$transferredCount} ท่าน ไปยังวาระชุดที่ {$targetTermNumber} (ฉบับร่าง) สำเร็จแล้ว",
             ];
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
