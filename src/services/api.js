@@ -13,7 +13,7 @@ const getApiUrl = (path) => path.startsWith('/') ? path : `/${path}`;
  * Core fetch wrapper with fallback URLs for development/production compatibility.
  */
 const apiFetch = async (path, options = {}) => {
-  if (isStaticMode) {
+  if (isStaticMode && !path.startsWith('/api/auth') && !path.startsWith('/api/admin')) {
     return { success: false, available: false, message: 'ระบบอยู่ในโหมดเผยแพร่ข้อมูลสาธารณะแบบคงที่ (Static Mode)' };
   }
   const uniqueUrls = [getApiUrl(path)];

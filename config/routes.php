@@ -354,6 +354,9 @@ $router->post('/api/auth/mfa/confirm', 'Admin\\MfaController@confirm', [CsrfMidd
 $router->post('/api/auth/mfa/verify', 'Admin\\MfaController@verify', [CsrfMiddleware::class]);
 $router->post('/api/auth/mfa/recovery', 'Admin\\MfaController@recovery', [CsrfMiddleware::class]);
 $router->post('/api/auth/mfa/step-up', 'Admin\\MfaController@stepUp', [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/api/auth/mfa/re-enroll/start', 'Admin\\MfaController@reEnrollStart', [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/api/auth/mfa/re-enroll/confirm', 'Admin\\MfaController@reEnrollConfirm', [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/api/auth/mfa/re-enroll/cancel', 'Admin\\MfaController@reEnrollCancel', [AuthMiddleware::class, CsrfMiddleware::class]);
 
 /*
 |--------------------------------------------------------------------------
