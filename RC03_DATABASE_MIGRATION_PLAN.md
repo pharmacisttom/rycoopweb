@@ -93,19 +93,21 @@ The forward migration runner (`MigrationRunner.php`) autodiscoveres files strict
 
 ## 5. Migration Deployment Checklist for TEST
 
-1. **Pre-Flight Validation:**
+1. **Pre-Flight Validation (CLI Dry Run & Unit Tests):**
    ```bash
    php tests/MigrationRunnerTest.php
+   php bin/console db:migrate --dry-run --db-name=rycoopweb_test
    ```
 2. **Execute Forward Migration:**
    ```bash
-   php bin/migrate.php
+   php bin/console db:migrate --db-name=rycoopweb_test
    ```
 3. **Verify Table Creation:**
-   Verify `board_terms`, `board_term_members`, `board_term_groups`, `board_term_group_members` exist in `rycoopweb_test`.
-4. **Seed Committee Term 38:**
-   ```bash
-   php -r "require 'app/Core/Helpers.php'; require 'app/Core/Database.php'; require 'app/Services/BoardTermService.php'; App\Services\BoardTermService::reconcileTerm38();"
-   ```
-5. **Verify Core Financial Counts:**
+   Verify `board_terms`, `board_term_members`, `board_term_groups`, `board_term_group_members` exist in `rycoopweb_test` (total tables = 38).
+4. **Term Governance & Seeding Rule:**
+   - Migration 030 is schema-only.
+   - Do **NOT** automatically seed or publish term 38 or term 39 during migration.
+   - Committee Term 38 remains the active published term for public display.
+   - Committee Term 39 remains an unapproved draft isolated within the administrative workflow.
+5. **Verify Core Financial & Member Counts:**
    Confirm `member_dividends = 4,855`, `members = 2,508`, `users = 2,510`.

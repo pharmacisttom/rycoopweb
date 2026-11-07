@@ -47,7 +47,7 @@ Deploy the Full Frontend / Backend Data Consistency Recovery release to the **TE
   - `board_term_groups` (Subcommittee grouping definitions)
   - `board_term_group_members` (Group-to-member mappings)
 - **Destructive Statements:** NONE (Strictly additive, no `DROP`, `TRUNCATE`, or column drops).
-- **Execution:** Automated via `php bin/migrate.php`.
+- **Execution:** Automated via `php bin/console db:migrate --db-name=rycoopweb_test`.
 
 ---
 
@@ -103,9 +103,10 @@ git pull pharmacisttom feature/full-data-consistency-recovery
 
 ### Step 2: Database Migration
 ```bash
-php bin/migrate.php
+php bin/console db:migrate --dry-run --db-name=rycoopweb_test
+php bin/console db:migrate --db-name=rycoopweb_test
 ```
-*Note: Verify that Migration 030 applies with 0 errors and no existing records are altered.*
+*Note: Verify that Migration 030 applies with 0 errors and no existing records are altered. Committee terms are not automatically seeded or published.*
 
 ### Step 3: Frontend Asset Build
 ```bash
