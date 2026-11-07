@@ -1,18 +1,37 @@
-import React from 'react';
-import { HeartHandshake, Download, CheckCircle2, ShieldCheck, Heart, Award, GraduationCap, Stethoscope, Gift, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { HeartHandshake, Download, CheckCircle2, ShieldCheck, Heart, Award, GraduationCap, Stethoscope, Gift, ShieldAlert, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { WELFARE_ITEMS } from '../data/mockData';
 
-const ICONS = {
-  HeartHandshake: HeartHandshake,
-  GraduationCap: GraduationCap,
-  Stethoscope: Stethoscope,
-  Gift: Gift,
-  Award: Award,
-  ShieldAlert: ShieldAlert,
+const getIconForWelfare = (title = '', category = '') => {
+  const text = (title + ' ' + category).toLowerCase();
+  if (text.includes('ศพ') || text.includes('ถึงแก่กรรม') || text.includes('มรณ')) return ShieldAlert;
+  if (text.includes('การศึกษา') || text.includes('ทุน') || text.includes('เรียน')) return GraduationCap;
+  if (text.includes('สมรส') || text.includes('คลอด') || text.includes('บุตร') || text.includes('ขวัญ')) return Gift;
+  if (text.includes('รักษา') || text.includes('พยาบาล') || text.includes('ป่วย')) return Stethoscope;
+  if (text.includes('เกียรติ') || text.includes('อาวุโส') || text.includes('เกษียณ')) return Award;
+  return HeartHandshake;
 };
 
 export default function WelfarePage() {
+  const [welfareList, setWelfareList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/public/welfare')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data?.success && Array.isArray(data.data)) {
+          setWelfareList(data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="section">
       <div className="container">
@@ -26,10 +45,10 @@ export default function WelfarePage() {
 
         {/* Welfare Cards Grid */}
         <div className="grid-3" style={{ marginBottom: '3rem' }}>
-          {WELFARE_ITEMS.map((item, idx) => {
-            const IconComponent = ICONS[item.icon] || HeartHandshake;
+          {welfareList.map((item) => {
+            const IconComponent = getIconForWelfare(item.title, item.category);
             return (
-              <div key={idx} className="surface-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div key={item.id} className="surface-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--accent-teal-light)', color: 'var(--accent-teal-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -40,11 +59,16 @@ export default function WelfarePage() {
 
                   <h3 style={{ fontSize: '1.2rem', color: 'var(--primary-800)', marginBottom: '0.4rem' }}>{item.title}</h3>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--accent-teal-dark)', marginBottom: '0.75rem', fontFamily: 'var(--font-display)' }}>
-                    {item.amount}
+                    {item.benefit_amount || 'ตามระเบียบกำหนด'}
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    {item.desc}
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '0.75rem' }}>
+                    {item.short_description || item.full_description}
                   </p>
+                  {item.eligibility && (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--navy-600, #475569)', background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <strong>เงื่อนไข:</strong> {item.eligibility}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
