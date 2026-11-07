@@ -125,6 +125,7 @@ jobs:
           php tests/PasswordWorkflowTest.php
           php tests/MigrationRunnerTest.php
           php tests/LegacyMemberMigrationTest.php
+          php tests/MemberPdpaGateTest.php
 
       - name: Validate release guard without deploying
         run: |

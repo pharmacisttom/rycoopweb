@@ -354,6 +354,14 @@ export default function AdminControlCenterPage({ section: propSection }) {
   const [auditSeverity, setAuditSeverity] = useState('');
   const [auditQuery, setAuditQuery] = useState('');
   const [auditPage, setAuditPage] = useState(1);
+  const [auditActorType, setAuditActorType] = useState('all');
+  const [auditResult, setAuditResult] = useState('all');
+  const [auditDateFrom, setAuditDateFrom] = useState('');
+  const [auditDateTo, setAuditDateTo] = useState('');
+  const [showMfaExportModal, setShowMfaExportModal] = useState(false);
+  const [mfaExportCode, setMfaExportCode] = useState('');
+  const [mfaExportError, setMfaExportError] = useState('');
+  const [mfaExportLoading, setMfaExportLoading] = useState(false);
 
   useEffect(() => {
     const cat = searchParams.get('category') || '';
@@ -387,7 +395,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
       } else if (section === 'users') {
         if(user?.role==='super_admin') {
           setStaffDirData(null);
-          const staffResult=await memberAdminApi('/api/admin/staff/',{signal});
+          const staffResult=await memberAdminApi('/api/admin/staff',{signal});
           if(!Array.isArray(staffResult.staff)||!Array.isArray(staffResult.invitations)||!Array.isArray(staffResult.roles))throw new Error('เซิร์ฟเวอร์ส่งรายชื่อเจ้าหน้าที่ไม่ครบถ้วน');
           setStaffDirData(staffResult);
         }
@@ -403,6 +411,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
         });
         if (auditCategory) params.set('category', auditCategory);
         if (auditSeverity) params.set('severity', auditSeverity);
+        if (auditActorType && auditActorType !== 'all') params.set('actor_type', auditActorType);
+        if (auditResult && auditResult !== 'all') params.set('result', auditResult);
+        if (auditDateFrom) params.set('from', auditDateFrom);
+        if (auditDateTo) params.set('to', auditDateTo);
         if (auditQuery.trim()) params.set('q', auditQuery.trim());
         const logs = await memberAdminApi(`/api/admin/audit-logs/center?${params.toString()}`, { signal });
         setAuditData(logs);
@@ -432,19 +444,77 @@ export default function AdminControlCenterPage({ section: propSection }) {
     } catch (err) {
       if (err?.name !== 'AbortError') {
         setError(err?.message || 'ไม่สามารถโหลดข้อมูลได้');
+        if (section === 'audit-logs') {
+          setAuditData(null);
+        }
       }
     } finally {
       if (!signal?.aborted) {
         setLoading(false);
       }
     }
-  }, [authorized, section, days, auditPage, auditCategory, auditSeverity, auditQuery, user?.role]);
+  }, [authorized, section, days, auditPage, auditCategory, auditSeverity, auditQuery, auditActorType, auditResult, auditDateFrom, auditDateTo, user?.role]);
 
   useEffect(() => {
     const controller = new AbortController();
     loadSectionData(controller.signal);
     return () => controller.abort();
   }, [loadSectionData, refreshTick]);
+
+  const handlePrivilegedExport = async (e) => {
+    e.preventDefault();
+    setMfaExportError('');
+    setMfaExportLoading(true);
+    try {
+      // 1. Fetch fresh CSRF token
+      const csrfRes = await fetch('/csrf-token', {
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
+      });
+      const csrfData = csrfRes.ok ? await csrfRes.json() : {};
+      const csrfToken = csrfData.token || '';
+
+      // 2. Submit privileged export via POST body only (prohibit TOTP in URL)
+      const res = await fetch('/api/admin/audit-logs/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/csv',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          totp_code: mfaExportCode.trim(),
+          _csrf_token: csrfToken,
+          actor_type: auditActorType,
+          result: auditResult,
+          from: auditDateFrom,
+          to: auditDateTo,
+          category: auditCategory,
+          q: auditQuery.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'รหัสยืนยัน 2FA ไม่ถูกต้องหรือไม่มีสิทธิ์ส่งออก');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `security_audit_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setShowMfaExportModal(false);
+      setMfaExportCode('');
+    } catch (err) {
+      setMfaExportError(err.message || 'เกิดข้อผิดพลาดในการส่งออกข้อมูล');
+    } finally {
+      setMfaExportLoading(false);
+    }
+  };
 
   const handleRevokeStaffSessions = async (targetUserId, targetName) => {
     setNotice('');setError('');
@@ -1082,9 +1152,93 @@ export default function AdminControlCenterPage({ section: propSection }) {
       {/* ===================================================================
           5. AUDIT & ACTIVITY LOGS (/admin/audit-logs)
          =================================================================== */}
+      {!loading && section === 'audit-logs' && error && !auditData && (
+        <AdminErrorState
+          message={error}
+          onRetry={() => setRefreshTick((v) => v + 1)}
+        />
+      )}
       {!loading && section === 'audit-logs' && auditData && (
         <>
-          <div className="acc-filter-bar">
+          {/* Administrative Audit Dashboard KPIs */}
+          <div className="acc-kpi-grid" style={{ marginBottom: 20 }}>
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมความปลอดภัยทั้งหมด</span>
+                <span className="acc-kpi-icon teal"><Activity size={18} /></span>
+              </div>
+              <div className="acc-kpi-value">{formatNumber(auditData.stats?.total_events ?? auditData.total ?? 0)}</div>
+              <div className="acc-kpi-sub">
+                <span>บันทึกใน security_audit_logs</span>
+              </div>
+            </article>
+
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมสมาชิก (Member)</span>
+                <span className="acc-kpi-icon emerald"><Users size={18} /></span>
+              </div>
+              <div className="acc-kpi-value">{formatNumber(auditData.stats?.member_events ?? 0)}</div>
+              <div className="acc-kpi-sub">
+                <span>เข้าสู่ระบบ ยินยอม PDPA ดูข้อมูลส่วนบุคคล</span>
+              </div>
+            </article>
+
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมเจ้าหน้าที่ (Staff)</span>
+                <span className="acc-kpi-icon primary"><ShieldCheck size={18} /></span>
+              </div>
+              <div className="acc-kpi-value">{formatNumber(auditData.stats?.staff_events ?? 0)}</div>
+              <div className="acc-kpi-sub">
+                <span>ผู้ดูแลระบบและเจ้าหน้าที่ผ่านการยืนยัน 2FA</span>
+              </div>
+            </article>
+
+            <article className="acc-kpi-card">
+              <div className="acc-kpi-top">
+                <span className="acc-kpi-label">กิจกรรมล้มเหลว / ปฏิเสธ</span>
+                <span className="acc-kpi-icon rose"><ShieldAlert size={18} /></span>
+              </div>
+              <div className="acc-kpi-value" style={{ color: ((auditData.stats?.failed_events || 0) + (auditData.stats?.denied_events || 0)) > 0 ? '#ef4444' : undefined }}>
+                {formatNumber((auditData.stats?.failed_events ?? 0) + (auditData.stats?.denied_events ?? 0))}
+              </div>
+              <div className="acc-kpi-sub">
+                <span>ล้มเหลว: {formatNumber(auditData.stats?.failed_events ?? 0)} · ปฏิเสธ: {formatNumber(auditData.stats?.denied_events ?? 0)}</span>
+              </div>
+            </article>
+          </div>
+
+          <div className="acc-filter-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+            <select
+              className="acc-select"
+              aria-label="ประเภทผู้ใช้"
+              value={auditActorType}
+              onChange={(e) => {
+                setAuditActorType(e.target.value);
+                setAuditPage(1);
+              }}
+            >
+              <option value="all">ทุกประเภทผู้ใช้ (All Actors)</option>
+              <option value="member">สมาชิก (Member)</option>
+              <option value="staff">เจ้าหน้าที่ (Staff)</option>
+            </select>
+
+            <select
+              className="acc-select"
+              aria-label="ผลลัพธ์กิจกรรม"
+              value={auditResult}
+              onChange={(e) => {
+                setAuditResult(e.target.value);
+                setAuditPage(1);
+              }}
+            >
+              <option value="all">ทุกผลลัพธ์ (All Results)</option>
+              <option value="success">สำเร็จ (Success)</option>
+              <option value="failure">ล้มเหลว (Failure)</option>
+              <option value="denied">ถูกปฏิเสธ (Denied)</option>
+            </select>
+
             <select
               className="acc-select"
               aria-label="หมวดหมู่บันทึก"
@@ -1098,13 +1252,11 @@ export default function AdminControlCenterPage({ section: propSection }) {
               }}
             >
               <option value="">ทุกหมวดหมู่ (All Categories)</option>
-              <option value="authentication">Authentication Logs (เข้าสู่ระบบ/MFA)</option>
-              <option value="security">Security Events (ความปลอดภัย)</option>
-              <option value="access">User & Role Changes (สิทธิ์และบทบาท)</option>
-              <option value="members">Member Operations (ข้อมูลสมาชิก)</option>
-              <option value="finance">Financial & Dividends (การเงินและปันผล)</option>
-              <option value="content">Content Management (ข่าวสารและเนื้อหา)</option>
-              <option value="export">Export History (ประวัติการส่งออกข้อมูล)</option>
+              <option value="authentication">Authentication & MFA</option>
+              <option value="pdpa">PDPA & Consent</option>
+              <option value="finance">Financial & Export</option>
+              <option value="access">Authorization & RBAC</option>
+              <option value="backup">Backup Operations</option>
             </select>
 
             <select
@@ -1116,57 +1268,94 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 setAuditPage(1);
               }}
             >
-              <option value="">ทุกระดับความรุนแรง (All Severities)</option>
+              <option value="">ทุกระดับความรุนแรง</option>
               <option value="info">Info (ปกติ)</option>
               <option value="warning">Warning (เฝ้าระวัง)</option>
               <option value="critical">Critical (วิกฤต)</option>
             </select>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input
+                type="date"
+                className="acc-input"
+                aria-label="ตั้งแต่วันที่"
+                value={auditDateFrom}
+                onChange={(e) => {
+                  setAuditDateFrom(e.target.value);
+                  setAuditPage(1);
+                }}
+                style={{ width: 140 }}
+              />
+              <span style={{ color: 'var(--text-muted)' }}>-</span>
+              <input
+                type="date"
+                className="acc-input"
+                aria-label="ถึงวันที่"
+                value={auditDateTo}
+                onChange={(e) => {
+                  setAuditDateTo(e.target.value);
+                  setAuditPage(1);
+                }}
+                style={{ width: 140 }}
+              />
+            </div>
+
             <input
               type="search"
               className="acc-input"
-              placeholder="ค้นหาผู้ใช้, โมดูล, กิจกรรม หรือ Target ID..."
+              placeholder="ค้นหาผู้ใช้, Event Type, Correlation ID หรือ Target..."
               aria-label="ค้นหาบันทึกการตรวจสอบ"
               value={auditQuery}
               onChange={(e) => {
                 setAuditQuery(e.target.value);
                 setAuditPage(1);
               }}
-              style={{ minWidth: 240, flex: 1 }}
+              style={{ minWidth: 200, flex: 1 }}
             />
 
             <button
               type="button"
-              className="acc-btn primary"
+              className="acc-btn"
               onClick={() =>
                 downloadCsv(
                   `audit-logs-page-${auditPage}.csv`,
-                  ['Timestamp', 'Actor', 'Role', 'Category', 'Module', 'Action', 'Target', 'IP', 'Severity', 'CorrelationID'],
+                  ['Timestamp', 'Actor', 'ActorType', 'Role', 'Category', 'EventType', 'Target', 'Result', 'IP', 'Severity', 'CorrelationID'],
                   (auditData.records || []).map((it) => [
                     it.created_at,
                     it.actor_name,
+                    it.actor_type,
                     it.actor_role,
                     it.category,
-                    it.module,
-                    it.action,
+                    it.event_type || it.action,
                     it.target_resource,
+                    it.result,
                     it.ip_address,
                     it.severity,
                     it.correlation_id,
                   ])
                 )
               }
+              title="ส่งออกบันทึกหน้าปัจจุบัน"
             >
-              <Download size={15} /> ส่งออก CSV
+              <Download size={15} /> CSV หน้านี้
+            </button>
+
+            <button
+              type="button"
+              className="acc-btn primary"
+              onClick={() => setShowMfaExportModal(true)}
+              title="ส่งออกไฟล์ตรวจสอบสิทธิ์สูงพร้อมยืนยัน Step-Up MFA"
+            >
+              <Lock size={15} /> ส่งออกรายงานระดับสูง (MFA)
             </button>
           </div>
 
           <section className="acc-card">
             <div className="acc-card-header">
               <div>
-                <h2 className="acc-card-title">รายการบันทึกการตรวจสอบ (Audit Trail & Security Events)</h2>
+                <h2 className="acc-card-title">รายการบันทึกการตรวจสอบ (Security Audit Trail & Compliance)</h2>
                 <p className="acc-card-subtitle">
-                  แสดงหน้า {auditData.page || 1} (ทั้งหมด {formatNumber(auditData.total)} รายการ) • ระบบปกปิดรหัสผ่านและคีย์ลับอัตโนมัติ ([REDACTED])
+                  แสดงหน้า {auditData.page || 1} (ทั้งหมด {formatNumber(auditData.total)} รายการ) • ระบบปกปิดข้อมูลส่วนบุคคลและข้อมูลลับอัตโนมัติตามมาตรฐาน PDPA
                 </p>
               </div>
             </div>
@@ -1178,11 +1367,12 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <table className="acc-table">
                   <thead>
                     <tr>
-                      <th scope="col">วัน-เวลา</th>
+                      <th scope="col">วัน-เวลา / Correlation ID</th>
                       <th scope="col">ผู้ดำเนินการ (Actor)</th>
-                      <th scope="col">หมวดหมู่</th>
-                      <th scope="col">โมดูล / การกระทำ</th>
+                      <th scope="col">ประเภท / หมวดหมู่</th>
+                      <th scope="col">เหตุการณ์ความปลอดภัย (Event Type)</th>
                       <th scope="col">เป้าหมาย (Target)</th>
+                      <th scope="col">ผลลัพธ์ (Result)</th>
                       <th scope="col">IP Address</th>
                       <th scope="col">ระดับ</th>
                     </tr>
@@ -1200,11 +1390,21 @@ export default function AdminControlCenterPage({ section: propSection }) {
                           <br />
                           <small>{item.actor_role_name || item.actor_role}</small>
                         </td>
-                        <td><span className="acc-badge-pill">{item.category}</span></td>
                         <td>
-                          <strong>{item.module}</strong> : <code>{item.action}</code>
+                          <span className={`acc-badge-pill ${item.actor_type === 'member' ? 'warning' : 'primary'}`} style={{ marginRight: 6 }}>
+                            {item.actor_type === 'member' ? 'สมาชิก' : 'เจ้าหน้าที่'}
+                          </span>
+                          <span className="acc-badge-pill">{item.category}</span>
+                        </td>
+                        <td>
+                          <code>{item.event_type || item.action}</code>
                         </td>
                         <td>{item.target_resource}</td>
+                        <td>
+                          <span className={`acc-badge-pill ${item.result === 'success' ? 'success' : item.result === 'failure' ? 'warning' : 'danger'}`}>
+                            {item.result === 'success' ? 'สำเร็จ' : item.result === 'failure' ? 'ล้มเหลว' : 'ปฏิเสธ'}
+                          </span>
+                        </td>
                         <td><code>{item.ip_address || '-'}</code></td>
                         <td>
                           <span
@@ -1248,6 +1448,66 @@ export default function AdminControlCenterPage({ section: propSection }) {
               </button>
             </div>
           </section>
+
+          {/* Step-Up MFA Export Modal */}
+          {showMfaExportModal && (
+            <div className="acc-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <div className="acc-modal-content" style={{ background: '#fff', borderRadius: 8, padding: 24, maxWidth: 440, width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <span className="acc-kpi-icon primary"><Lock size={20} /></span>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem' }}>ยืนยัน Step-Up MFA เพื่อส่งออกข้อมูล</h3>
+                </div>
+                <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: 16 }}>
+                  การส่งออกบันทึกการตรวจสอบความปลอดภัยเป็นสิทธิ์ควบคุมพิเศษ กรุณาระบุรหัส Authenticator 6 หลักเพื่อยืนยันตัวตน
+                </p>
+                {mfaExportError && (
+                  <div style={{ padding: '8px 12px', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, fontSize: '0.85rem', marginBottom: 14 }}>
+                    {mfaExportError}
+                  </div>
+                )}
+                <form onSubmit={handlePrivilegedExport}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>
+                      รหัส Authenticator (TOTP)
+                    </label>
+                    <input
+                      type="text"
+                      className="acc-input"
+                      placeholder="000000"
+                      maxLength={6}
+                      pattern="[0-9]{6}"
+                      required
+                      autoFocus
+                      value={mfaExportCode}
+                      onChange={(e) => setMfaExportCode(e.target.value.replace(/\D/g, ''))}
+                      style={{ width: '100%', fontSize: '1.25rem', letterSpacing: '0.25em', textAlign: 'center' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                    <button
+                      type="button"
+                      className="acc-btn"
+                      disabled={mfaExportLoading}
+                      onClick={() => {
+                        setShowMfaExportModal(false);
+                        setMfaExportCode('');
+                        setMfaExportError('');
+                      }}
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      className="acc-btn primary"
+                      disabled={mfaExportLoading || mfaExportCode.length !== 6}
+                    >
+                      {mfaExportLoading ? 'กำลังตรวจสอบ...' : 'ยืนยันและดาวน์โหลด'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </>
       )}
 

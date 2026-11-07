@@ -16,7 +16,7 @@ export default function AdminAccessPage(){
       .then(([roles,users])=>{if(!controller.signal.aborted){setCatalog(roles);setAccounts(users);}}).catch(exception=>{if(exception.name!=='AbortError')setError(exception.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[query,page,refresh]);
-  useEffect(()=>{const controller=new AbortController();setMfaError('');memberAdminApi('/api/admin/staff/',{signal:controller.signal}).then(result=>{if(!Array.isArray(result.staff)||!Array.isArray(result.invitations))throw new Error('ข้อมูลเจ้าหน้าที่ไม่ครบถ้วน');setDirectory(result.staff);setInvitations(result.invitations);}).catch(exception=>{if(exception.name!=='AbortError'){setDirectory([]);setMfaError('สถานะ MFA ไม่พร้อมใช้งาน');}});return()=>controller.abort();},[refresh]);
+  useEffect(()=>{const controller=new AbortController();setMfaError('');memberAdminApi('/api/admin/staff',{signal:controller.signal}).then(result=>{if(!Array.isArray(result.staff)||!Array.isArray(result.invitations))throw new Error('ข้อมูลเจ้าหน้าที่ไม่ครบถ้วน');setDirectory(result.staff);setInvitations(result.invitations);}).catch(exception=>{if(exception.name!=='AbortError'){setDirectory([]);setMfaError('สถานะ MFA ไม่พร้อมใช้งาน');}});return()=>controller.abort();},[refresh]);
   async function mutate(path,data,label,scope,onSuccess,confirmation){
     setError('');setMessage('');
     try{await run(signal=>memberAdminApi(path,{data,signal}),{label,scope,confirm:confirmation});onSuccess?.();setMessage('บันทึกสำเร็จ ระบบเก็บประวัติการเปลี่ยนแปลงแล้ว');setRefresh(value=>value+1);}
@@ -46,7 +46,7 @@ export default function AdminAccessPage(){
     </div>},
   ];
   return <section className="admin-access-page">
-    <AdminPageHeader title="จัดการผู้ใช้งานและสิทธิ์" description="บทบาท เจ้าหน้าที่ และการยืนยันคำสั่งสำคัญ · สมาชิกใช้โมดูลดูแลสมาชิก" actions={<button className="acc-btn" disabled={busy||loading} onClick={()=>setRefresh(value=>value+1)}>โหลดข้อมูลล่าสุด</button>}/>
+    <AdminPageHeader title="จัดการผู้ใช้งานและสิทธิ์ (RBAC Access Management)" description="บทบาท เจ้าหน้าที่ และการยืนยันคำสั่งสำคัญ · สมาชิกใช้โมดูลดูแลสมาชิก" breadcrumbs={[{ label: "Admin Control Center", path: "/admin/dashboard" }, { label: "พื้นที่ทำงาน", path: "/admin/workspace" }, { label: "ผู้ใช้งานและสิทธิ์" }]} actions={<button className="acc-btn" disabled={busy||loading} onClick={()=>setRefresh(value=>value+1)}>โหลดข้อมูลล่าสุด</button>}/>
     {catalog&&!mfaError&&<PrOfficerInvitations allowRoleSelection roles={catalog.roles} invitations={invitations} onRefresh={()=>setRefresh(v=>v+1)}/>}
     {error&&<AdminErrorState message={error}/>} {message&&<p className="admin-notice" role="status">{message}</p>}{loading&&<AdminSkeleton/>}
     <AdminCard title="บทบาทและสิทธิ์" description="สิทธิ์มีผลกับผู้ใช้ทุกคนที่ได้รับบทบาทนี้" actions={can('roles.manage')&&<button className="acc-btn primary" disabled={busy||loading} onClick={()=>setRole(emptyRole())}>เพิ่มบทบาท</button>}>

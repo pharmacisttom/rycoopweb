@@ -49,6 +49,7 @@ class DividendImportController extends Controller
         try {
             MemberSystemHealth::requireWrites();
             $count = DividendImportService::import($preview['records'],['snapshots'=>$preview['snapshots'],'source_name'=>$preview['source_name']]);
+            \App\Services\SecurityAuditService::recordAdminFinancialImport((int)\App\Core\Auth::id(), (string)(\App\Core\Auth::user()['role_slug'] ?? 'staff'), 'dividends', (int)$count);
             Session::remove('dividend_import');
             $this->json(['success' => true, 'count' => $count, 'message' => 'นำเข้าสำเร็จ โดยคงรหัสผ่านเดิมของบัญชีที่มีอยู่']);
         } catch (\Throwable $e) {

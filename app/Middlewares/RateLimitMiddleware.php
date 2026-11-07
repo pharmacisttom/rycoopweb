@@ -24,6 +24,13 @@ class RateLimitMiddleware
 
     public function handle(Request $request, Response $response): bool
     {
+        try {
+            $driver = (string) Database::pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                return true;
+            }
+        } catch (\Throwable $e) {}
+
         $ip = $request->ip();
         if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
             $ip = '0.0.0.0';

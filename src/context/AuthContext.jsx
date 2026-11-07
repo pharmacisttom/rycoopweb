@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { mergeServerIdentity, hasEffectivePermission } from '../utils/identity';
 import { fetchCurrentUser } from '../services/api';
 import { normalizeSameOriginRedirect } from '../utils/navigation';
+import { maskCitizenId, maskMemberNo, maskName } from '../utils/pdpa';
 
 const AuthContext = createContext();
 
@@ -150,6 +151,7 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const data = await response.json();
+
         if (data.success && data.redirect && !data.user) {
           setUser(null); setSessionStatus('guest');
           return { success: true, requiresTwoFactor: true, redirect: normalizeSameOriginRedirect(data.redirect, '/admin/2fa'), user: null };
@@ -158,8 +160,8 @@ export function AuthProvider({ children }) {
               const roleSlug = data.user.role || data.user.role_slug || '';
               const authUser = {
                 id: data.user.id,
-                username: data.user.username || inputUsername,
-                name: data.user.name || inputUsername,
+                username: data.user.username || (roleSlug === 'member' ? maskCitizenId(inputUsername) : inputUsername),
+                name: data.user.name || (roleSlug === 'member' ? maskName(inputUsername) : inputUsername),
                 role: roleSlug,
                 permissions: data.user.permissions || [],
                 roleName: data.user.role_name || (roleSlug === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด' : roleSlug === 'staff' ? 'เจ้าหน้าที่สินเชื่อ/การเงิน' : roleSlug === 'auditor' ? 'ผู้ตรวจสอบกิจการ' : 'สมาชิกสหกรณ์'),
@@ -168,7 +170,7 @@ export function AuthProvider({ children }) {
                 position: data.user.position || '',
                 phone: data.user.phone || '',
                 avatar: data.user.avatar || '',
-                memberId: data.user.member_no || data.user.memberId || inputUsername,
+                memberId: data.user.member_no || (roleSlug === 'member' ? maskMemberNo(data.user.memberId || inputPassword) : (data.user.memberId || inputUsername)),
                 shares: data.user.shares_amount || data.user.shares || 0,
                 monthlyShare: data.user.monthly_share || 0,
                 savings: data.user.savings_balance || data.user.savings || 0,
@@ -177,7 +179,8 @@ export function AuthProvider({ children }) {
                 loanRefundEstimated: data.user.loan_refund_estimated || 0,
                 accounts: data.user.accounts || [],
                 loans: data.user.loans || [],
-                recentReceipts: data.user.recent_receipts || []
+                recentReceipts: data.user.recent_receipts || [],
+                pdpa_ack_required: data.user.pdpa_ack_required ?? (roleSlug === 'member')
               };
 
               setUser(authUser);
@@ -187,7 +190,7 @@ export function AuthProvider({ children }) {
                 success: true,
                 redirect: normalizeSameOriginRedirect(
                   data.redirect,
-                  roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'
+                  roleSlug === 'member' ? (authUser.pdpa_ack_required ? '/member/privacy-ack' : '/member/dividends') : roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'
                 ),
                 user: authUser
               };
@@ -219,6 +222,13 @@ export function AuthProvider({ children }) {
     return {
       success: false,
       message: 'ไม่สามารถติดต่อระบบยืนยันตัวตนได้ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่'
+    };
+  };
+
+  const verifyIdentity = async () => {
+    return {
+      success: false,
+      message: 'ระบบการยืนยันตัวตนด้วยหมายเลขโทรศัพท์ถูกระงับเพื่อความปลอดภัย กรุณาติดต่อเจ้าหน้าที่สหกรณ์'
     };
   };
 
@@ -283,6 +293,7 @@ export function AuthProvider({ children }) {
       sessionStatus,
       can: permission => hasEffectivePermission(user,permission),
       login,
+      verifyIdentity,
       logout,
       invalidateSession,
       updateProfile,

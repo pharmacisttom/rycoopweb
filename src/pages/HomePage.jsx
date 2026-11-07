@@ -1,9 +1,10 @@
+import HeroSlider from '../components/home/HeroSlider';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2, 
   ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall, 
-  ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award
+  ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award, Calendar
 } from 'lucide-react';
 import { fetchHomeData, fetchCoopInfo } from '../services/api';
 import LoanCalculator from '../components/calculators/LoanCalculator';
@@ -22,6 +23,7 @@ const FALLBACK_COOP = {
 };
 
 export default function HomePage() {
+  const memberPortalEnabled = import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
   const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
   const coopInfo = COOP_INFO;
   const { setShowAuthModal, isLoggedIn } = useAuth();
@@ -46,8 +48,13 @@ export default function HomePage() {
   const [newsList, setNewsList] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [welfareItems, setWelfareItems] = useState([]);
+  const [heroSlides, setHeroSlides] = useState([]);
 
   useEffect(() => {
+    if (import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true') {
+      setLoading(false);
+      return undefined;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -62,7 +69,8 @@ export default function HomePage() {
           setLoanRates(d.loanRates || []);
           setNewsList((d.latestNews || []).map(normalizeNewsItem));
           setAnnouncements(d.importantAnnouncements || []);
-          setWelfareItems(d.heroSlides || []); // welfare comes from separate endpoint if needed
+          setWelfareItems(d.heroSlides || []);
+          setHeroSlides(d.heroSlides || []); // welfare comes from separate endpoint if needed
 
           // Build key stats from latestStats
           if (d.latestStats) {
@@ -148,127 +156,357 @@ export default function HomePage() {
     setIsNewsSlideshowPaused(false);
   };
 
-  const heroSettings = {
-    title: coopInfo.nameTh,
-    subtitle: `${coopInfo.slogan || FALLBACK_COOP.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`,
-    badgeText: 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล',
-    bgImageUrl: '/assets/img/hero_bg_coop.jpg'
-  };
-
   return (
     <div>
       
       {/* =========================================================================
-          HERO SECTION (High Impact Modern Banner)
+          HERO PROMOTIONAL SLIDER (Modern White & Blue High-Impact Carousel)
           ========================================================================= */}
-      <section style={{
-        position: 'relative',
-        backgroundImage: heroSettings.bgImageUrl ? `linear-gradient(135deg, rgba(15, 43, 92, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%), url(${heroSettings.bgImageUrl})` : 'var(--gradient-hero)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        color: '#ffffff',
-        padding: '4.5rem 0 4rem 0',
-        overflow: 'hidden',
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
-      }}>
-        {/* Background glow & shapes */}
-        <div style={{
-          position: 'absolute',
-          top: '-20%',
-          right: '-10%',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(37, 99, 235, 0.4) 0%, rgba(37, 99, 235, 0) 70%)',
-          filter: 'blur(50px)',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-20%',
-          left: '-5%',
-          width: '400px',
-          height: '400px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(13, 148, 136, 0.3) 0%, rgba(13, 148, 136, 0) 70%)',
-          filter: 'blur(50px)',
-          pointerEvents: 'none'
-        }} />
+      <HeroSlider slides={heroSlides} />
 
-        <div className="container" style={{ position: 'relative', zIndex: 2 }}>
-          <div className="home-hero-grid">
+      {/* =========================================================================
+          HOMEPAGE QUICK ACCESS CARDS (Clean White & Blue Responsive Grid)
+          ========================================================================= */}
+      <section style={{ padding: '2.5rem 0 2rem 0', background: 'var(--background-main, #F4F8FD)' }}>
+        <div className="container">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+            gap: '1rem'
+          }}>
             
-            {/* Left Hero Content */}
-            <div className="animate-fade-in">
+            {/* Card 1: เข้าสู่ระบบสมาชิก */}
+            <Link to={memberPortalEnabled ? '/member/login' : '/eservice'} className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <Users size={24} />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เข้าสู่ระบบสมาชิก</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ตรวจสอบข้อมูลของคุณ</p>
+            </Link>
+
+            {/* Card 2: เงินกู้ของสหกรณ์ */}
+            <Link to="/loans" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <Calculator size={24} />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เงินกู้ของสหกรณ์</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ประเภทเงินกู้และเงื่อนไข</p>
+            </Link>
+
+            {/* Card 3: เงินฝาก */}
+            <Link to="/deposits" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <Landmark size={24} />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เงินฝาก</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ประเภทเงินฝากและดอกเบี้ย</p>
+            </Link>
+
+            {/* Card 4: เอกสารดาวน์โหลด */}
+            <Link to="/documents" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <FileText size={24} />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>เอกสารดาวน์โหลด</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>แบบฟอร์มและเอกสารต่าง ๆ</p>
+            </Link>
+
+            {/* Card 5: ข่าวสารและประกาศ */}
+            <Link to="/news" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <TrendingUp size={24} />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>ข่าวสารและประกาศ</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>ติดตามข่าวสารสหกรณ์</p>
+            </Link>
+
+            {/* Card 6: ปฏิทินยื่นกู้ */}
+            <Link to="/loan-schedule" className="surface-card" style={{
+              background: '#FFFFFF',
+              border: '1px solid #DCE5F0',
+              borderRadius: '0.75rem',
+              padding: '1.25rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'inherit',
+              boxShadow: '0 4px 18px rgba(16, 47, 104, 0.055)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '0.625rem',
+                background: '#EDF5FF',
+                color: '#1769C2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.75rem'
+              }}>
+                <Calendar size={24} />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#17315A', marginBottom: '0.25rem' }}>ปฏิทินยื่นกู้</h4>
+              <p style={{ fontSize: '0.8rem', color: '#526783', margin: 0 }}>กำหนดการและวันจ่ายเงินกู้</p>
+            </Link>
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          CHAIRPERSON WELCOME & COOPERATIVE GOVERNANCE (สารจากประธานกรรมการสหกรณ์)
+          ========================================================================= */}
+      <section className="section" style={{ background: '#FFFFFF', padding: '3.5rem 0', borderBottom: '1px solid #E2E8F0' }}>
+        <div className="container">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 280px',
+            gap: '2.5rem',
+            alignItems: 'center'
+          }} className="chairperson-welcome-grid">
+            
+            {/* Left: Message & Vision */}
+            <div>
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.4rem 1rem',
-                background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: 'var(--radius-full)',
+                background: '#EFF6FF',
+                borderRadius: '9999px',
                 fontSize: '0.85rem',
                 fontWeight: 600,
-                color: '#fbbf24',
-                marginBottom: '1.25rem',
-                border: '1px solid rgba(251, 191, 36, 0.3)'
+                color: '#1D4ED8',
+                marginBottom: '1rem',
+                border: '1px solid #BFDBFE'
               }}>
                 <Sparkles size={16} />
-                <span>{heroSettings.badgeText || 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล'}</span>
+                <span>สารจากประธานกรรมการสหกรณ์</span>
               </div>
 
-              <h1 className="home-hero-title" style={{
-                fontSize: 'clamp(1.8rem, 3vw, 3rem)',
+              <h2 style={{
+                fontSize: 'clamp(1.5rem, 2.5vw, 2.2rem)',
                 fontWeight: 800,
-                lineHeight: 1.2,
-                color: '#ffffff',
-                marginBottom: '1rem',
-                letterSpacing: '-0.02em',
-                whiteSpace: 'nowrap'
+                color: '#0F2B5C',
+                lineHeight: 1.3,
+                marginBottom: '1rem'
               }}>
-                {heroSettings.title || COOP_INFO.nameTh}
-              </h1>
+                {COOP_INFO.nameTh}
+              </h2>
 
               <p style={{
-                fontSize: '1.15rem',
-                color: '#e2e8f0',
-                lineHeight: 1.6,
-                marginBottom: '2rem',
-                maxWidth: '560px'
+                fontSize: '1.05rem',
+                color: '#334155',
+                lineHeight: 1.7,
+                marginBottom: '1.5rem'
               }}>
-                {heroSettings.subtitle || `${COOP_INFO.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`}
+                {coopInfo.slogan || FALLBACK_COOP.slogan} สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด มุ่งมั่นดำเนินงานตามหลักธรรมาภิบาล พัฒนาสู่ระบบสหกรณ์ดิจิทัลที่ทันสมัย สะดวก รวดเร็ว และปลอดภัย พร้อมส่งเสริมความมั่นคงทางการเงินและสวัสดิการที่ครอบคลุมทุกช่วงชีวิตของมวลสมาชิก
               </p>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <Link to="/service-unavailable" className="btn btn-gold btn-lg">
-                  <span>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
-                  <ArrowRight size={18} />
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+                <Link to="/about" className="btn btn-primary" style={{ background: '#1769C2', borderColor: '#1769C2', color: '#ffffff' }}>
+                  <span>วิสัยทัศน์และคณะกรรมการ</span>
+                  <ArrowRight size={16} />
                 </Link>
-
-                <Link to="/calculator" className="btn btn-outline btn-lg" style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.08)' }}>
-                  <Calculator size={18} />
-                  <span>คำนวณเงินกู้</span>
+                <Link to="/documents?category=annual_reports" className="btn btn-outline" style={{ color: '#1769C2', borderColor: '#BFDBFE', background: '#F8FAFC' }}>
+                  <FileText size={16} />
+                  <span>รายงานประจำปี</span>
                 </Link>
               </div>
 
-              {/* Quick Trust Badges */}
-              <div style={{ display: 'flex', gap: '1.5rem', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.15)', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ShieldCheck size={20} style={{ color: '#38bdf8' }} />
-                  <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>บริหารโปร่งใสตามหลักธรรมาภิบาล</span>
+                  <ShieldCheck size={20} style={{ color: '#0284C7' }} />
+                  <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>บริหารงานโปร่งใสตามหลักธรรมาภิบาล</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Award size={20} style={{ color: '#fbbf24' }} />
-                  <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>ตรวจสอบยอดปันผลในระบบสมาชิก</span>
+                  <Award size={20} style={{ color: '#D97706' }} />
+                  <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>สิทธิประโยชน์และผลตอบแทนที่มั่นคง</span>
                 </div>
               </div>
-
             </div>
 
-            <div className="hero-dashboard-row">
-            {/* Right Hero Card: Quick Rates & Services Widget */}
+            {/* Right: Official Chairperson Portrait */}
+            <figure style={{
+              width: '100%',
+              maxWidth: '280px',
+              margin: '0 auto',
+              padding: '0.85rem',
+              background: '#FFFFFF',
+              borderRadius: '1.25rem',
+              border: '2px solid #BFDBFE',
+              boxShadow: '0 12px 28px rgba(15, 43, 92, 0.08)',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '100%',
+                maxWidth: '240px',
+                margin: '0 auto',
+                overflow: 'hidden',
+                borderRadius: '0.85rem',
+                border: '2px solid #93C5FD',
+                aspectRatio: '294 / 394'
+              }}>
+                <img
+                  src={heroPortrait}
+                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+                  width="294"
+                  height="394"
+                />
+              </div>
+              <figcaption style={{ marginTop: '0.75rem' }}>
+                <strong style={{ display: 'block', fontSize: '0.95rem', color: '#0F2B5C', fontWeight: 700 }}>
+                  นางสาวอุษา อิศรางกูร ณ อยุธยา
+                </strong>
+                <span style={{ display: 'block', fontSize: '0.85rem', color: '#64748B', marginTop: '0.15rem' }}>
+                  ประธานกรรมการสหกรณ์
+                </span>
+              </figcaption>
+            </figure>
+
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          NEWS, ANNOUNCEMENTS & HIGHLIGHT RATES (ข่าวสาร ประกาศ และอัตราดอกเบี้ยเด่น)
+          ========================================================================= */}
+      <section className="section" style={{ background: '#0F2B5C', padding: '3.5rem 0', color: '#ffffff' }}>
+        <div className="container">
+          <div className="section-title-wrap" style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
+            <span className="section-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}>
+              ข่าวสารและอัตราดอกเบี้ย
+            </span>
+            <h2 className="section-title" style={{ color: '#ffffff' }}>
+              ข่าวประชาสัมพันธ์และอัตราดอกเบี้ยประจำวัน
+            </h2>
+            <p className="section-subtitle" style={{ color: '#cbd5e1' }}>
+              ติดตามข้อมูลข่าวสาร ประกาศทางการ และอัตราดอกเบี้ยเงินฝาก-เงินกู้ของสหกรณ์
+            </p>
+            <div className="section-line" style={{ background: 'linear-gradient(90deg, #38bdf8, #fbbf24)', margin: '1rem auto 0' }} />
+          </div>
+
+          <div className="hero-dashboard-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+            {/* Quick Rates & Services Widget */}
             <div className="glass-card hero-rate-card" style={{
               background: 'rgba(15, 23, 42, 0.65)',
               border: '1px solid rgba(255,255,255,0.15)',
@@ -298,9 +536,9 @@ export default function HomePage() {
                   <span>ดูดอกเบี้ยเงินกู้</span>
                 </Link>
               </div>
-
             </div>
 
+            {/* News & Announcements Card */}
             <section className="glass-card hero-news-card" aria-labelledby="hero-news-heading">
               <div className="hero-news-header">
                 <div>
@@ -417,91 +655,10 @@ export default function HomePage() {
                   ))
                 )}
                 {((activeNewsTab === 'news' && newsList.length === 0) || (activeNewsTab === 'announcements' && announcements.length === 0)) && (
-                  <p className="hero-news-empty">ยังไม่มีรายการในขณะนี้</p>
+                  <p className="hero-news-empty">อยู่ระหว่างเตรียมเผยแพร่ข่าวสารประชาสัมพันธ์รอบใหม่ สามารถติดตามประกาศและเอกสารสำคัญได้ที่ศูนย์เอกสาร</p>
                 )}
               </div>
             </section>
-            </div>
-
-            <figure className="hero-portrait">
-              <div className="hero-portrait-frame">
-                <img
-                  src={heroPortrait}
-                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
-                  width="294"
-                  height="394"
-                  fetchPriority="high"
-                />
-              </div>
-              <figcaption className="hero-portrait-caption">
-                <strong>นางสาวอุษา อิศรางกูร ณ อยุธยา</strong>
-                <span>ประธานกรรมการสหกรณ์</span>
-              </figcaption>
-            </figure>
-
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
-          ========================================================================= */}
-      <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
-        <div className="container">
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '1.25rem'
-          }}>
-            
-            <Link to="/calculator" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
-                <Calculator size={24} />
-              </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>คำนวณเงินกู้</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>จำลองค่างวดและดอกเบี้ย</p>
-            </Link>
-
-            <Link to="/dividend-estimator" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-teal-light)', color: 'var(--accent-teal-dark)' }}>
-                <TrendingUp size={24} />
-              </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>ประมาณการปันผล</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ปันผลหุ้น & เฉลี่ยคืน</p>
-            </Link>
-
-            <Link to="/verify-receipt" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--primary-100)', color: 'var(--primary-700)' }}>
-                <FileText size={24} />
-              </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>e-Receipt</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ตรวจสอบใบเสร็จออนไลน์</p>
-            </Link>
-
-            <Link to="/loan-checklist" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-emerald-light)', color: 'var(--accent-emerald-dark)' }}>
-                <CheckCircle2 size={24} />
-              </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>เช็คความพร้อมกู้</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ตรวจเอกสารและสิทธิ</p>
-            </Link>
-
-            <Link to="/welfare" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-rose-light)', color: 'var(--accent-rose)' }}>
-                <HeartHandshake size={24} />
-              </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>สวัสดิการสมาชิก</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ทุนการศึกษา & ช่วยเหลือ</p>
-            </Link>
-
-            <Link to="/service-unavailable" className="surface-card" style={quickServiceCardStyle}>
-              <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
-                <Coins size={24} />
-              </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ยังไม่เปิดให้บริการในระยะนี้</p>
-            </Link>
-
           </div>
         </div>
       </section>
@@ -509,6 +666,7 @@ export default function HomePage() {
       {/* =========================================================================
           KEY COOPERATIVE STATS
           ========================================================================= */}
+      {keyStats.length > 0 && (
       <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           
@@ -553,6 +711,7 @@ export default function HomePage() {
 
         </div>
       </section>
+      )}
 
       {/* =========================================================================
           FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)
@@ -562,7 +721,7 @@ export default function HomePage() {
           
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
-            <h2 className="section-title">สินเชื่อเพื่อบุคลากรสาธารณสุข</h2>
+            <h2 className="section-title">เงินกู้ของสหกรณ์</h2>
             <p className="section-subtitle">วงเงินกู้สูง ดอกเบี้ยต่ำ ผ่อนชำระสบาย ยื่นกู้ง่าย อนุมัติรวดเร็ว</p>
             <div className="section-line" />
           </div>

@@ -1,24 +1,46 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import reference from '../data/legacyReference.json';
 
 const PublicContentContext = createContext({ catalog: reference, status: 'reference', reload: async () => {} });
 export function PublicContentProvider({ children }) {
+  const isStaticMode = import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true';
   const [catalog, setCatalog] = useState(reference);
-  const [status, setStatus] = useState('loading');
+  const [status, setStatus] = useState('reference');
+  const endpointUnavailableRef = useRef(isStaticMode);
+
   const reload = useCallback(async signal => {
+    if (isStaticMode || endpointUnavailableRef.current) return;
     try {
       const response = await fetch('/api/public/content', { credentials: 'same-origin', cache: 'no-cache', signal, headers: { Accept: 'application/json' } });
+      if (response.status === 404 || response.status === 503) {
+        endpointUnavailableRef.current = true;
+        setStatus('reference');
+        return;
+      }
       const result = await response.json();
       if (!response.ok || !result.success || !result.data?.coopInfo || !Array.isArray(result.data?.boardMembers)) throw new Error('CONTENT_UNAVAILABLE');
       setCatalog(result.data); setStatus('published');
-    } catch (error) { if (error.name !== 'AbortError') setStatus('unavailable'); }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        endpointUnavailableRef.current = true;
+        setStatus('reference');
+      }
+    }
   }, []);
-  useEffect(() => { const controller = new AbortController(); reload(controller.signal); return () => controller.abort(); }, [reload]);
   useEffect(() => {
-    const onFocus = () => reload();
+    if (isStaticMode) return undefined;
+    const controller = new AbortController();
+    reload(controller.signal);
+    return () => controller.abort();
+  }, [reload, isStaticMode]);
+  useEffect(() => {
+    if (isStaticMode) return undefined;
+    const onFocus = () => {
+      if (!endpointUnavailableRef.current) reload();
+    };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [reload]);
+  }, [reload, isStaticMode]);
   return <PublicContentContext.Provider value={{ catalog, status, reload }}>{children}</PublicContentContext.Provider>;
 }
 export const usePublicContent = () => useContext(PublicContentContext);
@@ -34,5 +56,5 @@ export function usePublicInformation() {
     const published=catalog.publication?.[section];
     if(published)sources[key]={...sources[key],url:published.sourceUrl,checkedOn:published.effectiveOn};
   }
-  return { COOP_INFO:catalog.coopInfo,BOARD_MEMBERS:catalog.boardMembers,STAFF_MEMBERS:catalog.staffMembers,INTEREST_RATES:rates,LOAN_PRODUCTS:catalog.loanProducts,legacyReference:{...catalog,sources} };
+  return { COOP_INFO:{...catalog.coopInfo,phone:'0863681132'},BOARD_MEMBERS:catalog.boardMembers,STAFF_MEMBERS:catalog.staffMembers,INTEREST_RATES:rates,LOAN_PRODUCTS:catalog.loanProducts,legacyReference:{...catalog,sources} };
 }

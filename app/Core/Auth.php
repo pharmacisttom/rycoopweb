@@ -22,6 +22,9 @@ class Auth
         }
 
         if (time() - (int) Session::get('authenticated_at', 0) > (int) config('security.session.lifetime', 7200)) {
+            if ($user && ($user['role_slug'] ?? '') === 'member') {
+                \App\Services\SecurityAuditService::recordMemberSessionExpired((int)$user['id'], 'member');
+            }
             self::logout();
             return false;
         }
@@ -99,6 +102,7 @@ class Auth
         Session::set('mfa_enrollment', $requiresEnrollment);
         Session::set('authenticated_at', time());
         Session::set('mfa_started_at', time());
+        Session::set('auth_context', ((string)($user['role_slug'] ?? '')) === 'member' ? 'member' : 'backend');
         self::$user = null;
 
         Logger::auth("User authenticated: {$user['email']} (ID: {$user['id']}) - 2FA Verified: " . ($verified2FA ? 'yes' : 'pending'));
@@ -178,6 +182,26 @@ class Auth
                 WHERE ur.user_id = ? AND p.module = ? AND p.action = ?";
 
         $count = (int) Database::value($sql, [$user['id'], $module, $action]);
-        return $count > 0;
+        if ($count > 0) {
+            return true;
+        }
+
+        $synonyms = [
+            'people' => ['boards', 'staff', 'users'],
+            'products' => ['loan_products', 'deposit_products', 'interest_rates'],
+            'content' => ['news', 'announcements', 'hero_slides', 'popups'],
+            'settings' => ['settings', 'eservice_links'],
+        ];
+
+        if (isset($synonyms[$module])) {
+            foreach ($synonyms[$module] as $altModule) {
+                $altCount = (int) Database::value($sql, [$user['id'], $altModule, $action]);
+                if ($altCount > 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

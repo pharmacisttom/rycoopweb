@@ -5,12 +5,17 @@
  * All data fetching goes through these functions instead of importing mockData.
  */
 
+export const isStaticMode = import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true';
+
 const getApiUrl = (path) => path.startsWith('/') ? path : `/${path}`;
 
 /**
  * Core fetch wrapper with fallback URLs for development/production compatibility.
  */
 const apiFetch = async (path, options = {}) => {
+  if (isStaticMode) {
+    return { success: false, available: false, message: 'ระบบอยู่ในโหมดเผยแพร่ข้อมูลสาธารณะแบบคงที่ (Static Mode)' };
+  }
   const uniqueUrls = [getApiUrl(path)];
 
   const defaultOptions = {
@@ -36,6 +41,9 @@ const apiFetch = async (path, options = {}) => {
       if (res.status === 401) {
         return { success: false, authenticated: false, message: 'กรุณาเข้าสู่ระบบ' };
       }
+      if (res.status === 404) {
+        return { success: false, message: 'ไม่พบข้อมูล' };
+      }
     } catch (e) {
       // try next URL
     }
@@ -49,10 +57,10 @@ const apiFetch = async (path, options = {}) => {
 // ──────────────────────────────────────────────
 
 /** Fetch all homepage data in a single call */
-export const fetchHomeData = () => apiFetch('/api/public/home');
+export const fetchHomeData = () => isStaticMode ? Promise.resolve({ success: false, message: 'Static mode' }) : apiFetch('/api/public/home');
 
 /** Fetch cooperative information & stats */
-export const fetchCoopInfo = () => apiFetch('/api/public/coop-info');
+export const fetchCoopInfo = () => isStaticMode ? Promise.resolve({ success: false, message: 'Static mode' }) : apiFetch('/api/public/coop-info');
 
 /** Fetch interest rates (deposit & loan) */
 export const fetchInterestRates = () => apiFetch('/api/public/interest-rates');
@@ -61,19 +69,19 @@ export const fetchInterestRates = () => apiFetch('/api/public/interest-rates');
 export const fetchLoanProducts = () => apiFetch('/api/public/loan-products');
 
 /** Fetch news articles with pagination */
-export const fetchNews = (page = 1) => apiFetch(`/api/public/news?page=${page}`);
+export const fetchNews = (page = 1) => isStaticMode ? Promise.resolve({ success: true, data: [], meta: { total: 0 } }) : apiFetch(`/api/public/news?page=${page}`);
 
 /** Fetch announcements */
-export const fetchAnnouncements = () => apiFetch('/api/public/announcements');
+export const fetchAnnouncements = () => isStaticMode ? Promise.resolve({ success: true, data: [] }) : apiFetch('/api/public/announcements');
 
 /** Fetch downloadable documents */
-export const fetchDocuments = () => apiFetch('/api/public/documents');
+export const fetchDocuments = () => isStaticMode ? Promise.resolve({ success: false, message: 'Static mode' }) : apiFetch('/api/public/documents');
 
 /** Fetch welfare benefit types */
 export const fetchWelfareTypes = () => apiFetch('/api/public/welfare');
 
 /** Fetch FAQ items */
-export const fetchFaqs = () => apiFetch('/api/public/faqs');
+export const fetchFaqs = () => isStaticMode ? Promise.resolve({ success: false, message: 'Static mode' }) : apiFetch('/api/public/faqs');
 
 /** Fetch board of directors / staff */
 export const fetchBoardMembers = () => apiFetch('/api/public/board-members');
@@ -85,21 +93,36 @@ export const fetchStatistics = () => apiFetch('/api/public/statistics');
 // AUTH APIs
 // ──────────────────────────────────────────────
 
+const isPortalEnabled = () => import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
+
 /** Check if current user is authenticated */
-export const fetchCurrentUser = () => apiFetch('/api/auth/me', { cache: 'no-store' });
+export const fetchCurrentUser = () => {
+  return apiFetch('/api/auth/me', { cache: 'no-store' });
+};
+
+/** Fetch member dashboard summary */
+export const fetchMemberDashboard = () => {
+  if (!isPortalEnabled()) return Promise.resolve({ success: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
+  return apiFetch('/api/member/dashboard');
+};
+
+/** Fetch member profile data */
+export const fetchMemberProfile = () => {
+  if (!isPortalEnabled()) return Promise.resolve({ success: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
+  return apiFetch('/api/member/profile');
+};
+
+/** Fetch member shares data */
+export const fetchMemberShares = () => {
+  if (!isPortalEnabled()) return Promise.resolve({ success: false, message: 'ระบบสมาชิกยังไม่เปิดใช้งาน' });
+  return apiFetch('/api/member/shares');
+};
 
 // ──────────────────────────────────────────────
 // MEMBER DATA APIs (require authentication)
 // ──────────────────────────────────────────────
 
-/** Fetch member dashboard summary */
-export const fetchMemberDashboard = () => apiFetch('/api/member/dashboard');
 
-/** Fetch member profile data */
-export const fetchMemberProfile = () => apiFetch('/api/member/profile');
-
-/** Fetch member shares data */
-export const fetchMemberShares = () => apiFetch('/api/member/shares');
 
 /** Fetch member deposit accounts & transactions */
 export const fetchMemberDeposits = (account, type) => {
@@ -174,6 +197,9 @@ export const updateAdminLoanProduct = (id, data) => apiPost(`/api/admin/loan-pro
 
 /** Fetch CSRF token from server */
 export const fetchCsrfToken = async () => {
+  if (isStaticMode) {
+    return '';
+  }
   const data = await apiFetch('/csrf-token');
   return data?.token || data?.data?.token || '';
 };
@@ -183,6 +209,9 @@ export const fetchCsrfToken = async () => {
  * Automatically fetches CSRF token before submission.
  */
 export const apiPost = async (path, body = {}) => {
+  if (isStaticMode) {
+    return { success: false, available: false, message: 'ระบบอยู่ในโหมดเผยแพร่ข้อมูลสาธารณะแบบคงที่ (Static Mode)' };
+  }
   const token = await fetchCsrfToken();
   const formData = new FormData();
   Object.entries(body).forEach(([key, value]) => {
@@ -231,13 +260,13 @@ export const createAdminNews = (body) => apiPost('/api/admin/news', body);
 export const deleteAdminNews = (id) => apiPost(`/api/admin/news/${id}/delete`);
 
 /** Fetch public visitor statistics summary */
-export const fetchVisitorStats = () => apiFetch('/api/public/visitors/summary');
+export const fetchVisitorStats = () => isStaticMode ? Promise.resolve({ success: false, available: false, message: 'Static mode' }) : apiFetch('/api/public/visitors/summary');
 
 /** Alias for public visitor summary */
-export const fetchPublicVisitorSummary = () => apiFetch('/api/public/visitors/summary');
+export const fetchPublicVisitorSummary = () => fetchVisitorStats();
 
 /** Fetch detailed visitor analytics for /visitor-stats */
-export const fetchVisitorAnalytics = (days = 30) => apiFetch(`/api/public/visitors/analytics?days=${encodeURIComponent(days)}`);
+export const fetchVisitorAnalytics = (days = 30) => isStaticMode ? Promise.resolve({ success: false, available: false, message: 'Static mode' }) : apiFetch(`/api/public/visitors/analytics?days=${encodeURIComponent(days)}`);
 
 /** Fetch admin-level visitor analytics for /admin/analytics/visitors */
 export const fetchAdminVisitorAnalytics = (days = 30) => apiFetch(`/api/admin/analytics/visitors?days=${encodeURIComponent(days)}`);
@@ -246,4 +275,4 @@ export const fetchAdminVisitorAnalytics = (days = 30) => apiFetch(`/api/admin/an
 export const exportAdminVisitorAnalytics = (days = 30, format = 'csv') => apiPost('/api/admin/analytics/visitors/export', { days, format });
 
 /** Record page visit */
-export const recordPageVisit = (payload) => apiPost('/api/visits/record', payload);
+export const recordPageVisit = (payload) => isStaticMode ? Promise.resolve({ success: false, available: false, message: 'Disabled in static mode' }) : apiPost('/api/visits/record', payload);

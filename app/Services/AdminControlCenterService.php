@@ -7,6 +7,8 @@ namespace App\Services;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Core\Session;
+use App\Services\MemberPiiMaskingService;
+use App\Services\SecurityAuditService;
 use PDO;
 
 /**
@@ -1040,10 +1042,199 @@ class AdminControlCenterService
     }
 
     /**
+    /**
      * Audit & Log Center (Section 8)
-     * Returns paginated, categorized, and strictly redacted audit records.
+     * Primary source: security_audit_logs (Migration 028).
+     * Preserves legacy audit_logs access via source=legacy.
      */
     public static function getAuditLogs(array $filters = []): array
+    {
+        $source = strtolower(trim((string) ($filters['source'] ?? 'security')));
+        if ($source === 'legacy') {
+            return self::getLegacyAuditLogs($filters);
+        }
+
+        try {
+            return self::getSecurityAuditLogs($filters);
+        } catch (\Throwable $e) {
+            return self::getLegacyAuditLogs($filters);
+        }
+    }
+
+    /**
+     * Query security_audit_logs with full filtering, PII masking, and KPI dashboard stats.
+     */
+    public static function getSecurityAuditLogs(array $filters = []): array
+    {
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $perPage = max(10, min(100, (int) ($filters['per_page'] ?? 25)));
+        $actorType = strtolower(trim((string) ($filters['actor_type'] ?? 'all')));
+        $resultFilter = strtolower(trim((string) ($filters['result'] ?? 'all')));
+        $category = trim((string) ($filters['category'] ?? 'all'));
+        $severityFilter = trim((string) ($filters['severity'] ?? 'all'));
+        $eventTypeFilter = trim((string) ($filters['event_type'] ?? ''));
+        $moduleFilter = trim((string) ($filters['module'] ?? ''));
+        $q = mb_substr(trim((string) ($filters['q'] ?? '')), 0, 100);
+        $dateFrom = trim((string) ($filters['from'] ?? ''));
+        $dateTo = trim((string) ($filters['to'] ?? ''));
+
+        $where = ['1=1'];
+        $params = [];
+
+        if (in_array($actorType, ['member', 'staff'], true)) {
+            $where[] = 's.actor_type = ?';
+            $params[] = $actorType;
+        }
+
+        if (in_array($resultFilter, ['success', 'failure', 'denied'], true)) {
+            $where[] = 's.result = ?';
+            $params[] = $resultFilter;
+        }
+
+        if ($eventTypeFilter !== '' && $eventTypeFilter !== 'all') {
+            $where[] = 's.event_type = ?';
+            $params[] = $eventTypeFilter;
+        }
+
+        if ($moduleFilter !== '' && $moduleFilter !== 'all') {
+            $where[] = '(s.event_type = ? OR s.target_resource LIKE ?)';
+            $params[] = $moduleFilter;
+            $params[] = '%' . $moduleFilter . '%';
+        }
+
+        if ($q !== '') {
+            $like = '%' . $q . '%';
+            $where[] = '(s.event_type LIKE ? OR s.target_resource LIKE ? OR s.correlation_id LIKE ? OR s.role LIKE ? OR u.name LIKE ? OR u.username LIKE ?)';
+            array_push($params, $like, $like, $like, $like, $like, $like);
+        }
+
+        if ($dateFrom !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
+            $where[] = 's.timestamp_utc >= ?';
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        if ($dateTo !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+            $where[] = 's.timestamp_utc <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
+
+        $whereSql = implode(' AND ', $where);
+        $total = (int) (Database::value(
+            "SELECT COUNT(*) FROM security_audit_logs s LEFT JOIN users u ON s.actor_user_id = u.id WHERE {$whereSql}",
+            $params
+        ) ?? 0);
+
+        $offset = ($page - 1) * $perPage;
+        $rows = Database::query(
+            "SELECT s.*, u.name AS actor_name, u.username AS actor_username
+             FROM security_audit_logs s
+             LEFT JOIN users u ON s.actor_user_id = u.id
+             WHERE {$whereSql}
+             ORDER BY s.id DESC
+             LIMIT {$perPage} OFFSET {$offset}",
+            $params
+        );
+
+        $records = [];
+        foreach ($rows as $row) {
+            $severity = self::classifySecurityAuditSeverity((string) $row['event_type'], (string) $row['result']);
+            if ($severityFilter !== 'all' && $severityFilter !== '' && $severity !== $severityFilter) {
+                continue;
+            }
+
+            $cat = self::classifySecurityAuditCategory((string) $row['event_type']);
+            if ($category !== 'all' && $category !== '' && stripos($cat, $category) === false && stripos((string) $row['event_type'], $category) === false) {
+                continue;
+            }
+
+            $isMember = ($row['actor_type'] ?? '') === 'member';
+            $actorDisplayName = $row['actor_name'] ?: ($row['actor_username'] ?: 'System / CLI');
+            $actorDisplayUsername = $row['actor_username'] ?: '—';
+
+            if ($isMember) {
+                if (!empty($row['actor_name'])) {
+                    $actorDisplayName = MemberPiiMaskingService::maskFullName($row['actor_name']);
+                }
+                if (!empty($row['actor_username']) && preg_match('/^\d{13}$/', $row['actor_username'])) {
+                    $actorDisplayUsername = MemberPiiMaskingService::maskCitizenId($row['actor_username']);
+                }
+            }
+
+            $targetResource = (string) ($row['target_resource'] ?? '—');
+            if (preg_match('/\b\d{13}\b/', $targetResource, $matchId)) {
+                $targetResource = str_replace($matchId[0], MemberPiiMaskingService::maskCitizenId($matchId[0]), $targetResource);
+            }
+
+            $meta = json_decode((string) ($row['metadata'] ?? '{}'), true) ?: [];
+            $maskedMeta = SecurityAuditService::scrubMetadata($meta);
+
+            $roleSlug = (string) ($row['role'] ?? 'system');
+            $roleName = match ($roleSlug) {
+                'member' => 'สมาชิก',
+                'super_admin' => 'ผู้ดูแลระบบสูงสุด',
+                'auditor' => 'ผู้ตรวจสอบกิจการ',
+                'it_admin' => 'ผู้ดูแลระบบไอที',
+                'finance_officer' => 'เจ้าหน้าที่การเงิน',
+                'member_service' => 'เจ้าหน้าที่บริการสมาชิก',
+                default => $roleSlug,
+            };
+
+            $records[] = [
+                'id' => (int) $row['id'],
+                'event_id' => (string) $row['event_id'],
+                'timestamp_utc' => !empty($row['timestamp_utc']) ? gmdate('Y-m-d\TH:i:s\Z', strtotime((string) $row['timestamp_utc'])) : gmdate('Y-m-d\TH:i:s\Z', strtotime((string) $row['created_at'])),
+                'created_at' => (string) ($row['timestamp_utc'] ?? $row['created_at']),
+                'actor_id' => $row['actor_user_id'] !== null ? (int) $row['actor_user_id'] : null,
+                'actor_type' => (string) $row['actor_type'],
+                'actor_name' => $actorDisplayName,
+                'actor_username' => $actorDisplayUsername,
+                'actor_role' => $roleSlug,
+                'actor_role_name' => $roleName,
+                'category' => $cat,
+                'event_type' => (string) $row['event_type'],
+                'module' => (string) $row['event_type'],
+                'action' => (string) $row['event_type'],
+                'record_id' => $targetResource,
+                'target_resource' => $targetResource,
+                'result' => (string) $row['result'],
+                'severity' => $severity,
+                'ip_address' => self::maskIpForPolicy((string) ($row['ip_address'] ?? '')),
+                'correlation_id' => (string) $row['correlation_id'],
+                'session_fingerprint' => (string) ($row['session_fingerprint'] ?? ''),
+                'user_agent' => (string) ($row['user_agent'] ?? ''),
+                'metadata' => $maskedMeta,
+            ];
+        }
+
+        $availableModules = [];
+        try {
+            $availableModules = array_column(
+                Database::query("SELECT DISTINCT event_type AS module FROM security_audit_logs ORDER BY event_type ASC"),
+                'module'
+            );
+        } catch (\Throwable $e) {}
+
+        return [
+            'generated_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
+            'page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'total_pages' => max(1, (int) ceil($total / $perPage)),
+            ],
+            'stats' => self::getSecurityAuditStats(),
+            'available_modules' => $availableModules,
+            'records' => $records,
+            'items' => $records,
+        ];
+    }
+
+    /**
+     * Query legacy audit_logs table (Preserved audit history).
+     */
+    public static function getLegacyAuditLogs(array $filters = []): array
     {
         $page = max(1, (int) ($filters['page'] ?? 1));
         $perPage = max(10, min(100, (int) ($filters['per_page'] ?? 25)));
@@ -1123,21 +1314,27 @@ class AdminControlCenterService
 
                 $records[] = [
                     'id' => (int) $row['id'],
+                    'event_id' => sprintf('leg-%08d', (int) $row['id']),
                     'timestamp_utc' => !empty($row['created_at']) ? gmdate('Y-m-d\TH:i:s\Z', strtotime((string) $row['created_at'])) : null,
                     'created_at' => $row['created_at'],
                     'actor_id' => $row['user_id'] !== null ? (int) $row['user_id'] : null,
+                    'actor_type' => 'staff',
                     'actor_name' => $row['actor_name'] ?: ($row['actor_username'] ?: 'System / CLI'),
+                    'actor_username' => $row['actor_username'] ?: '—',
                     'actor_role' => $row['actor_role_slug'] ?: 'system',
                     'actor_role_name' => $row['actor_role_name'] ?: 'ระบบอัตโนมัติ',
                     'category' => self::classifyAuditCategory((string) $row['module'], (string) $row['action']),
+                    'event_type' => (string) $row['action'],
                     'module' => (string) $row['module'],
                     'action' => (string) $row['action'],
                     'record_id' => $row['record_id'] !== null ? (string) $row['record_id'] : '—',
                     'target_resource' => $row['record_id'] !== null ? (string) $row['record_id'] : '—',
-                    'result' => str_contains((string) $row['action'], 'fail') ? 'failed' : 'success',
+                    'result' => str_contains((string) $row['action'], 'fail') ? 'failure' : 'success',
                     'severity' => $severity,
                     'ip_address' => self::maskIpForPolicy((string) ($row['ip_address'] ?? '')),
                     'correlation_id' => sprintf('aud-%08d', (int) $row['id']),
+                    'session_fingerprint' => '',
+                    'user_agent' => (string) ($row['user_agent'] ?? ''),
                     'metadata' => [
                         'before' => $oldMeta,
                         'after' => $newMeta,
@@ -1148,16 +1345,13 @@ class AdminControlCenterService
             $records = [];
         }
 
-        // Distinct modules for filter dropdown
         $availableModules = [];
         try {
             $availableModules = array_column(
                 Database::query("SELECT DISTINCT module FROM audit_logs ORDER BY module ASC"),
                 'module'
             );
-        } catch (\Throwable $e) {
-            $availableModules = [];
-        }
+        } catch (\Throwable $e) {}
 
         return [
             'generated_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
@@ -1170,11 +1364,58 @@ class AdminControlCenterService
                 'total' => $total,
                 'total_pages' => max(1, (int) ceil($total / $perPage)),
             ],
+            'stats' => self::getSecurityAuditStats(),
             'available_modules' => $availableModules,
             'records' => $records,
             'items' => $records,
         ];
     }
+
+    /**
+     * Compute summary activity statistics for administrative audit dashboard.
+     */
+    public static function getSecurityAuditStats(): array
+    {
+        $defaultStats = [
+            'total_events' => 0,
+            'member_events' => 0,
+            'staff_events' => 0,
+            'failed_events' => 0,
+            'denied_events' => 0,
+            'success_events' => 0,
+            'legacy_total' => 0,
+        ];
+
+        try {
+            $row = Database::first("
+                SELECT
+                    COUNT(*) AS total_events,
+                    SUM(CASE WHEN actor_type = 'member' THEN 1 ELSE 0 END) AS member_events,
+                    SUM(CASE WHEN actor_type = 'staff' THEN 1 ELSE 0 END) AS staff_events,
+                    SUM(CASE WHEN result = 'failure' THEN 1 ELSE 0 END) AS failed_events,
+                    SUM(CASE WHEN result = 'denied' THEN 1 ELSE 0 END) AS denied_events,
+                    SUM(CASE WHEN result = 'success' THEN 1 ELSE 0 END) AS success_events
+                FROM security_audit_logs
+            ");
+
+            if ($row) {
+                $defaultStats['total_events'] = (int) ($row['total_events'] ?? 0);
+                $defaultStats['member_events'] = (int) ($row['member_events'] ?? 0);
+                $defaultStats['staff_events'] = (int) ($row['staff_events'] ?? 0);
+                $defaultStats['failed_events'] = (int) ($row['failed_events'] ?? 0);
+                $defaultStats['denied_events'] = (int) ($row['denied_events'] ?? 0);
+                $defaultStats['success_events'] = (int) ($row['success_events'] ?? 0);
+            }
+        } catch (\Throwable $e) {}
+
+        try {
+            $legacyCount = (int) Database::value("SELECT COUNT(*) FROM audit_logs");
+            $defaultStats['legacy_total'] = $legacyCount;
+        } catch (\Throwable $e) {}
+
+        return $defaultStats;
+    }
+
 
     /**
      * Backup & Recovery Center — Read-Only Monitoring & Verification (Section 9)
@@ -1872,6 +2113,37 @@ class AdminControlCenterService
         }
         if (in_array($module, ['roles', 'permissions', 'users', 'staff_management', 'backups', 'mfa'], true)) {
             return 'medium';
+        }
+        return 'info';
+    }
+
+    public static function classifySecurityAuditCategory(string $eventType): string
+    {
+        if (str_starts_with($eventType, 'MEMBER_LOGIN') || str_starts_with($eventType, 'STAFF_LOGIN') || str_contains($eventType, '2FA') || str_contains($eventType, 'AUTH') || str_contains($eventType, 'SESSION')) {
+            return 'Authentication & MFA';
+        }
+        if (str_contains($eventType, 'PDPA')) {
+            return 'PDPA & Consent';
+        }
+        if (str_contains($eventType, 'FINANCIAL') || str_contains($eventType, 'DIVIDEND') || str_contains($eventType, 'EXPORT')) {
+            return 'Financial & Export';
+        }
+        if (str_contains($eventType, 'PERMISSION') || str_contains($eventType, 'ROLE') || str_contains($eventType, 'ACCESS_DENIED')) {
+            return 'Authorization & Access';
+        }
+        if (str_contains($eventType, 'BACKUP')) {
+            return 'Backup Operations';
+        }
+        return 'Security & Audit';
+    }
+
+    public static function classifySecurityAuditSeverity(string $eventType, string $result): string
+    {
+        if ($result === 'denied' || str_contains($eventType, 'LOCKED') || str_contains($eventType, 'LOCKOUT') || str_contains($eventType, 'DENIED')) {
+            return 'critical';
+        }
+        if ($result === 'failure' || str_contains($eventType, 'FAILURE') || str_contains($eventType, 'STEP_UP')) {
+            return 'warning';
         }
         return 'info';
     }

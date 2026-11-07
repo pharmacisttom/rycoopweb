@@ -6,7 +6,7 @@ import {
   MapPin, Phone, Mail, Clock, MessageSquare,
   Send, CheckCircle2, ChevronDown, ChevronUp, Search, ShieldCheck, AlertCircle
 } from 'lucide-react';
-import { FAQS, MEMBER_COMPLAINTS } from '../data/mockData';
+import { FAQS } from '../data/mockData';
 
 export default function ContactPage() {
   const { COOP_INFO } = usePublicInformation();
@@ -16,8 +16,17 @@ export default function ContactPage() {
   const [trackingId, setTrackingId] = useState('');
   const [trackingResult, setTrackingResult] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
-  const [faqs,setFaqs]=useState([]);
-  useEffect(()=>{let cancelled=false;fetchFaqs().then(result=>{if(!cancelled && result?.success)setFaqs(result.data.map(f=>({...f,q:f.question,a:f.answer})));});return()=>{cancelled=true;};},[]);
+  const [faqs, setFaqs] = useState(FAQS);
+  useEffect(() => {
+    if (import.meta.env.VITE_PUBLIC_STATIC_MODE === 'true') return undefined;
+    let cancelled = false;
+    fetchFaqs().then(result => {
+      if (!cancelled && result?.success && Array.isArray(result.data)) {
+        setFaqs(result.data.map(f => ({ ...f, q: f.question, a: f.answer })));
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const [form, setForm] = useState({
     name: '',
@@ -62,7 +71,7 @@ export default function ContactPage() {
     e.preventDefault();
     if (!trackingId) return;
 
-    let list = MEMBER_COMPLAINTS;
+    let list = [];
     try {
       const saved = localStorage.getItem('coop_member_complaints');
       if (saved) list = JSON.parse(saved);

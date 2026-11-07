@@ -11,6 +11,7 @@ use RuntimeException;
 class Database
 {
     private static ?PDO $instance = null;
+    private static ?array $tablesCache = null;
 
     public static function connect(): PDO
     {
@@ -47,6 +48,19 @@ class Database
     public static function pdo(): PDO
     {
         return self::connect();
+    }
+
+    public static function hasTable(string $table): bool
+    {
+        if (self::$tablesCache === null) {
+            try {
+                $tables = self::query("SHOW TABLES");
+                self::$tablesCache = array_map(fn($t) => strtolower((string)array_values($t)[0]), $tables);
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+        return in_array(strtolower($table), self::$tablesCache, true);
     }
 
     public static function query(string $sql, array $params = []): array

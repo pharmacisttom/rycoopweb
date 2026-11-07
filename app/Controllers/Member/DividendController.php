@@ -4,6 +4,7 @@ namespace App\Controllers\Member;
 use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Database;
+use App\Core\Session;
 use App\Services\MemberPortalService;
 
 class DividendController extends Controller
@@ -15,9 +16,21 @@ class DividendController extends Controller
             $this->response->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
             return;
         }
+
         $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());
         if (!$member) {
             $this->response->json(['success' => false, 'code' => 'MEMBER_NOT_LINKED', 'message' => 'ไม่พบข้อมูลสมาชิก กรุณาติดต่อสหกรณ์'], 404);
+            return;
+        }
+
+        // Security gate: Require secure password setup before accessing financial dividends if explicitly required
+        if (\App\Services\MemberSecurityService::isPasswordChangeRequired((int)Auth::id())) {
+            Session::set('requires_password_change', true);
+            $this->response->json([
+                'success' => false,
+                'code' => 'PASSWORD_CHANGE_REQUIRED',
+                'message' => 'กรุณาเปลี่ยนรหัสผ่านเริ่มต้นเป็นรหัสผ่านส่วนตัวก่อนเข้าถึงข้อมูลทางการเงิน'
+            ], 403);
             return;
         }
         $rows = Database::query('SELECT year, details_json, imported_at FROM member_dividends WHERE member_id = ? ORDER BY year DESC', [$member['id']]);
@@ -26,6 +39,9 @@ class DividendController extends Controller
             unset($data['id_card'], $data['name'], $data['department'], $data['member_no'], $data['source_row']);
             return $data;
         }, $rows);
-        $this->response->json(['success' => true, 'member' => ['member_no' => $member['member_no'], 'name' => trim(($member['prefix'] ?? '') . $member['first_name'] . ' ' . $member['last_name'])], 'records' => $records]);
+        $maskedMemberNo = \App\Services\MemberPiiMaskingService::maskMemberNo((string)$member['member_no']);
+        $maskedName = \App\Services\MemberPiiMaskingService::maskMemberName($member['prefix'] ?? '', $member['first_name'] ?? '', $member['last_name'] ?? '');
+        \App\Services\SecurityAuditService::recordMemberFinancialView((int)Auth::id(), 'dividends', $maskedMemberNo);
+        $this->response->json(['success' => true, 'member' => ['member_no' => $maskedMemberNo, 'name' => $maskedName], 'records' => $records]);
     }
 }
