@@ -63,11 +63,18 @@ class ControlCenterApiController extends Controller
 
         try {
             $payload = $callback();
-            $this->response->json([
+            $response = [
                 'success' => true,
                 'correlation_id' => $correlationId,
                 'data' => $payload,
-            ]);
+            ];
+            if (is_array($payload) && !array_is_list($payload)) {
+                $response = array_merge($payload, $response);
+                $response['data'] = $payload;
+                $response['success'] = true;
+                $response['correlation_id'] = $correlationId;
+            }
+            $this->response->json($response);
         } catch (\App\Exceptions\SecurityGateException $e) {
             $this->response->json([
                 'success' => false,
@@ -129,11 +136,18 @@ class ControlCenterApiController extends Controller
 
         try {
             $payload = $callback();
-            $this->response->json([
+            $response = [
                 'success' => true,
                 'correlation_id' => $correlationId,
                 'data' => $payload,
-            ]);
+            ];
+            if (is_array($payload) && !array_is_list($payload)) {
+                $response = array_merge($payload, $response);
+                $response['data'] = $payload;
+                $response['success'] = true;
+                $response['correlation_id'] = $correlationId;
+            }
+            $this->response->json($response);
         } catch (\App\Exceptions\SecurityGateException $e) {
             $this->response->json([
                 'success' => false,
@@ -377,6 +391,37 @@ class ControlCenterApiController extends Controller
                     }
                 }
 
+                $catalog = [
+                    [
+                        'id' => 'REP-FIN-01',
+                        'title' => 'รายงานสถิติทางการเงินและอัตราดอกเบี้ย',
+                        'description' => 'สถิติทางการเงินรายเดือน ทุนเรือนหุ้น เงินฝาก เงินกู้ และสินทรัพย์รวม',
+                        'category' => 'การเงิน (Finance)',
+                        'authorized' => $canFinance,
+                    ],
+                    [
+                        'id' => 'REP-DIV-02',
+                        'title' => 'รายงานสรุปการจัดสรรเงินปันผลประจำปี',
+                        'description' => 'ข้อมูลประวัติการนำเข้าเงินปันผลรายปีและจำนวนสมาชิกผู้มีสิทธิ์',
+                        'category' => 'สมาชิกและเงินปันผล (Dividends)',
+                        'authorized' => $canMembers || $canFinance,
+                    ],
+                    [
+                        'id' => 'REP-SEC-03',
+                        'title' => 'รายงานการตรวจสอบความมั่นคงปลอดภัยและบันทึกประวัติ',
+                        'description' => 'บันทึก Audit Logs และ Security Events สำหรับการตรวจสอบภายใน',
+                        'category' => 'ความปลอดภัยและการตรวจสอบ (Security & Audit)',
+                        'authorized' => $canAudit,
+                    ],
+                    [
+                        'id' => 'REP-SYS-04',
+                        'title' => 'รายงานความพร้อมของระบบและการสำรองข้อมูล',
+                        'description' => 'สถานะความสมบูรณ์ของฐานข้อมูล เซอร์วิสหลัก และประวัติการสำรองข้อมูล',
+                        'category' => 'ระบบโครงสร้างพื้นฐาน (System & Backup)',
+                        'authorized' => $canAudit,
+                    ],
+                ];
+
                 return [
                     'generated_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
                     'permissions' => [
@@ -384,6 +429,7 @@ class ControlCenterApiController extends Controller
                         'can_audit' => $canAudit,
                         'can_members' => $canMembers,
                     ],
+                    'catalog' => $catalog,
                     'financial_statistics' => $finStats,
                     'dividend_years' => $dividendSummary,
                 ];

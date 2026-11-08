@@ -495,26 +495,28 @@ export default function AdminControlCenterPage({ section: propSection }) {
           memberAdminApi('/api/admin/dashboard/summary', { signal }),
           memberAdminApi(`/api/admin/dashboard/trends?days=${days}`, { signal }),
         ]);
-        setSummaryData(sum);
-        setTrendsData(trn);
+        setSummaryData(sum?.data || sum);
+        setTrendsData(trn?.data || trn);
       } else if (section === 'visitor-analytics') {
         const vis = await memberAdminApi(`/api/admin/analytics/visitors?days=${days}`, { signal });
-        setVisitorAnalyticsData(vis);
+        setVisitorAnalyticsData(vis?.data || vis);
       } else if (section === 'operations') {
         const ops = await memberAdminApi('/api/admin/operations/overview', { signal });
-        setOpsData(ops);
+        setOpsData(ops?.data || ops);
       } else if (section === 'users') {
         if(user?.role==='super_admin') {
           setStaffDirData(null);
           const staffResult=await memberAdminApi('/api/admin/staff/',{signal});
-          if(!Array.isArray(staffResult.staff)||!Array.isArray(staffResult.invitations)||!Array.isArray(staffResult.roles))throw new Error('เซิร์ฟเวอร์ส่งรายชื่อเจ้าหน้าที่ไม่ครบถ้วน');
-          setStaffDirData(staffResult);
+          const unwrapped = staffResult?.data || staffResult;
+          if(!Array.isArray(unwrapped.staff)||!Array.isArray(unwrapped.invitations)||!Array.isArray(unwrapped.roles))throw new Error('เซิร์ฟเวอร์ส่งรายชื่อเจ้าหน้าที่ไม่ครบถ้วน');
+          setStaffDirData(unwrapped);
         }
       } else if (section === 'roles' || section === 'permissions') {
-        setPermMatrixData(await memberAdminApi('/api/admin/access/permissions',{signal}));
+        const perm = await memberAdminApi('/api/admin/access/permissions',{signal});
+        setPermMatrixData(perm?.data || perm);
       } else if (section === 'departments') {
         const dept = await memberAdminApi('/api/admin/departments', { signal });
-        setDeptData(dept);
+        setDeptData(dept?.data || dept);
       } else if (section === 'audit-logs') {
         const params = new URLSearchParams({
           page: String(auditPage),
@@ -528,29 +530,29 @@ export default function AdminControlCenterPage({ section: propSection }) {
         if (auditDateTo) params.set('to', auditDateTo);
         if (auditQuery.trim()) params.set('q', auditQuery.trim());
         const logs = await memberAdminApi(`/api/admin/audit-logs/center?${params.toString()}`, { signal });
-        setAuditData(logs);
+        setAuditData(logs?.data || logs);
       } else if (section === 'security') {
         const sec = await memberAdminApi('/api/admin/security/overview', { signal });
-        setSecurityData(sec);
+        setSecurityData(sec?.data || sec);
       } else if (section === 'sessions') {
         const ses = await memberAdminApi('/api/admin/security/sessions', { signal });
-        setSessionsData(ses);
+        setSessionsData(ses?.data || ses);
       } else if (section === 'mfa') {
         const mfa = await memberAdminApi('/api/admin/security/mfa', { signal });
-        setMfaData(mfa);
+        setMfaData(mfa?.data || mfa);
       } else if (section === 'backups' || section === 'backups-history') {
         const bkp = await memberAdminApi('/api/admin/backups', { signal });
-        setBackupData(bkp);
+        setBackupData(bkp?.data || bkp);
       } else if (section === 'health' || section === 'settings') {
         const hlt = await memberAdminApi('/api/admin/system/health', { signal });
-        setHealthData(hlt);
+        setHealthData(hlt?.data || hlt);
       } else if (section === 'reports') {
         const [rep, sum] = await Promise.all([
           memberAdminApi('/api/admin/reports/catalog', { signal }),
           memberAdminApi('/api/admin/dashboard/summary', { signal }).catch(() => null),
         ]);
-        setReportsData(rep);
-        if (sum) setSummaryData(sum);
+        setReportsData(rep?.data || rep);
+        if (sum) setSummaryData(sum?.data || sum);
       }
     } catch (err) {
       if (err?.name !== 'AbortError') {
@@ -2137,7 +2139,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 {backupData.latest_backup_at || 'ยังไม่มีข้อมูล'}
               </div>
               <div className="acc-kpi-sub">
-                <span>อายุข้อมูล: {backupData.freshness_hours !== null ? `${backupData.freshness_hours} ชม.` : 'ยังไม่มีข้อมูล'}</span>
+                <span>อายุข้อมูล: {backupData.freshness_hours != null ? `${backupData.freshness_hours} ชม.` : 'ยังไม่มีข้อมูล'}</span>
               </div>
             </article>
             <article className="acc-kpi-card">
@@ -2227,116 +2229,120 @@ export default function AdminControlCenterPage({ section: propSection }) {
       {/* ===================================================================
           10. SYSTEM HEALTH (/admin/health)
          =================================================================== */}
-      {!loading && section === 'health' && healthData && (
-        <>
-          <div className="acc-kpi-grid">
-            <article className="acc-kpi-card">
-              <div className="acc-kpi-top">
-                <span className="acc-kpi-label">สถานะภาพรวมของแอปพลิเคชัน</span>
-                <span className="acc-kpi-icon success"><Activity size={18} /></span>
-              </div>
-              <div className="acc-kpi-value">{healthData.overall_label}</div>
-              <div className="acc-kpi-sub"><span>{healthData.summary_text}</span></div>
-            </article>
-            <article className="acc-kpi-card">
-              <div className="acc-kpi-top">
-                <span className="acc-kpi-label">หน่วยความจำ PHP Process</span>
-                <span className="acc-kpi-icon info"><Server size={18} /></span>
-              </div>
-              <div className="acc-kpi-value">{healthData.resources?.php_memory_usage_mb} MB</div>
-              <div className="acc-kpi-sub"><span>Limit: {healthData.resources?.php_memory_limit}</span></div>
-            </article>
-            <article className="acc-kpi-card">
-              <div className="acc-kpi-top">
-                <span className="acc-kpi-label">พื้นที่ดิสก์ว่าง (Disk Free Space)</span>
-                <span className="acc-kpi-icon info"><Server size={18} /></span>
-              </div>
-              <div className="acc-kpi-value">
-                {healthData.resources?.disk_free_gb !== null ? `${healthData.resources.disk_free_gb} GB` : 'ไม่พร้อมใช้งาน'}
-              </div>
-              <div className="acc-kpi-sub">
-                <span>ใช้งานแล้ว: {healthData.resources?.disk_used_percent !== null ? `${healthData.resources.disk_used_percent}%` : '-'}</span>
-              </div>
-            </article>
-            <article className="acc-kpi-card">
-              <div className="acc-kpi-top">
-                <span className="acc-kpi-label">CPU Load Average</span>
-                <span className="acc-kpi-icon info"><Activity size={18} /></span>
-              </div>
-              <div className="acc-kpi-value" style={{ fontSize: '1.1rem' }}>{healthData.resources?.cpu_load}</div>
-              <div className="acc-kpi-sub"><span>ตรวจสอบจากระบบปฏิบัติการ</span></div>
-            </article>
-          </div>
-
-          <div className="acc-grid-2">
-            <section className="acc-card">
-              <div className="acc-card-header">
-                <div>
-                  <h2 className="acc-card-title">สถานะบริการหลัก (Core Service Readiness)</h2>
-                  <p className="acc-card-subtitle">ตรวจสอบการทำงานของ PHP-FPM, Database, Schema และ Backup</p>
+      {!loading && section === 'health' && healthData && (() => {
+        const health = healthData?.data || healthData;
+        const res = health?.resources || {};
+        return (
+          <>
+            <div className="acc-kpi-grid">
+              <article className="acc-kpi-card">
+                <div className="acc-kpi-top">
+                  <span className="acc-kpi-label">สถานะภาพรวมของแอปพลิเคชัน</span>
+                  <span className="acc-kpi-icon success"><Activity size={18} /></span>
                 </div>
-              </div>
-              <div className="acc-table-wrap">
-                <table className="acc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">บริการ (Service)</th>
-                      <th scope="col">สถานะ</th>
-                      <th scope="col">รายละเอียด</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(healthData.services || []).map((svc) => (
-                      <tr key={svc.name}>
-                        <td><strong>{svc.name}</strong></td>
-                        <td>
-                          <span className={`acc-badge-pill ${svc.status === 'healthy' ? 'success' : 'warning'}`}>
-                            {svc.status}
-                          </span>
-                        </td>
-                        <td>{svc.detail}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="acc-card">
-              <div className="acc-card-header">
-                <div>
-                  <h2 className="acc-card-title">สถานะ Scheduled Jobs & Background Tasks</h2>
-                  <p className="acc-card-subtitle">ตรวจสอบการทำงานของงานตารางเวลา</p>
+                <div className="acc-kpi-value">{health.overall_label || 'พร้อมใช้งาน'}</div>
+                <div className="acc-kpi-sub"><span>{health.summary_text || 'ระบบทำงานปกติ'}</span></div>
+              </article>
+              <article className="acc-kpi-card">
+                <div className="acc-kpi-top">
+                  <span className="acc-kpi-label">หน่วยความจำ PHP Process</span>
+                  <span className="acc-kpi-icon info"><Server size={18} /></span>
                 </div>
-              </div>
-              <div className="acc-table-wrap">
-                <table className="acc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">ชื่องาน (Job Name)</th>
-                      <th scope="col">ตารางเวลา</th>
-                      <th scope="col">สถานะ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(healthData.scheduled_jobs || []).map((job) => (
-                      <tr key={job.job}>
-                        <td>
-                          <strong>{job.job}</strong>
-                          <br />
-                          <small><code>{job.command}</code></small>
-                        </td>
-                        <td>{job.schedule}</td>
-                        <td><span className="acc-badge-pill">{job.status}</span></td>
+                <div className="acc-kpi-value">{res.php_memory_usage_mb != null ? `${res.php_memory_usage_mb} MB` : 'ไม่พร้อมใช้งาน'}</div>
+                <div className="acc-kpi-sub"><span>Limit: {res.php_memory_limit || '-'}</span></div>
+              </article>
+              <article className="acc-kpi-card">
+                <div className="acc-kpi-top">
+                  <span className="acc-kpi-label">พื้นที่ดิสก์ว่าง (Disk Free Space)</span>
+                  <span className="acc-kpi-icon info"><Server size={18} /></span>
+                </div>
+                <div className="acc-kpi-value">
+                  {res.disk_free_gb != null ? `${res.disk_free_gb} GB` : 'ไม่พร้อมใช้งาน'}
+                </div>
+                <div className="acc-kpi-sub">
+                  <span>ใช้งานแล้ว: {res.disk_used_percent != null ? `${res.disk_used_percent}%` : '-'}</span>
+                </div>
+              </article>
+              <article className="acc-kpi-card">
+                <div className="acc-kpi-top">
+                  <span className="acc-kpi-label">CPU Load Average</span>
+                  <span className="acc-kpi-icon info"><Activity size={18} /></span>
+                </div>
+                <div className="acc-kpi-value" style={{ fontSize: '1.1rem' }}>{res.cpu_load || 'ไม่พร้อมใช้งาน'}</div>
+                <div className="acc-kpi-sub"><span>ตรวจสอบจากระบบปฏิบัติการ</span></div>
+              </article>
+            </div>
+
+            <div className="acc-grid-2">
+              <section className="acc-card">
+                <div className="acc-card-header">
+                  <div>
+                    <h2 className="acc-card-title">สถานะบริการหลัก (Core Service Readiness)</h2>
+                    <p className="acc-card-subtitle">ตรวจสอบการทำงานของ PHP-FPM, Database, Schema และ Backup</p>
+                  </div>
+                </div>
+                <div className="acc-table-wrap">
+                  <table className="acc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">บริการ (Service)</th>
+                        <th scope="col">สถานะ</th>
+                        <th scope="col">รายละเอียด</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </>
-      )}
+                    </thead>
+                    <tbody>
+                      {(health.services || []).map((svc) => (
+                        <tr key={svc.name}>
+                          <td><strong>{svc.name}</strong></td>
+                          <td>
+                            <span className={`acc-badge-pill ${svc.status === 'healthy' ? 'success' : 'warning'}`}>
+                              {svc.status}
+                            </span>
+                          </td>
+                          <td>{svc.detail}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="acc-card">
+                <div className="acc-card-header">
+                  <div>
+                    <h2 className="acc-card-title">สถานะ Scheduled Jobs & Background Tasks</h2>
+                    <p className="acc-card-subtitle">ตรวจสอบการทำงานของงานตารางเวลา</p>
+                  </div>
+                </div>
+                <div className="acc-table-wrap">
+                  <table className="acc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">ชื่องาน (Job Name)</th>
+                        <th scope="col">ตารางเวลา</th>
+                        <th scope="col">สถานะ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(health.scheduled_jobs || []).map((job) => (
+                        <tr key={job.job}>
+                          <td>
+                            <strong>{job.job}</strong>
+                            <br />
+                            <small><code>{job.command}</code></small>
+                          </td>
+                          <td>{job.schedule}</td>
+                          <td><span className="acc-badge-pill">{job.status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ===================================================================
           11. COMPLIANCE & OPERATIONAL REPORTS (/admin/reports)
