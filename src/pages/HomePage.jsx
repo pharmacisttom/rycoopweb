@@ -383,7 +383,7 @@ export default function HomePage() {
             alignItems: 'center'
           }} className="chairperson-welcome-grid">
 
-            {/* Left: Message & Vision */}
+            {/* Left: Message, Vision & Mission */}
             <div>
               <div style={{
                 display: 'inline-flex',
@@ -395,11 +395,11 @@ export default function HomePage() {
                 fontSize: '0.85rem',
                 fontWeight: 600,
                 color: '#1D4ED8',
-                marginBottom: '1rem',
+                marginBottom: '0.75rem',
                 border: '1px solid #BFDBFE'
               }}>
                 <Sparkles size={16} />
-                <span>สารจากประธานกรรมการสหกรณ์</span>
+                <span>แผนยุทธศาสตร์ ประจำปี 2569 - 2573</span>
               </div>
 
               <h2 style={{
@@ -407,23 +407,93 @@ export default function HomePage() {
                 fontWeight: 800,
                 color: '#0F2B5C',
                 lineHeight: 1.3,
-                marginBottom: '1rem'
+                marginBottom: '0.85rem'
               }}>
                 {COOP_INFO.nameTh}
               </h2>
 
-              <p style={{
-                fontSize: '1.05rem',
-                color: '#334155',
-                lineHeight: 1.7,
-                marginBottom: '1.5rem'
+              {/* Vision & Motto Highlight Box */}
+              <div style={{
+                background: 'linear-gradient(135deg, #F0F7FF 0%, #E6F0FA 100%)',
+                borderLeft: '4px solid #1769C2',
+                borderRadius: '0.75rem',
+                padding: '1rem 1.25rem',
+                marginBottom: '1.25rem',
+                boxShadow: '0 4px 14px rgba(23, 105, 194, 0.08)'
               }}>
-                {coopInfo.slogan || FALLBACK_COOP.slogan} สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด มุ่งมั่นดำเนินงานตามหลักธรรมาภิบาล พัฒนาสู่ระบบสหกรณ์ดิจิทัลที่ทันสมัย สะดวก รวดเร็ว และปลอดภัย พร้อมส่งเสริมความมั่นคงทางการเงินและสวัสดิการที่ครอบคลุมทุกช่วงชีวิตของมวลสมาชิก
-              </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                  <Award size={18} style={{ color: '#1769C2' }} />
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#17315A' }}>
+                    วิสัยทัศน์ (Vision)
+                  </span>
+                </div>
+                <p style={{
+                  fontSize: '1.15rem',
+                  fontWeight: 700,
+                  color: '#0F2B5C',
+                  margin: '0 0 0.5rem 0',
+                  lineHeight: 1.5
+                }}>
+                  "เป็นสหกรณ์ชั้นนำ ก้าวล้ำเทคโนโลยี เพื่อคุณภาพชีวิตที่ดีของสมาชิก"
+                </p>
+                <div style={{ fontSize: '0.9rem', color: '#475569', borderTop: '1px solid rgba(23, 105, 194, 0.15)', paddingTop: '0.45rem' }}>
+                  <strong style={{ color: '#1E293B' }}>คำขวัญ (Motto):</strong> การเงินมั่นคง ซื่อตรงโปร่งใส บริการฉับไว ใส่ใจสมาชิก
+                </div>
+              </div>
 
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+              {/* Mission (พันธกิจ 6 ข้อ) */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  color: '#1E293B',
+                  marginBottom: '0.65rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <ShieldCheck size={18} style={{ color: '#0284C7' }} />
+                  <span>พันธกิจ (Mission)</span>
+                </h3>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: '0.5rem 1rem'
+                }}>
+                  {[
+                    'เสริมสร้างความมั่นคงด้านการเงิน โดยคำนึงถึงประโยชน์ของสมาชิก',
+                    'พัฒนาประสิทธิภาพการให้บริการแก่สมาชิก',
+                    'จัดสวัสดิการที่เหมาะสมให้แก่สมาชิก',
+                    'ส่งเสริมการมีส่วนร่วมของสมาชิก',
+                    'พัฒนาระบบการบริหารจัดการตามหลักธรรมาภิบาล',
+                    'พัฒนาระบบเทคโนโลยีสารสนเทศ'
+                  ].map((mission, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.875rem', color: '#334155' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: '#DBEAFE',
+                        color: '#1D4ED8',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        marginTop: '2px'
+                      }}>
+                        {idx + 1}
+                      </span>
+                      <span style={{ lineHeight: 1.45 }}>{mission}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                 <Link to="/about" className="btn btn-primary" style={{ background: '#1769C2', borderColor: '#1769C2', color: '#ffffff' }}>
-                  <span>วิสัยทัศน์และคณะกรรมการ</span>
+                  <span>ประวัติและวิสัยทัศน์</span>
                   <ArrowRight size={16} />
                 </Link>
                 <Link to="/documents?category=annual_reports" className="btn btn-outline" style={{ color: '#1769C2', borderColor: '#BFDBFE', background: '#F8FAFC' }}>

@@ -66,18 +66,31 @@ export default function AboutPage() {
         </div>
 
         <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2.5rem' }}>
-          <h2 style={{ fontSize: '1.35rem', color: 'var(--primary-800)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.85rem', background: 'var(--primary-100)', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-700)', marginBottom: '1rem' }}>
+            <span>แผนยุทธศาสตร์ ประจำปี 2569 - 2573</span>
+          </div>
+          <h2 style={{ fontSize: '1.35rem', color: 'var(--primary-800)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Shield size={21} aria-hidden="true" />
-            วิสัยทัศน์และพันธกิจ
+            วิสัยทัศน์ (Vision)
           </h2>
-          <blockquote style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-main)', borderLeft: '4px solid var(--accent-gold)', paddingLeft: '1rem', fontStyle: 'italic', marginBottom: '1.5rem' }}>
-            "เป็นสถาบันการเงินชั้นนำของบุคลากรสาธารณสุข บริหารงานโปร่งใส ใช้เทคโนโลยีดิจิทัล พัฒนาคุณภาพชีวิตสมาชิกอย่างยั่งยืน"
+          <blockquote style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', borderLeft: '4px solid var(--accent-gold)', paddingLeft: '1rem', marginBottom: '0.75rem' }}>
+            "เป็นสหกรณ์ชั้นนำ ก้าวล้ำเทคโนโลยี เพื่อคุณภาพชีวิตที่ดีของสมาชิก"
           </blockquote>
-          <ul style={{ listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem 1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>ส่งเสริมการออมทรัพย์และสร้างวินัยทางการเงินแก่สมาชิก</span></li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>ให้บริการสินเชื่ออัตราดอกเบี้ยเป็นธรรม เพื่อสวัสดิการและที่อยู่อาศัย</span></li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>จัดสวัสดิการที่ครอบคลุมทุกช่วงชีวิตของสมาชิกและครอบครัว</span></li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>พัฒนาระบบเทคโนโลยีดิจิทัลเพื่อความสะดวกรวดเร็วและปลอดภัย</span></li>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', marginBottom: '1.5rem', paddingLeft: '1rem' }}>
+            <strong style={{ color: 'var(--text-main)' }}>คำขวัญ (Motto):</strong> การเงินมั่นคง ซื่อตรงโปร่งใส บริการฉับไว ใส่ใจสมาชิก
+          </p>
+
+          <h3 style={{ fontSize: '1.1rem', color: 'var(--primary-800)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Award size={19} aria-hidden="true" />
+            พันธกิจ (Mission)
+          </h3>
+          <ul style={{ listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem 1.5rem', fontSize: '0.925rem', color: 'var(--text-main)' }}>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>1. เสริมสร้างความมั่นคงด้านการเงิน โดยคำนึงถึงประโยชน์ของสมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>2. พัฒนาประสิทธิภาพการให้บริการแก่สมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>3. จัดสวัสดิการที่เหมาะสมให้แก่สมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>4. ส่งเสริมการมีส่วนร่วมของสมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>5. พัฒนาระบบการบริหารจัดการตามหลักธรรมาภิบาล</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>6. พัฒนาระบบเทคโนโลยีสารสนเทศ</span></li>
           </ul>
         </div>
 
