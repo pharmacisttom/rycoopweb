@@ -441,7 +441,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Mission (พันธกิจ 6 ข้อ) */}
+              {/* Mission (พันธกิจ 7 ข้อ) */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <h3 style={{
                   fontSize: '0.95rem',
@@ -466,7 +466,8 @@ export default function HomePage() {
                     'จัดสวัสดิการที่เหมาะสมให้แก่สมาชิก',
                     'ส่งเสริมการมีส่วนร่วมของสมาชิก',
                     'พัฒนาระบบการบริหารจัดการตามหลักธรรมาภิบาล',
-                    'พัฒนาระบบเทคโนโลยีสารสนเทศ'
+                    'พัฒนาระบบเทคโนโลยีสารสนเทศ',
+                    'สนับสนุนกิจกรรมเพื่อชุมชน สังคมและสิ่งแวดล้อม'
                   ].map((mission, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.875rem', color: '#334155' }}>
                       <span style={{

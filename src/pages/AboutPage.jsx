@@ -91,6 +91,7 @@ export default function AboutPage() {
             <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>4. ส่งเสริมการมีส่วนร่วมของสมาชิก</span></li>
             <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>5. พัฒนาระบบการบริหารจัดการตามหลักธรรมาภิบาล</span></li>
             <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>6. พัฒนาระบบเทคโนโลยีสารสนเทศ</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>7. สนับสนุนกิจกรรมเพื่อชุมชน สังคมและสิ่งแวดล้อม</span></li>
           </ul>
         </div>
 
