@@ -94,6 +94,14 @@ $router->get('/api/public/news', 'Api\\SpaApiController@news');
 $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements');
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
 $router->get('/api/public/welfare', 'Api\\SpaApiController@welfare');
+
+$router->group(['prefix'=>'api/admin/welfare','middleware'=>[AuthMiddleware::class,new RoleMiddleware(['super_admin'])]],function(\App\Core\Router $r){
+    $r->get('','Admin\\WelfareCmsController@index');
+    $r->post('','Admin\\WelfareCmsController@store',[CsrfMiddleware::class]);
+    $r->post('/{id}/update','Admin\\WelfareCmsController@update',[CsrfMiddleware::class]);
+    $r->post('/{id}/delete','Admin\\WelfareCmsController@disable',[CsrfMiddleware::class]);
+});
+
 $router->get('/api/public/faqs', 'Api\\SpaApiController@faqs');
 $router->get('/api/public/board-members', 'Api\\SpaApiController@boardMembers');
 $router->get('/api/public/statistics', 'Api\\SpaApiController@statistics');

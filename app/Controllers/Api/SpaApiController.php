@@ -198,12 +198,12 @@ class SpaApiController extends Controller
      */
     public function welfare(): void
     {
-        $types = [];
         try {
-            $types = Database::query("SELECT id, name, description, max_amount, icon, requirements FROM welfare_types WHERE status = 'active' ORDER BY id ASC");
-        } catch (\Throwable $e) {}
-
-        $this->json(['success' => true, 'data' => $types]);
+            $items=Database::query("SELECT id,category,title,slug,short_description,full_description,benefit_amount,eligibility,required_documents,application_process,contact_info,sort_order FROM welfare WHERE status='active' AND deleted_at IS NULL ORDER BY sort_order,id");
+            $this->json(['success'=>true,'data'=>$items]);
+        } catch (\Throwable $e) {
+            $this->json(['success'=>false,'message'=>'ยังไม่สามารถโหลดข้อมูลสวัสดิการได้'],503);
+        }
     }
 
     /**
