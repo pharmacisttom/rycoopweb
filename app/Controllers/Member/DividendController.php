@@ -5,6 +5,7 @@ use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Database;
 use App\Services\MemberPortalService;
+use App\Services\MemberPrivacyService;
 
 class DividendController extends Controller
 {
@@ -13,6 +14,13 @@ class DividendController extends Controller
         header('Cache-Control: no-store, private');
         if (!Auth::check() || (Auth::user()['role_slug'] ?? '') !== 'member' || (Auth::user()['status'] ?? '') !== 'active') {
             $this->response->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+            return;
+        }
+        // Deny financial details until the authenticated member has acknowledged
+        // the currently published privacy notice. Optional consent is not required.
+        if (!config('features.member_login', false) || !MemberPrivacyService::acknowledged((int)Auth::id())) {
+            $this->response->json(['success' => false, 'code' => 'PRIVACY_NOTICE_REQUIRED',
+                'message' => 'กรุณารับทราบประกาศความเป็นส่วนตัวก่อนดูข้อมูลปันผล'], 403);
             return;
         }
         $member = MemberPortalService::getActiveMemberByUserId((int)Auth::id());

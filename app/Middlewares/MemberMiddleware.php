@@ -10,6 +10,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Services\MemberPortalService;
+use App\Services\MemberPrivacyService;
 
 class MemberMiddleware
 {
@@ -101,6 +102,22 @@ class MemberMiddleware
             }
             Session::flash('error', 'ไม่พบข้อมูลสมาชิกที่เปิดใช้งานหรือเชื่อมโยงกับบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่');
             $response->redirect(url('login'));
+            return false;
+        }
+
+        // Every authenticated member-only screen/API must honor the latest privacy notice,
+        // not just the dividend endpoint. Privacy status/record routes deliberately run
+        // without MemberMiddleware to avoid an acknowledgement deadlock.
+        if (!config('features.member_login', false) || !MemberPrivacyService::acknowledged((int)Auth::id())) {
+            if ($request->isAjax()) {
+                $response->json([
+                    'success' => false,
+                    'code' => 'PRIVACY_NOTICE_REQUIRED',
+                    'message' => 'กรุณารับทราบประกาศความเป็นส่วนตัวก่อนใช้บริการสมาชิก',
+                ], 403);
+                return false;
+            }
+            $response->redirect(url('member/dividends'));
             return false;
         }
 
