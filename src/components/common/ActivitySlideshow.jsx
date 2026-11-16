@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import SafeImage from './SafeImage';
 import './ActivitySlideshow.css';
 
 export default function ActivitySlideshow({ images = [], title = 'ภาพกิจกรรม' }) {
@@ -58,7 +59,7 @@ export default function ActivitySlideshow({ images = [], title = 'ภาพก�
     <div className="activity-thumbnails" aria-label="เลือกภาพ">
       {images.map((item, position) => <button type="button" key={`${item.src}-${position}`} aria-label={`ภาพที่ ${position + 1}`} aria-pressed={index === position}
         onClick={() => { setPlaying(false); setIndex(position); }}>
-        <img src={item.thumbnail || item.src} alt="" loading="lazy" />
+        <SafeImage src={item.thumbnail || item.src} alt="" loading="lazy" />
       </button>)}
     </div>
     <dialog ref={lightbox} className="activity-lightbox" aria-label={`${title} ภาพขยาย`} onKeyDown={keyboard}

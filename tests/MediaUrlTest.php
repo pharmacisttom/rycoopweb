@@ -63,5 +63,27 @@ foreach (['../secret.php', 'news/../../secret.php', 'C:\\Windows\\file.txt', 'ht
     }
 }
 
+// Shared release storage must remain opt-in and may never accept path traversal.
+$previousRoot = getenv('RYCOOP_UPLOAD_ROOT');
+putenv('RYCOOP_UPLOAD_ROOT=/tmp/rycoop-media-fixture/uploads');
+try {
+    $shared = storage_upload_path('news/gallery/sample.webp');
+    if ($shared !== '/tmp/rycoop-media-fixture/uploads/news/gallery/sample.webp') {
+        $failed++; echo "FAIL: configured shared upload path was not used." . PHP_EOL;
+    }
+    foreach (['/tmp/../private', 'relative/uploads', '/'] as $badRoot) {
+        putenv('RYCOOP_UPLOAD_ROOT=' . $badRoot);
+        try {
+            storage_upload_path('news/gallery/sample.webp');
+            $failed++; echo "FAIL: invalid shared upload root accepted." . PHP_EOL;
+        } catch (InvalidArgumentException $e) {
+            // Expected.
+        }
+    }
+} finally {
+    if ($previousRoot === false) putenv('RYCOOP_UPLOAD_ROOT');
+    else putenv('RYCOOP_UPLOAD_ROOT=' . $previousRoot);
+}
+
 if ($failed > 0) exit(1);
 echo 'Media URL tests passed (' . count($cases) . ' cases).' . PHP_EOL;
