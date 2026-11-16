@@ -43,7 +43,7 @@ export default function AdminActivitiesPage() {
   };
   const save = async (e) => {
     e.preventDefault(); setBusy(true); setError('');
-    try { await memberAdminApi(`/api/admin/activities/${selected.id}/update`, { data: form }); await refresh(); setNotice('บันทึกเรียบร้อยแล้ว'); }
+    try { await memberAdminApi(`/api/admin/activities/${selected.id}/update`, { data: form }); await chooseAlbum({ id: selected.id }); await refresh(); setNotice('บันทึกเรียบร้อยแล้ว'); }
     catch (err) { setError(err.message); } finally { setBusy(false); }
   };
   const setFiles = (list) => {
@@ -69,11 +69,16 @@ export default function AdminActivitiesPage() {
       } catch (err) { failures++; next[i] = { ...next[i], state: 'failed', message: err.message }; }
       setQueue([...next]);
     }
-    setBusy(false);
-    await chooseAlbum(selected);
+    try {
+      await chooseAlbum(selected);
+      await refresh();
+    } catch (err) {
+      setError(`อัปโหลดเสร็จแล้วแต่โหลดรายการภาพใหม่ไม่สำเร็จ: ${err.message}`);
+    } finally {
+      setBusy(false);
+    }
     if (failures) { setQueue(next.filter((row) => row.state === 'failed')); setError(`อัปโหลดไม่สำเร็จ ${failures} ภาพ สามารถลองใหม่ได้`); }
-    else setNotice('อัปโหลดรูปภาพทั้งหมดสำเร็จ');
-    await refresh();
+    else setNotice('ส่งไฟล์ครบแล้ว กรุณาตรวจภาพที่บันทึกในอัลบั้ม');
   };
   const publish = async () => {
     if (!selected || !window.confirm('ยืนยันเผยแพร่อัลบั้มนี้ต่อสาธารณะ?')) return;
@@ -93,7 +98,8 @@ export default function AdminActivitiesPage() {
       await chooseAlbum({ id: selected.id });
       await refresh();
       setNotice('บันทึกการเปลี่ยนแปลงสำเร็จ');
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+      return true;
+    } catch (e) { setError(e.message); return false; } finally { setBusy(false); }
   };
   const changeCaption = async (photo) => {
     const caption = window.prompt('คำบรรยายภาพ (สูงสุด 500 ตัวอักษร)', photo.caption || '');
@@ -113,8 +119,8 @@ export default function AdminActivitiesPage() {
   };
   const archive = async () => {
     if (!selected || !window.confirm('ยืนยันซ่อนอัลบั้มและนำออกจากหน้าสาธารณะ?')) return;
-    await action('/archive');
-    setSelected(null); setPhotos([]); setForm(emptyForm);
+    const archived = await action('/archive');
+    if (archived) { setSelected(null); setPhotos([]); setForm(emptyForm); }
   };
   const isDraft = !selected || selected.status === 'draft';
   return <section style={{ padding: '1.25rem', maxWidth: 1280, margin: '0 auto' }}>
