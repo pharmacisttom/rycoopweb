@@ -95,7 +95,7 @@ export default function AdminActivitiesPage() {
     setBusy(true); setError(''); setNotice('');
     try {
       await memberAdminApi(`/api/admin/activities/${selected.id}${suffix}`, { data: payload });
-      await chooseAlbum({ id: selected.id });
+      if (suffix !== '/archive') await chooseAlbum({ id: selected.id });
       await refresh();
       setNotice('บันทึกการเปลี่ยนแปลงสำเร็จ');
       return true;
