@@ -95,6 +95,7 @@ $router->get('/api/public/news', 'Api\\SpaApiController@news');
 $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements');
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
 $router->get('/api/public/documents/{id}/download', 'Api\\SpaApiController@downloadDocument');
+$router->get('/api/public/media/{folder}/{filename}', 'Public\\MediaController@show');
 $router->get('/api/public/welfare', 'Api\\SpaApiController@welfare');
 $router->get('/api/public/eservices', 'Api\\SpaApiController@eservices');
 $router->get('/api/public/faqs', 'Api\\SpaApiController@faqs');
@@ -315,6 +316,8 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/news/{id}/delete','Api\\SpaApiController@deleteAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','delete'),CsrfMiddleware::class]);
     $r->get('/faqs','Api\\SpaApiController@adminFaqs',[new PermissionMiddleware('faqs','view')]);
     $r->get('/documents','Admin\\DocumentController@index',[new PermissionMiddleware('documents','view')]);
+    $r->get('/documents/{id}/preview','Admin\\DocumentController@preview',[new PermissionMiddleware('documents','view')]);
+    $r->get('/documents/{id}/download','Admin\\DocumentController@download',[new PermissionMiddleware('documents','view')]);
     $r->post('/documents','Admin\\DocumentController@store',[new PermissionMiddleware('documents','create'),CsrfMiddleware::class]);
     $r->post('/documents/{id}/update','Admin\\DocumentController@update',[new PermissionMiddleware('documents','edit'),CsrfMiddleware::class]);
     $r->post('/documents/{id}/delete','Admin\\DocumentController@destroy',[new PermissionMiddleware('documents','delete'),CsrfMiddleware::class]);
