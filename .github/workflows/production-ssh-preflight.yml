@@ -47,9 +47,16 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ssh"
           KEYFILE="$RUNNER_TEMP/ssh/id_ed25519"
           KNOWN="$RUNNER_TEMP/ssh/known_hosts"
-          printf '%s\n' "$SSH_KEY" > "$KEYFILE"
-          printf '%s\n' "$SSH_HOST_KEYS" > "$KNOWN"
+          # Normalize Windows CRLF text when secret is pasted from PowerShell.
+          # Never echo the key, its content, or its derived public key to logs.
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$KEYFILE"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$KNOWN"
           chmod 600 "$KEYFILE" "$KNOWN"
+          if ! ssh-keygen -y -P '' -f "$KEYFILE" >/dev/null 2>&1; then
+            echo "Invalid or encrypted RYCOOP_SSH_PRIVATE_KEY. Re-upload the full unencrypted OpenSSH private key, preserving its line breaks."
+            exit 1
+          fi
+          echo "SSH private key format: PASS"
           PORT="${SSH_PORT:-22}"
           [[ "$PORT" =~ ^[0-9]+$ ]] && ((PORT>=1 && PORT<=65535))
           [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
