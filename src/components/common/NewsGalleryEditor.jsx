@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SafeImage from './SafeImage';
 import './ActivitySlideshow.css';
 
 export default function NewsGalleryEditor({ images, onChange, disabled, onBusyChange }) {
@@ -34,7 +35,7 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
     <p>ภาพละไม่เกิน 5 MB ภาพใหม่รวมไม่เกิน 12 MB ต่อการบันทึก ระบบย่อภาพและนำพิกัด EXIF ออกก่อนเผยแพร่</p>
     {reading && <p role="status">กำลังอ่านไฟล์ภาพ…</p>}{error && <p role="alert">{error}</p>}
     <ol>{images.map((image, index) => <li key={index}>
-      <img src={image.thumbnail || image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" />
+      <SafeImage src={image.thumbnail || image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" />
       <strong>{index === 0 ? 'ภาพปก' : `ภาพที่ ${index + 1}`}</strong>
       <label>ข้อความทดแทนภาพ<input className="form-control" maxLength={255} value={image.alt} onChange={event => onChange(images.map((item, position) => position === index ? { ...item, alt: event.target.value } : item))} /></label>
       <label>คำบรรยาย<textarea className="form-control" maxLength={1000} value={image.caption} onChange={event => onChange(images.map((item, position) => position === index ? { ...item, caption: event.target.value } : item))} /></label>
