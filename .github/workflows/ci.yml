@@ -99,6 +99,12 @@ jobs:
       - name: Run media URL tests
         run: php tests/MediaUrlTest.php
 
+      - name: Verify Activity Gallery frontend/backend contracts
+        run: |
+          php tests/ActivityGalleryRouteTest.php
+          php tests/ActivityGalleryDataTest.php
+          php tests/ActivityFrontendBackendContractTest.php
+
       - name: Validate seeded static assets
         run: php scripts/check-seed-assets.php
 

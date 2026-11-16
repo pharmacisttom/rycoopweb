@@ -66,20 +66,79 @@ export default function AboutPage() {
         </div>
 
         <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2.5rem' }}>
-          <h2 style={{ fontSize: '1.35rem', color: 'var(--primary-800)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.85rem', background: 'var(--primary-100)', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-700)', marginBottom: '1rem' }}>
+            <span>แผนยุทธศาสตร์ ประจำปี 2569 - 2573</span>
+          </div>
+          <h2 style={{ fontSize: '1.35rem', color: 'var(--primary-800)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Shield size={21} aria-hidden="true" />
-            วิสัยทัศน์และพันธกิจ
+            วิสัยทัศน์ (Vision)
           </h2>
-          <blockquote style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-main)', borderLeft: '4px solid var(--accent-gold)', paddingLeft: '1rem', fontStyle: 'italic', marginBottom: '1.5rem' }}>
-            "เป็นสถาบันการเงินชั้นนำของบุคลากรสาธารณสุข บริหารงานโปร่งใส ใช้เทคโนโลยีดิจิทัล พัฒนาคุณภาพชีวิตสมาชิกอย่างยั่งยืน"
+          <blockquote style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', borderLeft: '4px solid var(--accent-gold)', paddingLeft: '1rem', marginBottom: '0.75rem' }}>
+            "เป็นสหกรณ์ชั้นนำ ก้าวล้ำเทคโนโลยี เพื่อคุณภาพชีวิตที่ดีของสมาชิก"
           </blockquote>
-          <ul style={{ listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem 1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>ส่งเสริมการออมทรัพย์และสร้างวินัยทางการเงินแก่สมาชิก</span></li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>ให้บริการสินเชื่ออัตราดอกเบี้ยเป็นธรรม เพื่อสวัสดิการและที่อยู่อาศัย</span></li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>จัดสวัสดิการที่ครอบคลุมทุกช่วงชีวิตของสมาชิกและครอบครัว</span></li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>พัฒนาระบบเทคโนโลยีดิจิทัลเพื่อความสะดวกรวดเร็วและปลอดภัย</span></li>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', marginBottom: '1.5rem', paddingLeft: '1rem' }}>
+            <strong style={{ color: 'var(--text-main)' }}>คำขวัญ (Motto):</strong> การเงินมั่นคง ซื่อตรงโปร่งใส บริการฉับไว ใส่ใจสมาชิก
+          </p>
+
+          <h3 style={{ fontSize: '1.1rem', color: 'var(--primary-800)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Award size={19} aria-hidden="true" />
+            พันธกิจ (Mission)
+          </h3>
+          <ul style={{ listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem 1.5rem', fontSize: '0.925rem', color: 'var(--text-main)' }}>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>1. เสริมสร้างความมั่นคงด้านการเงิน โดยคำนึงถึงประโยชน์ของสมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>2. พัฒนาประสิทธิภาพการให้บริการแก่สมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>3. จัดสวัสดิการที่เหมาะสมให้แก่สมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>4. ส่งเสริมการมีส่วนร่วมของสมาชิก</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>5. พัฒนาระบบการบริหารจัดการตามหลักธรรมาภิบาล</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>6. พัฒนาระบบเทคโนโลยีสารสนเทศ</span></li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}><CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" /><span>7. สนับสนุนกิจกรรมเพื่อชุมชน สังคมและสิ่งแวดล้อม</span></li>
           </ul>
         </div>
+
+        {/* Restored from the historical expanded About page (2026-09-09). */}
+        <section aria-labelledby="founding-committee" className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2.5rem' }}>
+          <span className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>ประวัติและบุคคลสำคัญ</span>
+          <h2 id="founding-committee" style={{ fontSize: '1.6rem', color: 'var(--primary-800)', marginBottom: '0.75rem' }}>
+            คณะผู้จัดตั้งสหกรณ์ 5 ท่านแรก
+          </h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.25rem' }}>บุคคลผู้ริเริ่มก่อตั้งสหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด เพื่อความมั่นคงและการเกื้อกูลสมาชิก</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 230px), 1fr))', gap: '1rem' }}>
+            {[
+              ['นายแพทย์อรรณพ สมาธิวัฒน์', 'ประธาน'],
+              ['นายแพทย์มนูญ จิรัฐติกาลกิจ', 'รองประธาน'],
+              ['นายแพทย์สาโรจน์ คงประศาสตร์', 'รองประธาน'],
+              ['นางสาวอุษา อิศรางกูร ณ อยุธยา', 'เหรัญญิก'],
+              ['นายบุญจอม ณ นคร', 'เลขานุการ'],
+            ].map(([name, role], index) => (
+              <article key={name} className="surface-card" style={{ padding: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <span aria-hidden="true" style={{ display: 'grid', placeItems: 'center', width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--primary-700)', color: '#fff', fontWeight: 700 }}>{index + 1}</span>
+                <div><strong style={{ display: 'block', color: 'var(--text-main)' }}>{name}</strong><span style={{ color: 'var(--text-muted)', fontSize: '0.86rem' }}>{role}</span></div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="cooperative-objectives" className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2.5rem' }}>
+          <span className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>อุดมการณ์และความมุ่งมั่น</span>
+          <h2 id="cooperative-objectives" style={{ fontSize: '1.6rem', color: 'var(--primary-800)', marginBottom: '1rem' }}>หลักการและวัตถุประสงค์ของสหกรณ์</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 330px), 1fr))', gap: '1.5rem' }}>
+            <div className="surface-card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ color: 'var(--primary-800)', marginBottom: '0.75rem' }}>หลักการสหกรณ์</h3>
+              <p style={{ color: 'var(--text-main)', lineHeight: 1.8, marginBottom: '1rem' }}>สหกรณ์เป็นการรวมตัวกันโดยสมัครใจเพื่อประโยชน์ทางเศรษฐกิจและสังคม บนพื้นฐานการช่วยตนเองและช่วยเหลือซึ่งกันและกัน</p>
+              <p style={{ color: 'var(--text-muted)', lineHeight: 1.8 }}>การดำเนินงานยึดหลักประชาธิปไตย ความเสมอภาคของสมาชิก ธรรมาภิบาล และการกระจายผลประโยชน์อย่างเป็นธรรม</p>
+            </div>
+            <div className="surface-card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ color: 'var(--primary-800)', marginBottom: '1rem' }}>วัตถุประสงค์ของสหกรณ์ 5 ประการ</h3>
+              <ol style={{ display: 'grid', gap: '0.85rem', paddingLeft: '1.5rem', lineHeight: 1.7, color: 'var(--text-main)' }}>
+                <li><strong>ส่งเสริมการประหยัด</strong> และปลูกฝังวินัยทางการเงินแก่สมาชิกและครอบครัว</li>
+                <li><strong>ส่งเสริมการออมและการสะสมทุน</strong> ผ่านทุนเรือนหุ้นและเงินฝากของสมาชิก</li>
+                <li><strong>ให้เงินกู้ที่จำเป็นแก่สมาชิก</strong> ด้วยเงื่อนไขและอัตราดอกเบี้ยที่เหมาะสม</li>
+                <li><strong>ส่งเสริมการลงทุนประกอบอาชีพ</strong> เพื่อสร้างรายได้และพัฒนาคุณภาพชีวิต</li>
+                <li><strong>จัดสวัสดิการและการสงเคราะห์</strong> แก่สมาชิกและครอบครัวตามหลักเกณฑ์สหกรณ์</li>
+              </ol>
+            </div>
+          </div>
+        </section>
 
         {/* Core Values */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>

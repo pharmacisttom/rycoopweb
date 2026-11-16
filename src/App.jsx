@@ -45,6 +45,8 @@ const DepositsPage = lazy(() => import('./pages/DepositsPage'));
 const LoanChecklistPage = lazy(() => import('./pages/LoanChecklistPage'));
 const WelfarePage = lazy(() => import('./pages/WelfarePage'));
 const AdminWelfarePage = lazy(() => import('./pages/AdminWelfarePage'));
+const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
+const AdminActivitiesPage = lazy(() => import('./pages/AdminActivitiesPage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
@@ -88,6 +90,8 @@ function ScrollToTop() {
 
 const publicRoutes = [
   ['/about', AboutPage],
+  ['/activities', ActivitiesPage],
+  ['/events', ActivitiesPage],
   ['/board', BoardPage],
   ['/board_committee', BoardPage],
   ['/board_officer', BoardOfficerPage],
@@ -156,7 +160,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|login|2fa)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|login|2fa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -238,6 +242,7 @@ export default function App() {
 
             <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/welfare" element={<StaffProtectedRoute roles={['super_admin']}><AdminWelfarePage /></StaffProtectedRoute>} />
+            <Route path="/admin/activities" element={<StaffProtectedRoute permission="news.view"><AdminActivitiesPage /></StaffProtectedRoute>} />
             <Route path="/admin/documents" element={<StaffProtectedRoute permission="documents.view"><AdminStoredContentPage/></StaffProtectedRoute>} />
             <Route path="/admin/settings/content" element={<StaffProtectedRoute permission="settings.view"><AdminStoredContentPage kind="settings"/></StaffProtectedRoute>} />
             <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view','faqs.view']}><ContentAdminPage /></StaffProtectedRoute>} />
