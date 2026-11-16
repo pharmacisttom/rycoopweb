@@ -212,7 +212,19 @@ if (!function_exists('storage_upload_path')) {
             throw new InvalidArgumentException('Unsafe upload path.');
         }
 
-        $base = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads';
+        // Opt-in persistent upload root shared across immutable releases. Keep legacy
+        // behavior until a separate, verified server configuration enables this.
+        $configured = trim((string) (getenv('RYCOOP_UPLOAD_ROOT') ?: ''));
+        if ($configured !== '') {
+            $configured = rtrim(str_replace('\\\\', '/', $configured), '/');
+            if (!str_starts_with($configured, '/') || $configured === ''
+                || preg_match('#(?:^|/)(?:\\.|\\.\\.)(?:/|$)#', $configured)) {
+                throw new InvalidArgumentException('Invalid persistent uploads root.');
+            }
+            $base = $configured;
+        } else {
+            $base = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads';
+        }
         return $path === '' ? $base : $base . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments);
     }
 }
