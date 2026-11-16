@@ -155,15 +155,15 @@ final class ActivityGalleryController extends Controller
                     if($album['status']!=='draft')throw new SecurityGateException('Only draft albums accept uploads',409,'NOT_DRAFT');
                     $ext=strtolower(pathinfo((string)$file['name'],PATHINFO_EXTENSION));
                     $extensions=['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif'];
-                    $mime=(new \\finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+                    $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
                     if(!isset($extensions[$ext])||$extensions[$ext]!==$mime||($file['size']??0)>20*1024*1024||@getimagesize($file['tmp_name'])===false) {
-                        throw new \\InvalidArgumentException('Unsupported image or image exceeds 20MB');
+                        throw new \InvalidArgumentException('Unsupported image or image exceeds 20MB');
                     }
                     $root=self::photoRoot();
-                    if(!is_dir($root)&&!mkdir($root,0700,true)&&!is_dir($root))throw new \\RuntimeException('Photo storage unavailable');
+                    if(!is_dir($root)&&!mkdir($root,0700,true)&&!is_dir($root))throw new \RuntimeException('Photo storage unavailable');
                     $filename=bin2hex(random_bytes(16)).'.'.$ext;
                     $target=$root.'/'.$filename;
-                    if(!move_uploaded_file($file['tmp_name'],$target))throw new \\RuntimeException('Unable to save image');
+                    if(!move_uploaded_file($file['tmp_name'],$target))throw new \RuntimeException('Unable to save image');
                     @chmod($target,0600);
                     $uploaded=['path'=>$target];
                     $position=(int)Database::value('SELECT COALESCE(MAX(sort_order),0)+1 FROM activity_photos WHERE album_id=?',[$albumId]);
@@ -216,7 +216,7 @@ final class ActivityGalleryController extends Controller
         AdminCrudService::respond($this->response,function()use($id,$photo):array {
             self::authorize('update');$albumId=self::id($id);$photoId=self::id($photo);
             $caption=trim((string)$this->request->input('caption',''));
-            if(mb_strlen($caption)>500)throw new \\InvalidArgumentException('Caption too long');
+            if(mb_strlen($caption)>500)throw new \InvalidArgumentException('Caption too long');
             return Database::transaction(static function()use($albumId,$photoId,$caption):array {
                 if(self::album($albumId,true)['status']!=='draft')throw new SecurityGateException('Draft required',409,'NOT_DRAFT');
                 if(!Database::first('SELECT id FROM activity_photos WHERE id=? AND album_id=?',[$photoId,$albumId]))
@@ -253,12 +253,12 @@ final class ActivityGalleryController extends Controller
         AdminCrudService::respond($this->response,function()use($id):array {
             self::authorize('update');$albumId=self::id($id);
             $ids=$this->request->input('ids',[]);
-            if(!is_array($ids)||count($ids)>1000)throw new \\InvalidArgumentException('Invalid photo order');
+            if(!is_array($ids)||count($ids)>1000)throw new \InvalidArgumentException('Invalid photo order');
             return Database::transaction(static function()use($albumId,$ids):array {
                 if(self::album($albumId,true)['status']!=='draft')throw new SecurityGateException('Draft required',409,'NOT_DRAFT');
                 $original=array_map('intval',array_column(Database::query('SELECT id FROM activity_photos WHERE album_id=? ORDER BY id',[$albumId]),'id'));
                 $incoming=[];
-                foreach($ids as $v){if(!is_scalar($v)||!preg_match('/^[1-9][0-9]*$/D',(string)$v))throw new \\InvalidArgumentException('Invalid photo ID');$incoming[]=(int)$v;}
+                foreach($ids as $v){if(!is_scalar($v)||!preg_match('/^[1-9][0-9]*$/D',(string)$v))throw new \InvalidArgumentException('Invalid photo ID');$incoming[]=(int)$v;}
                 sort($incoming);
                 if($incoming!==$original)throw new SecurityGateException('Photo list has changed; reload',409,'STALE_PHOTOS');
                 foreach($ids as $i=>$photoId)Database::execute('UPDATE activity_photos SET sort_order=? WHERE id=? AND album_id=?',[$i+1,(int)$photoId,$albumId]);
