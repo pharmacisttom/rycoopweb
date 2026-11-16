@@ -1,0 +1,37 @@
+name: Integrated release merge conflict audit (NO DEPLOY)
+on:
+  push:
+    branches: [Test]
+    paths:
+      - '.github/workflows/integrated-merge-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  merge-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Dry-run merge-tree for integrated candidate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git fetch --no-tags origin '+refs/heads/release/integrated-all-modules-20261116:refs/remotes/origin/release/integrated-all-modules-20261116'
+          echo '===== MERGE BASE ====='
+          git merge-base HEAD origin/release/integrated-all-modules-20261116
+          echo '===== TEST-ONLY MERGE ANALYSIS ====='
+          set +e
+          git merge-tree --write-tree HEAD origin/release/integrated-all-modules-20261116 >"$RUNNER_TEMP/merge-report.txt" 2>&1
+          code=$?
+          set -e
+          # Log only file paths and Git-generated conflict headings, not file contents.
+          grep -E '^(CONFLICT |Auto-merging |[[:space:]]*[0-9]{6}[[:space:]][0-9a-f]{40} )' "$RUNNER_TEMP/merge-report.txt" | head -n 130 || true
+          echo "MERGE_TREE_EXIT=$code"
+          if (( code != 0 )); then
+            echo 'INTEGRATED_MERGE=BLOCKED'
+            exit 1
+          fi
+          echo 'INTEGRATED_MERGE=CLEAN'
