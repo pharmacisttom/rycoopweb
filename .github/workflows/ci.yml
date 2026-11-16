@@ -102,6 +102,9 @@ jobs:
       - name: Verify Activity Gallery route security contracts
         run: php tests/ActivityGalleryRouteTest.php
 
+      - name: Verify Activity Gallery public draft isolation
+        run: php tests/ActivityGalleryDataTest.php
+
       - name: Verify RC03 Media/Document route contracts
         run: php tests/Rc03MediaDocumentRouteTest.php
 
