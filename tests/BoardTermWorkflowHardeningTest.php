@@ -65,6 +65,7 @@ $copy=Board::getSelectiveTransferPreview($id,39,$ids);$source=snapshotBoard($id)
 rejected(fn()=>Board::selectiveTransfer($id,39,$ids,['version'=>'stale']),'stale copy rejected');
 rejected(fn()=>Board::getSelectiveTransferPreview($id,39,[$ids[0],$ids[0]]),'duplicate selection rejected');
 rejected(fn()=>Board::getSelectiveTransferPreview($id,38,$ids),'same source and destination rejected');
+rejected(fn()=>Board::getSelectiveTransferPreview($id,40,$ids),'copy to unapproved destination term number rejected');
 rejected(fn()=>Board::getSelectiveTransferPreview(999,39,$ids),'invalid source rejected');
 rejected(fn()=>Board::getSelectiveTransferPreview($id,39,[999]),'foreign source member rejected');
 \App\Services\AuditService::setTestFaultInjector(function($module,$action){if($action==='selective_copy')throw new RuntimeException('Injected copy failure');});
@@ -130,7 +131,15 @@ foreach($routes as $route){
 $_SERVER['REQUEST_METHOD']='POST';$_SERVER['HTTP_X_REQUESTED_WITH']='XMLHttpRequest';$_POST=[];
 $csrfResponse=new BoardResponse();$csrfRequest=new \App\Core\Request();
 ok(!(new \App\Middlewares\CsrfMiddleware())->handle($csrfRequest,$csrfResponse) && $csrfResponse->status===419,'state-changing request without CSRF is rejected');
-loginBoard(1,'super_admin');$actorTerm=Board::createTerm(['term_number'=>41],999);
+loginBoard(1,'super_admin');
+\App\Services\AuditService::setTestFaultInjector(function($module,$action){
+    if($module==='board_terms' && $action==='create') throw new RuntimeException('Injected draft create audit failure');
+});
+try { Board::createTerm(['term_number'=>41]); throw new LogicException('expected audit failure'); }
+catch (RuntimeException $e) { ok($e->getMessage()==='Injected draft create audit failure','draft creation aborts on required audit failure'); }
+\App\Services\AuditService::setTestFaultInjector(null);
+ok(!Database::first('SELECT id FROM board_terms WHERE term_number=41'),'required audit failure leaves no draft record');
+$actorTerm=Board::createTerm(['term_number'=>41],999);
 ok((int)Database::value('SELECT created_by FROM board_terms WHERE id=?',[$actorTerm])===1,'caller-supplied actor ID ignored in favor of authenticated session');
 
 Auth::logout();(new ReflectionProperty(Database::class,'instance'))->setValue(null,null);
