@@ -99,6 +99,9 @@ jobs:
       - name: Run media URL tests
         run: php tests/MediaUrlTest.php
 
+      - name: Verify RC03 Media/Document route contracts
+        run: php tests/Rc03MediaDocumentRouteTest.php
+
       - name: Validate seeded static assets
         run: php scripts/check-seed-assets.php
 
