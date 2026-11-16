@@ -19,7 +19,7 @@ permissions:
 jobs:
   php-quality:
     name: PHP, database, media and security checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -68,7 +68,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -213,18 +213,18 @@ jobs:
 
   frontend-build:
     name: React production build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       VITE_FEATURE_MEMBER_PORTAL: "false"
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: npm
@@ -277,7 +277,7 @@ jobs:
           fi
 
       - name: Upload production build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rayongcoop-react-build
           path: public/app/
@@ -286,11 +286,11 @@ jobs:
 
   admin-ui-browser:
     name: Admin presentation and critical-action browser QA
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: npm
@@ -317,7 +317,7 @@ jobs:
         run: node tests/AdminCrudBrowserTest.mjs
       - name: Upload staff-session integration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: staff-session-integration-qa
           path: storage/tmp/staff-page-integration/*.png
@@ -325,7 +325,7 @@ jobs:
           retention-days: 7
       - name: Upload synthetic presentation evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: admin-ui-presentation-qa
           path: storage/tmp/admin-ui-qa/
