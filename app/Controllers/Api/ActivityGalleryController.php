@@ -7,7 +7,6 @@ use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Auth;
 use App\Services\AuditService;
-use App\Services\MediaService;
 use App\Services\AdminCrudService;
 use App\Exceptions\SecurityGateException;
 
@@ -131,6 +130,12 @@ final class ActivityGalleryController extends Controller
         });
     }
 
+    private static function photoRoot(): string
+    {
+        // Stored outside storage/uploads and public URL aliases. Only this controller streams files.
+        return dirname(storage_upload_path()) . '/private-activity-photos';
+    }
+
     public function uploadPhoto(string $id): void
     {
         AdminCrudService::respond($this->response,function()use($id):array {
@@ -148,15 +153,27 @@ final class ActivityGalleryController extends Controller
                 return Database::transaction(static function()use($albumId,$file,&$uploaded):array {
                     $album=self::album($albumId,true);
                     if($album['status']!=='draft')throw new SecurityGateException('Only draft albums accept uploads',409,'NOT_DRAFT');
-                    $uploaded=MediaService::upload($file,'activities');
+                    $ext=strtolower(pathinfo((string)$file['name'],PATHINFO_EXTENSION));
+                    $extensions=['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif'];
+                    $mime=(new \\finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+                    if(!isset($extensions[$ext])||$extensions[$ext]!==$mime||($file['size']??0)>20*1024*1024||@getimagesize($file['tmp_name'])===false) {
+                        throw new \\InvalidArgumentException('Unsupported image or image exceeds 20MB');
+                    }
+                    $root=self::photoRoot();
+                    if(!is_dir($root)&&!mkdir($root,0700,true)&&!is_dir($root))throw new \\RuntimeException('Photo storage unavailable');
+                    $filename=bin2hex(random_bytes(16)).'.'.$ext;
+                    $target=$root.'/'.$filename;
+                    if(!move_uploaded_file($file['tmp_name'],$target))throw new \\RuntimeException('Unable to save image');
+                    @chmod($target,0600);
+                    $uploaded=['path'=>$target];
                     $position=(int)Database::value('SELECT COALESCE(MAX(sort_order),0)+1 FROM activity_photos WHERE album_id=?',[$albumId]);
-                    $photoId=(int)Database::insert('INSERT INTO activity_photos (album_id,media_id,path,sort_order,created_at) VALUES (?,?,?,?,NOW())',
-                      [$albumId,$uploaded['id'],$uploaded['path'],$position]);
+                    $photoId=(int)Database::insert('INSERT INTO activity_photos (album_id,media_id,path,sort_order,created_at) VALUES (?,NULL,?,?,NOW())',
+                      [$albumId,$filename,$position]);
                     AuditService::log('activity_albums','upload_photo',(string)$albumId,null,['photo_id'=>$photoId],required:true);
                     return ['photo'=>['id'=>$photoId,'url'=>"/api/admin/activities/$albumId/photos/$photoId",'sort_order'=>$position]];
                 });
             } catch(\Throwable $e) {
-                if($uploaded) @unlink(storage_upload_path($uploaded['path']));
+                if($uploaded) @unlink($uploaded['path']);
                 throw $e;
             }
         },201);
@@ -188,8 +205,8 @@ final class ActivityGalleryController extends Controller
         $sql='SELECT p.path,a.status FROM activity_photos p JOIN activity_albums a ON a.id=p.album_id WHERE p.id=? AND p.album_id=? AND a.deleted_at IS NULL';
         $row=Database::first($sql,[(int)$photo,(int)$album]);
         if(!$row||(!$admin&&$row['status']!=='published')) {http_response_code(404);return;}
-        $base=realpath(storage_upload_path());
-        $path=realpath(storage_upload_path($row['path']));
+        $base=realpath(self::photoRoot());
+        $path=realpath(self::photoRoot().'/'.$row['path']);
         if(!$base||!$path||!str_starts_with($path,$base.DIRECTORY_SEPARATOR)||!is_file($path)||!is_readable($path)){http_response_code(404);return;}
         $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);
         if(!in_array($mime,['image/jpeg','image/png','image/webp','image/gif'],true)||@getimagesize($path)===false){http_response_code(415);return;}
