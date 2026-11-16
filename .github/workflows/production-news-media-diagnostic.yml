@@ -1,0 +1,83 @@
+name: Production news media route diagnostic (READ ONLY)
+on:
+  push:
+    branches: [Test]
+    paths: ['.github/workflows/production-news-media-diagnostic.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - name: Read-only HTTP and storage checks (no content or secrets logged)
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$RUNNER_TEMP/ssh/known"
+          chmod 600 "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/ssh/id" >/dev/null
+          PORT="${SSH_PORT:-22}"
+          [[ "$PORT" =~ ^[0-9]+$ ]] && ((PORT>=1 && PORT<=65535))
+          ssh -T -p "$PORT" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          echo '===== NEWS API READ-ONLY INSPECTION ====='
+          python3 - <<'PY'
+          import json,subprocess,urllib.parse
+          target='http://127.0.0.1:18092/api/public/news'
+          try:
+              p=subprocess.run(['curl','-sfS','--max-time','10',target],capture_output=True,text=True)
+              print('API_FETCH=', 'PASS' if p.returncode==0 else 'FAIL')
+              if p.returncode==0:
+                  j=json.loads(p.stdout)
+                  items=j.get('data',[])
+                  if isinstance(items,dict): items=items.get('items',items.get('news',[]))
+                  if not isinstance(items,list): items=[]
+                  print('NEWS_ITEMS_COUNT=',len(items))
+                  for row in items[:4]:
+                      if not isinstance(row,dict):continue
+                      for field in ('cover_image','image'):
+                          v=row.get(field)
+                          if not v: continue
+                          parsed=urllib.parse.urlparse(str(v))
+                          value=parsed.path if parsed.scheme else str(v).split('?')[0]
+                          if value.startswith('/') and value.startswith(('/storage/uploads/','/assets/')):
+                              code=subprocess.run(['curl','-sS','-o','/dev/null','-w','%{http_code}','--max-time','8','https://www.rayongcoop.org'+value],capture_output=True,text=True).stdout
+                              print('NEWS_IMAGE_FIELD',field,'PATH_CLASS',value.split('/')[1:4],'HTTP',code)
+                          else: print('NEWS_IMAGE_FIELD',field,'PATH_CLASS','OTHER')
+                      gg=row.get('gallery_images',[])
+                      if isinstance(gg,str):
+                          try:gg=json.loads(gg)
+                          except:gg=[]
+                      for image in (gg if isinstance(gg,list) else [])[:2]:
+                          if not isinstance(image,dict):continue
+                          u=str(image.get('src',''))
+                          value=urllib.parse.urlparse(u).path
+                          if value.startswith(('/storage/uploads/','/assets/')):
+                              code=subprocess.run(['curl','-sS','-o','/dev/null','-w','%{http_code}','--max-time','8','https://www.rayongcoop.org'+value],capture_output=True,text=True).stdout
+                              print('GALLERY_FILE_CLASS',value.split('/')[1:4],'HTTP',code)
+          except Exception as e:print('DIAGNOSTIC_ERROR_TYPE',type(e).__name__)
+          PY
+          echo '===== STORAGE PATHS (COUNTS ONLY) ====='
+          for p in /var/www/rycoopweb/production-releases/member-dividend-unlock-rc01-20261111/storage/uploads/news/gallery /var/www/rycoopweb/production-releases/member-calculator-rc03-20261111-public/storage/uploads/news/gallery /var/www/rycoopweb/production-releases/member-dividend-unlock-rc01-20261111/public/storage /var/www/rycoopweb/production-releases/member-calculator-rc03-20261111-public/storage /var/www/rycoopweb/shared/storage/uploads/news/gallery; do
+            if [ -L "$p" ]; then echo "SYMLINK $p -> $(readlink "$p")"; elif [ -d "$p" ]; then echo "DIR $p file_count=$(find "$p" -maxdepth 1 -type f 2>/dev/null | wc -l)"; elif [ -e "$p" ]; then echo "OTHER $p"; else echo "ABSENT $p"; fi
+          done
+          echo '===== WEB SERVER MEDIA DIRECTIVES ====='
+          f=/etc/nginx/sites-enabled/rycoopweb-main-ssl
+          if test -r "$f"; then
+            grep -En 'storage|uploads|assets|try_files|location |alias |root ' "$f" | head -n 95 || true
+          fi
+          echo 'NEWS_MEDIA_DIAGNOSTIC=COMPLETE'
+          REMOTE
+          rm -f "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
