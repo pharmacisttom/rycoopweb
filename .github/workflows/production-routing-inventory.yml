@@ -1,0 +1,80 @@
+name: RYCOOP production routing inventory (READ ONLY)
+
+on:
+  push:
+    branches: [Test]
+    paths:
+      - '.github/workflows/production-routing-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rycoop-production-routing-inventory
+  cancel-in-progress: false
+
+jobs:
+  routing:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - name: Read active Nginx routing without secrets or writes
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          D="$RUNNER_TEMP/rycoop-ssh"
+          mkdir -p "$D"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$D/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$D/known_hosts"
+          chmod 600 "$D/id" "$D/known_hosts"
+          ssh-keygen -y -P '' -f "$D/id" >/dev/null 2>&1
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P>=1 && P<=65535))
+          ssh -T -p "$P" -i "$D/id" -o BatchMode=yes -o ConnectTimeout=12 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$D/known_hosts" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          echo "===== EFFECTIVE NGINX ROUTE REFERENCES ====="
+          python3 - <<'PY'
+          import pathlib, re
+          allowed = re.compile(r"^\s*(?:listen|server_name|root|alias|proxy_pass|fastcgi_pass|fastcgi_param\s+SCRIPT_FILENAME)\s+[^;]+;", re.I)
+          dirs = [pathlib.Path("/etc/nginx/sites-enabled"), pathlib.Path("/etc/nginx/conf.d")]
+          for directory in dirs:
+              if not directory.is_dir():
+                  continue
+              for f in sorted(directory.iterdir()):
+                  if not f.is_file():
+                      continue
+                  try:
+                      real = f.resolve(strict=True)
+                      lines = real.read_text(encoding="utf-8").splitlines()
+                  except (OSError,UnicodeError,PermissionError):
+                      print("UNREADABLE_CONFIG_FILE", f.name)
+                      continue
+                  selected = [line.strip() for line in lines if allowed.match(line)]
+                  # Only configuration files mentioning this site's domain/path.
+                  if not any("rayongcoop.org" in line or "rycoop" in line for line in lines):
+                      continue
+                  print("CONFIG", f.name)
+                  for line in selected[:100]:
+                      # Only pathname, host/port upstream directives. Drop $ variables and non-path remote URLs.
+                      if line.lower().startswith("server_name") or line.lower().startswith("listen") or line.lower().startswith("root") or line.lower().startswith("alias") or line.lower().startswith("fastcgi_pass") or line.lower().startswith("proxy_pass"):
+                          print("ROUTE", line)
+                  print("END_CONFIG")
+          PY
+          echo "===== PRODUCTION BACKEND PROCESS / PORT ====="
+          ss -ltn '( sport = :18092 )' | tail -n 3 || true
+          echo "===== PUBLIC REDIRECTS (HEADERS ONLY) ====="
+          for url in https://www.rayongcoop.org/ https://www.rayongcoop.org/app/about; do
+            curl --max-time 10 -sSI "$url" | grep -Ei '^(HTTP/|location:|cache-control:)' | head -n 6 || true
+          done
+          echo "READ_ONLY_ROUTING_INVENTORY=PASS"
+          REMOTE
+          rm -f "$D/id" "$D/known_hosts"
