@@ -96,6 +96,9 @@ $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements')
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
 $router->get('/api/public/documents/{id}/download', 'Api\\SpaApiController@downloadDocument');
 $router->get('/api/public/media/{folder}/{filename}', 'Public\\MediaController@show');
+$router->get('/api/public/activities', 'Api\\ActivityGalleryController@publicAlbums');
+$router->get('/api/public/activities/{id}', 'Api\\ActivityGalleryController@publicAlbum');
+$router->get('/api/public/activities/{album}/photos/{photo}', 'Api\\ActivityGalleryController@photo');
 $router->get('/api/public/welfare', 'Api\\SpaApiController@welfare');
 $router->get('/api/public/eservices', 'Api\\SpaApiController@eservices');
 $router->get('/api/public/faqs', 'Api\\SpaApiController@faqs');
@@ -315,6 +318,19 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/news/{id}/publish','Admin\\NewsWorkflowController@publish',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
     $r->post('/news/{id}/delete','Api\\SpaApiController@deleteAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','delete'),CsrfMiddleware::class]);
     $r->get('/faqs','Api\\SpaApiController@adminFaqs',[new PermissionMiddleware('faqs','view')]);
+    // Activity albums — draft-first, no implicit publication.
+    $r->get('/activities','Api\\ActivityGalleryController@adminAlbums',[new PermissionMiddleware('news','view')]);
+    $r->get('/activities/{id}','Api\\ActivityGalleryController@adminAlbum',[new PermissionMiddleware('news','view')]);
+    $r->post('/activities','Api\\ActivityGalleryController@create',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->post('/activities/{id}/update','Api\\ActivityGalleryController@update',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->post('/activities/{id}/photos','Api\\ActivityGalleryController@uploadPhoto',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->get('/activities/{album}/photos/{photo}','Api\\ActivityGalleryController@adminPhoto',[new PermissionMiddleware('news','view')]);
+    $r->post('/activities/{id}/publish','Api\\ActivityGalleryController@publish',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
+    $r->post('/activities/{id}/photos/{photo}/cover','Api\\ActivityGalleryController@cover',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->post('/activities/{id}/photos/{photo}/caption','Api\\ActivityGalleryController@caption',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->post('/activities/{id}/photos/{photo}/remove','Api\\ActivityGalleryController@removePhoto',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->post('/activities/{id}/reorder','Api\\ActivityGalleryController@reorder',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','update'),CsrfMiddleware::class]);
+    $r->post('/activities/{id}/archive','Api\\ActivityGalleryController@archive',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
     $r->get('/documents','Admin\\DocumentController@index',[new PermissionMiddleware('documents','view')]);
     $r->get('/documents/{id}/preview','Admin\\DocumentController@preview',[new PermissionMiddleware('documents','view')]);
     $r->get('/documents/{id}/download','Admin\\DocumentController@download',[new PermissionMiddleware('documents','view')]);

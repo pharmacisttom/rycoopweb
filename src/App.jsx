@@ -56,6 +56,8 @@ const WelfarePage = lazy(() => import('./pages/WelfarePage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
+const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
+const AdminActivitiesPage = lazy(() => import('./pages/AdminActivitiesPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const BoardPage = lazy(() => import('./pages/BoardPage'));
@@ -122,7 +124,8 @@ const publicRoutes = [
   ['/documents', DocumentsPage],
   ['/news', NewsPage],
   ['/announcements', NewsPage],
-  ['/events', NewsPage],
+  ['/activities', ActivitiesPage],
+  ['/events', ActivitiesPage],
   ['/calendar', NewsPage],
   ['/contact', ContactPage],
   ['/complaints', ContactPage],
@@ -271,6 +274,7 @@ export default function App() {
             <Route path="/admin/documents" element={<StaffProtectedRoute permission="documents.view"><AdminStoredContentPage/></StaffProtectedRoute>} />
             <Route path="/admin/settings/content" element={<StaffProtectedRoute permission="settings.view"><AdminStoredContentPage kind="settings"/></StaffProtectedRoute>} />
             <Route path="/admin/content" element={<StaffProtectedRoute anyPermissions={['news.view','faqs.view']}><ContentAdminPage /></StaffProtectedRoute>} />
+            <Route path="/admin/activities" element={<StaffProtectedRoute permission="news.view"><AdminActivitiesPage /></StaffProtectedRoute>} />
             <Route path="/admin/hero-slides" element={<StaffProtectedRoute anyPermissions={['hero_slides.view','news.view','content.view']}><AdminHeroSlidesPage /></StaffProtectedRoute>} />
             <Route path="/admin/popups" element={<StaffProtectedRoute anyPermissions={['popups.view','news.view','content.view']}><AdminPopupsPage /></StaffProtectedRoute>} />
             <Route path="/admin/welfare" element={<StaffProtectedRoute permission="welfare.view"><AdminWelfarePage /></StaffProtectedRoute>} />
