@@ -1,0 +1,72 @@
+name: RYCOOP production release inventory (READ ONLY)
+
+on:
+  push:
+    branches: [Test]
+    paths:
+      - '.github/workflows/production-release-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rycoop-production-release-inventory
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - name: Inspect deployed production layout, without writes
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          D="$RUNNER_TEMP/rycoop-ssh"
+          mkdir -p "$D"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$D/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$D/known_hosts"
+          chmod 600 "$D/id" "$D/known_hosts"
+          ssh-keygen -y -P '' -f "$D/id" >/dev/null 2>&1
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P>=1 && P<=65535))
+          ssh -T -p "$P" -i "$D/id" -o BatchMode=yes -o ConnectTimeout=12 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$D/known_hosts" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          echo "===== SAFE PRODUCTION INVENTORY ====="
+          echo "USER=$(id -un) HOST=$(hostname)"
+          echo "PHP=$(php -r 'echo PHP_VERSION;' 2>/dev/null || echo absent)"
+          echo "NODE=$(node --version 2>/dev/null || echo absent)"
+          echo "NPM=$(npm --version 2>/dev/null || echo absent)"
+          echo "COMPOSER=$(composer --version --no-ansi 2>/dev/null | head -1 || echo absent)"
+          echo "GIT=$(git --version 2>/dev/null || echo absent)"
+          echo "===== ROOTS ====="
+          for p in /var/www/rycoopweb/production-releases /var/www/rycoopweb/current /var/www/rycoopweb/production /var/www/rycoopweb/production-current /var/www/rycoopweb/test-v2 /var/www/rycoopweb/test-v2-static; do
+            if test -L "$p"; then echo "SYMLINK $p -> $(readlink "$p")"; elif test -d "$p"; then echo "DIRECTORY $p"; elif test -e "$p"; then echo "FILE $p"; else echo "ABSENT $p"; fi
+          done
+          echo "===== PRODUCTION RELEASE DIRECTORY NAMES ====="
+          find /var/www/rycoopweb/production-releases -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | tail -n 15
+          echo "===== RELEASE DIRECTORY ESSENTIAL FILES ====="
+          for p in /var/www/rycoopweb/production-releases/*; do
+            test -d "$p" || continue
+            name="${p##*/}"
+            test -f "$p/public/index.php" && idx=yes || idx=no
+            test -f "$p/vendor/autoload.php" && vendor=yes || vendor=no
+            test -f "$p/public/app/index.html" && spa=yes || spa=no
+            test -f "$p/.env" && env=yes || env=no
+            echo "$name index=$idx vendor=$vendor spa=$spa env=$env"
+          done
+          echo "===== WEB SERVER OBSERVABLE STATUS ====="
+          (curl --max-time 12 -sS -o /dev/null -w 'PUBLIC_ABOUT_HTTP=%{http_code}\n' https://www.rayongcoop.org/app/about || true)
+          (curl --max-time 12 -sS -o /dev/null -w 'PUBLIC_HOME_HTTP=%{http_code}\n' https://www.rayongcoop.org/ || true)
+          echo "READ_ONLY_INVENTORY=PASS"
+          REMOTE
+          rm -f "$D/id" "$D/known_hosts"
