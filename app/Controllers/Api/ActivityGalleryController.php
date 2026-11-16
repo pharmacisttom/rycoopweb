@@ -40,6 +40,7 @@ final class ActivityGalleryController extends Controller
     {
         return array_map(static function(array $photo) use ($id):array {
             $photo['url']="/api/public/activities/$id/photos/{$photo['id']}";
+            $photo['thumbnail_url']=$photo['url'].'?size=thumb';
             return $photo;
         },Database::query('SELECT id,album_id,caption,sort_order FROM activity_photos WHERE album_id=? ORDER BY sort_order,id',[$id]));
     }
@@ -52,7 +53,7 @@ final class ActivityGalleryController extends Controller
                 (SELECT p.id FROM activity_photos p WHERE p.album_id=a.id ORDER BY (p.id=a.cover_photo_id) DESC,p.sort_order,p.id LIMIT 1) AS cover_id
                 FROM activity_albums a WHERE a.status='published' AND a.deleted_at IS NULL
                 ORDER BY a.event_date DESC,a.id DESC LIMIT 100");
-            foreach($rows as &$row) $row['cover_url']=empty($row['cover_id'])?null:"/api/public/activities/{$row['id']}/photos/{$row['cover_id']}";
+            foreach($rows as &$row) $row['cover_url']=empty($row['cover_id'])?null:"/api/public/activities/{$row['id']}/photos/{$row['cover_id']}?size=thumb";
             return ['data'=>$rows];
         });
     }
@@ -153,19 +154,48 @@ final class ActivityGalleryController extends Controller
                 return Database::transaction(static function()use($albumId,$file,&$uploaded):array {
                     $album=self::album($albumId,true);
                     if($album['status']!=='draft')throw new SecurityGateException('Only draft albums accept uploads',409,'NOT_DRAFT');
+                    if((int)Database::value('SELECT COUNT(*) FROM activity_photos WHERE album_id=?',[$albumId])>=1000)
+                        throw new \InvalidArgumentException('Album limit: 1,000 images');
                     $ext=strtolower(pathinfo((string)$file['name'],PATHINFO_EXTENSION));
                     $extensions=['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif'];
-                    $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-                    if(!isset($extensions[$ext])||$extensions[$ext]!==$mime||($file['size']??0)>20*1024*1024||@getimagesize($file['tmp_name'])===false) {
-                        throw new \InvalidArgumentException('Unsupported image or image exceeds 20MB');
-                    }
+                    $actual=(new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+                    $dimensions=@getimagesize($file['tmp_name']);
+                    if(!isset($extensions[$ext])||$extensions[$ext]!==$actual
+                        ||(int)($file['size']??0)>20*1024*1024||!is_array($dimensions)
+                        ||(int)$dimensions[0]*(int)$dimensions[1]>16000000)
+                        throw new \InvalidArgumentException('Invalid, oversized or overly large image');
+                    if(!function_exists('imagecreatefromstring')||!function_exists('imagewebp'))
+                        throw new \RuntimeException('GD WebP processing unavailable');
+                    // Re-encode before storage: bounded display size and strips EXIF GPS metadata.
+                    $input=@file_get_contents($file['tmp_name']);
+                    $image=$input!==false ? @imagecreatefromstring($input) : false;
+                    unset($input);
+                    if(!$image)throw new \InvalidArgumentException('Unreadable image content');
                     $root=self::photoRoot();
-                    if(!is_dir($root)&&!mkdir($root,0700,true)&&!is_dir($root))throw new \RuntimeException('Photo storage unavailable');
-                    $filename=bin2hex(random_bytes(16)).'.'.$ext;
+                    if(!is_dir($root)&&!mkdir($root,0700,true)&&!is_dir($root)){
+                        imagedestroy($image);
+                        throw new \RuntimeException('Private photo storage unavailable');
+                    }
+                    $key=bin2hex(random_bytes(16));
+                    $filename=$key.'.webp';
                     $target=$root.'/'.$filename;
-                    if(!move_uploaded_file($file['tmp_name'],$target))throw new \RuntimeException('Unable to save image');
-                    @chmod($target,0600);
-                    $uploaded=['path'=>$target];
+                    $thumb=$root.'/thumb-'.$filename;
+                    $uploaded=['path'=>$target,'thumb'=>$thumb];
+                    try {
+                        foreach([[2200,82,$target],[480,76,$thumb]] as [$bound,$quality,$destination]) {
+                            $width=imagesx($image);$height=imagesy($image);
+                            $scale=min(1,$bound/max($width,$height));
+                            $w=max(1,(int)round($width*$scale));$h=max(1,(int)round($height*$scale));
+                            $output=imagecreatetruecolor($w,$h);
+                            imagealphablending($output,false);
+                            imagesavealpha($output,true);
+                            imagecopyresampled($output,$image,0,0,0,0,$w,$h,$width,$height);
+                            $saved=imagewebp($output,$destination,$quality);
+                            imagedestroy($output);
+                            if(!$saved)throw new \RuntimeException('Image processing failed');
+                            @chmod($destination,0600);
+                        }
+                    } finally {imagedestroy($image);}
                     $position=(int)Database::value('SELECT COALESCE(MAX(sort_order),0)+1 FROM activity_photos WHERE album_id=?',[$albumId]);
                     $photoId=(int)Database::insert('INSERT INTO activity_photos (album_id,media_id,path,sort_order,created_at) VALUES (?,NULL,?,?,NOW())',
                       [$albumId,$filename,$position]);
@@ -173,7 +203,7 @@ final class ActivityGalleryController extends Controller
                     return ['photo'=>['id'=>$photoId,'url'=>"/api/admin/activities/$albumId/photos/$photoId",'sort_order'=>$position]];
                 });
             } catch(\Throwable $e) {
-                if($uploaded) @unlink($uploaded['path']);
+                if($uploaded) { @unlink($uploaded['path']); @unlink($uploaded['thumb']); }
                 throw $e;
             }
         },201);
@@ -243,7 +273,7 @@ final class ActivityGalleryController extends Controller
             });
             // Delete private file only after committed DB deletion.
             $filename=basename($path);
-            if($filename===$path) @unlink(self::photoRoot().'/'.$filename);
+            if($filename===$path){ @unlink(self::photoRoot().'/'.$filename); @unlink(self::photoRoot().'/thumb-'.$filename); }
             return ['deleted'=>true];
         });
     }
@@ -292,7 +322,8 @@ final class ActivityGalleryController extends Controller
         $row=Database::first($sql,[(int)$photo,(int)$album]);
         if(!$row||(!$admin&&$row['status']!=='published')) {http_response_code(404);return;}
         $base=realpath(self::photoRoot());
-        $path=realpath(self::photoRoot().'/'.$row['path']);
+        $variant=$this->request->query('size')==='thumb'?'thumb-':'';
+        $path=realpath(self::photoRoot().'/'.$variant.$row['path']);
         if(!$base||!$path||!str_starts_with($path,$base.DIRECTORY_SEPARATOR)||!is_file($path)||!is_readable($path)){http_response_code(404);return;}
         $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);
         if(!in_array($mime,['image/jpeg','image/png','image/webp','image/gif'],true)||@getimagesize($path)===false){http_response_code(415);return;}
