@@ -1,0 +1,57 @@
+name: Locate original news media storage (READ ONLY)
+on:
+  push:
+    branches: [Test]
+    paths: ['.github/workflows/production-news-media-locate.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - name: Find storage roots by path and count only, no private filenames
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          D="$RUNNER_TEMP/ssh"
+          mkdir -p "$D"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$D/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$D/known"
+          chmod 600 "$D/id" "$D/known"
+          ssh-keygen -y -P '' -f "$D/id" >/dev/null
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P>=1&&P<=65535))
+          ssh -T -p "$P" -i "$D/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$D/known" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import os
+          roots=['/var/www/rycoopweb','/var/www/rycoop','/var/www/html']
+          matches=[]
+          for root in roots:
+            if not os.path.isdir(root):continue
+            for base,dirs,files in os.walk(root,followlinks=False):
+              relative=os.path.relpath(base,root)
+              depth=0 if relative=='.' else relative.count(os.sep)+1
+              dirs[:]=[d for d in dirs if d not in {'.git','node_modules','vendor','cache','sessions','tmp','logs'}]
+              if depth>=9:dirs[:]=[]
+              if base.endswith('/storage/uploads/news/gallery') or base.endswith('/uploads/news/gallery') or base.endswith('/news/gallery'):
+                count=sum(1 for n in files if n.endswith(('.webp','.jpg','.jpeg','.png','.gif')))
+                matches.append((base,count,os.access(base,os.R_OK|os.X_OK)))
+          print('===== CANDIDATE GALLERY STORAGE ROOTS =====')
+          for path,count,readable in matches[:40]:
+            print('GALLERY_ROOT',path,'IMAGE_COUNT',count,'READABLE',readable)
+          print('MATCHING_ROOT_COUNT',len(matches))
+          PY
+          echo 'MEDIA_LOCATION_READONLY=PASS'
+          REMOTE
+          rm -f "$D/id" "$D/known"
