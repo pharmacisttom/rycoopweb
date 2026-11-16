@@ -85,6 +85,37 @@ export default function AdminActivitiesPage() {
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
 
+  const action = async (suffix, payload = {}) => {
+    if (!selected || busy) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await memberAdminApi(`/api/admin/activities/${selected.id}${suffix}`, { data: payload });
+      await chooseAlbum({ id: selected.id });
+      await refresh();
+      setNotice('บันทึกการเปลี่ยนแปลงสำเร็จ');
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  };
+  const changeCaption = async (photo) => {
+    const caption = window.prompt('คำบรรยายภาพ (สูงสุด 500 ตัวอักษร)', photo.caption || '');
+    if (caption === null) return;
+    await action(`/photos/${photo.id}/caption`, { caption });
+  };
+  const remove = async (photo) => {
+    if (!window.confirm('ลบภาพนี้จากอัลบั้ม Draft ใช่หรือไม่?')) return;
+    await action(`/photos/${photo.id}/remove`);
+  };
+  const move = async (index, delta) => {
+    const destination = index + delta;
+    if (destination < 0 || destination >= photos.length) return;
+    const ids = photos.map((photo) => photo.id);
+    [ids[index], ids[destination]] = [ids[destination], ids[index]];
+    await action('/reorder', { ids });
+  };
+  const archive = async () => {
+    if (!selected || !window.confirm('ยืนยันซ่อนอัลบั้มและนำออกจากหน้าสาธารณะ?')) return;
+    await action('/archive');
+    setSelected(null); setPhotos([]); setForm(emptyForm);
+  };
   const isDraft = !selected || selected.status === 'draft';
   return <section style={{ padding: '1.25rem', maxWidth: 1280, margin: '0 auto' }}>
     <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -122,9 +153,19 @@ export default function AdminActivitiesPage() {
               <ul style={{ maxHeight: 150, overflow: 'auto' }}>{queue.map((q)=><li key={q.key}>{q.file.name} — {q.state}{q.message? ` (${q.message})`:''}</li>)}</ul></>}
           </div>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(95px,1fr))', gap: 8, marginTop: 14 }}>
-            {photos.map((p)=><img key={p.id} alt={p.caption||'ภาพกิจกรรม'} loading="lazy" src={`/api/admin/activities/${selected.id}/photos/${p.id}`} style={{ width:'100%',height:95,objectFit:'cover',borderRadius:8 }}/>)}
+            {photos.map((p,i)=><div key={p.id} style={{ border:'1px solid #cbd5e1',borderRadius:8,padding:5 }}>
+              <img alt={p.caption||'ภาพกิจกรรม'} loading="lazy" src={`/api/admin/activities/${selected.id}/photos/${p.id}`} style={{ width:'100%',height:95,objectFit:'cover',borderRadius:8 }}/>
+              {isDraft && <div style={{ display:'flex',flexWrap:'wrap',gap:4,marginTop:4 }}>
+                <button type="button" disabled={busy} onClick={()=>action(`/photos/${p.id}/cover`)} title="ตั้งภาพปก">ปก</button>
+                <button type="button" disabled={busy} onClick={()=>changeCaption(p)} title="คำบรรยาย">แก้</button>
+                <button type="button" disabled={busy||i===0} onClick={()=>move(i,-1)} title="เลื่อนก่อนหน้า">↑</button>
+                <button type="button" disabled={busy||i===photos.length-1} onClick={()=>move(i,1)} title="เลื่อนถัดไป">↓</button>
+                <button type="button" disabled={busy} onClick={()=>remove(p)} title="ลบภาพ">ลบ</button>
+              </div>}
+            </div>)}
           </div>
           {isDraft && photos.length > 0 && <button className="btn btn-primary" style={{ marginTop: 18 }} disabled={busy} onClick={publish}>เผยแพร่อัลบั้มกิจกรรม</button>}
+          <button className="btn btn-outline" style={{ marginTop: 18, marginLeft: 8 }} disabled={busy} onClick={archive}>ซ่อน/เก็บอัลบั้ม</button>
         </div>}
       </div>
     </div>
