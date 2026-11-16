@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CalendarDays, Images, MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ActivitiesPage() {
+  const dialogRef = useRef(null);
   const [albums, setAlbums] = useState([]);
   const [selected, setSelected] = useState(null);
   const [active, setActive] = useState(0);
@@ -30,6 +31,7 @@ export default function ActivitiesPage() {
     } catch (e) { setError(e.message); }
   };
 
+  useEffect(() => { if (selected) dialogRef.current?.focus(); }, [selected]);
   const photos = selected?.photos || [];
   return <main className="container section" style={{ minHeight: '70vh' }}>
     <div className="section-title-wrap">
@@ -56,7 +58,7 @@ export default function ActivitiesPage() {
         </div>
       </article>)}
     </div>
-    {selected && <div role="dialog" aria-modal="true" aria-label={selected.album.title} style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(10,20,36,.96)', color: 'white', overflow: 'auto', padding: 20 }} onKeyDown={(e) => { if (e.key === 'Escape') setSelected(null); if (e.key === 'ArrowRight') setActive((i) => Math.min(i+1,photos.length-1)); if (e.key === 'ArrowLeft') setActive((i) => Math.max(0,i-1)); }}>
+    {selected && <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={selected.album.title} style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(10,20,36,.96)', color: 'white', overflow: 'auto', padding: 20 }} onKeyDown={(e) => { if (e.key === 'Escape') setSelected(null); if (e.key === 'ArrowRight') setActive((i) => Math.min(i+1,photos.length-1)); if (e.key === 'ArrowLeft') setActive((i) => Math.max(0,i-1)); }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
           <h2 style={{ color: 'white' }}>{selected.album.title}</h2>
