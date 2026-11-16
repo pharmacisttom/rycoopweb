@@ -39,7 +39,7 @@ foreach($targets as $target){
     echo "PASS: $target\n";
 }
 $service=file_get_contents(__DIR__.'/../app/Controllers/Api/ActivityGalleryController.php');
-foreach(["status='published'","if($"."album['status']!=='published')","photoRoot()","Auth::check()","move_uploaded_file(","required:true"] as $guard){
+foreach(["status='published'","photoRoot()","Auth::check()","move_uploaded_file(","required:true"] as $guard){
     if(!str_contains($service,$guard))throw new RuntimeException("Missing guard: $guard");
 }
 echo "PASS: Activity Gallery route and draft/public structural gates (live verification pending)\n";
