@@ -24,8 +24,9 @@ export default function AdminActivitiesPage() {
   useEffect(() => { refresh().catch((e) => setError(e.message)); }, []);
 
   const chooseAlbum = async (album) => {
-    setSelected(album); setQueue([]); setError(''); setNotice('');
+    setQueue([]); setError(''); setNotice('');
     const result = await memberAdminApi(`/api/admin/activities/${album.id}`);
+    setSelected(result.data.album);
     setPhotos(result.data?.photos || []);
     setForm({ title: result.data.album.title, description: result.data.album.description || '', location: result.data.album.location || '', event_date: result.data.album.event_date || '' });
   };
