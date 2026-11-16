@@ -50,7 +50,7 @@ final class ActivityGalleryController extends Controller
         AdminCrudService::respond($this->response,static function():array {
             $rows=Database::query("SELECT a.id,a.title,a.description,a.event_date,a.location,
                 (SELECT COUNT(*) FROM activity_photos p WHERE p.album_id=a.id) AS photo_count,
-                (SELECT p.id FROM activity_photos p WHERE p.album_id=a.id ORDER BY (p.id=a.cover_photo_id) DESC,p.sort_order,p.id LIMIT 1) AS cover_id
+                COALESCE(a.cover_photo_id,(SELECT p.id FROM activity_photos p WHERE p.album_id=a.id ORDER BY p.sort_order,p.id LIMIT 1)) AS cover_id
                 FROM activity_albums a WHERE a.status='published' AND a.deleted_at IS NULL
                 ORDER BY a.event_date DESC,a.id DESC LIMIT 100");
             foreach($rows as &$row) $row['cover_url']=empty($row['cover_id'])?null:"/api/public/activities/{$row['id']}/photos/{$row['cover_id']}?size=thumb";
