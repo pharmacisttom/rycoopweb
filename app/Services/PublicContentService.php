@@ -56,6 +56,17 @@ class PublicContentService
         $base = self::setting();
         $catalog = $base ? json_decode($base['value'],true,512,JSON_THROW_ON_ERROR) : self::reference();
 
+        $today = date('Y-m-d');
+        $rows = Database::query("SELECT section,payload,source_url,effective_on,expires_on,id FROM public_content_revisions WHERE state='published' AND effective_on<=? AND (expires_on IS NULL OR expires_on>=?) ORDER BY effective_on,id",[$today,$today]);
+        $metadata = [];
+        foreach ($rows as $row) {
+            if (!isset(self::SECTIONS[$row['section']])) continue;
+            self::assign($catalog,$row['section'],json_decode($row['payload'],true,512,JSON_THROW_ON_ERROR));
+            $metadata[$row['section']] = ['sourceUrl'=>$row['source_url'],'effectiveOn'=>$row['effective_on'],'expiresOn'=>$row['expires_on'],'revision'=>(int)$row['id']];
+        }
+        // Published BoardTerm is authoritative for board sections. Apply it after
+        // dated public-content revisions so legacy CMS edits cannot override an
+        // explicitly approved current term. Without one, revisions/fallback remain.
         try {
             $activeTerm = BoardTermService::getPublicActiveTerm();
             if ($activeTerm) {
@@ -76,14 +87,7 @@ class PublicContentService
             // Graceful fallback to legacyReference.json if board_terms is not available
         }
 
-        $today = date('Y-m-d');
-        $rows = Database::query("SELECT section,payload,source_url,effective_on,expires_on,id FROM public_content_revisions WHERE state='published' AND effective_on<=? AND (expires_on IS NULL OR expires_on>=?) ORDER BY effective_on,id",[$today,$today]);
-        $metadata = [];
-        foreach ($rows as $row) {
-            if (!isset(self::SECTIONS[$row['section']])) continue;
-            self::assign($catalog,$row['section'],json_decode($row['payload'],true,512,JSON_THROW_ON_ERROR));
-            $metadata[$row['section']] = ['sourceUrl'=>$row['source_url'],'effectiveOn'=>$row['effective_on'],'expiresOn'=>$row['expires_on'],'revision'=>(int)$row['id']];
-        }
+
         foreach ($catalog['loanProducts'] as &$product) {
             foreach ($catalog['interestRates']['loans'] as $rate) if ((!empty($rate['productId']) && $rate['productId']===$product['id']) || (empty($rate['productId']) && $rate['type']===$product['title'])) {
                 $product['rateValue']=(float)rtrim($rate['rate'],'%');

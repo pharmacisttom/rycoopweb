@@ -252,7 +252,7 @@ export default function AdminBoardPersonnelPage() {
         }
       });
       if (res.success) {
-        alertService.success(res.message || 'นำเข้าข้อมูลกรรมการชุดที่ 38 สำเร็จแล้ว');
+        alertService.success(res.message || 'นำเข้าชุดที่ 38 เป็นฉบับร่างแล้ว (ยังไม่เผยแพร่)');
         setImportModalOpen(false);
         await reloadPublicContent();
         setRefreshKey((k) => k + 1);
@@ -1295,7 +1295,7 @@ export default function AdminBoardPersonnelPage() {
                   title="นำเข้าและเทียบข้อมูลกรรมการชุดที่ 38 จากหน้าเว็บไซต์"
                 >
                   <Download size={15} />
-                  <span>นำเข้าข้อมูลชุดที่ 38</span>
+                  <span>นำเข้าชุดที่ 38 เป็นร่าง</span>
                 </button>
                 <button
                   type="button"
@@ -1376,7 +1376,7 @@ export default function AdminBoardPersonnelPage() {
             onClick={handleOpenImport38Modal}
           >
             <Download size={15} />
-            <span>นำเข้าข้อมูลกรรมการชุดที่ 38 จากข้อมูลหน้าบ้าน</span>
+            <span>สร้างข้อมูลชุดที่ 38 เป็นร่างจากข้อมูลต้นฉบับ</span>
           </button>
         </div>
       )}
@@ -2413,7 +2413,7 @@ export default function AdminBoardPersonnelPage() {
                 onClick={handleConfirmImport38}
                 disabled={importing || importPreviewLoading}
               >
-                {importing ? 'กำลังนำเข้าข้อมูล...' : 'ยืนยันนำเข้าข้อมูลชุดที่ 38'}
+                {importing ? 'กำลังนำเข้าข้อมูล...' : 'ยืนยันสร้างชุดที่ 38 (ร่าง ไม่เผยแพร่)'}
               </button>
             </div>
           </div>
