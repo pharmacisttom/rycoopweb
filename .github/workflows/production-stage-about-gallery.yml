@@ -1,0 +1,75 @@
+name: Stage reviewed About + Gallery frontend on VPS (NO CUTOVER)
+
+on:
+  push:
+    branches: [Test]
+    paths:
+      - '.github/workflows/production-stage-about-gallery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rycoop-about-gallery-staging
+  cancel-in-progress: false
+
+jobs:
+  build-and-stage:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 20
+    env:
+      # Pinned to reviewed PR #34 commit with quality gate #210.
+      APPROVED_SHA: 82e766f0c2f48a8cb00620abf87b56538127a177
+      SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+      SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+      SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+      SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+      SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Checkout exact reviewed commit
+        uses: actions/checkout@v6
+        with:
+          ref: 82e766f0c2f48a8cb00620abf87b56538127a177
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build immutable frontend asset
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$APPROVED_SHA" ]]
+          npm ci --ignore-scripts
+          NODE_ENV=production npm run build
+          test -s public/app/index.html
+          test -d public/app/assets
+          tar -C public/app -czf "$RUNNER_TEMP/rycoop-front.tgz" .
+          sha256sum "$RUNNER_TEMP/rycoop-front.tgz" | awk '{print "FRONTEND_BUNDLE_SHA256="$1}'
+      - name: Stage artifact without changing active production roots
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$RUNNER_TEMP/ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/ssh/id" >/dev/null
+          PORT="${SSH_PORT:-22}"
+          [[ "$PORT" =~ ^[0-9]+$ ]] && ((PORT>=1 && PORT<=65535))
+          S=( -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" )
+          STAGE=".local/share/rycoop-deploy-staging/$APPROVED_SHA"
+          ssh -p "$PORT" "${S[@]}" "$SSH_USER@$SSH_HOST" "mkdir -p ~/$STAGE && chmod 700 ~/$STAGE"
+          scp -P "$PORT" "${S[@]}" "$RUNNER_TEMP/rycoop-front.tgz" "$SSH_USER@$SSH_HOST:$STAGE/frontend.tgz"
+          LOCAL_SHA="$(sha256sum "$RUNNER_TEMP/rycoop-front.tgz" | awk '{print $1}')"
+          ssh -p "$PORT" "${S[@]}" "$SSH_USER@$SSH_HOST" "STAGE=\$HOME/$STAGE; test -s \"\$STAGE/frontend.tgz\" && tar -tzf \"\$STAGE/frontend.tgz\" >/dev/null && sha256sum \"\$STAGE/frontend.tgz\"" > "$RUNNER_TEMP/remote-sha.txt"
+          REMOTE_SHA="$(awk '{print $1}' "$RUNNER_TEMP/remote-sha.txt")"
+          [[ "$LOCAL_SHA" == "$REMOTE_SHA" ]] || { echo "STAGED_ARTIFACT_HASH_MISMATCH"; exit 1; }
+          echo "STAGE_UPLOAD=PASS"
+          echo "ACTIVE_PRODUCTION_UNCHANGED=YES"
+          echo "DATABASE_UNCHANGED=YES"
+          echo "NGINX_UNCHANGED=YES"
+          rm -f "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known_hosts"
