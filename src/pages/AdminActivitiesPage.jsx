@@ -154,7 +154,7 @@ export default function AdminActivitiesPage() {
           </div>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(95px,1fr))', gap: 8, marginTop: 14 }}>
             {photos.map((p,i)=><div key={p.id} style={{ border:'1px solid #cbd5e1',borderRadius:8,padding:5 }}>
-              <img alt={p.caption||'ภาพกิจกรรม'} loading="lazy" src={`/api/admin/activities/${selected.id}/photos/${p.id}`} style={{ width:'100%',height:95,objectFit:'cover',borderRadius:8 }}/>
+              <img alt={p.caption||'ภาพกิจกรรม'} loading="lazy" src={`/api/admin/activities/${selected.id}/photos/${p.id}?size=thumb`} style={{ width:'100%',height:95,objectFit:'cover',borderRadius:8 }}/>
               {isDraft && <div style={{ display:'flex',flexWrap:'wrap',gap:4,marginTop:4 }}>
                 <button type="button" disabled={busy} onClick={()=>action(`/photos/${p.id}/cover`)} title="ตั้งภาพปก">ปก</button>
                 <button type="button" disabled={busy} onClick={()=>changeCaption(p)} title="คำบรรยาย">แก้</button>
