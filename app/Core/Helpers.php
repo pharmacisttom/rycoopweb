@@ -216,7 +216,7 @@ if (!function_exists('storage_upload_path')) {
         // behavior until a separate, verified server configuration enables this.
         $configured = trim((string) (getenv('RYCOOP_UPLOAD_ROOT') ?: ''));
         if ($configured !== '') {
-            $configured = rtrim(str_replace('\\\\', '/', $configured), '/');
+            $configured = rtrim(str_replace('\\', '/', $configured), '/');
             if (!str_starts_with($configured, '/') || $configured === ''
                 || preg_match('#(?:^|/)(?:\\.|\\.\\.)(?:/|$)#', $configured)) {
                 throw new InvalidArgumentException('Invalid persistent uploads root.');
