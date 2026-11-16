@@ -173,28 +173,26 @@ class BoardTermService
         $pdo->beginTransaction();
 
         try {
-            $existing = Database::first("SELECT id FROM board_terms WHERE term_number = 38");
+            $existing = Database::first("SELECT id FROM board_terms WHERE term_number = 38 FOR UPDATE");
             $termId = null;
 
             if ($existing) {
-                $termId = (int)$existing['id'];
-                Database::execute(
-                    "UPDATE board_terms
-                     SET term_name = ?, year_start_be = ?, year_end_be = ?, source_url = ?, note = ?,
-                         status = 'published', is_current = 1, published_at = NOW(), updated_at = NOW()
-                     WHERE id = ?",
-                    ['ชุดที่ 38', 2567, 2568, $sourceUrl, $note, $termId]
-                );
-            } else {
-                $termId = (int)Database::insert(
-                    "INSERT INTO board_terms (term_number, term_name, year_start_be, year_end_be, status, is_current, source_url, note, published_at, created_at, updated_at)
-                     VALUES (38, 'ชุดที่ 38', 2567, 2568, 'published', 1, ?, ?, NOW(), NOW(), NOW())",
-                    [$sourceUrl, $note]
-                );
+                // Import is create-only. Never reconcile or overwrite an existing term implicitly.
+                // Use the separately authorized reconciliation workflow for intentional updates.
+                $pdo->commit();
+                return [
+                    'status' => 'already_exists',
+                    'term_id' => (int)$existing['id'],
+                    'term_number' => 38,
+                    'message' => 'ชุดที่ 38 มีอยู่แล้ว: ไม่ได้แก้ไขข้อมูลหรือสถานะเผยแพร่',
+                ];
             }
 
-            // Demote any other terms so only Term 38 is current
-            Database::execute("UPDATE board_terms SET is_current = 0, status = 'archived', updated_at = NOW() WHERE id != ? AND is_current = 1", [$termId]);
+            $termId = (int)Database::insert(
+                "INSERT INTO board_terms (term_number, term_name, year_start_be, year_end_be, status, is_current, source_url, note, published_at, created_at, updated_at)
+                 VALUES (38, 'ชุดที่ 38', 2567, 2568, 'draft', 0, ?, ?, NULL, NOW(), NOW())",
+                [$sourceUrl, $note]
+            );
 
             // Existing members map for Term 38
             $existingMembers = Database::query("SELECT * FROM board_term_members WHERE term_id = ?", [$termId]);
@@ -369,9 +367,6 @@ class BoardTermService
                     }
                 }
             }
-
-            // Archive older revisions for clean public overlay
-            Database::execute("UPDATE public_content_revisions SET state = 'archived' WHERE section IN ('boards', 'groups', 'advisors', 'auditors') AND state = 'published'");
 
             $pdo->commit();
             AuditService::log('board_terms', 'import_term_38', (string)$termId, null, [
@@ -642,13 +637,25 @@ class BoardTermService
             throw new RuntimeException('ตาราง board_terms ยังไม่พร้อมใช้งาน');
         }
 
-        if (empty($selectedMemberIds)) {
-            throw new InvalidArgumentException('กรุณาเลือกกรรมการอย่างน้อย 1 ท่านสำหรับถ่ายโอน');
+        if ($sourceTermId < 1 || $targetTermNumber !== 39) {
+            throw new InvalidArgumentException('อนุญาตเฉพาะการคัดลอกไปวาระชุดที่ 39');
         }
+        $validatedIds = [];
+        foreach ($selectedMemberIds as $rawId) {
+            $id = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id === false || isset($validatedIds[$id])) {
+                throw new InvalidArgumentException('รหัสกรรมการไม่ถูกต้องหรือซ้ำ');
+            }
+            $validatedIds[$id] = true;
+        }
+        if (!$validatedIds || count($validatedIds) > 200) {
+            throw new InvalidArgumentException('กรุณาเลือกกรรมการ 1–200 รายการ');
+        }
+        $selectedMemberIds = array_keys($validatedIds);
 
         $source = self::getTerm($sourceTermId);
-        if (!$source) {
-            throw new InvalidArgumentException('ไม่พบวาระต้นฉบับที่ต้องการถ่ายโอน');
+        if (!$source || (int)$source['term']['term_number'] !== 38) {
+            throw new InvalidArgumentException('ต้องคัดลอกจากวาระชุดที่ 38 เท่านั้น');
         }
 
         $transferGroups = (bool)($options['transfer_groups'] ?? true);
@@ -659,7 +666,7 @@ class BoardTermService
 
         // Verify target term status if it exists
         $target = Database::first("SELECT * FROM board_terms WHERE term_number = ?", [$targetTermNumber]);
-        if ($target && $target['status'] === 'published') {
+        if ($target && ($target['status'] !== 'draft' || (int)$target['is_current'] !== 0)) {
             throw new InvalidArgumentException("ไม่สามารถถ่ายโอนไปยังวาระชุดที่ {$targetTermNumber} ได้ เนื่องจากวาระดังกล่าวเผยแพร่อยู่แล้ว");
         }
 
@@ -667,6 +674,15 @@ class BoardTermService
         $pdo->beginTransaction();
 
         try {
+            // Serialize competing transfers through the source term row.
+            $sourceLock = Database::first("SELECT id FROM board_terms WHERE id = ? FOR UPDATE", [$sourceTermId]);
+            if (!$sourceLock) {
+                throw new InvalidArgumentException('ไม่พบวาระต้นฉบับ');
+            }
+            $target = Database::first("SELECT * FROM board_terms WHERE term_number = ? FOR UPDATE", [$targetTermNumber]);
+            if ($target && ($target['status'] !== 'draft' || (int)$target['is_current'] !== 0)) {
+                throw new InvalidArgumentException('วาระเป้าหมายไม่ใช่ฉบับร่าง');
+            }
             $targetTermId = null;
             if ($target) {
                 $targetTermId = (int)$target['id'];
@@ -696,8 +712,8 @@ class BoardTermService
                 $params
             );
 
-            if (empty($membersToTransfer)) {
-                throw new InvalidArgumentException('ไม่พบรายชื่อกรรมการที่เลือกในวาระต้นฉบับ');
+            if (count($membersToTransfer) !== count($selectedMemberIds)) {
+                throw new InvalidArgumentException('มีรหัสกรรมการที่ไม่ได้อยู่ในวาระต้นฉบับ');
             }
 
             // Existing target members map
@@ -1396,17 +1412,8 @@ class BoardTermService
             return null;
         }
 
-        // Check if any scheduled term has reached its publication time
-        $due = Database::first(
-            "SELECT id FROM board_terms WHERE status = 'scheduled' AND publish_at <= NOW() ORDER BY publish_at ASC LIMIT 1"
-        );
-        if ($due) {
-            try {
-                self::publishTerm((int)$due['id'], null);
-            } catch (\Throwable $e) {
-                // If auto-transition encounters issue, proceed with current published
-            }
-        }
+        // Public GET must be strictly read-only. Scheduled publication requires
+        // a separate privileged CLI job with an audited service identity.
 
         $term = Database::first(
             "SELECT * FROM board_terms WHERE status = 'published' AND is_current = 1 ORDER BY published_at DESC, id DESC LIMIT 1"
