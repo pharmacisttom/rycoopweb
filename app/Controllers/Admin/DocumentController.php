@@ -52,6 +52,106 @@ final class DocumentController extends \App\Core\Controller
     // DOCUMENT CATEGORIES MANAGEMENT API
     // ──────────────────────────────────────────────
 
+    /** Admin-only file review. Never expose private storage as a static URL. */
+    public function preview(string $id): void
+    {
+        $this->serveAdminDocument($id, false);
+    }
+
+    /** Admin-only file download, including unpublished documents. */
+    public function download(string $id): void
+    {
+        $this->serveAdminDocument($id, true);
+    }
+
+    private function serveAdminDocument(string $id, bool $download): void
+    {
+        // Defense in depth: the /api/admin route group and PermissionMiddleware
+        // must also enforce the authenticated, fully MFA-verified admin session.
+        if (!Auth::check() || !Auth::hasPermission('documents', 'view')) {
+            http_response_code(403);
+            header('Cache-Control: no-store, private');
+            exit;
+        }
+
+        $docId = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($docId === false) {
+            http_response_code(404);
+            exit;
+        }
+
+        $doc = Database::first(
+            'SELECT id, file_path FROM documents WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+            [(int)$docId]
+        );
+        if (!$doc || empty($doc['file_path'])) {
+            http_response_code(404);
+            exit;
+        }
+
+        try {
+            $base = realpath(storage_upload_path());
+            $path = realpath(storage_upload_path((string)$doc['file_path']));
+        } catch (\Throwable $e) {
+            http_response_code(404);
+            exit;
+        }
+        if (!$base || !$path || !str_starts_with($path, $base . DIRECTORY_SEPARATOR)
+            || !is_file($path) || !is_readable($path)) {
+            http_response_code(404);
+            exit;
+        }
+
+        // Never trust MIME metadata saved in the DB for HTTP response headers.
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $allowed = [
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+        if (!isset($allowed[$extension])) {
+            http_response_code(415);
+            exit;
+        }
+        // The eye button previews PDFs only; other formats are downloaded.
+        if (!$download && $extension !== 'pdf') {
+            header('Cache-Control: no-store, private');
+            http_response_code(415);
+            exit;
+        }
+        if ($extension === 'pdf') {
+            $fp = fopen($path, 'rb');
+            $magic = $fp ? fread($fp, 5) : false;
+            if ($fp) fclose($fp);
+            if ($magic !== '%PDF-') {
+                http_response_code(415);
+                exit;
+            }
+        }
+
+        $size = filesize($path);
+        if ($size === false) {
+            http_response_code(404);
+            exit;
+        }
+        $filename = 'rycoop-document-' . (int)$docId . '.' . $extension;
+        header('Content-Type: ' . $allowed[$extension]);
+        header('Content-Disposition: ' . ($download ? 'attachment' : 'inline') . '; filename="' . $filename . '"');
+        header('Content-Length: ' . $size);
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store, no-cache, must-revalidate, private');
+        header('Pragma: no-cache');
+        header('X-Robots-Tag: noindex, nofollow, noarchive');
+        if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD') {
+            exit;
+        }
+        readfile($path);
+        exit;
+    }
+
+
     public function apiCategories(): void
     {
         $categories = Database::query("SELECT * FROM document_categories ORDER BY sort_order ASC, id ASC");
