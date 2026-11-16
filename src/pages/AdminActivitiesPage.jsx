@@ -127,7 +127,7 @@ export default function AdminActivitiesPage() {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,330px),1fr))', gap: 20, marginTop: 20 }}>
       <aside className="surface-card" style={{ padding: 20, alignSelf: 'start' }}>
         <h2 style={{ fontSize: '1.1rem' }}>อัลบั้มทั้งหมด</h2>
-        <button className="btn btn-outline btn-sm" onClick={() => refresh().catch((e)=>setError(e.message)}><RefreshCw size={14}/> รีเฟรช</button>
+        <button className="btn btn-outline btn-sm" onClick={() => refresh().catch((e)=>setError(e.message))}><RefreshCw size={14}/> รีเฟรช</button>
         <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
           {albums.map((a) => <button key={a.id} type="button" onClick={() => chooseAlbum(a).catch((e)=>setError(e.message))} style={{ padding: 12, textAlign: 'left', border: selected?.id===a.id?'2px solid #0284c7':'1px solid #cbd5e1', borderRadius: 10, background: 'transparent' }}>
             <strong>{a.title}</strong><small style={{ display: 'block' }}>{a.photo_count} ภาพ · {a.status==='draft'?'ฉบับร่าง':'เผยแพร่แล้ว'}</small>
