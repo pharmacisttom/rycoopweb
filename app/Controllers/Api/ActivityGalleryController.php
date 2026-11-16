@@ -195,6 +195,92 @@ final class ActivityGalleryController extends Controller
         });
     }
 
+    public function cover(string $id,string $photo):void
+    {
+        AdminCrudService::respond($this->response,static function()use($id,$photo):array {
+            self::authorize('update');$albumId=self::id($id);$photoId=self::id($photo);
+            return Database::transaction(static function()use($albumId,$photoId):array {
+                $album=self::album($albumId,true);
+                if($album['status']!=='draft')throw new SecurityGateException('Draft required',409,'NOT_DRAFT');
+                if(!Database::first('SELECT id FROM activity_photos WHERE id=? AND album_id=?',[$photoId,$albumId]))
+                    throw new SecurityGateException('Photo not found',404,'NOT_FOUND');
+                Database::execute('UPDATE activity_albums SET cover_photo_id=?,updated_at=NOW() WHERE id=?',[$photoId,$albumId]);
+                AuditService::log('activity_albums','cover',(string)$albumId,null,['photo_id'=>$photoId],required:true);
+                return ['cover_photo_id'=>$photoId];
+            });
+        });
+    }
+
+    public function caption(string $id,string $photo):void
+    {
+        AdminCrudService::respond($this->response,function()use($id,$photo):array {
+            self::authorize('update');$albumId=self::id($id);$photoId=self::id($photo);
+            $caption=trim((string)$this->request->input('caption',''));
+            if(mb_strlen($caption)>500)throw new \\InvalidArgumentException('Caption too long');
+            return Database::transaction(static function()use($albumId,$photoId,$caption):array {
+                if(self::album($albumId,true)['status']!=='draft')throw new SecurityGateException('Draft required',409,'NOT_DRAFT');
+                if(!Database::first('SELECT id FROM activity_photos WHERE id=? AND album_id=?',[$photoId,$albumId]))
+                    throw new SecurityGateException('Photo not found',404,'NOT_FOUND');
+                Database::execute('UPDATE activity_photos SET caption=? WHERE id=?',[$caption,$photoId]);
+                AuditService::log('activity_albums','caption',(string)$albumId,null,['photo_id'=>$photoId],required:true);
+                return ['photo_id'=>$photoId];
+            });
+        });
+    }
+
+    public function removePhoto(string $id,string $photo):void
+    {
+        AdminCrudService::respond($this->response,static function()use($id,$photo):array {
+            self::authorize('update');$albumId=self::id($id);$photoId=self::id($photo);
+            $path=Database::transaction(static function()use($albumId,$photoId):string {
+                if(self::album($albumId,true)['status']!=='draft')throw new SecurityGateException('Draft required',409,'NOT_DRAFT');
+                $row=Database::first('SELECT path FROM activity_photos WHERE id=? AND album_id=?',[$photoId,$albumId]);
+                if(!$row)throw new SecurityGateException('Photo not found',404,'NOT_FOUND');
+                Database::execute('DELETE FROM activity_photos WHERE id=? AND album_id=?',[$photoId,$albumId]);
+                Database::execute('UPDATE activity_albums SET cover_photo_id=NULL WHERE id=? AND cover_photo_id=?',[$albumId,$photoId]);
+                AuditService::log('activity_albums','remove_photo',(string)$albumId,null,['photo_id'=>$photoId],required:true);
+                return (string)$row['path'];
+            });
+            // Delete private file only after committed DB deletion.
+            $filename=basename($path);
+            if($filename===$path) @unlink(self::photoRoot().'/'.$filename);
+            return ['deleted'=>true];
+        });
+    }
+
+    public function reorder(string $id):void
+    {
+        AdminCrudService::respond($this->response,function()use($id):array {
+            self::authorize('update');$albumId=self::id($id);
+            $ids=$this->request->input('ids',[]);
+            if(!is_array($ids)||count($ids)>1000)throw new \\InvalidArgumentException('Invalid photo order');
+            return Database::transaction(static function()use($albumId,$ids):array {
+                if(self::album($albumId,true)['status']!=='draft')throw new SecurityGateException('Draft required',409,'NOT_DRAFT');
+                $original=array_map('intval',array_column(Database::query('SELECT id FROM activity_photos WHERE album_id=? ORDER BY id',[$albumId]),'id'));
+                $incoming=[];
+                foreach($ids as $v){if(!is_scalar($v)||!preg_match('/^[1-9][0-9]*$/D',(string)$v))throw new \\InvalidArgumentException('Invalid photo ID');$incoming[]=(int)$v;}
+                sort($incoming);
+                if($incoming!==$original)throw new SecurityGateException('Photo list has changed; reload',409,'STALE_PHOTOS');
+                foreach($ids as $i=>$photoId)Database::execute('UPDATE activity_photos SET sort_order=? WHERE id=? AND album_id=?',[$i+1,(int)$photoId,$albumId]);
+                AuditService::log('activity_albums','reorder',(string)$albumId,null,['count'=>count($ids)],required:true);
+                return ['reordered'=>count($ids)];
+            });
+        });
+    }
+
+    public function archive(string $id):void
+    {
+        AdminCrudService::respond($this->response,static function()use($id):array {
+            self::authorize('publish');$albumId=self::id($id);
+            return Database::transaction(static function()use($albumId):array {
+                $old=self::album($albumId,true);
+                Database::execute('UPDATE activity_albums SET deleted_at=NOW(),updated_at=NOW() WHERE id=?',[$albumId]);
+                AuditService::log('activity_albums','archive',(string)$albumId,$old,['deleted'=>true],required:true);
+                return ['archived'=>true];
+            });
+        });
+    }
+
     public function photo(string $album, string $photo): void { $this->streamPhoto($album,$photo,false); }
     public function adminPhoto(string $album,string $photo): void { $this->streamPhoto($album,$photo,true); }
 
