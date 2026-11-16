@@ -26,6 +26,7 @@ import {
   Layers,
   Image as ImageIcon
 } from 'lucide-react';
+import BoardTermWorkflowPanel from '../components/admin/BoardTermWorkflowPanel';
 import { memberAdminApi } from '../services/memberAdminApi';
 import alertService from '../services/alertService';
 import { usePublicContent } from '../context/PublicContentContext';
@@ -941,6 +942,7 @@ export default function AdminBoardPersonnelPage() {
 
   return (
     <div className="admin-board-staff-page">
+      <BoardTermWorkflowPanel />
       {/* ─────────────────────────────────────────────────────────────
           Page Header
       ───────────────────────────────────────────────────────────── */}

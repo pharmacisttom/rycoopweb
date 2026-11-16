@@ -1,0 +1,321 @@
+RC03 actual local evidence — clean staged snapshot; 2026-11-16 Asia/Bangkok
+No environment database / operational import / deployment.
+
+No syntax errors detected in app/Controllers/Admin/BoardTermWorkflowController.php
+No syntax errors detected in app/Services/BoardTermService.php
+No syntax errors detected in app/Services/BoardTermWorkflow.php
+No syntax errors detected in app/Services/PublicContentService.php
+No syntax errors detected in config/routes.php
+No syntax errors detected in tests/BoardTermManagementTest.php
+No syntax errors detected in tests/BoardTermWorkflowHardeningTest.php
+
+COMMAND: php tests/BoardTermManagementTest.php
+PASS: import preview performs zero writes
+PASS: legacy preview counts and contract
+PASS: no published term returns fallback
+PASS: import fault injected
+PASS: import rollback leaves board_terms empty
+PASS: import rollback leaves board_term_members empty
+PASS: import rollback leaves board_term_groups empty
+PASS: import rollback leaves board_term_group_members empty
+PASS: draft import leaves public catalog unchanged
+PASS: term 38 imported as draft
+PASS: re-import preserves every row and custom edit/photo
+PASS: destructive reconciliation rejected
+PASS: stale copy rejected
+PASS: duplicate selection rejected
+PASS: same source and destination rejected
+PASS: invalid source rejected
+PASS: foreign source member rejected
+PASS: copy fault injected
+PASS: failed copy rolls back destination and preserves source
+PASS: selective copy preserves source rows
+PASS: term 39 stays separate draft
+PASS: member photo preserved
+PASS: selected group relationships copied
+PASS: repeat copy rejected
+PASS: unapproved draft cannot publish
+PASS: editor cannot publish
+PASS: pending MFA rejected
+PASS: member cannot import
+PASS: changes invalidate approval
+PASS: exactly one current published term
+PASS: public GET paths perform zero database writes
+PASS: re-import cannot demote current term
+PASS: published term cannot be edited
+PASS: required audit failure propagated
+PASS: failed publication rolls back promotion and demotion
+PASS: replacement publication keeps one current term
+PASS: previous current archived only by explicit publication
+PASS: public API uses published board term
+PASS: BoardTerm takes precedence over published board revisions
+PASS: API rejects malformed term IDs with 422 contract
+PASS: API unauthorized publication returns 403
+PASS: Document API keeps active-only list contract
+PASS: Document API field id
+PASS: Document API field title
+PASS: Document API field category
+PASS: Document API field category_slug
+PASS: Document API field file_path
+PASS: Document API field file_size
+PASS: Document API field download_count
+PASS: Document API field file_url
+PASS: Document API refuses inactive download
+PASS: board route authenticated /api/admin/board-terms/import-38/preview
+PASS: board route authenticated /api/admin/board-terms/import-38
+PASS: board mutation CSRF /api/admin/board-terms/import-38
+PASS: board route authenticated /api/admin/board-terms/{id}/selection-candidates
+PASS: board route authenticated /api/admin/board-terms/{id}/selective-copy/preview
+PASS: board mutation CSRF /api/admin/board-terms/{id}/selective-copy/preview
+PASS: board route authenticated /api/admin/board-terms/{id}/selective-copy
+PASS: board mutation CSRF /api/admin/board-terms/{id}/selective-copy
+PASS: board route authenticated /api/admin/board-terms/{id}/approve
+PASS: board mutation CSRF /api/admin/board-terms/{id}/approve
+PASS: board route authenticated /api/admin/board-terms
+PASS: board route authenticated /api/admin/board-terms/{id}
+PASS: board route authenticated /api/admin/board-terms/{id}/preview
+PASS: board route authenticated /api/admin/board-terms
+PASS: board mutation CSRF /api/admin/board-terms
+PASS: board route authenticated /api/admin/board-terms/reconcile-38
+PASS: board mutation CSRF /api/admin/board-terms/reconcile-38
+PASS: board route authenticated /api/admin/board-terms/upload-photo
+PASS: board mutation CSRF /api/admin/board-terms/upload-photo
+PASS: board route authenticated /api/admin/board-terms/{id}/copy
+PASS: board mutation CSRF /api/admin/board-terms/{id}/copy
+PASS: board route authenticated /api/admin/board-terms/{id}
+PASS: board mutation CSRF /api/admin/board-terms/{id}
+PASS: board route authenticated /api/admin/board-terms/{id}/update
+PASS: board mutation CSRF /api/admin/board-terms/{id}/update
+PASS: board route authenticated /api/admin/board-terms/{id}/members
+PASS: board mutation CSRF /api/admin/board-terms/{id}/members
+PASS: board route authenticated /api/admin/board-terms/{id}/members
+PASS: board mutation CSRF /api/admin/board-terms/{id}/members
+PASS: board route authenticated /api/admin/board-terms/{id}/groups
+PASS: board mutation CSRF /api/admin/board-terms/{id}/groups
+PASS: board route authenticated /api/admin/board-terms/{id}/groups
+PASS: board mutation CSRF /api/admin/board-terms/{id}/groups
+PASS: board route authenticated /api/admin/board-terms/{id}/publish
+PASS: board mutation CSRF /api/admin/board-terms/{id}/publish
+PASS: board route authenticated /api/admin/board-terms/{id}/schedule
+PASS: board mutation CSRF /api/admin/board-terms/{id}/schedule
+PASS: state-changing request without CSRF is rejected
+PASS: caller-supplied actor ID ignored in favor of authenticated session
+
+
+COMMAND: php tests/PublicContentWorkflowTest.php
+PASS: member cannot read admin revisions
+PASS: saving draft does not alter public data
+PASS: editor cannot publish
+PASS: publisher cannot edit drafts
+PASS: publisher activates approved profile
+PASS: repeat publication rejected
+PASS: stale draft cannot overwrite newer publication
+PASS: failed stale publication retains draft
+PASS: future publication does not activate early
+PASS: expired publication not shown
+PASS: loan display and calculator follow published interest rate
+PASS: unsafe source URL rejected
+PASS: stale editor version rejected
+PASS: unknown profile fields rejected
+PASS: negative rate rejected
+PASS: expiry before effective date rejected
+PASS: cannot remove person still referenced in a committee
+PASS: restore through new reviewed revision succeeds
+PASS: stable product ID preserves rate sync after renaming
+PASS: legacy public API adapter uses published rates
+PASS: product API and calculator use the same published rate
+PASS: before/after audit records persisted
+PASS: audit failure rolls back publication
+PASS: audit failure leaves public data unchanged
+
+
+COMMAND: php tests/MediaUrlTest.php
+Media URL tests passed (13 cases).
+
+
+COMMAND: php tests/SecurityRegressionTest.php
+PASS: login controller contains no hardcoded username bypass
+PASS: login controller contains no hardcoded password bypass
+PASS: member lookup does not select a default member
+PASS: member lookup does not select the first member as a fallback
+PASS: MemberPortalController.php contains no default member profile
+PASS: TaxCertificateController.php contains no default member profile
+PASS: SurveyController.php contains no default member profile
+PASS: SuggestionController.php contains no default member profile
+PASS: DividendEstimatorController.php contains no default member profile
+PASS: /member/dashboard permits only member
+PASS: /staff/dashboard permits only staff, manager, executive, finance, loan_officer, welfare_officer, document_officer, complaint_officer, auditor, it_admin
+PASS: /admin/dashboard permits only super_admin
+PASS: /dashboard permits only super_admin
+PASS: /api/admin/users permits only super_admin
+PASS: /api/admin/access/roles permits only super_admin
+PASS: GET /api/admin/members/dashboard is registered
+PASS: GET /api/admin/members/dashboard requires authentication
+PASS: GET /api/admin/members/dashboard requires members.view
+PASS: GET /api/admin/members/health is registered
+PASS: GET /api/admin/members/health requires authentication
+PASS: GET /api/admin/members/health requires members.view
+PASS: GET /api/admin/members is registered
+PASS: GET /api/admin/members requires authentication
+PASS: GET /api/admin/members requires members.view
+PASS: GET /api/admin/members/{id} is registered
+PASS: GET /api/admin/members/{id} requires authentication
+PASS: GET /api/admin/members/{id} requires members.view
+PASS: POST /api/admin/members/{id} is registered
+PASS: POST /api/admin/members/{id} requires authentication
+PASS: POST /api/admin/members/{id} requires members.update
+PASS: POST /api/admin/members/{id} requires CSRF
+PASS: POST /api/admin/dividends/preview is registered
+PASS: POST /api/admin/dividends/preview requires authentication
+PASS: POST /api/admin/dividends/preview requires dividends.import
+PASS: POST /api/admin/dividends/preview requires CSRF
+PASS: POST /api/admin/dividends/confirm is registered
+PASS: POST /api/admin/dividends/confirm requires authentication
+PASS: POST /api/admin/dividends/confirm requires dividends.import
+PASS: POST /api/admin/dividends/confirm requires CSRF
+PASS: POST /api/admin/news/{id}/update is registered
+PASS: POST /api/admin/news/{id}/update requires authentication
+PASS: POST /api/admin/news/{id}/update requires news.update
+PASS: POST /api/admin/news/{id}/update requires CSRF
+PASS: POST /api/admin/news/{id}/publish is registered
+PASS: POST /api/admin/news/{id}/publish requires authentication
+PASS: POST /api/admin/news/{id}/publish requires news.publish
+PASS: POST /api/admin/news/{id}/publish requires CSRF
+PASS: POST /api/admin/faqs is registered
+PASS: POST /api/admin/faqs requires authentication
+PASS: POST /api/admin/faqs requires faqs.create
+PASS: POST /api/admin/faqs requires CSRF
+PASS: POST /api/admin/faqs/{id}/update is registered
+PASS: POST /api/admin/faqs/{id}/update requires authentication
+PASS: POST /api/admin/faqs/{id}/update requires faqs.update
+PASS: POST /api/admin/faqs/{id}/update requires CSRF
+PASS: POST /api/admin/faqs/{id}/delete is registered
+PASS: POST /api/admin/faqs/{id}/delete requires authentication
+PASS: POST /api/admin/faqs/{id}/delete requires faqs.delete
+PASS: POST /api/admin/faqs/{id}/delete requires CSRF
+PASS: rate limit uses shared database storage
+PASS: rate limit does not store counters in the browser session
+PASS: CSRF protection is not bypassed for AJAX login
+PASS: admin dashboard does not use LOAN_PRODUCTS without importing it
+PASS: member portal respects explicit feature flag and defaults to disabled
+PASS: member login respects explicit feature flag and defaults to dividend access
+PASS: /api/member/dashboard is protected by a backend feature flag
+PASS: /member/dashboard is protected by a backend feature flag
+PASS: /portal is protected by a backend feature flag
+PASS: missing role never defaults to super_admin
+PASS: member login is denied by the backend when disabled
+PASS: login fails closed when no role is assigned
+PASS: migration checks actual nested backup restore safety flag
+PASS: backup restore safety flag resolves through runtime configuration
+Security regression tests passed.
+
+
+COMMAND: node tests/PublicContentReferenceTest.mjs
+PASS: reference values, board groups and rendered public pages
+
+
+COMMAND: PLAYWRIGHT_EXECUTABLE=installed Google Chrome; node tests/BoardTermWorkflowBrowserTest.mjs
+PASS: browser import/copy preview, draft confirmation, CSRF, stale errors, separate approval/publication and status contracts
+
+
+COMMAND: npm run build
+
+> rayongcoop-react@1.0.0 build
+> vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 2746 modules transformed.
+rendering chunks...
+computing gzip size...
+public/app/index.html                                        1.94 kB │ gzip:   0.83 kB
+public/app/assets/coop-logo-C7DMvEhb.webp                  128.57 kB
+public/app/assets/hero-portrait-official-DBSK6WiW.png      160.48 kB
+public/app/assets/MemberDividendsPage-3QbO8RaV.css           1.85 kB │ gzip:   0.71 kB
+public/app/assets/PublicContentAdminPage-BzxwExu2.css        1.97 kB │ gzip:   0.65 kB
+public/app/assets/ActivitySlideshow-t50UfqkA.css             2.27 kB │ gzip:   0.85 kB
+public/app/assets/RichTextContent-G9oxLtS5.css               2.89 kB │ gzip:   0.92 kB
+public/app/assets/MemberPrivacyAckPage-CtTNftYB.css          2.93 kB │ gzip:   0.98 kB
+public/app/assets/AdminMembers-C7-ecsW-.css                  8.38 kB │ gzip:   1.99 kB
+public/app/assets/MfaPage-S1CCNPT7.css                      11.20 kB │ gzip:   2.88 kB
+public/app/assets/RichTextEditor-MPWXhL5q.css               24.40 kB │ gzip:   3.71 kB
+public/app/assets/index-DZueHRVW.css                       129.33 kB │ gzip:  24.47 kB
+public/app/assets/smartphone-CrHkhjhV.js                     0.40 kB │ gzip:   0.31 kB
+public/app/assets/rotate-ccw-Bjm8516d.js                     0.41 kB │ gzip:   0.31 kB
+public/app/assets/circle-check-big-CBNx6HUD.js               0.42 kB │ gzip:   0.32 kB
+public/app/assets/circle-x-D8EE8tg3.js                       0.43 kB │ gzip:   0.31 kB
+public/app/assets/percent-DQuODTWX.js                        0.44 kB │ gzip:   0.31 kB
+public/app/assets/user-check-Cd0qt3Dw.js                     0.44 kB │ gzip:   0.33 kB
+public/app/assets/monitor-BVn9pOc5.js                        0.46 kB │ gzip:   0.33 kB
+public/app/assets/image-LAwMfTyp.js                          0.47 kB │ gzip:   0.35 kB
+public/app/assets/inbox-DXolTlX7.js                          0.49 kB │ gzip:   0.35 kB
+public/app/assets/file-check-De6g01U8.js                     0.52 kB │ gzip:   0.36 kB
+public/app/assets/save-DLXTeeao.js                           0.53 kB │ gzip:   0.35 kB
+public/app/assets/scale-hNLVJBos.js                          0.54 kB │ gzip:   0.35 kB
+public/app/assets/trash-DTI-Lvxi.js                          0.55 kB │ gzip:   0.35 kB
+public/app/assets/building-2-VcN2ADLA.js                     0.59 kB │ gzip:   0.37 kB
+public/app/assets/layers-DEMS82cl.js                         0.65 kB │ gzip:   0.38 kB
+public/app/assets/building-x9qZRgSD.js                       0.77 kB │ gzip:   0.41 kB
+public/app/assets/LoanChecklistPage-BeapTp8f.js              0.87 kB │ gzip:   0.46 kB
+public/app/assets/cloud-upload-C6LK5KPE.js                   0.97 kB │ gzip:   0.50 kB
+public/app/assets/MemberAdminWarnings-CrKCNMV1.js            1.18 kB │ gzip:   0.65 kB
+public/app/assets/NotFoundPage-D4-G7_W_.js                   1.26 kB │ gzip:   0.67 kB
+public/app/assets/PermissionGuard-jJW23OKx.js                1.27 kB │ gzip:   0.73 kB
+public/app/assets/BoardOfficerPage-B1GdPHkp.js               1.31 kB │ gzip:   0.81 kB
+public/app/assets/ServiceUnavailablePage-DtFNue1t.js         1.34 kB │ gzip:   0.77 kB
+public/app/assets/PageHeader-DAadMQBf.js                     2.18 kB │ gzip:   0.93 kB
+public/app/assets/ActivitySlideshow-YEU2RuQw.js              3.49 kB │ gzip:   1.50 kB
+public/app/assets/BoardPage-NwhshRGj.js                      4.25 kB │ gzip:   1.67 kB
+public/app/assets/LedStatusBadge-Bj5GOxw2.js                 4.44 kB │ gzip:   1.47 kB
+public/app/assets/LedRunHistoryTable-Cop0MQIp.js             4.97 kB │ gzip:   1.69 kB
+public/app/assets/MemberDividendsPage-Dya-PZP0.js            5.06 kB │ gzip:   1.98 kB
+public/app/assets/PrOfficerInvitations-y2yycUlS.js           5.63 kB │ gzip:   2.11 kB
+public/app/assets/AdminLedSchemaPage-CDffdi4R.js             6.40 kB │ gzip:   2.16 kB
+public/app/assets/StatisticsPage-B4J4Dkq5.js                 6.70 kB │ gzip:   2.04 kB
+public/app/assets/DepositsPage-Bfj-lG0b.js                   6.83 kB │ gzip:   1.83 kB
+public/app/assets/NewsPage-uxFLC1La.js                       7.23 kB │ gzip:   2.59 kB
+public/app/assets/LoanReadinessChecklist-BHX2Kgth.js         7.51 kB │ gzip:   2.33 kB
+public/app/assets/VerifyReceiptPage-COYpTMwU.js              7.82 kB │ gzip:   2.37 kB
+public/app/assets/MemberPrivacyAckPage-CUP3IW6x.js           8.30 kB │ gzip:   2.75 kB
+public/app/assets/AdminDividendImportPage-nY-TSceA.js        8.34 kB │ gzip:   2.66 kB
+public/app/assets/EServicePage-BWfxq9Ob.js                   8.36 kB │ gzip:   2.73 kB
+public/app/assets/ledApi-Ba4IATg0.js                         8.37 kB │ gzip:   2.98 kB
+public/app/assets/LoansPage-D0XsX_Z-.js                      8.43 kB │ gzip:   2.72 kB
+public/app/assets/AdminMembersHealthPage-BbmqbGhc.js         8.62 kB │ gzip:   2.79 kB
+public/app/assets/AdminDashboardPage-d_cMBZw0.js             8.62 kB │ gzip:   3.03 kB
+public/app/assets/AdminLedReviewPage-t-piC9z6.js             8.68 kB │ gzip:   2.91 kB
+public/app/assets/PrivacyPolicyPage-2zn-LLpz.js              8.79 kB │ gzip:   2.55 kB
+public/app/assets/CalculatorPage-BGk-KG4G.js                 9.57 kB │ gzip:   2.41 kB
+public/app/assets/AdminMembersPage-B9T81XBK.js              10.14 kB │ gzip:   3.11 kB
+public/app/assets/AdminLedBatchPage-DV_Fzv5W.js             10.28 kB │ gzip:   3.07 kB
+public/app/assets/ProfilePage-DsdMkVa7.js                   11.78 kB │ gzip:   3.45 kB
+public/app/assets/ContentAdminPage-C68ihaKo.js              11.98 kB │ gzip:   3.97 kB
+public/app/assets/LoanSchedulePage-CkrMm4-K.js              12.37 kB │ gzip:   3.26 kB
+public/app/assets/AdminDocumentCategoriesPage-qN9MEl8S.js   12.42 kB │ gzip:   3.80 kB
+public/app/assets/WelfarePage-CcznLrOD.js                   12.50 kB │ gzip:   3.05 kB
+public/app/assets/AdminMembersDashboardPage-BxYWsMYG.js     12.61 kB │ gzip:   3.18 kB
+public/app/assets/AdminHeroSlidesPage-BGVlcdaN.js           12.91 kB │ gzip:   3.86 kB
+public/app/assets/AdminLedSearchPage-C_L4st4Y.js            13.52 kB │ gzip:   3.77 kB
+public/app/assets/AdminWelfarePage-DvboryHv.js              13.53 kB │ gzip:   3.61 kB
+public/app/assets/AdminLedDashboardPage-3kz_GTo7.js         13.60 kB │ gzip:   3.57 kB
+public/app/assets/PublicContentAdminPage-CjVDPXUW.js        14.28 kB │ gzip:   4.86 kB
+public/app/assets/AboutPage-DQF03fdT.js                     14.70 kB │ gzip:   3.53 kB
+public/app/assets/DocumentsPage-BatyhlR5.js                 15.01 kB │ gzip:   3.99 kB
+public/app/assets/AdminAccessPage-Cnhz6Jn9.js               15.06 kB │ gzip:   4.38 kB
+public/app/assets/LedReviewModal-B1x0lGJk.js                15.78 kB │ gzip:   3.89 kB
+public/app/assets/ContactPage-DJRGwL68.js                   16.84 kB │ gzip:   4.41 kB
+public/app/assets/AdminEServicesPage-DP2C4g7r.js            18.38 kB │ gzip:   5.10 kB
+public/app/assets/StatusBadge-LeA3_Woj.js                   19.46 kB │ gzip:   5.44 kB
+public/app/assets/AdminWorkspacePage-ClFu5YMp.js            19.62 kB │ gzip:   6.02 kB
+public/app/assets/MfaPage-D0DP3sP8.js                       20.90 kB │ gzip:   6.20 kB
+public/app/assets/VisitorStatsPage-BN__R8x7.js              21.45 kB │ gzip:   5.36 kB
+public/app/assets/AdminMemberDetailPage-DpltdU1T.js         21.69 kB │ gzip:   5.55 kB
+public/app/assets/AdminPopupsPage-Dc2-pppH.js               24.74 kB │ gzip:   6.04 kB
+public/app/assets/AdminProductsPage-fNl_LJYu.js             25.61 kB │ gzip:   5.55 kB
+public/app/assets/RichTextContent-5HHkyv4B.js               31.02 kB │ gzip:  12.00 kB
+public/app/assets/AdminBoardPersonnelPage-gTodOHvC.js       54.08 kB │ gzip:  11.64 kB
+public/app/assets/MemberDashboardPage--weswuLV.js          114.74 kB │ gzip:  21.68 kB
+public/app/assets/AdminControlCenterPage-AyLi5gOA.js       119.17 kB │ gzip:  25.45 kB
+public/app/assets/RichTextEditor-BYkEBQZh.js               210.93 kB │ gzip:  63.77 kB
+public/app/assets/index-Dcv02SqJ.js                        607.03 kB │ gzip: 163.90 kB
+✓ built in 6.75s

@@ -56,6 +56,7 @@ class PublicContentService
         $base = self::setting();
         $catalog = $base ? json_decode($base['value'],true,512,JSON_THROW_ON_ERROR) : self::reference();
 
+        $activeTerm = null;
         try {
             $activeTerm = BoardTermService::getPublicActiveTerm();
             if ($activeTerm) {
@@ -81,6 +82,8 @@ class PublicContentService
         $metadata = [];
         foreach ($rows as $row) {
             if (!isset(self::SECTIONS[$row['section']])) continue;
+            // A published term owns the entire board graph; revisions remain editable fallback.
+            if ($activeTerm && in_array($row['section'], ['boards','advisors','auditors','groups'], true)) continue;
             self::assign($catalog,$row['section'],json_decode($row['payload'],true,512,JSON_THROW_ON_ERROR));
             $metadata[$row['section']] = ['sourceUrl'=>$row['source_url'],'effectiveOn'=>$row['effective_on'],'expiresOn'=>$row['expires_on'],'revision'=>(int)$row['id']];
         }

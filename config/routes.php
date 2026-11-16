@@ -250,21 +250,27 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->delete('/board-staff/staff/{id}', 'Admin\\BoardStaffController@apiDestroyStaff', [new PermissionMiddleware(['people', 'staff'], 'update'), CsrfMiddleware::class]);
 
     // Board Term Management
-    $r->get('/board-terms', 'Admin\\BoardStaffController@apiTermsIndex', [new PermissionMiddleware(['people', 'boards'], 'view')]);
-    $r->get('/board-terms/{id}', 'Admin\\BoardStaffController@apiTermShow', [new PermissionMiddleware(['people', 'boards'], 'view')]);
-    $r->get('/board-terms/{id}/preview', 'Admin\\BoardStaffController@apiTermPreview', [new PermissionMiddleware(['people', 'boards'], 'view')]);
-    $r->post('/board-terms', 'Admin\\BoardStaffController@apiTermStore', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/reconcile-38', 'Admin\\BoardStaffController@apiReconcileTerm38', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/upload-photo', 'Admin\\BoardStaffController@apiUploadPhoto', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/{id}/copy', 'Admin\\BoardStaffController@apiTermCopy', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->put('/board-terms/{id}', 'Admin\\BoardStaffController@apiTermUpdate', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/{id}/update', 'Admin\\BoardStaffController@apiTermUpdate', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->put('/board-terms/{id}/members', 'Admin\\BoardStaffController@apiTermSaveMembers', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/{id}/members', 'Admin\\BoardStaffController@apiTermSaveMembers', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->put('/board-terms/{id}/groups', 'Admin\\BoardStaffController@apiTermSaveGroups', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/{id}/groups', 'Admin\\BoardStaffController@apiTermSaveGroups', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/{id}/publish', 'Admin\\BoardStaffController@apiTermPublish', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
-    $r->post('/board-terms/{id}/schedule', 'Admin\\BoardStaffController@apiTermSchedule', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->get('/board-terms/import-38/preview', 'Admin\\BoardTermWorkflowController@apiImportTerm38Preview', [new PermissionMiddleware('people', 'view')]);
+    $r->post('/board-terms/import-38', 'Admin\\BoardTermWorkflowController@apiImportTerm38', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
+    $r->get('/board-terms/{id}/selection-candidates', 'Admin\\BoardTermWorkflowController@apiSelectionCandidates', [new PermissionMiddleware('people', 'view')]);
+    $r->post('/board-terms/{id}/selective-copy/preview', 'Admin\\BoardTermWorkflowController@apiSelectiveCopyPreview', [new PermissionMiddleware('people', 'view'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/selective-copy', 'Admin\\BoardTermWorkflowController@apiSelectiveCopy', [new PermissionMiddleware('people', 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/approve', 'Admin\\BoardTermWorkflowController@apiTermApprove', [new PermissionMiddleware('people', 'publish'), CsrfMiddleware::class]);
+    $r->get('/board-terms', 'Admin\\BoardTermWorkflowController@apiTermsIndex', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->get('/board-terms/{id}', 'Admin\\BoardTermWorkflowController@apiTermShow', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->get('/board-terms/{id}/preview', 'Admin\\BoardTermWorkflowController@apiTermPreview', [new PermissionMiddleware(['people', 'boards'], 'view')]);
+    $r->post('/board-terms', 'Admin\\BoardTermWorkflowController@apiTermStore', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/reconcile-38', 'Admin\\BoardTermWorkflowController@apiReconcileTerm38', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/upload-photo', 'Admin\\BoardTermWorkflowController@apiUploadPhoto', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/copy', 'Admin\\BoardTermWorkflowController@apiTermCopy', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-terms/{id}', 'Admin\\BoardTermWorkflowController@apiTermUpdate', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/update', 'Admin\\BoardTermWorkflowController@apiTermUpdate', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-terms/{id}/members', 'Admin\\BoardTermWorkflowController@apiTermSaveMembers', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/members', 'Admin\\BoardTermWorkflowController@apiTermSaveMembers', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->put('/board-terms/{id}/groups', 'Admin\\BoardTermWorkflowController@apiTermSaveGroups', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/groups', 'Admin\\BoardTermWorkflowController@apiTermSaveGroups', [new PermissionMiddleware(['people', 'boards'], 'update'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/publish', 'Admin\\BoardTermWorkflowController@apiTermPublish', [new PermissionMiddleware('people', 'publish'), CsrfMiddleware::class]);
+    $r->post('/board-terms/{id}/schedule', 'Admin\\BoardTermWorkflowController@apiTermSchedule', [new PermissionMiddleware('people', 'publish'), CsrfMiddleware::class]);
 
     // Document Categories
     $r->get('/document-categories', 'Admin\\DocumentController@apiCategories', [new PermissionMiddleware('documents', 'view')]);
