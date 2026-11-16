@@ -72,7 +72,7 @@ export default function ActivitiesPage() {
           </div>
         </div>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(100px,1fr))', gap: 10, marginTop: 20 }}>
-          {photos.map((photo,i) => <button key={photo.id} type="button" onClick={() => setActive(i)} aria-label={`ดูภาพ ${i+1}`} aria-pressed={active===i} style={{ padding: 0, border: active===i?'3px solid #38bdf8':'3px solid transparent', borderRadius: 8, overflow: 'hidden' }}><img src={photo.url} alt="" loading="lazy" style={{ height: 84, width: '100%', objectFit: 'cover' }}/></button>)}
+          {photos.map((photo,i) => <button key={photo.id} type="button" onClick={() => setActive(i)} aria-label={`ดูภาพ ${i+1}`} aria-pressed={active===i} style={{ padding: 0, border: active===i?'3px solid #38bdf8':'3px solid transparent', borderRadius: 8, overflow: 'hidden' }}><img src={photo.thumbnail_url || photo.url} alt="" loading="lazy" style={{ height: 84, width: '100%', objectFit: 'cover' }}/></button>)}
         </div>
       </div>
     </div>}
