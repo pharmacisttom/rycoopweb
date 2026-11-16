@@ -1,0 +1,87 @@
+name: Production media root-cause inspection (READ ONLY)
+on:
+  push:
+    branches: [Test]
+    paths: ['.github/workflows/production-media-root-cause.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Inspect public media filenames against disk and backups without exposing filenames
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          D="$RUNNER_TEMP/ssh"
+          mkdir -p "$D"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$D/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$D/known"
+          chmod 600 "$D/id" "$D/known"
+          ssh-keygen -y -P '' -f "$D/id" >/dev/null
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P>=1&&P<=65535))
+          ssh -T -p "$P" -i "$D/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$D/known" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import collections,json,os,subprocess,urllib.parse
+          print('===== MEDIA SOURCE TRACKING (NO PRIVATE FILENAMES) =====')
+          p=subprocess.run(['curl','-fsS','--max-time','12','http://127.0.0.1:18092/api/public/news'],capture_output=True,text=True)
+          if p.returncode!=0: print('API_FETCH=FAILED');raise SystemExit(0)
+          try:
+            j=json.loads(p.stdout);rows=j.get('data',[])
+            if isinstance(rows,dict): rows=rows.get('items',rows.get('news',[]))
+            if not isinstance(rows,list): rows=[]
+          except (ValueError,AttributeError):print('API_JSON=INVALID');raise SystemExit(0)
+          candidates=set()
+          for row in rows[:30]:
+            if not isinstance(row,dict): continue
+            images=[row.get('cover_image')]
+            gallery=row.get('gallery_images') or []
+            if isinstance(gallery,str):
+              try:gallery=json.loads(gallery)
+              except ValueError:gallery=[]
+            if isinstance(gallery,list):
+              images.extend(i.get('src') for i in gallery if isinstance(i,dict))
+              images.extend(i.get('thumbnail') for i in gallery if isinstance(i,dict))
+            for image in images:
+              if not isinstance(image,str):continue
+              x=urllib.parse.urlparse(image).path
+              if x.startswith('/storage/uploads/news/gallery/') and '/' not in x[len('/storage/uploads/news/gallery/'):]:
+                candidates.add(x.rsplit('/',1)[-1])
+          print('PUBLIC_GALLERY_REFERENCED_FILES',len(candidates))
+          roots=['/var/www/rycoopweb','/var/www/html','/var/backups','/home/coopadmin','/opt']
+          found=collections.Counter(); media_roots=collections.Counter();archives=collections.Counter(); scanned=0
+          for root in roots:
+            if not os.path.isdir(root):continue
+            for base,dirs,files in os.walk(root,followlinks=False):
+              rel=os.path.relpath(base,root)
+              depth=0 if rel=='.' else rel.count(os.sep)+1
+              dirs[:]=[d for d in dirs if d not in ('.git','node_modules','vendor','sessions','cache','tmp','logs') and not d.startswith('.cache')]
+              if depth>=13:dirs[:]=[]
+              scanned+=1
+              for name in files:
+                if name in candidates: found[root]+=1; media_roots[base]+=1
+                if 'backup' in base.lower() and name.lower().endswith(('.tar.gz','.tgz','.zip','.sql.gz')): archives[root]+=1
+              if scanned>45000:
+                print('SCAN_LIMIT_REACHED');break
+            if scanned>45000:break
+          print('DIRECTORIES_SCANNED',scanned)
+          for root in roots:
+            print('SEARCH_ROOT',root,'EXACT_MATCHED_FILE_COUNT',found[root],'BACKUP_ARCHIVES_OBSERVED',archives[root])
+          for directory,count in media_roots.most_common(8):
+            print('EXACT_IMAGE_DIR',directory,'MATCHING_COUNT',count)
+          print('MEDIA_SCAN_READONLY=PASS')
+          PY
+          REMOTE
+          rm -f "$D/id" "$D/known"
