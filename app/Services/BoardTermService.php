@@ -290,14 +290,24 @@ class BoardTermService
         $sourceUrl = !empty($data['source_url']) ? trim((string)$data['source_url']) : null;
         $note = !empty($data['note']) ? trim((string)$data['note']) : null;
 
-        $id = (int)Database::insert(
-            "INSERT INTO board_terms (term_number, term_name, year_start_be, year_end_be, start_date, end_date, status, is_current, source_url, note, created_by, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, 'draft', 0, ?, ?, ?, NOW(), NOW())",
-            [$termNumber, $termName, $yearStart, $yearEnd, $startDate, $endDate, $sourceUrl, $note, $userId ?? Auth::id()]
-        );
-
-        AuditService::log('board_terms', 'create', (string)$id, null, ['term_number' => $termNumber, 'term_name' => $termName]);
-        return $id;
+        // A direct create must be atomic with its mandatory audit. Selective copy
+        // already owns a transaction, so never start an unsupported nested PDO one.
+        $persist = static function () use ($termNumber, $termName, $yearStart, $yearEnd, $startDate, $endDate, $sourceUrl, $note, $userId): int {
+            self::lockTerms();
+            if (Database::first('SELECT id FROM board_terms WHERE term_number=?', [$termNumber])) {
+                throw new InvalidArgumentException("มีวาระชุดที่ {$termNumber} อยู่ในระบบแล้ว");
+            }
+            $id = (int)Database::insert(
+                "INSERT INTO board_terms (term_number, term_name, year_start_be, year_end_be, start_date, end_date, status, is_current, source_url, note, created_by, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, 'draft', 0, ?, ?, ?, NOW(), NOW())",
+                [$termNumber, $termName, $yearStart, $yearEnd, $startDate, $endDate, $sourceUrl, $note, $userId]
+            );
+            AuditService::log('board_terms', 'create', (string)$id, null, [
+                'term_number' => $termNumber, 'term_name' => $termName, 'status' => 'draft'
+            ], required:true);
+            return $id;
+        };
+        return Database::connect()->inTransaction() ? $persist() : Database::transaction($persist);
     }
 
     /**

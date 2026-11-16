@@ -90,9 +90,13 @@ trait BoardTermWorkflow
     public static function getSelectionCandidates(int $sourceTermId, int $targetTermNumber = 39): array
     {
         self::requirePermission('view');
-        if ($sourceTermId <= 0 || $targetTermNumber <= 0) throw new InvalidArgumentException('Invalid source or destination');
+        if ($sourceTermId <= 0 || $targetTermNumber !== 39) {
+            throw new InvalidArgumentException('Selective copy requires an existing Term 38 source and Draft Term 39 destination');
+        }
         $source = self::getTerm($sourceTermId);
-        if (!$source || (int)$source['term']['term_number'] === $targetTermNumber) throw new InvalidArgumentException('Source and destination must be distinct existing term numbers');
+        if (!$source || (int)$source['term']['term_number'] !== 38) {
+            throw new InvalidArgumentException('Selective copy source must be Term 38');
+        }
         $target = Database::first('SELECT * FROM board_terms WHERE term_number=?',[$targetTermNumber]);
         if ($target) self::requireDraft((int)$target['id']);
         return ['source'=>$source,'target'=>$target,'members'=>array_merge($source['directors'],$source['advisors'],$source['auditors'])];
