@@ -1,0 +1,99 @@
+name: Prepare immutable production release and rollback snapshot (NO CUTOVER)
+on:
+  push:
+    branches: [Test]
+    paths:
+      - '.github/workflows/production-prepare-rc04.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rycoop-production-prepare-rc04
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 25
+    env:
+      RELEASE_SHA: f8d8e07a42bea58f9a9d25a7155c52ec93161f65
+      SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+      SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+      SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+      SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+      SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: f8d8e07a42bea58f9a9d25a7155c52ec93161f65
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql,mbstring,xml,curl,gd,zip,bcmath,intl,fileinfo
+          tools: composer:v2
+      - name: Build and validate full release without database
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+          npm ci --ignore-scripts
+          NODE_ENV=production npm run build
+          php tests/ActivityGalleryRouteTest.php
+          php tests/ActivityFrontendBackendContractTest.php
+          test -s public/app/index.html
+          test -f vendor/autoload.php
+          mkdir -p "$RUNNER_TEMP/package"
+          git archive "$RELEASE_SHA" | tar -x -C "$RUNNER_TEMP/package"
+          cp -a vendor "$RUNNER_TEMP/package/vendor"
+          mkdir -p "$RUNNER_TEMP/package/public/app"
+          cp -a public/app/. "$RUNNER_TEMP/package/public/app/"
+          tar -czf "$RUNNER_TEMP/rycoop-full-rc04.tgz" -C "$RUNNER_TEMP/package" .
+          sha256sum "$RUNNER_TEMP/rycoop-full-rc04.tgz" | awk '{print "RELEASE_ARTIFACT_SHA256="$1}'
+      - name: Stage new release and backup READ-ONLY copies of active frontend/nginx
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$RUNNER_TEMP/ssh/known"
+          chmod 600 "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/ssh/id" >/dev/null
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P>=1 && P<=65535))
+          S=(-p "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known")
+          REMOTE_STAGE=".local/share/rycoop-deploy-staging/$RELEASE_SHA"
+          ssh "${S[@]}" "$SSH_USER@$SSH_HOST" "mkdir -p ~/$REMOTE_STAGE && chmod 700 ~/$REMOTE_STAGE"
+          scp -P "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$RUNNER_TEMP/rycoop-full-rc04.tgz" "$SSH_USER@$SSH_HOST:$REMOTE_STAGE/release.tgz"
+          LOCAL_SHA="$(sha256sum "$RUNNER_TEMP/rycoop-full-rc04.tgz" | cut -d' ' -f1)"
+          ssh "${S[@]}" "$SSH_USER@$SSH_HOST" "SHA='$RELEASE_SHA' EXPECT='$LOCAL_SHA' bash -se" <<'REMOTE'
+          set -Eeuo pipefail
+          umask 077
+          F="$HOME/.local/share/rycoop-deploy-staging/$SHA/release.tgz"
+          test -s "$F"
+          test "$(sha256sum "$F" | cut -d' ' -f1)" = "$EXPECT"
+          tar -tzf "$F" >/dev/null
+          BACKUP="$HOME/.local/share/rycoop-deploy-staging/$SHA/rollback"
+          mkdir -p "$BACKUP"
+          chmod 700 "$BACKUP"
+          ACTIVE=/var/www/rycoopweb/production-releases/member-calculator-rc03-20261111-public
+          test -d "$ACTIVE"
+          tar -czf "$BACKUP/active-frontend.tgz" -C "$ACTIVE" .
+          test -r /etc/nginx/sites-enabled/rycoopweb-main-ssl
+          cp -L /etc/nginx/sites-enabled/rycoopweb-main-ssl "$BACKUP/rycoopweb-main-ssl.conf"
+          test -s "$BACKUP/active-frontend.tgz"
+          test -s "$BACKUP/rycoopweb-main-ssl.conf"
+          sha256sum "$F" "$BACKUP/active-frontend.tgz" > "$BACKUP/sha256sums"
+          echo "FULL_RELEASE_STAGED=PASS"
+          echo "FRONTEND_ROLLBACK_SNAPSHOT=PASS"
+          echo "NGINX_CONFIG_SNAPSHOT=PASS"
+          echo "DATABASE_BACKUP=NOT_PERFORMED"
+          echo "PRODUCTION_CUTOVER=NOT_PERFORMED"
+          REMOTE
+          rm -f "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
