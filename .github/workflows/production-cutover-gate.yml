@@ -1,0 +1,60 @@
+name: Production cutover gate — read-only inspection
+on:
+  push:
+    branches: [Test]
+    paths: ['.github/workflows/production-cutover-gate.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - name: Validate deployment prerequisites (no writes)
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          D="$RUNNER_TEMP/ssh"
+          mkdir -p "$D"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$D/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$D/known"
+          chmod 600 "$D/id" "$D/known"
+          ssh-keygen -y -P '' -f "$D/id" >/dev/null
+          ssh -p "${SSH_PORT:-22}" -T -i "$D/id" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$D/known" -o IdentitiesOnly=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          echo '===== ACTIVE SSL NGINX ROOTS ====='
+          f=/etc/nginx/sites-enabled/rycoopweb-main-ssl
+          if test -r "$f"; then
+            grep -En '^\s*(root|alias|location |proxy_pass|include |server_name) ' "$f" | grep -Ev 'ssl_certificate|private' | head -n 110 || true
+          else
+            echo 'NGINX_CONFIG_UNREADABLE'
+          fi
+          echo '===== PERMISSIONS & CAPACITY ====='
+          for p in /var/www/rycoopweb/production-releases /var/www/rycoopweb/production-releases/member-calculator-rc03-20261111-public /var/www/rycoopweb/production-releases/member-dividend-unlock-rc01-20261111 /var/www/rycoopweb/production-releases/member-dividend-unlock-rc01-20261111/public /var/www/rycoopweb/test-v2; do
+            if test -d "$p"; then
+              stat -c 'DIR %n owner=%U group=%G permissions=%a' "$p"
+              test -w "$p" && echo "WRITABLE $p" || echo "READ_ONLY $p"
+            else echo "MISSING $p"; fi
+          done
+          df -h /var/www/rycoopweb | tail -n 1
+          echo '===== NONINTERACTIVE SUDO (NO USE) ====='
+          if sudo -n true >/dev/null 2>&1; then echo 'SUDO_NONINTERACTIVE=YES'; else echo 'SUDO_NONINTERACTIVE=NO'; fi
+          echo '===== PHOTO REQUIREMENTS ====='
+          php -r 'echo "GD=",(extension_loaded("gd")?"yes":"no")," WEBP=",(function_exists("imagewebp")?"yes":"no")," upload_max_filesize=",ini_get("upload_max_filesize")," post_max_size=",ini_get("post_max_size"),PHP_EOL;'
+          echo '===== ACTIVITY MIGRATION STATUS (READ ONLY) ====='
+          if command -v mysql >/dev/null; then echo 'MYSQL_CLI=YES'; else echo 'MYSQL_CLI=NO'; fi
+          echo '===== LOCAL ROUTES ====='
+          for u in 'http://127.0.0.1:18092/api/public/activities' 'http://127.0.0.1:18092/api/public/welfare'; do
+            curl -sS --max-time 8 -o /dev/null -w 'LOOPBACK_HTTP=%{http_code}\n' "$u" || true
+          done
+          echo 'PRODUCTION_CUTOVER_GATE_READONLY=COMPLETE'
+          REMOTE
