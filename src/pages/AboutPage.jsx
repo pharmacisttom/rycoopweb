@@ -95,6 +95,51 @@ export default function AboutPage() {
           </ul>
         </div>
 
+        {/* Restored from the historical expanded About page (2026-09-09). */}
+        <section aria-labelledby="founding-committee" className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2.5rem' }}>
+          <span className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>ประวัติและบุคคลสำคัญ</span>
+          <h2 id="founding-committee" style={{ fontSize: '1.6rem', color: 'var(--primary-800)', marginBottom: '0.75rem' }}>
+            คณะผู้จัดตั้งสหกรณ์ 5 ท่านแรก
+          </h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.25rem' }}>บุคคลผู้ริเริ่มก่อตั้งสหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด เพื่อความมั่นคงและการเกื้อกูลสมาชิก</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 230px), 1fr))', gap: '1rem' }}>
+            {[
+              ['นายแพทย์อรรณพ สมาธิวัฒน์', 'ประธาน'],
+              ['นายแพทย์มนูญ จิรัฐติกาลกิจ', 'รองประธาน'],
+              ['นายแพทย์สาโรจน์ คงประศาสตร์', 'รองประธาน'],
+              ['นางสาวอุษา อิศรางกูร ณ อยุธยา', 'เหรัญญิก'],
+              ['นายบุญจอม ณ นคร', 'เลขานุการ'],
+            ].map(([name, role], index) => (
+              <article key={name} className="surface-card" style={{ padding: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <span aria-hidden="true" style={{ display: 'grid', placeItems: 'center', width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--primary-700)', color: '#fff', fontWeight: 700 }}>{index + 1}</span>
+                <div><strong style={{ display: 'block', color: 'var(--text-main)' }}>{name}</strong><span style={{ color: 'var(--text-muted)', fontSize: '0.86rem' }}>{role}</span></div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="cooperative-objectives" className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2.5rem' }}>
+          <span className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>อุดมการณ์และความมุ่งมั่น</span>
+          <h2 id="cooperative-objectives" style={{ fontSize: '1.6rem', color: 'var(--primary-800)', marginBottom: '1rem' }}>หลักการและวัตถุประสงค์ของสหกรณ์</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 330px), 1fr))', gap: '1.5rem' }}>
+            <div className="surface-card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ color: 'var(--primary-800)', marginBottom: '0.75rem' }}>หลักการสหกรณ์</h3>
+              <p style={{ color: 'var(--text-main)', lineHeight: 1.8, marginBottom: '1rem' }}>สหกรณ์เป็นการรวมตัวกันโดยสมัครใจเพื่อประโยชน์ทางเศรษฐกิจและสังคม บนพื้นฐานการช่วยตนเองและช่วยเหลือซึ่งกันและกัน</p>
+              <p style={{ color: 'var(--text-muted)', lineHeight: 1.8 }}>การดำเนินงานยึดหลักประชาธิปไตย ความเสมอภาคของสมาชิก ธรรมาภิบาล และการกระจายผลประโยชน์อย่างเป็นธรรม</p>
+            </div>
+            <div className="surface-card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ color: 'var(--primary-800)', marginBottom: '1rem' }}>วัตถุประสงค์ของสหกรณ์ 5 ประการ</h3>
+              <ol style={{ display: 'grid', gap: '0.85rem', paddingLeft: '1.5rem', lineHeight: 1.7, color: 'var(--text-main)' }}>
+                <li><strong>ส่งเสริมการประหยัด</strong> และปลูกฝังวินัยทางการเงินแก่สมาชิกและครอบครัว</li>
+                <li><strong>ส่งเสริมการออมและการสะสมทุน</strong> ผ่านทุนเรือนหุ้นและเงินฝากของสมาชิก</li>
+                <li><strong>ให้เงินกู้ที่จำเป็นแก่สมาชิก</strong> ด้วยเงื่อนไขและอัตราดอกเบี้ยที่เหมาะสม</li>
+                <li><strong>ส่งเสริมการลงทุนประกอบอาชีพ</strong> เพื่อสร้างรายได้และพัฒนาคุณภาพชีวิต</li>
+                <li><strong>จัดสวัสดิการและการสงเคราะห์</strong> แก่สมาชิกและครอบครัวตามหลักเกณฑ์สหกรณ์</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
         {/* Core Values */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1.6rem', color: 'var(--primary-800)', marginBottom: '0.5rem' }}>ค่านิยมหลักขององค์กร (Core Values)</h2>
