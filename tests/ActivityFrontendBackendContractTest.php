@@ -42,7 +42,7 @@ $cases = [
     ['GET','/api/admin/activities/{album}/photos/{photo}','adminPhoto','?size=thumb','image'],
     ['GET','/api/public/activities','publicAlbums','/api/public/activities','public list'],
     ['GET','/api/public/activities/{id}','publicAlbum','/api/public/activities/','public detail'],
-    ['GET','/api/public/activities/{album}/photos/{photo}','photo','/api/public/activities/','public photo'],
+    ['GET','/api/public/activities/{album}/photos/{photo}','photo','photos[active]?.url','public photo'],
 ];
 
 foreach ($cases as [$method, $route, $handler, $uiToken, $kind]) {
