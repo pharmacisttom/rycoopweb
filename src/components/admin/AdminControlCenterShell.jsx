@@ -97,6 +97,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
       { label: 'แคมเปญป๊อปอัป (Popup Manager)', to: '/admin/popups', permissions: ['news.view', 'content.view'] },
       { label: 'ภาพสไลด์แบนเนอร์ (Hero Slides)', to: '/admin/hero-slides', permissions: ['news.view', 'content.view'] },
       { label: 'ข่าวสาร & ประชาสัมพันธ์', to: '/admin/content?tab=news', permissions: ['news.view'] },
+      { label: 'ภาพกิจกรรมและอัลบั้มรูป', to: '/admin/activities', permissions: ['news.view'] },
       { label: 'สวัสดิการสมาชิก', to: '/admin/welfare', permissions: ['welfare.view'] },
       { label: 'บริการออนไลน์ (E-Services)', to: '/admin/eservices', permissions: ['settings.view', 'content.view'] },
       { label: 'คณะกรรมการและเจ้าหน้าที่', to: '/admin/board-staff', permissions: ['people.view'] },
