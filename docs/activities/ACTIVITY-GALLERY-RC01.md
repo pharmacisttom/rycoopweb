@@ -14,7 +14,7 @@ Additive migration `database/migrations/031_create_activity_photo_albums.sql` (t
 
 Authorizations reuse existing `news.view`, `news.update`, `news.publish` rather than silently granting a new role. Every admin mutation requires CSRF and fully MFA-complete backend auth, with required audit for change/publish. No scheduled publication. No client-supplied actor IDs.
 
-Original images live in the **private directory** adjacent to `storage_upload_path()`: `dirname(storage_upload_path())/private-activity-photos`, rather than publicly routed uploads. This directory must be backed up, writable by TEST PHP-FPM and **explicitly DENIED by Nginx static aliases**. An authenticated Admin GET can preview Draft photos; the public photo endpoint verifies published album status before opening image bytes. Paths are randomized, and the photo stream verifies canonical containment and MIME/image payload.
+Optimized WebP images and 480px thumbnails live in the **private directory** adjacent to `storage_upload_path()`: `dirname(storage_upload_path())/private-activity-photos`, rather than publicly routed uploads. This directory must be backed up, writable by TEST PHP-FPM and **explicitly DENIED by Nginx static aliases**. An authenticated Admin GET can preview Draft photos; the public photo endpoint verifies published album status before opening image bytes. Uploads are decoded through PHP GD with a 16 megapixel ceiling, re-encoded into 2200px-max WebP (metadata/EXIF stripped), and a 480px WebP thumbnail. Animated GIF becomes a still image. Albums are capped at 1,000 images. Paths are randomized, and the photo stream verifies canonical containment and MIME/image payload. PHP GD with WebP support and adequate process memory are mandatory.
 
 ## Critical TEST acceptance / release gates
 - Code CI (PHP syntax, static route/permissions regression and React Vite build) on exact branch SHA.
@@ -23,7 +23,7 @@ Original images live in the **private directory** adjacent to `storage_upload_pa
 - Verify public 404 for Draft album/photo and anonymous/private preview 403, pending MFA, member role, staff with insufficient permissions, publish privilege separation and CSRF 419.
 - Verify archived albums disappear from public APIs; existing URLs no longer expose images; cover/captions/order stay consistent.
 - Verify Nginx cannot serve `private-activity-photos` directly. Prevent EXIF GPS/PII leaks, check consent/photo rights, define image retention policy.
-- **Performance gate:** create measured thumbnails/responsive derivatives and paginated image lists before enabling very large public albums. Current RC01 uses lazy loading but serves original images in the lightbox and grids, which may be expensive for hundreds of large photos.
+- **Performance gate:** WebP derivatives and thumbnails are implemented but must be load-tested on TEST. Add server-side image pagination before enabling very large public albums; RC01 loads up to 100 albums and all photos within a selected album.
 - Independently complete RC03 BoardTerm and Media/Document TEST gates. Do not merge this branch onto main or deploy automatically.
 
 ## Evidence classification
