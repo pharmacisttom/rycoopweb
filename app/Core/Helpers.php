@@ -214,7 +214,7 @@ if (!function_exists('storage_upload_path')) {
 
         // Opt-in persistent upload root shared across immutable releases. Keep legacy
         // behavior until a separate, verified server configuration enables this.
-        $configured = trim((string) (getenv('RYCOOP_UPLOAD_ROOT') ?: ''));
+        $configured = trim((string) env('RYCOOP_UPLOAD_ROOT', ''));
         if ($configured !== '') {
             $configured = rtrim(str_replace('\\', '/', $configured), '/');
             if (!str_starts_with($configured, '/') || $configured === ''
