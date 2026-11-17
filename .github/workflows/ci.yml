@@ -251,6 +251,9 @@ jobs:
       - name: Verify genuine AdminLTE installation and scoped React CSS
         run: node tests/AdminLteIntegrationTest.mjs
 
+      - name: Verify 16px typography and Welfare modernization
+        run: node tests/AdminTypographyLegacyRegressionTest.mjs
+
       - name: Decode generated MFA QR images
         run: node tests/QrCodeRoundTripTest.mjs
 

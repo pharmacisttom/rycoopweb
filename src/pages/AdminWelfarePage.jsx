@@ -1,4 +1,6 @@
 import React, {useEffect,useState} from 'react';
+import { AdminPageHeader, AdminCard, AdminErrorState, AdminEmptyState, AdminStatusBadge } from '../components/admin/AdminUI';
+import './AdminWelfarePage.css';
 import {Link} from 'react-router-dom';
 import {memberAdminApi} from '../services/memberAdminApi';
 const blank={category:'',title:'',slug:'',short_description:'',full_description:'',benefit_amount:'',eligibility:'',required_documents:'',application_process:'',contact_info:'',sort_order:0,status:'inactive'};
@@ -11,25 +13,74 @@ export default function AdminWelfarePage(){
   setEditing(null);setRevision(v=>v+1)
  }catch(e){setError(e.message)}finally{setBusy(false)}}
  async function remove(item){if(!window.confirm('ยืนยันปิดรายการสวัสดิการนี้?'))return;setBusy(true);setError('');try{await memberAdminApi('/api/admin/welfare/'+item.id+'/delete',{data:{version:item.version}});setRevision(v=>v+1)}catch(e){setError(e.message)}finally{setBusy(false)}}
- return <section className="admin-module container" style={{padding:'2rem 1rem'}}>
-  <Link to="/admin/workspace">กลับหลังบ้าน</Link>
-  <h1>จัดการสวัสดิการสมาชิก</h1>
-  <p role="status">หน้าสาธารณะยังถูกระงับด้วย Nginx — การบันทึกที่นี่ไม่เปิดเผยแพร่หน้าสาธารณะอัตโนมัติ</p>
-  {error&&<p role="alert">{error}</p>}
-  <button className="btn btn-primary" disabled={busy} onClick={()=>setEditing({...blank})}>เพิ่มรายการสวัสดิการ</button>
-  <div style={{overflowX:'auto',marginTop:20}}><table style={{width:'100%'}}><thead><tr><th>ลำดับ</th><th>ชื่อ</th><th>วงเงิน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>
-  {rows.map(item=><tr key={item.id}><td>{item.sort_order}</td><td>{item.title}</td><td>{item.benefit_amount}</td><td>{item.status==='active'?'เผยแพร่เมื่อเปิดโมดูล':'ร่าง/ไม่ใช้งาน'}</td><td><button className="btn btn-outline" disabled={busy} onClick={()=>setEditing({...item})}>แก้ไข</button> <button className="btn btn-outline" disabled={busy} onClick={()=>remove(item)}>ปิดรายการ</button></td></tr>)}
-  </tbody></table></div>
-  {editing&&<form onSubmit={save} className="surface-card" style={{padding:24,marginTop:24,display:'grid',gap:12}}>
-  <h2>{editing.id?'แก้ไขสวัสดิการ':'เพิ่มสวัสดิการ'}</h2>
-  {fields.map(([key,label])=><label key={key} style={{display:'grid',gap:4}}>{label}
-   {['full_description','eligibility','required_documents','application_process'].includes(key)
-    ?<textarea className="form-control" rows={3} value={editing[key]||''} onChange={e=>setEditing(v=>({...v,[key]:e.target.value}))}/>
-    :<input className="form-control" required={['category','title','slug'].includes(key)} value={editing[key]||''} onChange={e=>setEditing(v=>({...v,[key]:e.target.value}))}/>}
-   </label>)}
-  <label>ลำดับ<input type="number" min="0" max="100000" value={editing.sort_order??0} onChange={e=>setEditing(v=>({...v,sort_order:Number(e.target.value)}))}/></label>
-  <label>สถานะ<select value={editing.status} onChange={e=>setEditing(v=>({...v,status:e.target.value}))}><option value="inactive">ร่าง/ไม่ใช้งาน</option><option value="active">พร้อมเผยแพร่หลังเปิดโมดูล</option></select></label>
-  <div><button className="btn btn-primary" disabled={busy}>บันทึก</button> <button type="button" className="btn btn-outline" disabled={busy} onClick={()=>setEditing(null)}>ยกเลิก</button></div>
-  </form>}
- </section>
+ return (
+  <section className="admin-module welfare-admin-page">
+    <AdminPageHeader
+      title="จัดการสวัสดิการสมาชิก"
+      description="เพิ่ม แก้ไข และจัดการข้อมูลสวัสดิการ โดยยังคงการอนุมัติและสิทธิ์จากระบบเดิม"
+      actions={<Link className="acc-btn" to="/admin/workspace">กลับพื้นที่ทำงาน</Link>}
+    />
+    <div className="welfare-admin-notice" role="status">
+      หน้าสาธารณะยังถูกระงับด้วย Nginx — การบันทึกที่นี่ไม่เปิดเผยแพร่หน้าสาธารณะอัตโนมัติ
+    </div>
+    {error && <AdminErrorState message={error}/>}
+    <AdminCard title="รายการสวัสดิการ" description="บริหารสถานะและข้อมูลสิทธิประโยชน์ของสมาชิก">
+      <div className="welfare-admin-toolbar">
+        <span>รายการทั้งหมด {rows.length.toLocaleString('th-TH')} รายการ</span>
+        <button type="button" className="acc-btn primary" disabled={busy} onClick={()=>setEditing({...blank})}>
+          เพิ่มรายการสวัสดิการ
+        </button>
+      </div>
+      {rows.length === 0 ? <AdminEmptyState>ยังไม่มีรายการสวัสดิการ</AdminEmptyState> : (
+        <div className="admin-table-scroll" role="region" aria-label="ตารางรายการสวัสดิการ" tabIndex={0}>
+          <table className="admin-table">
+            <thead><tr><th scope="col">ลำดับ</th><th scope="col">ชื่อสวัสดิการ</th><th scope="col">วงเงิน / สิทธิประโยชน์</th><th scope="col">สถานะ</th><th scope="col">จัดการ</th></tr></thead>
+            <tbody>{rows.map(item=>(
+              <tr key={item.id}>
+                <td>{item.sort_order}</td>
+                <td>{item.title}</td>
+                <td>{item.benefit_amount || '—'}</td>
+                <td><AdminStatusBadge status={item.status}>{item.status==='active'?'พร้อมเผยแพร่เมื่อเปิดโมดูล':'ร่าง/ไม่ใช้งาน'}</AdminStatusBadge></td>
+                <td>
+                  <div className="welfare-admin-row-actions">
+                    <button type="button" className="acc-btn" disabled={busy} onClick={()=>setEditing({...item})}>แก้ไข</button>
+                    <button type="button" className="acc-btn" disabled={busy} onClick={()=>remove(item)}>ปิดรายการ</button>
+                  </div>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </AdminCard>
+    {editing && (
+      <AdminCard title={editing.id?'แก้ไขสวัสดิการ':'เพิ่มสวัสดิการ'} description="ตรวจสอบข้อมูลให้ครบก่อนบันทึก">
+        <form className="welfare-admin-form" onSubmit={save}>
+          <div className="welfare-admin-fields">
+            {fields.map(([key,label])=>(
+              <label key={key} className="admin-field">{label}
+                {['full_description','eligibility','required_documents','application_process'].includes(key)
+                  ? <textarea className="form-control" rows={3} value={editing[key]||''} onChange={e=>setEditing(v=>({...v,[key]:e.target.value}))}/>
+                  : <input className="form-control" required={['category','title','slug'].includes(key)} value={editing[key]||''} onChange={e=>setEditing(v=>({...v,[key]:e.target.value}))}/>}
+              </label>
+            ))}
+            <label className="admin-field">ลำดับ
+              <input type="number" min="0" max="100000" value={editing.sort_order??0} onChange={e=>setEditing(v=>({...v,sort_order:Number(e.target.value)}))}/>
+            </label>
+            <label className="admin-field">สถานะ
+              <select value={editing.status} onChange={e=>setEditing(v=>({...v,status:e.target.value}))}>
+                <option value="inactive">ร่าง/ไม่ใช้งาน</option>
+                <option value="active">พร้อมเผยแพร่หลังเปิดโมดูล</option>
+              </select>
+            </label>
+          </div>
+          <div className="welfare-admin-form-actions">
+            <button className="acc-btn primary" disabled={busy} type="submit">{busy?'กำลังบันทึก…':'บันทึก'}</button>
+            <button type="button" className="acc-btn" disabled={busy} onClick={()=>setEditing(null)}>ยกเลิก</button>
+          </div>
+        </form>
+      </AdminCard>
+    )}
+  </section>
+ );
 }

@@ -1,0 +1,10 @@
+/* AdminLTE RC05 — welfare module layout; scoped by React Admin shell */
+.acc-shell .welfare-admin-page{padding:0;max-width:none}
+.acc-shell .welfare-admin-notice{margin:0 0 20px;padding:13px 16px;border:1px solid var(--acc-border);border-left:4px solid var(--acc-info);border-radius:12px;background:var(--acc-surface-elevated);font-size:14px;line-height:1.6}
+.acc-shell .welfare-admin-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.acc-shell .welfare-admin-row-actions,.acc-shell .welfare-admin-form-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.acc-shell .welfare-admin-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px}
+.acc-shell .welfare-admin-fields .admin-field{min-width:0}
+.acc-shell .welfare-admin-fields :is(input,select,textarea){font-size:16px;min-height:44px}
+.acc-shell .welfare-admin-form-actions{justify-content:flex-end;border-top:1px solid var(--acc-border);padding-top:16px}
+@media(max-width:720px){.acc-shell .welfare-admin-fields{grid-template-columns:minmax(0,1fr)}.acc-shell .welfare-admin-form-actions button{flex:1 1 125px}}
