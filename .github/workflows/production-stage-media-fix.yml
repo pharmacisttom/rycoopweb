@@ -54,7 +54,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/package/public/app"
           cp -a public/app/. "$RUNNER_TEMP/package/public/app/"
           tar -czf "$RUNNER_TEMP/rycoop-full-media-fix.tgz" -C "$RUNNER_TEMP/package" .
-          sha256sum "$RUNNER_TEMP/rycoop-full-rc04.tgz" | awk '{print "RELEASE_ARTIFACT_SHA256="$1}'
+          sha256sum "$RUNNER_TEMP/rycoop-full-media-fix.tgz" | awk '{print "RELEASE_ARTIFACT_SHA256="$1}'
       - name: Stage new release and backup READ-ONLY copies of active frontend/nginx
         shell: bash
         run: |
@@ -70,8 +70,8 @@ jobs:
           S=(-p "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known")
           REMOTE_STAGE=".local/share/rycoop-deploy-staging/$RELEASE_SHA"
           ssh "${S[@]}" "$SSH_USER@$SSH_HOST" "mkdir -p ~/$REMOTE_STAGE && chmod 700 ~/$REMOTE_STAGE"
-          scp -P "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$RUNNER_TEMP/rycoop-full-rc04.tgz" "$SSH_USER@$SSH_HOST:$REMOTE_STAGE/release.tgz"
-          LOCAL_SHA="$(sha256sum "$RUNNER_TEMP/rycoop-full-rc04.tgz" | cut -d' ' -f1)"
+          scp -P "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$RUNNER_TEMP/rycoop-full-media-fix.tgz" "$SSH_USER@$SSH_HOST:$REMOTE_STAGE/release.tgz"
+          LOCAL_SHA="$(sha256sum "$RUNNER_TEMP/rycoop-full-media-fix.tgz" | cut -d' ' -f1)"
           ssh "${S[@]}" "$SSH_USER@$SSH_HOST" "SHA='$RELEASE_SHA' EXPECT='$LOCAL_SHA' bash -se" <<'REMOTE'
           set -Eeuo pipefail
           umask 077
