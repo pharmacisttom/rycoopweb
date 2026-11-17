@@ -135,6 +135,9 @@ jobs:
           php tests/MigrationRunnerTest.php
           php tests/LegacyMemberMigrationTest.php
 
+      - name: Syntax-check TEST-only AdminLTE deployment
+        run: bash -n scripts/deploy-test-adminlte-rc04.sh
+
       - name: Validate release guard without deploying
         run: |
           bash -n bin/deploy-production.sh
