@@ -1,4 +1,4 @@
-name: Stage reviewed media fix release with rollback snapshot (NO CUTOVER)
+name: Stage merged admin responsive UI release with rollback snapshot (NO CUTOVER)
 on:
   push:
     branches: [Test]
@@ -16,7 +16,7 @@ jobs:
     environment: production
     timeout-minutes: 25
     env:
-      RELEASE_SHA: 066fd727fbde146dd40e744a6b03be9af5bb1cdd
+      RELEASE_SHA: 91cd65a6f8d877cc849f56ce2ca73718c4fd8af8
       SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
       SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
       SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: 066fd727fbde146dd40e744a6b03be9af5bb1cdd
+          ref: 91cd65a6f8d877cc849f56ce2ca73718c4fd8af8
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
