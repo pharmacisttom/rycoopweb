@@ -232,3 +232,44 @@
   .acc-shell .acc-card-header h2,
   .acc-shell .acc-page-header h1 {font-size:16px}
 }
+
+
+/* RC05 legacy module normalization: AdminLTE native staff canvas only.
+   Avoid global element rules outside the authenticated .acc-shell. */
+.acc-shell .admin-module {
+  min-width:0;
+  max-width:100%;
+  font-size:16px;
+  line-height:1.5;
+  color:var(--acc-text);
+}
+.acc-shell .admin-module :is(h1,h2,h3),
+.acc-shell .admin-card-heading h2,
+.acc-shell .member-admin :is(h1,h2) {
+  font-size:16px;
+  line-height:1.5;
+  letter-spacing:normal;
+  overflow-wrap:anywhere;
+}
+.acc-shell .admin-module :is(input,select,textarea,button),
+.acc-shell .admin-module :is(.btn,.form-control) {
+  font-size:16px;
+}
+.acc-shell .admin-module :is(input,select,textarea) {
+  max-width:100%;
+  border-radius:10px;
+}
+.acc-shell .admin-module :is(.surface-card,.admin-panel) {
+  background:var(--acc-surface);
+  border:1px solid var(--acc-border);
+  border-radius:16px;
+  box-shadow:var(--acc-shadow);
+}
+.acc-shell .admin-module table {width:100%;border-collapse:collapse;font-size:16px}
+.acc-shell .admin-module :is(th,td) {padding:12px 14px;vertical-align:middle;border-bottom:1px solid var(--acc-border)}
+.acc-shell .admin-module th {font-weight:700;text-align:left;background:var(--acc-surface-elevated)}
+.acc-shell .admin-module :is(button,a):focus-visible {outline:3px solid var(--acc-focus-ring);outline-offset:2px}
+@media(max-width:640px){
+ .acc-shell .admin-module {min-width:0}
+ .acc-shell .admin-module :is(.admin-card,.surface-card) {padding:14px}
+}
