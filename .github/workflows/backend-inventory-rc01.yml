@@ -1,0 +1,35 @@
+name: Backend inventory RC01
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/export-admin-route-inventory.php'
+      - 'scripts/export-test-datasheet.sh'
+      - '.github/workflows/backend-inventory-rc01.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  route-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax
+        run: php -l scripts/export-admin-route-inventory.php
+      - name: Shell syntax
+        run: bash -n scripts/export-test-datasheet.sh
+      - name: TEST datasheet export regression
+        run: bash tests/DatabaseDatasheetExportTest.sh
+      - name: Route inventory
+        run: php scripts/export-admin-route-inventory.php
+      - name: Print summary
+        run: head -n 14 docs/audit/ADMIN_API_ROUTE_MATRIX.md
