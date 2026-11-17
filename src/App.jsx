@@ -34,6 +34,7 @@ const AdminMembersHealthPage = lazy(() => import('./pages/AdminMembersHealthPage
 const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const AdminControlCenterPage = lazy(() => import('./pages/AdminControlCenterPage'));
+const AdminMediaLibraryPage = lazy(() => import('./pages/AdminMediaLibraryPage'));
 const AdminAccessPage = lazy(() => import('./pages/AdminAccessPage'));
 const MfaPage = lazy(() => import('./pages/MfaPage'));
 const PublicContentAdminPage = lazy(() => import('./pages/PublicContentAdminPage'));
@@ -160,7 +161,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|login|2fa)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|media|login|2fa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -239,6 +240,7 @@ export default function App() {
             <Route path="/admin/settings" element={<StaffProtectedRoute><AdminControlCenterPage section="settings" /></StaffProtectedRoute>} />
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
+            <Route path="/admin/media" element={<StaffProtectedRoute permission="news.view"><AdminMediaLibraryPage /></StaffProtectedRoute>} />
 
             <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/welfare" element={<StaffProtectedRoute roles={['super_admin']}><AdminWelfarePage /></StaffProtectedRoute>} />
