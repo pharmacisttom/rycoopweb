@@ -1,0 +1,68 @@
+/* RYCOOPWEB Admin UX refresh RC01 — scoped to React Admin only.
+   Keep the existing RBAC navigation, mobile focus trap and footer utilities. */
+.acc-shell {
+  --acc-radius-sm: 11px;
+  --acc-radius-md: 16px;
+  --acc-radius-lg: 22px;
+  --acc-focus-ring: #38bdf8;
+  --acc-shadow: 0 2px 8px rgba(10, 37, 64, .035), 0 16px 36px rgba(10, 37, 64, .035);
+  --acc-shadow-md: 0 12px 36px rgba(10, 37, 64, .10);
+  --acc-bg: #f3f7fc;
+  --acc-border: #e0e9f4;
+  --acc-border-strong: #afc1d6;
+  --acc-surface-elevated: #f7fafe;
+  letter-spacing: .002em;
+}
+[data-theme="dark"] .acc-shell {
+  --acc-bg: #0a1222;
+  --acc-border: #24354d;
+  --acc-border-strong: #47617d;
+  --acc-surface-elevated: #15243b;
+}
+.acc-shell .acc-sidebar {
+  background: linear-gradient(165deg, #0b3151 0%, #0b2441 52%, #07192f 100%);
+  border-right: 1px solid rgba(255,255,255,.12);
+}
+.acc-shell .acc-sidebar-header {padding-block:19px 17px}
+.acc-shell .acc-brand-logo {width:44px;height:44px;border-radius:13px}
+.acc-shell .acc-nav-group-btn {border-radius:11px;min-height:42px;padding-inline:12px}
+.acc-shell .acc-nav-group-btn:hover,.acc-shell .acc-nav-group-btn:focus-visible {background:rgba(125,211,252,.12)}
+.acc-shell .acc-search-input {min-height:44px;border-radius:12px;background:rgba(2,16,34,.42)}
+.acc-shell .acc-main-wrapper {min-width:0}
+.acc-shell .acc-topbar {backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--acc-border)}
+.acc-shell .acc-content {max-width:1600px; padding-block:clamp(18px,2.6vw,36px)}
+.acc-shell .acc-page-title, .acc-shell .admin-page-heading h1 {letter-spacing:-.025em;line-height:1.25}
+.acc-shell :is(.acc-card,.admin-card,.ry-media-panel) {
+  border:1px solid var(--acc-border);
+  border-radius:var(--acc-radius-md);
+  box-shadow:var(--acc-shadow);
+}
+.acc-shell :is(.admin-field input,.admin-field select,.admin-field textarea,.form-control) {
+  border-radius:var(--acc-radius-sm);
+  background:var(--acc-surface);color:var(--acc-text);
+}
+.acc-shell :is(button,.acc-btn,.btn,input,select,textarea,a):focus-visible {
+  outline:3px solid var(--acc-focus-ring);
+  outline-offset:2px;
+}
+.acc-shell :is(.acc-btn,.btn,.admin-toolbar button,.admin-actions button) {transition:background .16s ease,transform .16s ease,box-shadow .16s ease}
+@media(hover:hover) and (prefers-reduced-motion:no-preference) {
+  .acc-shell :is(.acc-btn.primary,.btn-primary):hover {transform:translateY(-1px);box-shadow:0 8px 20px rgba(29,78,216,.17)}
+}
+.acc-shell .admin-table thead th {background:var(--acc-surface-elevated);font-weight:750}
+.acc-shell .admin-table tbody tr:hover {background:color-mix(in srgb,var(--acc-blue-100) 25%,var(--acc-surface))}
+.acc-shell .admin-table-scroll {border-radius:var(--acc-radius-sm)}
+.acc-shell .acc-footer-tools-trigger {border-radius:12px;min-height:46px}
+.acc-shell .acc-footer-tools-panel {border-radius:12px}
+@media(max-width:920px) {
+  .acc-shell .acc-content {padding:18px}
+  .acc-shell .acc-sidebar-header {padding-block:12px}
+}
+@media(max-width:640px) {
+  .acc-shell .acc-content {padding:12px}
+  .acc-shell :is(.admin-card,.acc-card,.ry-media-panel) {border-radius:14px}
+  .acc-shell :is(.admin-actions,.admin-toolbar) button {min-height:44px}
+}
+@media(prefers-reduced-motion:reduce) {
+  .acc-shell *, .acc-shell *::before, .acc-shell *::after {scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
