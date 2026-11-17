@@ -96,6 +96,9 @@ jobs:
             find app config database tests scripts bin public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           fi
 
+      - name: Preserve member portal, dividend and admin RBAC routes
+        run: php tests/AdminUiMemberNonRegressionTest.php
+
       - name: Run media URL tests
         run: php tests/MediaUrlTest.php
 

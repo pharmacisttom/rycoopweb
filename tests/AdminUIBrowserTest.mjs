@@ -47,14 +47,14 @@ try{
   const goto=async(kind,width=1440,theme='light')=>{await page.setViewportSize({width,height:1000});await page.goto(`http://127.0.0.1:${port}/__admin_fixture?kind=${kind}&theme=${theme}`);if(!before||!['access','workspace','content','publicContent','cms','ledDashboard','ledSearch','ledReview','ledBatch','ledSchema'].includes(kind))await page.locator(before&&kind.startsWith('member')||before&&kind==='dividendImport'?'.member-admin-layout':'.acc-shell').waitFor();};
   if(!before){
   await goto('access');
-  const footerUtilities = page.getByRole('button',{name:'เครื่องมือและระบบอื่น ๆ'});
+  const footerUtilities = page.getByRole('button',{name:'ระบบทั้งหมด'});
   await footerUtilities.waitFor();
-  assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','utilities closed by default');
+  assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','system footer closed by default');
   await footerUtilities.click();
-  assert.equal(await footerUtilities.getAttribute('aria-expanded'),'true','utilities expand on click');
-  await page.getByRole('navigation',{name:'เมนูเครื่องมือระบบส่วนท้าย'}).getByRole('link',{name:'Backup Overview'}).waitFor();
-  await footerUtilities.click();
-  assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','utilities collapse on click');
+  assert.equal(await page.getByRole('button',{name:'ปิดเมนูระบบ'}).getAttribute('aria-expanded'),'true','system footer expands on click');
+  await page.getByRole('navigation',{name:'เมนูเครื่องมือระบบ'}).getByRole('link',{name:'Backup Overview'}).waitFor();
+  await page.getByRole('button',{name:'ปิดเมนูระบบ'}).click();
+  assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','system footer closes on click');
   await page.getByRole('button',{name:'เพิ่มบทบาท',exact:true}).click();
   const editor=page.getByRole('dialog',{name:'เพิ่มบทบาท',exact:true});await editor.getByLabel('ชื่อบทบาท').fill('Fixture reviewer');await editor.getByLabel('รหัสภาษาอังกฤษ').fill('fixture_reviewer');await editor.getByRole('checkbox',{name:'ข่าวประชาสัมพันธ์: ดูข้อมูล',exact:true}).check();
   await page.screenshot({path:`${out}/role-modal-light-1440.png`,fullPage:true,animations:'disabled',timeout:60000});

@@ -1,0 +1,100 @@
+/* RYCOOPWEB Admin UX refresh RC01 — scoped to React Admin only.
+   Keep the existing RBAC navigation, mobile focus trap and footer utilities. */
+.acc-shell {
+  --acc-radius-sm: 11px;
+  --acc-radius-md: 16px;
+  --acc-radius-lg: 22px;
+  --acc-focus-ring: #38bdf8;
+  --acc-shadow: 0 2px 8px rgba(10, 37, 64, .035), 0 16px 36px rgba(10, 37, 64, .035);
+  --acc-shadow-md: 0 12px 36px rgba(10, 37, 64, .10);
+  --acc-bg: #f3f7fc;
+  --acc-border: #e0e9f4;
+  --acc-border-strong: #afc1d6;
+  --acc-surface-elevated: #f7fafe;
+  letter-spacing: .002em;
+}
+[data-theme="dark"] .acc-shell {
+  --acc-bg: #0a1222;
+  --acc-border: #24354d;
+  --acc-border-strong: #47617d;
+  --acc-surface-elevated: #15243b;
+}
+.acc-shell .acc-sidebar {
+  background: linear-gradient(165deg, #0b3151 0%, #0b2441 52%, #07192f 100%);
+  border-right: 1px solid rgba(255,255,255,.12);
+}
+.acc-shell .acc-sidebar-header {padding-block:19px 17px}
+.acc-shell .acc-brand-logo {width:44px;height:44px;border-radius:13px}
+.acc-shell .acc-nav-group-btn {border-radius:11px;min-height:42px;padding-inline:12px}
+.acc-shell .acc-nav-group-btn:hover,.acc-shell .acc-nav-group-btn:focus-visible {background:rgba(125,211,252,.12)}
+.acc-shell .acc-search-input {min-height:44px;border-radius:12px;background:rgba(2,16,34,.42)}
+.acc-shell .acc-main-wrapper {min-width:0}
+.acc-shell .acc-topbar {backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--acc-border)}
+.acc-shell .acc-content {max-width:1600px; padding-block:clamp(18px,2.6vw,36px)}
+.acc-shell .acc-page-title, .acc-shell .admin-page-heading h1 {letter-spacing:-.025em;line-height:1.25}
+.acc-shell :is(.acc-card,.admin-card,.ry-media-panel) {
+  border:1px solid var(--acc-border);
+  border-radius:var(--acc-radius-md);
+  box-shadow:var(--acc-shadow);
+}
+.acc-shell :is(.admin-field input,.admin-field select,.admin-field textarea,.form-control) {
+  border-radius:var(--acc-radius-sm);
+  background:var(--acc-surface);color:var(--acc-text);
+}
+.acc-shell :is(button,.acc-btn,.btn,input,select,textarea,a):focus-visible {
+  outline:3px solid var(--acc-focus-ring);
+  outline-offset:2px;
+}
+.acc-shell :is(.acc-btn,.btn,.admin-toolbar button,.admin-actions button) {transition:background .16s ease,transform .16s ease,box-shadow .16s ease}
+@media(hover:hover) and (prefers-reduced-motion:no-preference) {
+  .acc-shell :is(.acc-btn.primary,.btn-primary):hover {transform:translateY(-1px);box-shadow:0 8px 20px rgba(29,78,216,.17)}
+}
+.acc-shell .admin-table thead th {background:var(--acc-surface-elevated);font-weight:750}
+.acc-shell .admin-table tbody tr:hover {background:color-mix(in srgb,var(--acc-blue-100) 25%,var(--acc-surface))}
+.acc-shell .admin-table-scroll {border-radius:var(--acc-radius-sm)}
+.acc-shell .acc-footer-tools-trigger {border-radius:12px;min-height:46px}
+.acc-shell .acc-footer-tools-panel {border-radius:12px}
+@media(max-width:920px) {
+  .acc-shell .acc-content {padding:18px}
+  .acc-shell .acc-sidebar-header {padding-block:12px}
+}
+@media(max-width:640px) {
+  .acc-shell .acc-content {padding:12px}
+  .acc-shell :is(.admin-card,.acc-card,.ry-media-panel) {border-radius:14px}
+  .acc-shell :is(.admin-actions,.admin-toolbar) button {min-height:44px}
+}
+@media(prefers-reduced-motion:reduce) {
+  .acc-shell *, .acc-shell *::before, .acc-shell *::after {scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
+/* Wider AdminLTE-inspired navigation; keep compact mode and responsive overlay. */
+@media(min-width:921px) {
+  .acc-shell:not(.is-collapsed) {grid-template-columns:326px minmax(0,1fr)}
+  .acc-shell.is-collapsed {grid-template-columns:76px minmax(0,1fr)}
+}
+.acc-shell .acc-sidebar-nav {padding-inline:13px; gap:7px}
+.acc-shell .acc-nav-group-btn {font-size:.9rem;line-height:1.5}
+.acc-shell .acc-nav-link {font-size:.86rem;line-height:1.52;white-space:normal}
+.acc-shell .acc-sidebar-footer {border-top:1px solid rgba(255,255,255,.12)}
+.acc-shell .acc-footer-tools-panel {max-height:min(46vh,440px)}
+.acc-shell .acc-system-footer {width:100%;margin-top:auto;padding:14px clamp(14px,2.5vw,30px) 17px;border-top:1px solid var(--acc-border);background:var(--acc-surface);color:var(--acc-text)}
+.acc-shell .acc-main-wrapper {display:flex;flex-direction:column;min-height:100vh}
+.acc-shell .acc-content {flex:1 0 auto}
+.acc-shell .acc-system-footer-bar {display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.acc-shell .acc-system-footer-identity {display:flex;align-items:center;gap:11px;min-width:210px}
+.acc-shell .acc-system-footer-identity svg {color:var(--acc-blue-600)}
+.acc-shell .acc-system-footer-identity div {display:grid;gap:3px}
+.acc-shell .acc-system-footer-identity strong {font-size:.87rem;line-height:1.3}
+.acc-shell .acc-system-footer-identity small {font-size:.76rem;color:var(--acc-text-secondary)}
+.acc-shell .acc-system-footer-shortcuts {display:flex;flex:1;gap:8px;flex-wrap:wrap}
+.acc-shell .acc-system-footer-shortcut {font-size:.78rem;font-weight:650;border-radius:999px;border:1px solid var(--acc-border);padding:8px 12px;text-decoration:none;color:var(--acc-text-secondary);background:var(--acc-surface-elevated)}
+.acc-shell .acc-system-footer-shortcut:hover {border-color:var(--acc-blue-600);color:var(--acc-blue-600)}
+.acc-shell .acc-system-footer-toggle {display:flex;align-items:center;gap:10px;justify-content:center;min-height:44px;padding:10px 15px;border:1px solid var(--acc-border-strong);border-radius:12px;background:var(--acc-surface-elevated);color:var(--acc-text);font:inherit;font-size:.85rem;font-weight:750;cursor:pointer}
+.acc-shell .acc-system-footer-toggle[aria-expanded=true] svg {transform:rotate(180deg)}
+.acc-shell .acc-system-footer-menu {display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:18px;margin-top:16px;padding-top:16px;border-top:1px solid var(--acc-border)}
+.acc-shell .acc-system-footer-group {min-width:0;display:flex;flex-direction:column;gap:4px}
+.acc-shell .acc-system-footer-group h2 {font-size:.85rem;line-height:1.45;margin:0 0 5px;color:var(--acc-text)}
+.acc-shell .acc-system-footer-link {border-radius:9px;padding:8px 10px;text-decoration:none;font-size:.82rem;line-height:1.4;color:var(--acc-text-secondary)}
+.acc-shell .acc-system-footer-link:hover,.acc-shell .acc-system-footer-link.is-active {background:var(--acc-surface-elevated);color:var(--acc-blue-600)}
+@media(max-width:1200px){.acc-shell .acc-system-footer-shortcuts {display:none}}
+@media(max-width:640px){.acc-shell .acc-system-footer{padding:12px}.acc-shell .acc-system-footer-bar{justify-content:space-between}.acc-shell .acc-system-footer-identity{min-width:0}.acc-shell .acc-system-footer-shortcuts{display:none}.acc-shell .acc-system-footer-menu{grid-template-columns:minmax(0,1fr)}}
