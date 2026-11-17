@@ -25,6 +25,6 @@ chmod +x "$WORK/bin/mysql"
  test -s out/INDEXES.tsv
  test -s out/DATA_DICTIONARY.md
  test "$(wc -l < out/COLUMNS.tsv)" -eq 1
- grep -q 'media.id' out/DATA_DICTIONARY.md
+ grep -Fq '| `media` | `id` |' out/DATA_DICTIONARY.md
 )
 echo 'PASS: TEST datasheet files and column path'
