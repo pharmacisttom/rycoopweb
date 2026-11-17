@@ -9,6 +9,7 @@ $routes = (new ReflectionProperty(\App\Core\Router::class, 'routes'))->getValue(
 $cases = [
     ['GET','/api/admin/media','index','view'],
     ['GET','/api/admin/media/{id}','show','view'],
+    ['GET','/api/admin/media/{id}/image','image','view'],
     ['POST','/api/admin/media','upload','create'],
     ['POST','/api/admin/media/{id}/update','update','update'],
     ['POST','/api/admin/media/{id}/delete','destroy','delete'],
