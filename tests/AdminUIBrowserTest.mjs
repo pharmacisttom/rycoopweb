@@ -51,7 +51,7 @@ try{
   await footerUtilities.waitFor();
   assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','system footer closed by default');
   await footerUtilities.click();
-  assert.equal(await footerUtilities.getAttribute('aria-expanded'),'true','system footer expands on click');
+  assert.equal(await page.getByRole('button',{name:'ปิดเมนูระบบ'}).getAttribute('aria-expanded'),'true','system footer expands on click');
   await page.getByRole('navigation',{name:'เมนูเครื่องมือระบบ'}).getByRole('link',{name:'Backup Overview'}).waitFor();
   await page.getByRole('button',{name:'ปิดเมนูระบบ'}).click();
   assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','system footer closes on click');
