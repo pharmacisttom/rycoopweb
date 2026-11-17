@@ -117,3 +117,64 @@
 .acc-shell .acc-account-footer-actions :is(button,a):focus-visible {outline:3px solid var(--acc-focus-ring);outline-offset:2px}
 @media(max-width:720px){.acc-shell .acc-account-footer {align-items:stretch}.acc-shell .acc-account-footer-actions{justify-content:flex-start;width:100%}.acc-shell .acc-account-footer-actions :is(button,a){flex:1 1 105px}}
 @media(max-width:420px){.acc-shell .acc-account-footer-actions :is(button,a){flex:1 1 42%;font-size:.8rem}}
+
+
+/* RC03: a viewport-pinned navigation rail is independent from long admin pages.
+   Previous sticky layout could end at its containing block and leave a blank
+   lower-left region when scrolling the dashboard. */
+@media (min-width: 921px) {
+  .acc-shell:not(.is-collapsed) { grid-template-columns: 326px minmax(0,1fr); }
+  .acc-shell.is-collapsed { grid-template-columns: 76px minmax(0,1fr); }
+  .acc-shell .acc-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 326px;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    z-index: 40;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .acc-shell.is-collapsed .acc-sidebar { width: 76px; }
+}
+.acc-shell .acc-sidebar-header, .acc-shell .acc-sidebar-search {flex:0 0 auto}
+.acc-shell .acc-sidebar-nav {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147,197,253,.55) transparent;
+  padding-bottom: max(20px,env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+.acc-shell .acc-sidebar-nav::-webkit-scrollbar {width:7px}
+.acc-shell .acc-sidebar-nav::-webkit-scrollbar-thumb {background:rgba(147,197,253,.48);border-radius:999px}
+.acc-shell .acc-sidebar-nav::-webkit-scrollbar-track {background:transparent}
+@media(max-width:920px) {
+  .acc-shell,.acc-shell.is-collapsed {grid-template-columns:minmax(0,1fr)}
+  .acc-shell .acc-sidebar {
+    position:fixed;
+    inset:0 auto 0 0;
+    width:min(326px,calc(100vw - 44px));
+    max-width:calc(100vw - 44px);
+    height:100vh;
+    height:100dvh;
+    max-height:100dvh;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    transform:translateX(-105%);
+    overflow:hidden;
+    z-index:60;
+  }
+  .acc-shell .acc-sidebar.is-mobile-open {transform:translateX(0)}
+  .acc-shell .acc-sidebar-nav {flex:1 1 0;min-height:0}
+}
