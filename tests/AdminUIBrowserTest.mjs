@@ -67,6 +67,16 @@ try{
   const afterScroll = await desktopSidebar.boundingBox();
   assert.ok(Math.abs(afterScroll.y) <= 2,'desktop sidebar remains pinned after scrolling');
   await page.evaluate(() => window.scrollTo(0, 0));
+  await page.setViewportSize({width:390,height:720});
+  await page.getByRole('button',{name:'เปิดเมนูผู้ดูแลระบบ'}).click();
+  const mobileSidebar = page.locator('.acc-sidebar');
+  const mobileBounds = await mobileSidebar.boundingBox();
+  assert.ok(mobileBounds && Math.abs(mobileBounds.height - 720)<=2,'mobile sidebar fills viewport');
+  assert.ok(mobileBounds.width <= 346,'mobile sidebar leaves backdrop visible');
+  assert.equal(await nav.evaluate(el=>getComputedStyle(el).overflowY),'auto','mobile menu can scroll');
+  await page.getByRole('button',{name:'ปิดเมนูผู้ดูแลระบบ'}).click();
+  await page.setViewportSize({width:1280,height:720});
+
 
   const footerUtilities = page.getByRole('button',{name:'ระบบทั้งหมด'});
   await footerUtilities.waitFor();
