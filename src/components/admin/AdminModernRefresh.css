@@ -196,3 +196,7 @@
 .acc-shell .acc-account-trigger:focus-visible,.acc-shell .acc-account-dropdown :is(button,a):focus-visible {outline:3px solid var(--acc-focus-ring);outline-offset:2px}
 @media(max-width:920px){.acc-shell .acc-account-trigger{max-width:min(250px,54vw)}}
 @media(max-width:620px){.acc-shell .acc-topbar-right{flex:0 0 auto;justify-content:flex-end;width:auto}.acc-shell .acc-topbar-right>.acc-badge-pill{display:none}.acc-shell .acc-account-trigger{padding:5px;gap:5px;min-height:44px}.acc-shell .acc-account-trigger-meta{display:none}.acc-shell .acc-account-dropdown{right:0}}
+
+/* Fixed sidebar is removed from grid flow: keep content in column 2. */
+@media(min-width:921px){.acc-shell>.acc-main-wrapper{grid-column:2;min-width:0}}
+@media(max-width:920px){.acc-shell>.acc-main-wrapper{grid-column:1;min-width:0}}
