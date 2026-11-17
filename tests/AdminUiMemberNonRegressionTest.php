@@ -14,14 +14,14 @@ if ($routes === false || $app === false || $shell === false) {
 }
 foreach ([
     "/api/member/dividends",
-    "Member\\DividendController@index",
+    "DividendController@index",
     "new RoleMiddleware(['member'])",
     "MemberMiddleware::class",
     "new FeatureFlagMiddleware('member_portal')",
     "'api/member'",
     "'member'",
-    "Member\\TaxCertificateController@index",
-    "Member\\MemberPortalController@dashboard",
+    "TaxCertificateController@index",
+    "MemberPortalController@dashboard",
 ] as $token) {
     if (!str_contains($routes, $token)) {
         throw new RuntimeException("Member route contract missing: {$token}");
