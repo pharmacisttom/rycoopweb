@@ -1,0 +1,10 @@
+.ry-media-picker-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.7);z-index:3000;display:grid;place-items:center;padding:16px}
+.ry-media-picker{width:min(860px,100%);max-height:92dvh;overflow:auto;background:#fff;color:#17243b;border-radius:15px;padding:20px;box-shadow:0 20px 60px #0004}
+.ry-media-picker h3{margin:0 0 12px}
+.ry-media-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px;margin:14px 0}
+.ry-media-picker-grid button{min-width:0;display:grid;gap:8px;padding:8px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#17243b;text-align:left}
+.ry-media-picker-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px}
+.ry-media-picker-grid span{font-size:.78rem;overflow-wrap:anywhere}
+.ry-media-picker nav{display:flex;justify-content:center;align-items:center;gap:14px}
+.ry-media-picker button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+@media(max-width:480px){.ry-media-picker{padding:14px}.ry-media-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
