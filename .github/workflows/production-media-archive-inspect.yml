@@ -1,0 +1,94 @@
+name: Inspect news gallery image references in existing archives (READ ONLY)
+on:
+  push:
+    branches: [Test]
+    paths: ['.github/workflows/production-media-archive-inspect.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 12
+    steps:
+      - name: Inspect available backups without extracting or printing filenames
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          D="$RUNNER_TEMP/ssh"
+          mkdir -p "$D"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$D/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$D/known"
+          chmod 600 "$D/id" "$D/known"
+          ssh-keygen -y -P '' -f "$D/id" >/dev/null
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P>=1 && P<=65535))
+          ssh -T -p "$P" -i "$D/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$D/known" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import collections,io,json,os,subprocess,tarfile,zipfile
+          from pathlib import Path
+          p=subprocess.run(['curl','-fsS','--max-time','12','http://127.0.0.1:18092/api/public/news'],capture_output=True,text=True)
+          assert p.returncode==0, 'news API unavailable'
+          obj=json.loads(p.stdout)
+          items=obj.get('data',[])
+          if isinstance(items,dict):items=items.get('items',items.get('news',[]))
+          expected=set()
+          for row in items:
+              if not isinstance(row,dict):continue
+              images=[row.get('cover_image')]
+              gallery=row.get('gallery_images') or []
+              if isinstance(gallery,str):
+                  try:gallery=json.loads(gallery)
+                  except ValueError:gallery=[]
+              if isinstance(gallery,list):
+                  for image in gallery:
+                      if isinstance(image,dict):
+                          images.extend((image.get('src'),image.get('thumbnail')))
+              for image in images:
+                  if isinstance(image,str) and '/storage/uploads/news/gallery/' in image:
+                      name=image.split('?')[0].rsplit('/',1)[-1]
+                      if name.lower().endswith(('.webp','.jpeg','.jpg','.png')):expected.add(name)
+          print('EXPECTED_REFERENCED_IMAGE_FILES',len(expected))
+          candidates=[]
+          home=Path.home()
+          for base,dirs,files in os.walk(home,followlinks=False):
+              depth=Path(base).relative_to(home).parts
+              dirs[:]=[d for d in dirs if d not in ('.git','node_modules','vendor','sessions','.cache','cache') and len(depth)<8]
+              for f in files:
+                  if f.lower().endswith(('.tgz','.tar.gz','.zip')):
+                      item=Path(base)/f
+                      try:
+                          if item.stat().st_size<8*1024*1024*1024: candidates.append(item)
+                      except OSError:pass
+          print('BACKUP_ARCHIVES_FOUND',len(candidates))
+          total=collections.Counter()
+          archive_with_match=0
+          for a in candidates[:100]:
+              found=set()
+              try:
+                  if a.name.lower().endswith('.zip'):
+                      with zipfile.ZipFile(a) as archive:
+                          for x in archive.infolist():
+                              if x.filename.rsplit('/',1)[-1] in expected:found.add(x.filename.rsplit('/',1)[-1])
+                  else:
+                      with tarfile.open(a,mode='r:*') as archive:
+                          for x in archive:
+                              if x.isfile() and x.name.rsplit('/',1)[-1] in expected:found.add(x.name.rsplit('/',1)[-1])
+                  if found:archive_with_match+=1;total.update(found)
+              except Exception as e:
+                  print('ARCHIVE_SCAN_ERROR_TYPE',type(e).__name__)
+          print('ARCHIVES_WITH_MATCHES',archive_with_match)
+          print('UNIQUE_REFERENCED_IMAGES_RECOVERABLE',len(total))
+          print('MEDIA_ARCHIVE_INSPECTION_READONLY=PASS')
+          PY
+          REMOTE
+          rm -f "$D/id" "$D/known"
