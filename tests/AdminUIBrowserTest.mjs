@@ -47,6 +47,15 @@ try{
   const goto=async(kind,width=1440,theme='light')=>{await page.setViewportSize({width,height:1000});await page.goto(`http://127.0.0.1:${port}/__admin_fixture?kind=${kind}&theme=${theme}`);if(!before||!['access','workspace','content','publicContent','cms','ledDashboard','ledSearch','ledReview','ledBatch','ledSchema'].includes(kind))await page.locator(before&&kind.startsWith('member')||before&&kind==='dividendImport'?'.member-admin-layout':'.acc-shell').waitFor();};
   if(!before){
   await goto('access');
+  const nav = page.locator('.acc-sidebar-nav');
+  const footer = page.locator('.acc-system-footer');
+  await footer.getByRole('button',{name:'โหมดมืด'}).waitFor();
+  await footer.getByRole('button',{name:'รหัสผ่าน'}).waitFor();
+  await footer.getByRole('link',{name:'หน้าเว็บ'}).waitFor();
+  await footer.getByRole('button',{name:'ออกระบบ'}).waitFor();
+  assert.equal(await page.locator('.acc-sidebar-footer').count(),0,'account card removed from sidebar');
+  assert.ok(await nav.isVisible(),'navigation stays visible and scrollable');
+  assert.equal(await nav.evaluate(el=>getComputedStyle(el).overflowY),'auto','navigation scrolls independently');
   const footerUtilities = page.getByRole('button',{name:'ระบบทั้งหมด'});
   await footerUtilities.waitFor();
   assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','system footer closed by default');
