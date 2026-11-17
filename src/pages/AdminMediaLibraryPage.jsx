@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
 import './AdminMediaLibraryPage.css';
+import './AdminMediaModern.css';
 
 /**
  * Reusable CMS image catalog. onSelect(image) can also be used by news/board/hero editors.
