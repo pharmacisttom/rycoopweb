@@ -429,57 +429,6 @@ function FullAdminControlCenterShell({
           })}
         </nav>
 
-        <div className="acc-sidebar-footer">
-          {!collapsed && (
-            <div className="acc-user-card">
-              <div className="acc-user-avatar" aria-hidden="true">
-                {userInitial}
-              </div>
-              <div className="acc-user-meta">
-                <strong>{user?.name || 'ผู้ดูแลระบบ'}</strong>
-                <span>{user?.roleName || user?.role || 'เจ้าหน้าที่สหกรณ์'}</span>
-              </div>
-            </div>
-          )}
-
-          <div className="acc-footer-actions">
-            <button
-              type="button"
-              className="acc-footer-btn"
-              onClick={toggleTheme}
-              title={theme === 'light' ? 'สลับเป็นโหมดมืด' : 'สลับเป็นโหมดสว่าง'}
-            >
-              {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-              {!collapsed && <span>{theme === 'light' ? 'โหมดมืด' : 'โหมดสว่าง'}</span>}
-            </button>
-
-            <button
-              type="button"
-              className="acc-footer-btn"
-              onClick={() => {setMobileOpen(false);setPasswordModalOpen(true);}}
-              title="เปลี่ยนรหัสผ่านของฉัน"
-            >
-              <Lock size={14} />
-              {!collapsed && <span>รหัสผ่าน</span>}
-            </button>
-
-            <Link to="/" className="acc-footer-btn" title="กลับสู่หน้าเว็บไซต์สหกรณ์">
-              <ArrowLeft size={14} />
-              {!collapsed && <span>หน้าเว็บ</span>}
-            </Link>
-
-            <button
-              type="button"
-              className="acc-footer-btn danger"
-              onClick={handleSignOut}
-              disabled={loggingOut}
-              title="ออกจากระบบ"
-            >
-              <LogOut size={14} />
-              {!collapsed && <span>{loggingOut ? 'ออก...' : 'ออกระบบ'}</span>}
-            </button>
-          </div>
-        </div>
       </aside>
 
       <div className="acc-main-wrapper" inert={mobileOpen?"":undefined}>
@@ -529,8 +478,33 @@ function FullAdminControlCenterShell({
 
           {children}
         </div>
-        {footerGroups.length > 0 && (
-          <footer className="acc-system-footer" aria-label="ระบบและเครื่องมือผู้ดูแล">
+        <footer className="acc-system-footer" aria-label="ระบบและบัญชีผู้ดูแล">
+          <div className="acc-account-footer">
+            <div className="acc-account-footer-user">
+              <div className="acc-user-avatar" aria-hidden="true">{userInitial}</div>
+              <div className="acc-user-meta">
+                <strong>{user?.name || 'ผู้ดูแลระบบ'}</strong>
+                <span>{user?.roleName || user?.role || 'เจ้าหน้าที่สหกรณ์'}</span>
+              </div>
+            </div>
+            <div className="acc-account-footer-actions" aria-label="เครื่องมือบัญชีผู้ดูแล">
+              <button type="button" onClick={toggleTheme} title={theme === 'light' ? 'สลับเป็นโหมดมืด' : 'สลับเป็นโหมดสว่าง'}>
+                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                <span>{theme === 'light' ? 'โหมดมืด' : 'โหมดสว่าง'}</span>
+              </button>
+              <button type="button" onClick={() => {setMobileOpen(false);setPasswordModalOpen(true);}} title="เปลี่ยนรหัสผ่านของฉัน">
+                <Lock size={16} /><span>รหัสผ่าน</span>
+              </button>
+              <Link to="/" title="กลับสู่หน้าเว็บไซต์สหกรณ์">
+                <ArrowLeft size={16} /><span>หน้าเว็บ</span>
+              </Link>
+              <button type="button" className="acc-account-signout" onClick={handleSignOut} disabled={loggingOut} title="ออกจากระบบ">
+                <LogOut size={16} /><span>{loggingOut ? 'ออก...' : 'ออกระบบ'}</span>
+              </button>
+            </div>
+          </div>
+          {footerGroups.length > 0 && (
+          <>
             <div className="acc-system-footer-bar">
               <div className="acc-system-footer-identity">
                 <Settings size={17} aria-hidden="true" />
@@ -567,8 +541,9 @@ function FullAdminControlCenterShell({
                 ))}
               </nav>
             )}
-          </footer>
-        )}
+          </>
+          )}
+        </footer>
       </div>
 
       <ChangePasswordModal isOpen={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
