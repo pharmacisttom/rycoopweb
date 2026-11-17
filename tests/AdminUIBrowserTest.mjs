@@ -48,11 +48,19 @@ try{
   if(!before){
   await goto('access');
   const nav = page.locator('.acc-sidebar-nav');
-  const footer = page.locator('.acc-system-footer');
-  await footer.getByRole('button',{name:'โหมดมืด'}).waitFor();
-  await footer.getByRole('button',{name:'รหัสผ่าน'}).waitFor();
-  await footer.getByRole('link',{name:'หน้าเว็บ'}).waitFor();
-  await footer.getByRole('button',{name:'ออกระบบ'}).waitFor();
+  const account = page.locator('.acc-account-menu');
+  const accountToggle = account.locator('.acc-account-trigger');
+  await accountToggle.waitFor();
+  assert.equal(await accountToggle.getAttribute('aria-expanded'),'false','profile closed by default');
+  await accountToggle.click();
+  assert.equal(await accountToggle.getAttribute('aria-expanded'),'true','profile opens');
+  await account.getByRole('button',{name:'โหมดมืด'}).waitFor();
+  await account.getByRole('button',{name:'รหัสผ่าน'}).waitFor();
+  await account.getByRole('link',{name:'หน้าเว็บ'}).waitFor();
+  await account.getByRole('button',{name:'ออกระบบ'}).waitFor();
+  await page.keyboard.press('Escape');
+  assert.equal(await accountToggle.getAttribute('aria-expanded'),'false','Escape closes profile');
+  assert.equal(await page.locator('.acc-account-footer').count(),0,'account panel removed from footer');
   assert.equal(await page.locator('.acc-sidebar-footer').count(),0,'account card removed from sidebar');
   assert.ok(await nav.isVisible(),'navigation stays visible and scrollable');
   assert.equal(await nav.evaluate(el=>getComputedStyle(el).overflowY),'auto','navigation scrolls independently');
