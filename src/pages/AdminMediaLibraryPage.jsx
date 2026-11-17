@@ -20,6 +20,7 @@ export default function AdminMediaLibraryPage({ onSelect }) {
   const [uploadAlt, setUploadAlt] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
   const [editing, setEditing] = useState(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -44,7 +45,8 @@ export default function AdminMediaLibraryPage({ onSelect }) {
     try {
       await mediaLibraryApi.upload(file, { folder: folder || 'general', altText: uploadAlt, caption: uploadCaption });
       setFile(null); setUploadAlt(''); setUploadCaption('');
-      e.currentTarget?.reset?.();
+      // React synthetic event currentTarget is cleared after await; the file input is reset on the next render.
+      setFileInputKey((key) => key + 1);
       setQuery({ page: 1, search: '', folder: '' });
       setSearch(''); setFolder('');
     } catch (e) {
@@ -83,7 +85,7 @@ export default function AdminMediaLibraryPage({ onSelect }) {
           <h2>เพิ่มรูปภาพ</h2>
           <p className="ry-media-help">JPEG, PNG, WebP สูงสุด 10 MB ระบบแปลงเป็น WebP และลบ EXIF</p>
           <div className="ry-media-fields">
-            <label>ไฟล์รูปภาพ<input type="file" accept="image/jpeg,image/png,image/webp" required
+            <label>ไฟล์รูปภาพ<input key={fileInputKey} type="file" accept="image/jpeg,image/png,image/webp" required
               onChange={(e) => setFile(e.target.files?.[0] || null)} /></label>
             <label>ข้อความอธิบายภาพ (Alt Text)<input value={uploadAlt} maxLength={255}
               onChange={(e) => setUploadAlt(e.target.value)} /></label>
