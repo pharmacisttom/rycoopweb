@@ -30,6 +30,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ChangePasswordModal from '../common/ChangePasswordModal';
+import 'admin-lte/dist/css/adminlte.rycoop.css';
 import './AdminControlCenter.css';
 import './AdminUI.css';
 import './AdminResponsiveFix.css';
@@ -337,7 +338,7 @@ function FullAdminControlCenterShell({
   const userInitial = (user?.name || user?.username || 'A').trim().charAt(0).toUpperCase();
 
   return (
-    <div className={`acc-shell ${collapsed ? 'is-collapsed' : ''}`}>
+    <div className={`acc-shell app-wrapper ${collapsed ? 'is-collapsed' : ''}`}>
       <div
         className={`acc-backdrop ${mobileOpen ? 'is-open' : ''}`}
         onClick={() => setMobileOpen(false)}
@@ -347,7 +348,7 @@ function FullAdminControlCenterShell({
       <aside
         inert={isMobile&&!mobileOpen?"":undefined} aria-hidden={isMobile&&!mobileOpen?true:undefined}
         ref={mobileDialog} role={mobileOpen?"dialog":undefined} aria-modal={mobileOpen?true:undefined}
-        className={`acc-sidebar ${mobileOpen ? 'is-mobile-open' : ''}`}
+        className={`acc-sidebar app-sidebar ${mobileOpen ? 'is-mobile-open' : ''}`}
         aria-label="เมนูศูนย์ควบคุมผู้ดูแลระบบ"
       >
         <div className="acc-sidebar-header">
@@ -446,8 +447,8 @@ function FullAdminControlCenterShell({
 
       </aside>
 
-      <div className="acc-main-wrapper" inert={mobileOpen?"":undefined}>
-        <header className="acc-topbar">
+      <div className="acc-main-wrapper app-main" inert={mobileOpen?"":undefined}>
+        <header className="acc-topbar app-header">
           <div className="acc-topbar-left">
             <CoopBrandLogo variant="emblem" size={32} />
             <button
@@ -520,7 +521,7 @@ function FullAdminControlCenterShell({
 
           {children}
         </div>
-        <footer className="acc-system-footer" aria-label="ระบบและเครื่องมือผู้ดูแล">
+        <footer className="acc-system-footer app-footer" aria-label="ระบบและเครื่องมือผู้ดูแล">
           {footerGroups.length > 0 && (
           <>
             <div className="acc-system-footer-bar">
