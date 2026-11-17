@@ -9,6 +9,7 @@ $routes = (new ReflectionProperty(\App\Core\Router::class, 'routes'))->getValue(
 $cases = [
     ['GET','/api/admin/media','index','view'],
     ['GET','/api/admin/media/{id}','show','view'],
+    ['GET','/api/admin/media/{id}/image','image','view'],
     ['POST','/api/admin/media','upload','create'],
     ['POST','/api/admin/media/{id}/update','update','update'],
     ['POST','/api/admin/media/{id}/delete','destroy','delete'],
@@ -29,4 +30,19 @@ $source=file_get_contents(dirname(__DIR__).'/app/Controllers/Api/MediaLibraryCon
 foreach(['imagecreatefromstring', 'imagewebp', 'getimagesize', 'is_uploaded_file', 'AuditService::log', 'deleted_at=NOW()', 'STALE_VERSION', 'required: true'] as $check) {
   if(!str_contains($source,$check))throw new RuntimeException("Missing safety token: $check");
 }
-echo "PASS: static media security contract; TEST MySQL integration and browser UAT still required\n";
+foreach ([
+    'realpath(storage_upload_path())',
+    'is_readable($path)',
+    'private, no-store',
+    "'preview_url'",
+    'readfile($path)',
+] as $guard) {
+    if (!str_contains($source, $guard)) throw new RuntimeException("Private image guard missing: $guard");
+}
+$ui = file_get_contents(dirname(__DIR__) . '/src/pages/AdminMediaLibraryPage.jsx');
+$picker = file_get_contents(dirname(__DIR__) . '/src/components/common/NewsGalleryEditor.jsx');
+if (!str_contains($ui, 'image.preview_url || image.url')
+    || !str_contains($picker, 'image.preview_url || image.url')) {
+    throw new RuntimeException('Admin media thumbnail picker must use private preview URL');
+}
+echo "PASS: private streaming and React preview contracts (live UAT pending)\n";

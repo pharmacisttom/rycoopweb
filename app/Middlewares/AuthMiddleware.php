@@ -15,7 +15,7 @@ class AuthMiddleware
     {
         if (!Auth::check()) {
             if (Auth::checkPendingMfaEnrollment()) {
-                if ($request->isAjax()) {
+                if ($request->isAjax() || str_starts_with($request->uri(), '/api/')) {
                     $response->json([
                         'success' => false,
                         'code' => 'MFA_ENROLLMENT_REQUIRED',
