@@ -200,3 +200,35 @@
 /* Fixed sidebar is removed from grid flow: keep content in column 2. */
 @media(min-width:921px){.acc-shell>.acc-main-wrapper{grid-column:2;min-width:0}}
 @media(max-width:920px){.acc-shell>.acc-main-wrapper{grid-column:1;min-width:0}}
+
+
+/* RC05: 16px admin typography scale; override AdminLTE heading defaults
+   only within the protected React Control Center. */
+.acc-shell {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.acc-shell .acc-page-title,
+.acc-shell .acc-card-title,
+.acc-shell .admin-page-heading h1,
+.acc-shell .acc-card-header h2,
+.acc-shell .acc-page-header h1 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+.acc-shell .acc-kpi-value {font-size: 16px;line-height:1.4}
+.acc-shell .acc-page-desc,
+.acc-shell .acc-card-subtitle {font-size: 14px;line-height:1.55}
+.acc-shell :is(.acc-btn,.acc-select,.acc-input,.acc-filter-bar button,.acc-filter-bar select) {
+  font-size: 16px;
+  line-height: 1.45;
+}
+@media(max-width:640px){
+  .acc-shell .acc-page-title,
+  .acc-shell .acc-card-title,
+  .acc-shell .acc-card-header h2,
+  .acc-shell .acc-page-header h1 {font-size:16px}
+}
