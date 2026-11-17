@@ -1,0 +1,47 @@
+name: Media Library RC01 Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'app/Controllers/Api/MediaLibraryController.php'
+      - 'config/routes.php'
+      - 'src/pages/AdminMediaLibraryPage.*'
+      - 'src/services/mediaLibraryApi.js'
+      - 'src/App.jsx'
+      - 'src/components/admin/AdminControlCenterShell.jsx'
+      - 'docs/media/**'
+      - '.github/workflows/media-library-rc01.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  media-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: fileinfo, gd, mbstring
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax and media route security contract
+        run: |
+          php -l app/Controllers/Api/MediaLibraryController.php
+          php -l config/routes.php
+          php tests/MediaLibraryApiRouteTest.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Build frontend
+        run: NODE_ENV=production npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: SPA routing smoke test
+        run: node tests/ProductionAppRoutingTest.mjs

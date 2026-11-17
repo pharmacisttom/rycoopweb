@@ -1,10 +1,32 @@
 import React, { useState } from 'react';
 import SafeImage from './SafeImage';
+import { mediaLibraryApi } from '../../services/mediaLibraryApi';
 import './ActivitySlideshow.css';
+import './NewsGalleryMediaPicker.css';
 
 export default function NewsGalleryEditor({ images, onChange, disabled, onBusyChange }) {
   const [error, setError] = useState('');
   const [reading, setReading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [catalog, setCatalog] = useState([]);
+  const [catalogError, setCatalogError] = useState('');
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogPages, setCatalogPages] = useState(1);
+  async function openCatalog(page = 1) {
+    setCatalogLoading(true); setCatalogError(''); setPickerOpen(true);
+    try {
+      const result = await mediaLibraryApi.list({ page, perPage: 12 });
+      setCatalog(result.data || []);setCatalogPage(page);setCatalogPages(result.pagination?.pages || 1);
+    } catch (e) { setCatalogError(e.message || 'ไม่สามารถโหลดคลังรูปภาพ'); }
+    finally { setCatalogLoading(false); }
+  }
+  function chooseCatalog(image) {
+    if (images.length >= 20) { setCatalogError('อัลบั้มมีได้ไม่เกิน 20 ภาพ'); return; }
+    if (images.some(item => item.src === image.url)) { setCatalogError('ภาพนี้อยู่ในอัลบั้มแล้ว'); return; }
+    onChange([...images, { src: image.url, alt: image.alt_text || '', caption: image.caption || '' }]);
+    setPickerOpen(false);
+  }
   async function add(event) {
     const files = Array.from(event.target.files || []); event.target.value = '';
     setError('');
@@ -33,6 +55,13 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
     <p>ภาพแรกเป็นภาพปก เรียงลำดับและระบุคำบรรยายก่อนส่งตรวจ (สูงสุด 20 ภาพ)</p>
     <label>เพิ่มภาพหลายภาพ<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={add} /></label>
     <p>ภาพละไม่เกิน 5 MB ภาพใหม่รวมไม่เกิน 12 MB ต่อการบันทึก ระบบย่อภาพและนำพิกัด EXIF ออกก่อนเผยแพร่</p>
+    <button type="button" onClick={() => openCatalog()} disabled={disabled || reading || images.length >= 20}>เลือกภาพจากคลังรูปภาพ</button>
+    {pickerOpen && <div className="ry-media-picker-backdrop" role="presentation"><section className="ry-media-picker" role="dialog" aria-modal="true" aria-label="เลือกรูปภาพจากคลัง">
+      <h3>คลังรูปภาพ</h3><button type="button" onClick={() => setPickerOpen(false)}>ปิดหน้าต่าง</button>
+      {catalogError && <p role="alert">{catalogError}</p>}
+      {catalogLoading ? <p role="status">กำลังโหลด...</p> : <div className="ry-media-picker-grid">{catalog.map(image => <button key={image.id} type="button" onClick={() => chooseCatalog(image)} title={image.alt_text || image.original_name}><img src={image.url} alt={image.alt_text || image.original_name} loading="lazy" /><span>{image.original_name}</span></button>)}</div>}
+      <nav aria-label="หน้าคลังภาพ"><button type="button" disabled={catalogLoading || catalogPage <= 1} onClick={() => openCatalog(catalogPage - 1)}>ก่อนหน้า</button><span> หน้า {catalogPage} / {Math.max(1,catalogPages)} </span><button type="button" disabled={catalogLoading || catalogPage >= catalogPages} onClick={() => openCatalog(catalogPage + 1)}>ถัดไป</button></nav>
+    </section></div>}
     {reading && <p role="status">กำลังอ่านไฟล์ภาพ…</p>}{error && <p role="alert">{error}</p>}
     <ol>{images.map((image, index) => <li key={index}>
       <SafeImage src={image.thumbnail || image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" />

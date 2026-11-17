@@ -98,6 +98,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
       { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view'] },
       { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
       { label: 'ศูนย์เอกสาร', to: '/admin/documents', permissions: ['documents.view'] },
+      { label: 'คลังรูปภาพ (Media Library)', to: '/admin/media', permissions: ['news.view'] },
     ],
   },
   {
