@@ -136,7 +136,7 @@ final class MediaLibraryController extends Controller
             || !is_file($path) || !is_readable($path)) {
             throw new SecurityGateException('Image unavailable', 404, 'NOT_FOUND');
         }
-        $actual = (new \\finfo(FILEINFO_MIME_TYPE))->file($path);
+        $actual = (new \finfo(FILEINFO_MIME_TYPE))->file($path);
         if ($actual !== $row['mime_type'] || !in_array($actual, $allowed, true)) {
             throw new SecurityGateException('Invalid image', 404, 'NOT_FOUND');
         }
