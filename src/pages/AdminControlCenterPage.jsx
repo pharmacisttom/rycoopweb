@@ -1663,10 +1663,10 @@ export default function AdminControlCenterPage({ section: propSection }) {
                 <span className="acc-kpi-icon info"><Server size={18} /></span>
               </div>
               <div className="acc-kpi-value">
-                {healthData.resources?.disk_free_gb !== null ? `${healthData.resources.disk_free_gb} GB` : 'ไม่พร้อมใช้งาน'}
+                {healthData.resources?.disk_free_gb != null ? `${healthData.resources.disk_free_gb} GB` : 'ไม่พร้อมใช้งาน'}
               </div>
               <div className="acc-kpi-sub">
-                <span>ใช้งานแล้ว: {healthData.resources?.disk_used_percent !== null ? `${healthData.resources.disk_used_percent}%` : '-'}</span>
+                <span>ใช้งานแล้ว: {healthData.resources?.disk_used_percent != null ? `${healthData.resources.disk_used_percent}%` : '-'}</span>
               </div>
             </article>
             <article className="acc-kpi-card">
@@ -1697,7 +1697,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {(healthData.services || []).map((svc) => (
+                    {(Array.isArray(healthData.services) ? healthData.services : []).map((svc) => (
                       <tr key={svc.name}>
                         <td><strong>{svc.name}</strong></td>
                         <td>
@@ -1730,7 +1730,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {(healthData.scheduled_jobs || []).map((job) => (
+                    {(Array.isArray(healthData.scheduled_jobs) ? healthData.scheduled_jobs : []).map((job) => (
                       <tr key={job.job}>
                         <td>
                           <strong>{job.job}</strong>
