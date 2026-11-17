@@ -57,3 +57,38 @@
   .acc-shell .acc-page-title { font-size:1.25rem; }
   .acc-shell :is(.admin-actions,.acc-page-actions,.admin-toolbar) { gap:8px; }
 }
+
+/* Footer utilities: secondary administration menus no longer crowd daily navigation. */
+.acc-shell .acc-footer-tools { min-width:0; }
+.acc-shell .acc-footer-tools-trigger {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  width:100%; min-height:44px; padding:10px 12px;
+  text-align:left; border:1px solid rgba(255,255,255,.15); border-radius:10px;
+  background:rgba(255,255,255,.08); color:#e2e8f0; font:inherit;
+}
+.acc-shell .acc-footer-tools-trigger:hover,
+.acc-shell .acc-footer-tools-trigger:focus-visible { background:rgba(255,255,255,.16); color:#fff; }
+.acc-shell .acc-footer-tools-trigger span { flex:1; font-size:.82rem; font-weight:700; }
+.acc-shell .acc-footer-tools-trigger[aria-expanded="true"] .acc-footer-tools-chevron { transform:rotate(180deg); }
+.acc-shell .acc-footer-tools-panel {
+  display:flex; flex-direction:column; gap:12px; max-height:min(40vh,340px);
+  min-height:0; overflow-y:auto; overscroll-behavior:contain; margin-top:8px;
+  padding:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px;
+  background:rgba(2,13,30,.68);
+}
+.acc-shell .acc-footer-tools-group { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.acc-shell .acc-footer-tools-title {
+  padding:7px 8px 3px; color:#93c5fd; font-size:.76rem; font-weight:700;
+}
+.acc-shell .acc-footer-tools-link {
+  display:block; padding:8px 10px; border-radius:7px; font-size:.82rem;
+  text-decoration:none; color:#e2e8f0; line-height:1.45; overflow-wrap:anywhere;
+}
+.acc-shell .acc-footer-tools-link:hover, .acc-shell .acc-footer-tools-link:focus-visible { background:rgba(255,255,255,.13); color:#fff; }
+.acc-shell .acc-footer-tools-link.is-active { background:#0369a1; color:#fff; font-weight:700; }
+.acc-shell.is-collapsed .acc-footer-tools-trigger { justify-content:center; padding:9px; }
+.acc-shell .acc-sidebar-footer { flex-shrink:0; }
+@media (max-height:640px) {
+  .acc-shell .acc-sidebar-footer { padding:8px; gap:6px; }
+  .acc-shell .acc-footer-tools-panel { max-height:24vh; }
+}
