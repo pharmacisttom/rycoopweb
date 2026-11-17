@@ -1,0 +1,66 @@
+name: Production image upload runtime diagnosis (READ ONLY)
+on:
+  workflow_dispatch:
+  push:
+    branches: [Test]
+    paths: ['.github/workflows/production-media-runtime-inspect.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - name: Inspect active production upload write/read paths safely
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$RUNNER_TEMP/ssh/known"
+          chmod 600 "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/ssh/id" >/dev/null
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P >= 1 && P <= 65535))
+          ssh -T -p "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          echo '===== ACTIVE BACKEND / APP IDENTIFICATION ====='
+          B=/var/www/rycoopweb/production-releases/member-dividend-unlock-rc01-20261111
+          if test -r "$B/app/Core/Helpers.php"; then
+            echo 'BACKEND_SOURCE_PRESENT=YES'
+            if grep -q RYCOOP_UPLOAD_ROOT "$B/app/Core/Helpers.php"; then echo 'PERSISTENT_UPLOAD_SUPPORT=YES'; else echo 'PERSISTENT_UPLOAD_SUPPORT=NO'; fi
+          else echo 'BACKEND_SOURCE_PRESENT=NO'; fi
+          echo '===== STORAGE ROOT ACCESS WITHOUT WRITES ====='
+          python3 - <<'PY'
+          import os,stat
+          roots=[
+            '/var/www/rycoopweb/shared/uploads/news/gallery',
+            '/var/www/rycoopweb/shared/storage/uploads/news/gallery',
+            '/var/www/rycoopweb/production-releases/member-dividend-unlock-rc01-20261111/storage/uploads/news/gallery',
+            '/var/www/rycoopweb/production-releases/member-dividend-unlock-rc01-20261111/storage',
+            '/var/www/rycoopweb/production-releases/member-calculator-rc03-20261111-public/storage',
+          ]
+          for p in roots:
+            if os.path.islink(p):print('LINK',p,'TO',os.readlink(p))
+            elif os.path.isdir(p):
+              print('DIRECTORY',p,'READABLE',os.access(p,os.R_OK|os.X_OK),'WRITABLE_BY_SSH',os.access(p,os.W_OK),'FILES',sum(1 for x in os.scandir(p) if x.is_file()))
+            else: print('ABSENT',p)
+          PY
+          echo '===== PRODUCTION NGINX IMAGE ROUTES ====='
+          f=/etc/nginx/sites-enabled/rycoopweb-main-ssl
+          if test -r "$f"; then
+            grep -En 'location.*storage|location.*gallery|alias .*uploads|root |location /app' "$f" || true
+          fi
+          echo '===== PUBLIC MEDIA URL HTTP STATUS ====='
+          curl -sS --max-time 8 -o /dev/null -w 'NEWS_API_HTTP=%{http_code}\n' 'http://127.0.0.1:18092/api/public/news' || true
+          echo 'PRODUCTION_MEDIA_RUNTIME_INSPECTION=COMPLETE'
+          REMOTE
+          rm -f "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
