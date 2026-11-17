@@ -254,6 +254,9 @@ jobs:
       - name: Verify 16px typography and Welfare modernization
         run: node tests/AdminTypographyLegacyRegressionTest.mjs
 
+      - name: Verify incomplete Health API data never crashes dashboard
+        run: node tests/AdminHealthRenderRegressionTest.mjs
+
       - name: Decode generated MFA QR images
         run: node tests/QrCodeRoundTripTest.mjs
 
