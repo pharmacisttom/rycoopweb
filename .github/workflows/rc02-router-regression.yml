@@ -1,0 +1,32 @@
+name: RC02 React Router regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/main.jsx'
+      - 'src/App.jsx'
+      - 'tests/ProductionAppRoutingTest.mjs'
+      - '.github/workflows/rc02-router-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-routing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build production SPA
+        run: NODE_ENV=production npm run build
+      - name: Check client routes
+        run: node tests/ProductionAppRoutingTest.mjs
