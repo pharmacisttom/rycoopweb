@@ -32,6 +32,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ChangePasswordModal from '../common/ChangePasswordModal';
 import './AdminControlCenter.css';
 import './AdminUI.css';
+import './AdminResponsiveFix.css';
 import { AdminBreadcrumb } from './AdminUI';
 const ShellContext=createContext(false);
 
