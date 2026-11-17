@@ -234,6 +234,7 @@ function FullAdminControlCenterShell({
   const [isMobile,setIsMobile]=useState(false);
   useEffect(()=>{const media=window.matchMedia("(max-width:920px)");const update=()=>{setIsMobile(media.matches);if(!media.matches)setMobileOpen(false);};update();media.addEventListener("change",update);return()=>media.removeEventListener("change",update);},[]);
   const [navSearch, setNavSearch] = useState('');
+  const [footerToolsOpen, setFooterToolsOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -286,6 +287,12 @@ function FullAdminControlCenterShell({
       return { ...group, items };
     }).filter((group) => group.items.length > 0);
   }, [user, can, navSearch]);
+
+  // Keep everyday tasks in the sidebar; move operational/system utilities into the footer.
+  // Search continues to reveal all permitted menu groups.
+  const footerGroupIds = new Set(['security', 'monitoring', 'audit', 'backups', 'settings', 'compliance', 'reports', 'tools']);
+  const primaryGroups = visibleGroups.filter(group => !footerGroupIds.has(group.id) || navSearch.trim());
+  const footerGroups = visibleGroups.filter(group => footerGroupIds.has(group.id));
 
   const isItemActive = (to) => {
     if (to.includes('?')) {
@@ -368,7 +375,7 @@ function FullAdminControlCenterShell({
         )}
 
         <nav className="acc-sidebar-nav" aria-label="หมวดหมู่การจัดการระบบ">
-          {visibleGroups.map((group) => {
+          {primaryGroups.map((group) => {
             const Icon = group.icon;
             const groupActive = group.items.some((item) => isItemActive(item.to));
             const isOpen = collapsed ? false : Boolean(navSearch) || openGroups[group.id] !== false || groupActive;
@@ -428,6 +435,32 @@ function FullAdminControlCenterShell({
                 <strong>{user?.name || 'ผู้ดูแลระบบ'}</strong>
                 <span>{user?.roleName || user?.role || 'เจ้าหน้าที่สหกรณ์'}</span>
               </div>
+            </div>
+          )}
+
+          {footerGroups.length > 0 && (
+            <div className="acc-footer-tools">
+              <button type="button" className="acc-footer-tools-trigger"
+                aria-expanded={footerToolsOpen || Boolean(navSearch.trim())}
+                aria-controls="acc-footer-tools-panel"
+                onClick={() => {setCollapsed(false);setFooterToolsOpen(open => !open);}}
+                title="เครื่องมือและการตั้งค่าระบบ">
+                <Settings size={17} />
+                {!collapsed && <span>เครื่องมือและระบบอื่น ๆ</span>}
+                {!collapsed && <ChevronDown size={15} className="acc-footer-tools-chevron" aria-hidden="true"/>}
+              </button>
+              {(footerToolsOpen || Boolean(navSearch.trim())) && !collapsed && (
+                <nav id="acc-footer-tools-panel" className="acc-footer-tools-panel" aria-label="เมนูเครื่องมือระบบส่วนท้าย">
+                  {footerGroups.map(group => (
+                    <div className="acc-footer-tools-group" key={group.id}>
+                      <div className="acc-footer-tools-title">{group.thaiLabel}</div>
+                      {group.items.map(item => <Link key={item.to + item.label} to={item.to}
+                        className={`acc-footer-tools-link ${isItemActive(item.to) ? 'is-active' : ''}`}
+                        aria-current={isItemActive(item.to) ? 'page' : undefined}>{item.label}</Link>)}
+                    </div>
+                  ))}
+                </nav>
+              )}
             </div>
           )}
 
