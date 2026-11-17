@@ -138,6 +138,9 @@ jobs:
       - name: Syntax-check TEST-only AdminLTE deployment
         run: bash -n scripts/deploy-test-adminlte-rc04.sh
 
+      - name: Syntax-check TEST-only Admin RC06 deployment
+        run: bash -n scripts/deploy-test-admin-rc06.sh
+
       - name: Validate release guard without deploying
         run: |
           bash -n bin/deploy-production.sh
