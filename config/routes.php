@@ -175,11 +175,13 @@ $router->group(['prefix' => 'api/admin', 'middleware' => [AuthMiddleware::class,
 $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],function(\App\Core\Router $r){
     // CMS Media Library API. Auth via api/admin group, granular CMS permissions, CSRF on mutations.
     $r->get('/media', 'Api\\MediaLibraryController@index', [new PermissionMiddleware('news','view')]);
+    $r->get('/media/trash', 'Api\\MediaLibraryController@trash', [new PermissionMiddleware('news','view')]);
     $r->get('/media/{id}', 'Api\\MediaLibraryController@show', [new PermissionMiddleware('news','view')]);
     $r->get('/media/{id}/image', 'Api\\MediaLibraryController@image', [new PermissionMiddleware('news','view')]);
     $r->post('/media', 'Api\\MediaLibraryController@upload', [new PermissionMiddleware('news','create'), CsrfMiddleware::class]);
     $r->post('/media/{id}/update', 'Api\\MediaLibraryController@update', [new PermissionMiddleware('news','update'), CsrfMiddleware::class]);
     $r->post('/media/{id}/delete', 'Api\\MediaLibraryController@destroy', [new PermissionMiddleware('news','delete'), CsrfMiddleware::class]);
+    $r->post('/media/{id}/restore', 'Api\\MediaLibraryController@restore', [new PermissionMiddleware('news','delete'), CsrfMiddleware::class]);
 
     // Activity albums — draft-first, no implicit publication.
     $r->get('/activities','Api\\ActivityGalleryController@adminAlbums',[new PermissionMiddleware('news','view')]);
