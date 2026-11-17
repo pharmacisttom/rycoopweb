@@ -27,6 +27,8 @@ jobs:
         run: php -l scripts/export-admin-route-inventory.php
       - name: Shell syntax
         run: bash -n scripts/export-test-datasheet.sh
+      - name: TEST datasheet export regression
+        run: bash tests/DatabaseDatasheetExportTest.sh
       - name: Route inventory
         run: php scripts/export-admin-route-inventory.php
       - name: Print summary
