@@ -1,0 +1,94 @@
+/* RYCOOP Admin Responsive Layout RC01
+   Scoped to the Control Center. Never override public website or Bootstrap globally.
+   Keep existing semantic tables and allow horizontal scrolling rather than clipping cells. */
+.acc-shell, .acc-shell *, .acc-shell *::before, .acc-shell *::after { box-sizing: border-box; }
+.acc-shell { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
+.acc-shell :is(.acc-main-wrapper,.acc-content,.admin-module,.admin-card,.acc-card,.acc-grid-2,.acc-grid-3,.acc-kpi-grid,.admin-form-grid) { min-width:0; }
+.acc-shell :is(.acc-grid-2,.acc-grid-3,.acc-kpi-grid,.admin-form-grid) > * { min-width:0; max-width:100%; }
+.acc-shell .acc-content { min-width:0; width:100%; max-width:1640px; overflow-wrap:anywhere; }
+.acc-shell .acc-content :is(img,video,canvas,svg) { max-width:100%; }
+.acc-shell .acc-content img, .acc-shell .acc-content video { height:auto; }
+.acc-shell :is(.acc-card,.admin-card) { max-width:100%; overflow-wrap:anywhere; }
+.acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) {
+  width:100%; max-width:100%; min-width:0; overflow-x:auto; overflow-y:visible;
+  overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch;
+}
+.acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) :is(table,.admin-table,.acc-table) {
+  margin:0; width:100%; max-width:none;
+}
+.acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) :is(th,td) {
+  vertical-align:top; line-height:1.5; padding:12px 14px; overflow-wrap:anywhere;
+}
+.acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) :is(th,td) :is(button,.btn,.acc-btn) {
+  min-height:40px; max-width:100%; white-space:normal; text-align:center;
+}
+.acc-shell :is(.admin-toolbar,.admin-actions,.acc-page-actions,.acc-filter-bar) { min-width:0; max-width:100%; flex-wrap:wrap; }
+.acc-shell :is(.admin-toolbar,.admin-actions,.acc-filter-bar) > * { min-width:0; }
+.acc-shell :is(.acc-topbar-left,.acc-topbar-right,.acc-breadcrumbs) { min-width:0; max-width:100%; }
+.acc-shell .acc-breadcrumbs > * { overflow-wrap:anywhere; }
+.acc-shell .admin-dialog { max-width:calc(100vw - 24px); max-height:calc(100dvh - 24px); }
+.acc-shell .admin-dialog :is(input,select,textarea) { min-width:0; max-width:100%; }
+.acc-shell .admin-dialog :is(.admin-form-grid,.admin-actions,.admin-toolbar) { min-width:0; }
+.acc-shell :is(.admin-card,.acc-card,.acc-kpi-card) :is(h1,h2,h3,p,span) { overflow-wrap:anywhere; }
+@media (max-width:1240px) {
+  .acc-shell .acc-content { padding:20px; }
+  .acc-shell .acc-kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .acc-shell :is(.acc-grid-2,.acc-grid-3) { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:920px) {
+  .acc-shell .acc-content { padding:16px; }
+  .acc-shell .acc-topbar { padding:12px 16px; flex-wrap:wrap; }
+  .acc-shell .acc-topbar-left { flex:1 1 220px; }
+  .acc-shell .acc-topbar-right { flex:1 1 100%; justify-content:flex-start; }
+}
+@media (max-width:700px) {
+  .acc-shell .acc-content { padding:12px; }
+  .acc-shell .acc-kpi-grid, .acc-shell .admin-form-grid { grid-template-columns:minmax(0,1fr); }
+  .acc-shell :is(.admin-card,.acc-card) { padding:16px; }
+  .acc-shell .admin-table { min-width:640px; table-layout:auto; }
+  .acc-shell .admin-permission-table { min-width:900px; }
+  .acc-shell .acc-table { min-width:640px; }
+  .acc-shell .admin-dialog { width:calc(100vw - 16px); padding:12px; }
+  .acc-shell .acc-badge-pill { max-width:100%; white-space:normal; }
+}
+@media (max-width:420px) {
+  .acc-shell .acc-content { padding:10px; }
+  .acc-shell .acc-page-header { gap:10px; }
+  .acc-shell .acc-page-title { font-size:1.25rem; }
+  .acc-shell :is(.admin-actions,.acc-page-actions,.admin-toolbar) { gap:8px; }
+}
+
+/* Footer utilities: secondary administration menus no longer crowd daily navigation. */
+.acc-shell .acc-footer-tools { min-width:0; }
+.acc-shell .acc-footer-tools-trigger {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  width:100%; min-height:44px; padding:10px 12px;
+  text-align:left; border:1px solid rgba(255,255,255,.15); border-radius:10px;
+  background:rgba(255,255,255,.08); color:#e2e8f0; font:inherit;
+}
+.acc-shell .acc-footer-tools-trigger:hover,
+.acc-shell .acc-footer-tools-trigger:focus-visible { background:rgba(255,255,255,.16); color:#fff; }
+.acc-shell .acc-footer-tools-trigger span { flex:1; font-size:.82rem; font-weight:700; }
+.acc-shell .acc-footer-tools-trigger[aria-expanded="true"] .acc-footer-tools-chevron { transform:rotate(180deg); }
+.acc-shell .acc-footer-tools-panel {
+  display:flex; flex-direction:column; gap:12px; max-height:min(40vh,340px);
+  min-height:0; overflow-y:auto; overscroll-behavior:contain; margin-top:8px;
+  padding:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px;
+  background:rgba(2,13,30,.68);
+}
+.acc-shell .acc-footer-tools-group { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.acc-shell .acc-footer-tools-title {
+  padding:7px 8px 3px; color:#93c5fd; font-size:.76rem; font-weight:700;
+}
+.acc-shell .acc-footer-tools-link {
+  display:block; padding:8px 10px; border-radius:7px; font-size:.82rem;
+  text-decoration:none; color:#e2e8f0; line-height:1.45; overflow-wrap:anywhere;
+}
+.acc-shell .acc-footer-tools-link:hover, .acc-shell .acc-footer-tools-link:focus-visible { background:rgba(255,255,255,.13); color:#fff; }
+.acc-shell .acc-footer-tools-link.is-active { background:#0369a1; color:#fff; font-weight:700; }
+.acc-shell.is-collapsed .acc-footer-tools-trigger { justify-content:center; padding:9px; }
+.acc-shell .acc-sidebar-footer { flex-shrink:0; }
+@media (max-height:640px) {
+  .acc-shell .acc-sidebar-footer { padding:8px; gap:6px; }
+  .acc-shell .acc-footer-tools-panel { max-height:24vh; }
+}
