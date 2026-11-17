@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import postcss from 'postcss';
+import selectorParser from 'postcss-selector-parser';
 
 const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
 const vendor = JSON.parse(fs.readFileSync('node_modules/admin-lte/package.json','utf8'));
@@ -20,8 +21,11 @@ root.walkRules(rule=>{
   while(p){if(p.type==='atrule'&&/keyframes$/i.test(p.name))keyframe=true;p=p.parent;}
   if(keyframe)return;
   rules++;
-  assert.ok(rule.selector.split(',').every(s=>s.trimStart().startsWith('.acc-shell')),
-    'Unscoped AdminLTE selector: '+rule.selector.slice(0,120));
+  selectorParser(selectors=>selectors.each(selector=>{
+    const first=selector.nodes[0];
+    assert.ok(first?.type==='class'&&first.value==='acc-shell',
+      'Unscoped AdminLTE selector: '+selector.toString().slice(0,120));
+  })).processSync(rule.selector);
 });
 assert.ok(rules>1000,'AdminLTE rule coverage incomplete');
 const shell=fs.readFileSync('src/components/admin/AdminControlCenterShell.jsx','utf8');
