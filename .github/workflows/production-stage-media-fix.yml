@@ -27,6 +27,13 @@ jobs:
         with:
           ref: 91cd65a6f8d877cc849f56ce2ca73718c4fd8af8
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 2471e33303541d41933cb0998026145450b9bd14
+          path: cutover-source
+          persist-credentials: false
+      - name: Validate pinned cutover script syntax
+        run: bash -n cutover-source/scripts/production-ui-cutover-rc01.sh
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -71,6 +78,7 @@ jobs:
           REMOTE_STAGE=".local/share/rycoop-deploy-staging/$RELEASE_SHA"
           ssh "${S[@]}" "$SSH_USER@$SSH_HOST" "mkdir -p ~/$REMOTE_STAGE && chmod 700 ~/$REMOTE_STAGE"
           scp -P "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$RUNNER_TEMP/rycoop-full-media-fix.tgz" "$SSH_USER@$SSH_HOST:$REMOTE_STAGE/release.tgz"
+          scp -P "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$GITHUB_WORKSPACE/cutover-source/scripts/production-ui-cutover-rc01.sh" "$SSH_USER@$SSH_HOST:$REMOTE_STAGE/cutover-ui.sh"
           LOCAL_SHA="$(sha256sum "$RUNNER_TEMP/rycoop-full-media-fix.tgz" | cut -d' ' -f1)"
           ssh "${S[@]}" "$SSH_USER@$SSH_HOST" "SHA='$RELEASE_SHA' EXPECT='$LOCAL_SHA' bash -se" <<'REMOTE'
           set -Eeuo pipefail
