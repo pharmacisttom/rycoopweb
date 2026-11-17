@@ -82,7 +82,7 @@ try{
   assert.ok(mobileBounds && Math.abs(mobileBounds.height - 720)<=2,'mobile sidebar fills viewport');
   assert.ok(mobileBounds.width <= 346,'mobile sidebar leaves backdrop visible');
   assert.equal(await nav.evaluate(el=>getComputedStyle(el).overflowY),'auto','mobile menu can scroll');
-  await page.getByRole('button',{name:'ปิดเมนูผู้ดูแลระบบ'}).click();
+  await mobileSidebar.getByRole('button',{name:'ปิดเมนูผู้ดูแลระบบ',exact:true}).click();
   await page.setViewportSize({width:1280,height:720});
 
 
