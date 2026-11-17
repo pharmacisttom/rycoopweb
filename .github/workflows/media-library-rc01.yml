@@ -26,10 +26,13 @@ jobs:
         with:
           php-version: '8.3'
           extensions: fileinfo, gd, mbstring
-      - name: PHP syntax
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax and media route security contract
         run: |
           php -l app/Controllers/Api/MediaLibraryController.php
           php -l config/routes.php
+          php tests/MediaLibraryApiRouteTest.php
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
