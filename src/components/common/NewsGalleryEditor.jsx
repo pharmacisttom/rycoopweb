@@ -59,7 +59,7 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
     {pickerOpen && <div className="ry-media-picker-backdrop" role="presentation"><section className="ry-media-picker" role="dialog" aria-modal="true" aria-label="เลือกรูปภาพจากคลัง">
       <h3>คลังรูปภาพ</h3><button type="button" onClick={() => setPickerOpen(false)}>ปิดหน้าต่าง</button>
       {catalogError && <p role="alert">{catalogError}</p>}
-      {catalogLoading ? <p role="status">กำลังโหลด...</p> : <div className="ry-media-picker-grid">{catalog.map(image => <button key={image.id} type="button" onClick={() => chooseCatalog(image)} title={image.alt_text || image.original_name}><img src={image.url} alt={image.alt_text || image.original_name} loading="lazy" /><span>{image.original_name}</span></button>)}</div>}
+      {catalogLoading ? <p role="status">กำลังโหลด...</p> : <div className="ry-media-picker-grid">{catalog.map(image => <button key={image.id} type="button" onClick={() => chooseCatalog(image)} title={image.alt_text || image.original_name}><img src={image.preview_url || image.url} alt={image.alt_text || image.original_name} loading="lazy" /><span>{image.original_name}</span></button>)}</div>}
       <nav aria-label="หน้าคลังภาพ"><button type="button" disabled={catalogLoading || catalogPage <= 1} onClick={() => openCatalog(catalogPage - 1)}>ก่อนหน้า</button><span> หน้า {catalogPage} / {Math.max(1,catalogPages)} </span><button type="button" disabled={catalogLoading || catalogPage >= catalogPages} onClick={() => openCatalog(catalogPage + 1)}>ถัดไป</button></nav>
     </section></div>}
     {reading && <p role="status">กำลังอ่านไฟล์ภาพ…</p>}{error && <p role="alert">{error}</p>}
