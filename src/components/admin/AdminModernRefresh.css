@@ -98,3 +98,22 @@
 .acc-shell .acc-system-footer-link:hover,.acc-shell .acc-system-footer-link.is-active {background:var(--acc-surface-elevated);color:var(--acc-blue-600)}
 @media(max-width:1200px){.acc-shell .acc-system-footer-shortcuts {display:none}}
 @media(max-width:640px){.acc-shell .acc-system-footer{padding:12px}.acc-shell .acc-system-footer-bar{justify-content:space-between}.acc-shell .acc-system-footer-identity{min-width:0}.acc-shell .acc-system-footer-shortcuts{display:none}.acc-shell .acc-system-footer-menu{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Account actions belong to workspace footer, never consume sidebar navigation height. */
+.acc-shell .acc-sidebar-nav {flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.acc-shell .acc-account-footer {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid var(--acc-border)}
+.acc-shell .acc-account-footer-user {display:flex;align-items:center;gap:11px;min-width:0}
+.acc-shell .acc-account-footer-user .acc-user-avatar {width:38px;height:38px;flex:0 0 38px}
+.acc-shell .acc-account-footer-user .acc-user-meta {min-width:0;display:grid;gap:3px}
+.acc-shell .acc-account-footer-user .acc-user-meta strong {color:var(--acc-text);font-size:.86rem;overflow-wrap:anywhere}
+.acc-shell .acc-account-footer-user .acc-user-meta span {color:var(--acc-text-secondary);font-size:.74rem}
+.acc-shell .acc-account-footer-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.acc-shell .acc-account-footer-actions :is(button,a) {display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:44px;border-radius:11px;padding:9px 12px;border:1px solid var(--acc-border-strong);background:var(--acc-surface-elevated);color:var(--acc-text);text-decoration:none;font:inherit;font-weight:650;font-size:.82rem;cursor:pointer}
+.acc-shell .acc-account-footer-actions :is(button,a):hover {border-color:var(--acc-blue-600);color:var(--acc-blue-600)}
+.acc-shell .acc-account-footer-actions button:disabled {opacity:.55;cursor:not-allowed}
+.acc-shell .acc-account-footer-actions .acc-account-signout {border-color:color-mix(in srgb,var(--acc-danger) 30%,var(--acc-border));color:var(--acc-danger)}
+.acc-shell .acc-account-footer-actions .acc-account-signout:hover {background:var(--acc-danger-bg);color:var(--acc-danger)}
+.acc-shell .acc-account-footer-actions :is(button,a):focus-visible {outline:3px solid var(--acc-focus-ring);outline-offset:2px}
+@media(max-width:720px){.acc-shell .acc-account-footer {align-items:stretch}.acc-shell .acc-account-footer-actions{justify-content:flex-start;width:100%}.acc-shell .acc-account-footer-actions :is(button,a){flex:1 1 105px}}
+@media(max-width:420px){.acc-shell .acc-account-footer-actions :is(button,a){flex:1 1 42%;font-size:.8rem}}
