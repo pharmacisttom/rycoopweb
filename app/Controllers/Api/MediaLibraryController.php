@@ -40,10 +40,10 @@ final class MediaLibraryController extends Controller
         return (int)$value;
     }
 
-    private static function record(int $id, bool $lock = false): array
+    private static function record(int $id, bool $lock = false, bool $includeDeleted = false): array
     {
         $row = Database::first(
-            'SELECT * FROM media WHERE id=? AND deleted_at IS NULL'
+            'SELECT * FROM media WHERE id=?' . ($includeDeleted ? '' : ' AND deleted_at IS NULL')
             . ($lock ? AdminCrudService::lock() : ''),
             [$id]
         );
@@ -66,6 +66,7 @@ final class MediaLibraryController extends Controller
             'alt_text' => $row['alt_text'],
             'caption' => $row['caption'],
             'created_at' => $row['created_at'],
+            'deleted_at' => $row['deleted_at'],
             'version' => hash('sha256', implode('|', [
                 $row['id'], $row['path'], $row['alt_text'] ?? '', $row['caption'] ?? '',
                 $row['deleted_at'] ?? ''
@@ -104,6 +105,23 @@ final class MediaLibraryController extends Controller
             return ['data' => array_map([self::class, 'visible'], $rows), 'pagination' =>
                 ['page' => $page, 'per_page' => $limit, 'total' => $total,
                     'pages' => (int)ceil($total / $limit)]];
+        });
+    }
+
+    /** Browse the recycle bin; soft-deleted images stay off the normal catalog. */
+    public function trash(): void
+    {
+        AdminCrudService::respond($this->response, function (): array {
+            self::authorize('view');
+            $page = max(1, min(100000, (int)$this->request->query('page', 1)));
+            $limit = max(1, min(50, (int)$this->request->query('per_page', 24)));
+            $total = (int)Database::value('SELECT COUNT(*) FROM media WHERE deleted_at IS NOT NULL');
+            $offset = ($page - 1) * $limit;
+            $rows = Database::query("SELECT * FROM media WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC LIMIT $limit OFFSET $offset");
+            return ['data' => array_map([self::class, 'visible'], $rows), 'pagination' => [
+                'page' => $page, 'per_page' => $limit, 'total' => $total,
+                'pages' => (int)ceil($total / $limit),
+            ]];
         });
     }
 
@@ -261,6 +279,37 @@ final class MediaLibraryController extends Controller
                 AuditService::log('media', 'update', (string)$mediaId,
                     ['alt_text' => $old['alt_text'], 'caption' => $old['caption']],
                     ['alt_text' => $alt, 'caption' => $caption], required: true);
+                return ['data' => self::visible(self::record($mediaId))];
+            });
+        });
+    }
+
+    /** Recover an item without creating new IDs or overwriting referenced content. */
+    public function restore(string $id): void
+    {
+        AdminCrudService::respond($this->response, function () use ($id): array {
+            self::authorize('delete');
+            $mediaId = self::id($id);
+            $version = (string)$this->request->input('version', '');
+            return Database::transaction(static function () use ($mediaId, $version): array {
+                $old = self::record($mediaId, true, true);
+                if ($old['deleted_at'] === null) {
+                    throw new SecurityGateException('Image is not in trash', 409, 'NOT_TRASHED');
+                }
+                if ($version === '' || !hash_equals(self::visible($old)['version'], $version)) {
+                    throw new SecurityGateException('Image was modified; reload and retry', 409, 'STALE_VERSION');
+                }
+                $root = realpath(storage_upload_path());
+                $file = realpath(storage_upload_path((string)$old['path']));
+                if ($root === false || $file === false
+                    || !str_starts_with($file, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+                    || !is_file($file) || !is_readable($file)) {
+                    throw new SecurityGateException('Original image is unavailable', 409, 'IMAGE_MISSING');
+                }
+                Database::execute('UPDATE media SET deleted_at=NULL WHERE id=? AND deleted_at IS NOT NULL', [$mediaId]);
+                AuditService::log('media', 'restore', (string)$mediaId,
+                    ['deleted_at' => $old['deleted_at']],
+                    ['deleted_at' => null], required: true);
                 return ['data' => self::visible(self::record($mediaId))];
             });
         });
