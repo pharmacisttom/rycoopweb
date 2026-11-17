@@ -1,0 +1,26 @@
+name: Admin CRUD coverage RC01
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/export-admin-crud-coverage.php'
+      - '.github/workflows/admin-crud-coverage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: php -l scripts/export-admin-crud-coverage.php
+      - run: php scripts/export-admin-crud-coverage.php
+      - run: test -s docs/audit/ADMIN_CRUD_COVERAGE_MATRIX.md
+      - run: grep -Fq '/api/admin/media' docs/audit/ADMIN_CRUD_COVERAGE_MATRIX.md
