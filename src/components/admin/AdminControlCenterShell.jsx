@@ -237,6 +237,7 @@ function FullAdminControlCenterShell({
   useEffect(()=>{const media=window.matchMedia("(max-width:920px)");const update=()=>{setIsMobile(media.matches);if(!media.matches)setMobileOpen(false);};update();media.addEventListener("change",update);return()=>media.removeEventListener("change",update);},[]);
   const [navSearch, setNavSearch] = useState('');
   const [footerToolsOpen, setFooterToolsOpen] = useState(false);
+  const [systemFooterOpen, setSystemFooterOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -258,6 +259,8 @@ function FullAdminControlCenterShell({
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname, location.search]);
+
+  useEffect(() => { setSystemFooterOpen(false); }, [location.pathname, location.search]);
 
   useEffect(() => {
     if(!mobileOpen)return undefined;
@@ -553,6 +556,46 @@ function FullAdminControlCenterShell({
 
           {children}
         </div>
+        {footerGroups.length > 0 && (
+          <footer className="acc-system-footer" aria-label="ระบบและเครื่องมือผู้ดูแล">
+            <div className="acc-system-footer-bar">
+              <div className="acc-system-footer-identity">
+                <Settings size={17} aria-hidden="true" />
+                <div><strong>ศูนย์ระบบและเครื่องมือ</strong><small>เมนูจัดการตามสิทธิ์ของคุณ</small></div>
+              </div>
+              <div className="acc-system-footer-shortcuts">
+                {footerGroups.slice(0, 3).map((group) => {
+                  const first = group.items[0];
+                  return first ? <Link key={group.id} to={first.to}
+                    className="acc-system-footer-shortcut">{group.thaiLabel}</Link> : null;
+                })}
+              </div>
+              <button type="button" className="acc-system-footer-toggle"
+                aria-expanded={systemFooterOpen}
+                aria-controls="acc-system-footer-menu"
+                onClick={() => setSystemFooterOpen(open => !open)}>
+                <span>{systemFooterOpen ? 'ปิดเมนูระบบ' : 'ระบบทั้งหมด'}</span>
+                <ChevronDown size={17} aria-hidden="true" />
+              </button>
+            </div>
+            {systemFooterOpen && (
+              <nav id="acc-system-footer-menu" className="acc-system-footer-menu" aria-label="เมนูเครื่องมือระบบ">
+                {footerGroups.map((group) => (
+                  <section className="acc-system-footer-group" key={group.id}>
+                    <h2>{group.thaiLabel}</h2>
+                    {group.items.map(item => (
+                      <Link key={item.to + item.label} to={item.to}
+                        aria-current={isItemActive(item.to) ? 'page' : undefined}
+                        className={`acc-system-footer-link ${isItemActive(item.to) ? 'is-active' : ''}`}>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </section>
+                ))}
+              </nav>
+            )}
+          </footer>
+        )}
       </div>
 
       <ChangePasswordModal isOpen={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
