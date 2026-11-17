@@ -30,3 +30,19 @@ Use **AdminLTE v4** as the design-system and layout reference for the React Admi
 - Do not copy upstream example HTML/JS wholesale.
 - Do not load AdminLTE assets from a third-party CDN at runtime.
 - Do not change member/public frontends, PHP server, authentication or database as part of purely visual UI modernization.
+
+
+## Member portal, dividend checking and other service preservation (mandatory)
+
+This is a visual refactor of the **staff React Admin Control Center only**. Existing member portal screens, all member sign-in/PDPA acknowledgement steps, dividend checking by fiscal year, member data masking, profile, loans, deposits, welfare, tax receipts, finance, public news and other service workflows are **out of scope for destructive changes**.
+
+Critical invariants before merging any AdminLTE-related UI change:
+- React member routes `/member/login`, `/member/dividends` and member dashboards remain present and use their previous authentication workflow.
+- PHP route `GET /api/member/dividends` remains protected by authentication, member role and MemberMiddleware.
+- Member portal `/api/member/*` and `/member/*` keep their existing feature flag and security gates.
+- PDPA acknowledgement and auditing requirements remain unchanged; there is no forced new password/MFA change for member access.
+- No member record, dividend value, consent record or database schema is migrated/modified by a UI-only PR.
+- All admin menu entries including dividend import and member management stay RBAC filtered and visible to authorized roles.
+- Every release is evaluated on a disposable CI database, then TEST; Production remains unchanged until member, PDPA, dividends and staff UAT pass.
+
+This release adds a static route-contract regression test in CI; it does NOT represent successful end-to-end member login or live dividend testing.
