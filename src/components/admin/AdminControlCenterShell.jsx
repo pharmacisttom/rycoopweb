@@ -237,6 +237,8 @@ function FullAdminControlCenterShell({
   useEffect(()=>{const media=window.matchMedia("(max-width:920px)");const update=()=>{setIsMobile(media.matches);if(!media.matches)setMobileOpen(false);};update();media.addEventListener("change",update);return()=>media.removeEventListener("change",update);},[]);
   const [navSearch, setNavSearch] = useState('');
   const [systemFooterOpen, setSystemFooterOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountMenuRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -260,6 +262,19 @@ function FullAdminControlCenterShell({
   }, [location.pathname, location.search]);
 
   useEffect(() => { setSystemFooterOpen(false); }, [location.pathname, location.search]);
+  useEffect(() => { setAccountOpen(false); }, [location.pathname, location.search]);
+  useEffect(() => {
+    if (!accountOpen) return undefined;
+    const closeOnOutside = event => { if (!accountMenuRef.current?.contains(event.target)) setAccountOpen(false); };
+    const closeOnEscape = event => { if (event.key === 'Escape') { setAccountOpen(false); accountMenuRef.current?.querySelector('button')?.focus(); } };
+    document.addEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [accountOpen]);
+
 
   useEffect(() => {
     if(!mobileOpen)return undefined;
@@ -456,13 +471,40 @@ function FullAdminControlCenterShell({
           </div>
 
           <div className="acc-topbar-right">
-            <span className="acc-badge-pill success" title="คำสั่งสำคัญต้องผ่านการตรวจสิทธิ์และ MFA ฝั่งเซิร์ฟเวอร์">
+            <span className="acc-badge-pill success" title="คำสั่งสำคัญตรวจสิทธิ์และ MFA ที่เซิร์ฟเวอร์">
               <ShieldCheck size={14} />
               <span>พื้นที่ผู้ดูแลระบบ</span>
             </span>
-            <span className="acc-badge-pill">
-              <span>บทบาท: {user?.roleName || user?.role || 'Staff'}</span>
-            </span>
+            <div className="acc-account-menu" ref={accountMenuRef}>
+              <button type="button" className="acc-account-trigger"
+                aria-haspopup="true" aria-expanded={accountOpen}
+                aria-controls="acc-account-dropdown"
+                onClick={() => setAccountOpen(open => !open)}>
+                <span className="acc-account-trigger-avatar" aria-hidden="true">{userInitial}</span>
+                <span className="acc-account-trigger-meta">
+                  <strong>{user?.name || 'ผู้ดูแลระบบ'}</strong>
+                  <small>{user?.roleName || user?.role || 'เจ้าหน้าที่สหกรณ์'}</small>
+                </span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </button>
+              {accountOpen && (
+                <div id="acc-account-dropdown" className="acc-account-dropdown" role="group" aria-label="เมนูบัญชีผู้ดูแล">
+                  <button type="button" onClick={() => {toggleTheme(); setAccountOpen(false);}}>
+                    {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                    <span>{theme === 'light' ? 'โหมดมืด' : 'โหมดสว่าง'}</span>
+                  </button>
+                  <button type="button" onClick={() => {setAccountOpen(false);setPasswordModalOpen(true);}}>
+                    <Lock size={16} /><span>รหัสผ่าน</span>
+                  </button>
+                  <Link to="/" onClick={() => setAccountOpen(false)}>
+                    <ArrowLeft size={16} /><span>หน้าเว็บ</span>
+                  </Link>
+                  <button type="button" className="acc-account-signout" onClick={() => {setAccountOpen(false);handleSignOut();}} disabled={loggingOut}>
+                    <LogOut size={16} /><span>{loggingOut ? 'ออก...' : 'ออกระบบ'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -478,31 +520,7 @@ function FullAdminControlCenterShell({
 
           {children}
         </div>
-        <footer className="acc-system-footer" aria-label="ระบบและบัญชีผู้ดูแล">
-          <div className="acc-account-footer">
-            <div className="acc-account-footer-user">
-              <div className="acc-user-avatar" aria-hidden="true">{userInitial}</div>
-              <div className="acc-user-meta">
-                <strong>{user?.name || 'ผู้ดูแลระบบ'}</strong>
-                <span>{user?.roleName || user?.role || 'เจ้าหน้าที่สหกรณ์'}</span>
-              </div>
-            </div>
-            <div className="acc-account-footer-actions" aria-label="เครื่องมือบัญชีผู้ดูแล">
-              <button type="button" onClick={toggleTheme} title={theme === 'light' ? 'สลับเป็นโหมดมืด' : 'สลับเป็นโหมดสว่าง'}>
-                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-                <span>{theme === 'light' ? 'โหมดมืด' : 'โหมดสว่าง'}</span>
-              </button>
-              <button type="button" onClick={() => {setMobileOpen(false);setPasswordModalOpen(true);}} title="เปลี่ยนรหัสผ่านของฉัน">
-                <Lock size={16} /><span>รหัสผ่าน</span>
-              </button>
-              <Link to="/" title="กลับสู่หน้าเว็บไซต์สหกรณ์">
-                <ArrowLeft size={16} /><span>หน้าเว็บ</span>
-              </Link>
-              <button type="button" className="acc-account-signout" onClick={handleSignOut} disabled={loggingOut} title="ออกจากระบบ">
-                <LogOut size={16} /><span>{loggingOut ? 'ออก...' : 'ออกระบบ'}</span>
-              </button>
-            </div>
-          </div>
+        <footer className="acc-system-footer" aria-label="ระบบและเครื่องมือผู้ดูแล">
           {footerGroups.length > 0 && (
           <>
             <div className="acc-system-footer-bar">
