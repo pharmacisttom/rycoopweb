@@ -33,9 +33,8 @@ jobs:
           ssh -T -p "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
           set -Eeuo pipefail
           echo '===== NONINTERACTIVE SUDO CAPABILITY ====='
-          if sudo -n /usr/bin/id -u >/dev/null 2>&1; then echo 'SUDO_ID=AVAILABLE'; else echo 'SUDO_ID=NOT_AVAILABLE'; fi
           if sudo -n /usr/sbin/nginx -t >/dev/null 2>&1; then echo 'SUDO_NGINX_TEST=AVAILABLE'; else echo 'SUDO_NGINX_TEST=NOT_AVAILABLE'; fi
-          if sudo -n /usr/bin/systemctl is-active nginx >/dev/null 2>&1; then echo 'SUDO_SYSTEMCTL_QUERY=AVAILABLE'; else echo 'SUDO_SYSTEMCTL_QUERY=NOT_AVAILABLE'; fi
+          if sudo -n -l /usr/bin/systemctl reload nginx >/dev/null 2>&1; then echo 'SUDO_NGINX_RELOAD_RULE=AVAILABLE'; else echo 'SUDO_NGINX_RELOAD_RULE=NOT_AVAILABLE'; fi
           echo 'SUDO_PREFLIGHT_READ_ONLY=PASS'
           REMOTE
           rm -f "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
