@@ -58,6 +58,7 @@ final class MediaLibraryController extends Controller
         return [
             'id' => (int)$row['id'],
             'url' => resolve_media_url($row['path']),
+            'preview_url' => '/api/admin/media/' . (int)$row['id'] . '/image',
             'original_name' => $row['original_name'],
             'mime_type' => $row['mime_type'],
             'file_size' => (int)$row['file_size'],
@@ -112,6 +113,46 @@ final class MediaLibraryController extends Controller
             self::authorize('view');
             return ['data' => self::visible(self::record(self::id($id)))];
         });
+    }
+
+    /**
+     * Serve a private CMS preview after verified staff authorization.
+     * This never exposes the filesystem path or permits public folder browsing.
+     */
+    public function image(string $id): void
+    {
+        self::authorize('view');
+        $row = self::record(self::id($id));
+        $allowed = ['image/webp', 'image/jpeg', 'image/png', 'image/gif'];
+        if (!in_array((string)$row['mime_type'], $allowed, true)) {
+            throw new SecurityGateException('Unsupported image', 404, 'NOT_FOUND');
+        }
+
+        $base = realpath(storage_upload_path());
+        $candidate = storage_upload_path((string)$row['path']);
+        $path = realpath($candidate);
+        if ($base === false || $path === false
+            || !str_starts_with($path, rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+            || !is_file($path) || !is_readable($path)) {
+            throw new SecurityGateException('Image unavailable', 404, 'NOT_FOUND');
+        }
+        $actual = (new \\finfo(FILEINFO_MIME_TYPE))->file($path);
+        if ($actual !== $row['mime_type'] || !in_array($actual, $allowed, true)) {
+            throw new SecurityGateException('Invalid image', 404, 'NOT_FOUND');
+        }
+        $size = filesize($path);
+        if ($size === false) {
+            throw new SecurityGateException('Image unavailable', 404, 'NOT_FOUND');
+        }
+        $this->response
+            ->header('Content-Type', (string)$actual)
+            ->header('Content-Length', (string)$size)
+            ->header('Cache-Control', 'private, no-store')
+            ->header('X-Content-Type-Options', 'nosniff')
+            ->header('Content-Disposition', 'inline')
+            ->sendHeaders();
+        readfile($path);
+        exit;
     }
 
     public function upload(): void
