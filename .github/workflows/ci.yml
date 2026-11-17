@@ -141,6 +141,12 @@ jobs:
       - name: Syntax-check TEST-only Admin RC06 deployment
         run: bash -n scripts/deploy-test-admin-rc06.sh
 
+      - name: Syntax-check read-only production frontend inventory
+        run: bash -n scripts/inventory-production-frontend-readonly.sh
+
+      - name: Verify embedded inventory syntax and read-only contract
+        run: python3 tests/ProductionFrontendInventorySyntaxTest.py
+
       - name: Validate release guard without deploying
         run: |
           bash -n bin/deploy-production.sh
