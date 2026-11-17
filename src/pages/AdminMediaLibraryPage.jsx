@@ -114,7 +114,7 @@ export default function AdminMediaLibraryPage({ onSelect }) {
         <div className="ry-media-grid">
           {rows.map((image) => (
             <article key={image.id} className="ry-media-card">
-              <img loading="lazy" src={image.url} alt={image.alt_text || image.original_name}
+              <img loading="lazy" src={image.preview_url || image.url} alt={image.alt_text || image.original_name}
                 referrerPolicy="same-origin" />
               <div className="ry-media-card-body">
                 <strong title={image.original_name}>{image.original_name}</strong>
@@ -122,8 +122,8 @@ export default function AdminMediaLibraryPage({ onSelect }) {
                 <div className="ry-media-actions">
                   {onSelect && <button type="button" onClick={() => onSelect(image)}>เลือกรูปนี้</button>}
                   <button type="button" onClick={() => setEditing({ ...image })}>แก้ไข</button>
-                  <button type="button" onClick={() => { navigator.clipboard?.writeText(new URL(image.url, window.location.origin).href); }}>
-                    คัดลอก URL
+                  <button type="button" onClick={() => { navigator.clipboard?.writeText(new URL(image.preview_url || image.url, window.location.origin).href); }}>
+                    คัดลอก URL ภายใน
                   </button>
                   <button type="button" className="ry-media-danger" onClick={() => remove(image)} disabled={busy}>ซ่อน</button>
                 </div>
