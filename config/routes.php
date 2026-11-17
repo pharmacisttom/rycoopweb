@@ -176,6 +176,7 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     // CMS Media Library API. Auth via api/admin group, granular CMS permissions, CSRF on mutations.
     $r->get('/media', 'Api\\MediaLibraryController@index', [new PermissionMiddleware('news','view')]);
     $r->get('/media/{id}', 'Api\\MediaLibraryController@show', [new PermissionMiddleware('news','view')]);
+    $r->get('/media/{id}/image', 'Api\\MediaLibraryController@image', [new PermissionMiddleware('news','view')]);
     $r->post('/media', 'Api\\MediaLibraryController@upload', [new PermissionMiddleware('news','create'), CsrfMiddleware::class]);
     $r->post('/media/{id}/update', 'Api\\MediaLibraryController@update', [new PermissionMiddleware('news','update'), CsrfMiddleware::class]);
     $r->post('/media/{id}/delete', 'Api\\MediaLibraryController@destroy', [new PermissionMiddleware('news','delete'), CsrfMiddleware::class]);
