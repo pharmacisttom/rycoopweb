@@ -1,0 +1,41 @@
+name: Production sudo privilege preflight (READ ONLY)
+on:
+  push:
+    branches: [Test]
+    paths: ['.github/workflows/production-sudo-preflight.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - name: Verify scoped noninteractive sudo over existing trusted SSH
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.RYCOOP_SSH_HOST }}
+          SSH_PORT: ${{ secrets.RYCOOP_SSH_PORT }}
+          SSH_USER: ${{ secrets.RYCOOP_SSH_USER }}
+          SSH_KEY: ${{ secrets.RYCOOP_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEYS: ${{ secrets.RYCOOP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/ssh/id"
+          printf '%s\n' "$SSH_HOST_KEYS" | tr -d '\r' > "$RUNNER_TEMP/ssh/known"
+          chmod 600 "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/ssh/id" >/dev/null
+          P="${SSH_PORT:-22}"
+          [[ "$P" =~ ^[0-9]+$ ]] && ((P>=1&&P<=65535))
+          ssh -T -p "$P" -i "$RUNNER_TEMP/ssh/id" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known" "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          echo '===== NONINTERACTIVE SUDO CAPABILITY ====='
+          if sudo -n /usr/bin/id -u >/dev/null 2>&1; then echo 'SUDO_ID=AVAILABLE'; else echo 'SUDO_ID=NOT_AVAILABLE'; fi
+          if sudo -n /usr/sbin/nginx -t >/dev/null 2>&1; then echo 'SUDO_NGINX_TEST=AVAILABLE'; else echo 'SUDO_NGINX_TEST=NOT_AVAILABLE'; fi
+          if sudo -n /usr/bin/systemctl is-active nginx >/dev/null 2>&1; then echo 'SUDO_SYSTEMCTL_QUERY=AVAILABLE'; else echo 'SUDO_SYSTEMCTL_QUERY=NOT_AVAILABLE'; fi
+          echo 'SUDO_PREFLIGHT_READ_ONLY=PASS'
+          REMOTE
+          rm -f "$RUNNER_TEMP/ssh/id" "$RUNNER_TEMP/ssh/known"
