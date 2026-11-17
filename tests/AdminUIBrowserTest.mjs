@@ -56,6 +56,18 @@ try{
   assert.equal(await page.locator('.acc-sidebar-footer').count(),0,'account card removed from sidebar');
   assert.ok(await nav.isVisible(),'navigation stays visible and scrollable');
   assert.equal(await nav.evaluate(el=>getComputedStyle(el).overflowY),'auto','navigation scrolls independently');
+  const desktopSidebar = page.locator('.acc-sidebar');
+  const sidebarBounds = await desktopSidebar.boundingBox();
+  const viewportSize = page.viewportSize();
+  assert.ok(sidebarBounds && viewportSize,'sidebar and viewport dimensions available');
+  assert.ok(Math.abs(sidebarBounds.y) <= 2,'desktop sidebar starts at viewport top');
+  assert.ok(Math.abs(sidebarBounds.height - viewportSize.height) <= 2,'desktop sidebar fills viewport height');
+  assert.equal(await desktopSidebar.evaluate(el=>getComputedStyle(el).position),'fixed','desktop sidebar stays visible while page scrolls');
+  await page.evaluate(() => window.scrollTo(0, 600));
+  const afterScroll = await desktopSidebar.boundingBox();
+  assert.ok(Math.abs(afterScroll.y) <= 2,'desktop sidebar remains pinned after scrolling');
+  await page.evaluate(() => window.scrollTo(0, 0));
+
   const footerUtilities = page.getByRole('button',{name:'ระบบทั้งหมด'});
   await footerUtilities.waitFor();
   assert.equal(await footerUtilities.getAttribute('aria-expanded'),'false','system footer closed by default');
