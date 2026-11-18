@@ -18,7 +18,7 @@ const shiftNode = (nodes, id, direction) => {
 const initialNode = () => ({
   id: 'section-' + crypto.randomUUID().replaceAll('-', '').slice(0,20),
   title: 'หัวข้อใหม่', description: '', type: 'gallery', layout: 'grid',
-  link: '/activities', visible: true, children: []
+  link: '/activities', album_ids: [], visible: true, children: []
 });
 
 export default function DynamicLayoutEditor() {
@@ -120,6 +120,10 @@ export default function DynamicLayoutEditor() {
             <label>รูปแบบ<select style={fieldStyle} value={current.layout} onChange={e=>update({layout:e.target.value})}>
               <option value="grid">Grid</option><option value="cards">Cards</option><option value="carousel">Carousel</option>
             </select></label>
+            <label>รหัสอัลบั้มกิจกรรม (คั่นด้วยเครื่องหมายจุลภาค)<input style={fieldStyle} value={(current.album_ids || []).join(', ')} placeholder="เช่น 1, 3, 5 — เว้นว่าง = ทุกอัลบั้ม" onChange={e => {
+              const ids = e.target.value.split(',').map(v => Number(v.trim())).filter(v => Number.isSafeInteger(v) && v > 0);
+              update({album_ids: [...new Set(ids)]});
+            }}/></label>
             <label>ลิงก์ภายในเว็บไซต์<input style={fieldStyle} value={current.link} placeholder="/activities" onChange={e=>update({link:e.target.value})}/></label>
             <label><input type="checkbox" checked={current.visible} onChange={e=>update({visible:e.target.checked})}/> แสดงหัวข้อนี้</label>
             <div style={{marginTop:18}}>
