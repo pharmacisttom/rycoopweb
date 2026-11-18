@@ -17,7 +17,18 @@ import { useAuth } from '../../context/AuthContext';
 import UserStatusBadge from '../common/UserStatusBadge';
 
 export default function Navbar() {
-  const { COOP_INFO } = usePublicInformation();
+  const { COOP_INFO, BOARD_MEMBERS } = usePublicInformation();
+  const [navigationCopy, setNavigationCopy] = useState(null);
+  const currentBoardTerm = BOARD_MEMBERS.find(person => person.status !== 'former')?.term || '';
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/public/navigation-copy', { signal: controller.signal, cache: 'no-cache' })
+      .then(response => response.ok ? response.json() : null)
+      .then(result => { if (result?.success && result?.data) setNavigationCopy(result.data); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const navText = (key, fallback) => navigationCopy?.[key] || fallback;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState(null);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -353,7 +364,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <Landmark size={14} style={{ color: 'var(--primary-600)' }} />
-                    <span>ข้อมูลและโครงสร้างองค์กร</span>
+                    <span>{navText('about_group', 'ข้อมูลและโครงสร้างองค์กร')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/about" className="mega-menu-card-item">
@@ -361,8 +372,8 @@ export default function Navbar() {
                         <Landmark size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ประวัติและวิสัยทัศน์</div>
-                        <div className="mega-menu-item-desc">ความเป็นมา พันธกิจ และค่านิยมหลักของสหกรณ์</div>
+                        <div className="mega-menu-item-title">{navText('about_title', 'ประวัติและวิสัยทัศน์')}</div>
+                        <div className="mega-menu-item-desc">{navText('about_desc', 'ความเป็นมา พันธกิจ และค่านิยมหลักของสหกรณ์')}</div>
                       </div>
                     </Link>
 
@@ -371,8 +382,8 @@ export default function Navbar() {
                         <Award size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">คณะกรรมการดำเนินการ</div>
-                        <div className="mega-menu-item-desc">ทำเนียบคณะกรรมการชุดที่ 32 และผู้ทรงคุณวุฒิ</div>
+                        <div className="mega-menu-item-title">{navText('board_title', 'คณะกรรมการดำเนินการ')}</div>
+                        <div className="mega-menu-item-desc">{navText('board_desc', currentBoardTerm ? `ทำเนียบคณะกรรมการดำเนินการ ${currentBoardTerm}` : 'ทำเนียบคณะกรรมการดำเนินการ')}</div>
                       </div>
                     </Link>
 
@@ -381,8 +392,8 @@ export default function Navbar() {
                         <Users size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ฝ่ายจัดการและเจ้าหน้าที่</div>
-                        <div className="mega-menu-item-desc">โครงสร้างบริหารและการดำเนินงานสาธารณสุขระยอง</div>
+                        <div className="mega-menu-item-title">{navText('staff_title', 'ฝ่ายจัดการและเจ้าหน้าที่')}</div>
+                        <div className="mega-menu-item-desc">{navText('staff_desc', 'บุคลากรฝ่ายจัดการและเจ้าหน้าที่สหกรณ์')}</div>
                       </div>
                     </Link>
                   </div>
@@ -391,7 +402,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <ShieldCheck size={14} style={{ color: 'var(--accent-emerald-dark)' }} />
-                    <span>ความมั่นคงและธรรมาภิบาล</span>
+                    <span>{navText('finance_group', 'ความมั่นคงและธรรมาภิบาล')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/statistics" className="mega-menu-card-item">
@@ -400,10 +411,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>ฐานะและสถิติทางการเงิน</span>
-                          <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>มั่นคงสูง</span>
+                          <span>{navText('finance_title', 'ฐานะและสถิติทางการเงิน')}</span>
+                          
                         </div>
-                        <div className="mega-menu-item-desc">สินทรัพย์ ทุนเรือนหุ้น และผลการดำเนินงานย้อนหลัง 5 ปี</div>
+                        <div className="mega-menu-item-desc">{navText('finance_desc', 'ข้อมูลฐานะการเงินและผลการดำเนินงานของสหกรณ์')}</div>
                       </div>
                     </Link>
 
@@ -412,8 +423,8 @@ export default function Navbar() {
                         <Coins size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">สถิติเงินปันผล-เฉลี่ยคืน</div>
-                        <div className="mega-menu-item-desc">ประวัติอัตราจ่ายเงินปันผล 5.25% - 5.50% ทุกปี</div>
+                        <div className="mega-menu-item-title">{navText('dividends_title', 'สถิติเงินปันผล-เฉลี่ยคืน')}</div>
+                        <div className="mega-menu-item-desc">{navText('dividends_desc', 'ประวัติอัตราเงินปันผลและเงินเฉลี่ยคืนตามข้อมูลที่เผยแพร่')}</div>
                       </div>
                     </Link>
 
@@ -422,7 +433,7 @@ export default function Navbar() {
                         <FileText size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ข้อบังคับและระเบียบสหกรณ์</div>
+                        <div className="mega-menu-item-title">{navText('documents_title', 'ข้อบังคับและระเบียบสหกรณ์')}</div>
                         <div className="mega-menu-item-desc">กฎเกณฑ์ ความโปร่งใส และนโยบายคุ้มครองข้อมูล</div>
                       </div>
                     </Link>
