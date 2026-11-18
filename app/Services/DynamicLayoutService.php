@@ -17,6 +17,24 @@ final class DynamicLayoutService
     private const DRAFT = 'dynamic_home_sections_draft_v1';
     private const TYPES = ['gallery', 'links', 'text'];
     private const LAYOUTS = ['grid', 'cards', 'carousel'];
+    private const DEFAULT_APPEARANCE = [
+        'background' => '#ffffff',
+        'text' => '#10294b',
+        'accent' => '#175cd3',
+    ];
+    private static function validateAppearance(mixed $input): array
+    {
+        if ($input === null) return self::DEFAULT_APPEARANCE;
+        if (!is_array($input) || array_keys($input) !== array_keys(self::DEFAULT_APPEARANCE)) {
+            throw new InvalidArgumentException('Invalid section color settings');
+        }
+        foreach ($input as $color) {
+            if (!is_string($color) || !preg_match('/^#[0-9a-fA-F]{6}$/D', $color)) {
+                throw new InvalidArgumentException('Section colors must be 6-digit hex values');
+            }
+        }
+        return array_map('strtolower', $input);
+    }
 
     private static function read(string $key, bool $lock = false): ?array
     {
@@ -66,6 +84,7 @@ final class DynamicLayoutService
                 $link = $node['link'] ?? '';
                 $children = $node['children'] ?? [];
                 $albumIds = $node['album_ids'] ?? [];
+                $appearance = self::validateAppearance($node['appearance'] ?? null);
                 if (!is_string($id) || !preg_match('/^[a-z0-9-]{8,64}$/D', $id) || isset($ids[$id])
                     || !is_string($title) || trim($title) === '' || mb_strlen($title) > 120
                     || !in_array($type, self::TYPES, true)
@@ -91,6 +110,7 @@ final class DynamicLayoutService
                     'description' => trim($description),
                     'link' => $link,
                     'album_ids' => $albumIds,
+                    'appearance' => $appearance,
                     'children' => $walk($children, $depth + 1),
                 ];
                 if (count($ids) > 120) throw new InvalidArgumentException('Too many sections');
