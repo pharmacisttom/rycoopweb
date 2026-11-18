@@ -47,6 +47,7 @@ const LoanChecklistPage = lazy(() => import('./pages/LoanChecklistPage'));
 const WelfarePage = lazy(() => import('./pages/WelfarePage'));
 const AdminWelfarePage = lazy(() => import('./pages/AdminWelfarePage'));
 const AdminHomepageLayoutPage = lazy(() => import('./pages/AdminHomepageLayoutPage'));
+const AdminNavigationCopyPage = lazy(() => import('./pages/AdminNavigationCopyPage'));
 const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
 const AdminActivitiesPage = lazy(() => import('./pages/AdminActivitiesPage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
@@ -243,6 +244,7 @@ export default function App() {
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
             <Route path="/admin/media" element={<StaffProtectedRoute permission="news.view"><AdminMediaLibraryPage /></StaffProtectedRoute>} />
 
+            <Route path="/admin/navigation-copy" element={<StaffProtectedRoute roles={['super_admin']}><AdminNavigationCopyPage /></StaffProtectedRoute>} />
             <Route path="/admin/layout" element={<StaffProtectedRoute roles={['super_admin']}><AdminHomepageLayoutPage /></StaffProtectedRoute>} />
             <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/welfare" element={<StaffProtectedRoute roles={['super_admin']}><AdminWelfarePage /></StaffProtectedRoute>} />
