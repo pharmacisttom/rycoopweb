@@ -100,3 +100,100 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Section appearance controls: independent of global AdminLTE form overrides. */
+.acc-shell .dynamic-layout-editor .dynamic-layout-appearance {
+  display: block;
+  grid-column: 1 / -1;
+  border: 1.5px solid #8fa3bd;
+  border-radius: 12px;
+  padding: 14px;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 18px;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #a0aec0;
+  border-radius: 9px;
+  background: #fff;
+  color: #243b53;
+  min-height: 44px;
+  padding: 7px 10px;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 30px;
+  border: 2px solid;
+  border-radius: 6px;
+  font-weight: 700;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-grid > label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-input input[type="color"] {
+  box-sizing: border-box;
+  width: 56px;
+  height: 46px;
+  min-height: 46px;
+  flex: 0 0 56px;
+  padding: 4px;
+  cursor: pointer;
+  border: 1.5px solid #8fa3bd !important;
+  background: #fff;
+  border-radius: 8px;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-input code {
+  overflow-wrap: anywhere;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-preview {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #94a3b8;
+  line-height: 1.5;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-preview p {
+  margin: 8px 0 16px;
+  color: inherit;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-preview > span {
+  display: inline-flex;
+  padding: 9px 14px;
+  border-radius: 8px;
+  background: transparent !important;
+  border: 3px solid;
+  border-color: currentColor;
+  color: inherit !important;
+  font-weight: 600;
+}
+.acc-shell .dynamic-layout-editor .dynamic-layout-color-hint {
+  margin-top: 10px;
+  font-size: .9rem;
+  color: #475569;
+}
+@media(max-width:740px){
+ .acc-shell .dynamic-layout-editor .dynamic-layout-color-grid {grid-template-columns:minmax(0,1fr);}
+}
