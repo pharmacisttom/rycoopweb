@@ -26,6 +26,14 @@ final class SiteNavigationCopyService
         'dividends_title' => 'ชื่อเมนู: เงินปันผลเฉลี่ยคืน',
         'dividends_desc' => 'คำอธิบาย: เงินปันผลเฉลี่ยคืน',
         'documents_title' => 'ชื่อเมนู: ข้อบังคับและระเบียบ',
+        'home_nav' => 'เมนูหลัก: หน้าแรก',
+        'about_nav' => 'เมนูหลัก: เกี่ยวกับสหกรณ์',
+        'finance_nav' => 'เมนูหลัก: บริการทางการเงิน',
+        'welfare_nav' => 'เมนูหลัก: สวัสดิการ',
+        'news_nav' => 'เมนูหลัก: ข่าวสารและเอกสาร',
+        'member_nav' => 'ปุ่ม: ระบบสมาชิก',
+        'documents_desc' => 'คำอธิบาย: ข้อบังคับและระเบียบ',
+        'finance_highlight_desc' => 'คำอธิบายการเงินในการ์ดด้านข้าง',
         'documents_desc' => 'คำอธิบาย: ข้อบังคับและระเบียบ',
     ];
     public static function defaults(): array
@@ -44,6 +52,14 @@ final class SiteNavigationCopyService
             'dividends_title' => 'สถิติเงินปันผล-เฉลี่ยคืน',
             'dividends_desc' => 'ประวัติอัตราเงินปันผลและเงินเฉลี่ยคืนตามข้อมูลที่เผยแพร่',
             'documents_title' => 'ข้อบังคับและระเบียบสหกรณ์',
+            'home_nav' => 'หน้าแรก',
+            'about_nav' => 'เกี่ยวกับสหกรณ์',
+            'finance_nav' => 'บริการทางการเงิน',
+            'welfare_nav' => 'สวัสดิการ',
+            'news_nav' => 'ข่าวสารและเอกสาร',
+            'member_nav' => 'ระบบสมาชิก',
+            'documents_desc' => 'ข้อบังคับ ระเบียบ และนโยบายที่เผยแพร่',
+            'finance_highlight_desc' => 'ติดตามข้อมูลฐานะการเงินที่สหกรณ์เผยแพร่อย่างเป็นทางการ',
             'documents_desc' => 'ข้อบังคับ ระเบียบ และเอกสารที่สหกรณ์เผยแพร่',
         ];
     }
