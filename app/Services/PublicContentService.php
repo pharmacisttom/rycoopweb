@@ -165,7 +165,7 @@ class PublicContentService
                 elseif ($key==='features') { if (!is_array($field) || !array_is_list($field) || count($field)>20) throw new InvalidArgumentException('รายละเอียดไม่ถูกต้อง');foreach($field as $line)self::text($line,1000,true); }
                 elseif ($section==='products' && in_array($key,['maxLimit','maxTerm'],true)) $item[$key]=self::integer($field,$key==='maxTerm'?600:999999999);
                 elseif ($key==='id' && $section!=='products') $item[$key]=self::integer($field,999999);
-                elseif ($key==='status' && $section==='boards') { if (!in_array($field,['active','former'],true)) throw new InvalidArgumentException('สถานะกรรมการไม่ถูกต้อง'); } 
+                elseif ($key==='status' && $section==='boards') { if (!in_array($field,['active','former'],true)) throw new InvalidArgumentException('สถานะกรรมการไม่ถูกต้อง'); }
                 elseif ($key==='highlight') $item[$key]=(bool)$field;
                 elseif (in_array($key,['rate','rateValue'],true)) { $number=rtrim((string)$field,'%');if (!preg_match('/^\d{1,3}(?:\.\d{1,3})?$/D',$number) || (float)$number>100) throw new InvalidArgumentException('ดอกเบี้ยต้องอยู่ระหว่าง 0–100% และทศนิยมไม่เกิน 3 ตำแหน่ง'); }
                 else $item[$key]=self::text($field,1000);
