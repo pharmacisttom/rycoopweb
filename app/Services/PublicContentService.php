@@ -140,10 +140,17 @@ class PublicContentService
             }
             if ($section==='groups') {
                 $title=self::text($item['title']??null,150,true);$members=$item['members']??null;
+                $term=isset($item['term'])?self::text($item['term'],100,true):null;
+                if ($term !== null && !in_array($term,array_column(self::catalog()['boardMembers'],'term'),true)) throw new InvalidArgumentException('ไม่พบชุดกรรมการที่เลือก');
                 if (!is_array($members) || !array_is_list($members) || count($members)>50) throw new InvalidArgumentException('รายชื่อคณะย่อยไม่ถูกต้อง');
                 $boardIds=array_column(self::catalog()['boardMembers'],'id');$seen=[];
                 foreach ($members as $member) { if (!is_array($member) || count($member)!==2 || !in_array((int)$member[0],array_map('intval',$boardIds),true) || isset($seen[(int)$member[0]])) throw new InvalidArgumentException('กรรมการในคณะย่อยไม่ถูกต้องหรือซ้ำ');self::text($member[1],150,true);$seen[(int)$member[0]]=true; }
-                $item=['title'=>$title,'members'=>$members];continue;
+                $item=['title'=>$title,'members'=>$members];if ($term !== null) $item['term']=$term;
+                foreach ($members as [$memberId]) {
+                    $person = current(array_filter(self::catalog()['boardMembers'], static fn($p) => (int)$p['id']===(int)$memberId));
+                    if ($term !== null && ($person['term']??null)!==$term) throw new InvalidArgumentException('กรรมการไม่อยู่ในชุดที่เลือก');
+                }
+                continue;
             }
             $allowed=match($section){
                 'boards'=>['id','name','position','image','term','workplace'],
