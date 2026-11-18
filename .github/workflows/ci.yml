@@ -330,6 +330,9 @@ jobs:
       - name: Verify Public Content null and revision safety RC02
         run: node tests/PublicContentNullSafetyRC02Test.mjs
 
+      - name: Verify board admin responsive card layout RC02
+        run: node tests/BoardAdminCardLayoutRC02Test.mjs
+
       - name: Build frontend
         run: npm run build
 
