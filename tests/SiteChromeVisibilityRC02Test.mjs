@@ -16,7 +16,7 @@ for(const key of ['nav_menu','footer_brand','footer_finance','footer_welfare','f
 }
 assert(php.includes('AuditService::log') && php.includes('hash_equals'),'missing audit/concurrency');
 assert(controller.includes('requireFreshStepUpMfa'),'missing MFA');
-assert(routes.includes("'/api/public/site-chrome'") && routes.includes("'/api/admin/site-chrome'"),'routes missing');
+assert(routes.includes("'/api/public/site-chrome'") && routes.includes("'prefix'=>'api/admin/site-chrome'"),'routes missing');
 assert(routes.includes('CsrfMiddleware::class'),'CSRF middleware missing');
 assert(navbar.includes('showNavMenu && <nav'),'public nav not conditional');
 assert(navbar.includes('showNavMenu && mobileMenuOpen'),'mobile menu not conditional');
