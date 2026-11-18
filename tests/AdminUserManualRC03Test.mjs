@@ -9,6 +9,6 @@ assert(shell.includes("id: 'help'") && shell.includes("to: '/admin/manual'"),'ma
 assert(shell.includes('help: true'),'manual sidebar group not expanded by default');
 assert(app.includes('path="/admin/manual" element={<StaffProtectedRoute><AdminUserManualPage /></StaffProtectedRoute>}'),'manual route must be protected');
 assert(page.includes('AdminControlCenterShell') && page.includes('window.print()'),'manual page or print missing');
-for(const word of ['คณะกรรมการชุดที่ 38/39','MFA','ระบบสมาชิก','Audit Trail','Maker / Checker'])assert(page.includes(word),word);
+for(const word of ['คณะกรรมการชุดที่ 38/39','MFA','สมาชิก การเงิน','Audit Trail','Maker / Checker'])assert(page.includes(word),word);
 assert(css.includes('@media print'),'print stylesheet absent');
 console.log('PASS: authenticated staff handbook linked from sidebar and printable');
