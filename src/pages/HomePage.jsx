@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2, 
-  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall, 
+import {
+  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2,
+  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall,
   ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award
 } from 'lucide-react';
 import { fetchHomeData, fetchCoopInfo } from '../services/api';
@@ -25,6 +25,21 @@ export default function HomePage() {
   const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
   const coopInfo = COOP_INFO;
   const { setShowAuthModal, isLoggedIn } = useAuth();
+  // Published-only visibility. No draft config is consumed by the public UI.
+  const [layout, setLayout] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/public/layout', { signal: controller.signal, credentials: 'same-origin', cache: 'no-cache' })
+      .then(response => response.ok ? response.json() : null)
+      .then(payload => {
+        const candidate = payload?.data;
+        const keys = ['hero','quick_services','statistics','products','calculator','welfare'];
+        if (candidate && keys.every(key => typeof candidate[key] === 'boolean')) setLayout(candidate);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const showSection = key => layout?.[key] !== false;
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
   const [activeNewsSlide, setActiveNewsSlide] = useState(0);
@@ -157,11 +172,11 @@ export default function HomePage() {
 
   return (
     <div>
-      
+
       {/* =========================================================================
           HERO SECTION (High Impact Modern Banner)
           ========================================================================= */}
-      <section style={{
+      {showSection('hero') && <section style={{
         position: 'relative',
         backgroundImage: heroSettings.bgImageUrl ? `linear-gradient(135deg, rgba(15, 43, 92, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%), url(${heroSettings.bgImageUrl})` : 'var(--gradient-hero)',
         backgroundSize: 'cover',
@@ -197,7 +212,7 @@ export default function HomePage() {
 
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
           <div className="home-hero-grid">
-            
+
             {/* Left Hero Content */}
             <div className="animate-fade-in">
               <div style={{
@@ -441,19 +456,19 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
           ========================================================================= */}
-      <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
+      {showSection('quick_services') && <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             gap: '1.25rem'
           }}>
-            
+
             <Link to="/calculator" className="surface-card" style={quickServiceCardStyle}>
               <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
                 <Calculator size={24} />
@@ -504,14 +519,14 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           KEY COOPERATIVE STATS
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('statistics') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ฐานะความมั่นคง</span>
             <h2 className="section-title">สถิติและผลการดำเนินงานที่โดดเด่น</h2>
@@ -535,13 +550,13 @@ export default function HomePage() {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.25rem' }}>
                   {stat.unit}
                 </div>
-                <div style={{ 
-                  marginTop: '0.85rem', 
-                  display: 'inline-block', 
-                  fontSize: '0.75rem', 
-                  padding: '0.2rem 0.6rem', 
-                  borderRadius: 'var(--radius-full)', 
-                  background: 'var(--accent-emerald-light)', 
+                <div style={{
+                  marginTop: '0.85rem',
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--accent-emerald-light)',
                   color: 'var(--accent-emerald-dark)',
                   fontWeight: 600
                 }}>
@@ -552,14 +567,14 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-main)' }}>
+      {showSection('products') && <section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
             <h2 className="section-title">สินเชื่อเพื่อบุคลากรสาธารณสุข</h2>
@@ -611,23 +626,23 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           INTERACTIVE LOAN CALCULATOR SUITE EMBED
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('calculator') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           <LoanCalculator />
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           MEMBER WELFARE HIGHLIGHTS
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('welfare') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">สวัสดิการสมาชิก</span>
             <h2 className="section-title">ดูแลสมาชิกและครอบครัวในทุกช่วงชีวิต</h2>
@@ -660,7 +675,7 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
 
     </div>

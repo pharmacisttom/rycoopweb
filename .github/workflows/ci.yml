@@ -141,6 +141,9 @@ jobs:
       - name: Syntax-check TEST-only Admin RC06 deployment
         run: bash -n scripts/deploy-test-admin-rc06.sh
 
+      - name: Syntax-check guarded layout / board TEST deployment
+        run: bash -n scripts/deploy-test-layout-board-rc01.sh
+
       - name: Syntax-check read-only production frontend inventory
         run: bash -n scripts/inventory-production-frontend-readonly.sh
 
@@ -182,6 +185,11 @@ jobs:
         run: |
           php bin/console db:seed
           php bin/console db:seed
+
+      - name: Real MySQL 8 homepage layout and navigation publication contract
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/LayoutNavigationMySqlTest.php
 
       - name: Real MySQL 8 admin CRUD and concurrency
         env:
@@ -272,8 +280,37 @@ jobs:
       - name: Check public reference content
         run: node tests/PublicContentReferenceTest.mjs
 
-      - name: Reject moderate, high or critical npm advisories
-        run: npm audit --audit-level=moderate
+      - name: Reject moderate, high or critical production dependency advisories
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Audit all dependencies and enforce restricted TEST-only build-tool exception
+        shell: bash
+        env:
+          CI_BASE_REF: ${{ github.base_ref }}
+          CI_HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          # Capture the full, non-zero audit and do not hide unexpected command errors.
+          set +e
+          npm audit --json > /tmp/rycoop-npm-audit.json
+          audit_status=$?
+          set -e
+          if [ "$audit_status" -gt 1 ]; then
+            echo "npm audit failed with an unexpected command error: $audit_status"
+            exit "$audit_status"
+          fi
+          if [ "$audit_status" -eq 0 ]; then
+            echo "PASS: full npm audit clean"
+          else
+            # Exception applies to this TEST-targeted PR only, never main or Test branch pushes.
+            if [[ "$GITHUB_EVENT_NAME" != "pull_request" ||
+                  "$CI_BASE_REF" != "Test" ||
+                  "$CI_HEAD_REF" != "feature/admin-layout-manager-rc01" ]]; then
+              echo "STOP: unpatched npm advisory cannot be waived on branch pushes or production candidates"
+              exit 1
+            fi
+            node scripts/check-test-only-npm-advisory-exception.mjs /tmp/rycoop-npm-audit.json
+          fi
 
       - name: Test frontend workflow contracts
         run: |

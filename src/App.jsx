@@ -46,6 +46,8 @@ const DepositsPage = lazy(() => import('./pages/DepositsPage'));
 const LoanChecklistPage = lazy(() => import('./pages/LoanChecklistPage'));
 const WelfarePage = lazy(() => import('./pages/WelfarePage'));
 const AdminWelfarePage = lazy(() => import('./pages/AdminWelfarePage'));
+const AdminHomepageLayoutPage = lazy(() => import('./pages/AdminHomepageLayoutPage'));
+const AdminNavigationCopyPage = lazy(() => import('./pages/AdminNavigationCopyPage'));
 const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
 const AdminActivitiesPage = lazy(() => import('./pages/AdminActivitiesPage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
@@ -161,7 +163,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|media|login|2fa)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|media|layout|login|2fa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -242,6 +244,8 @@ export default function App() {
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />
             <Route path="/admin/media" element={<StaffProtectedRoute permission="news.view"><AdminMediaLibraryPage /></StaffProtectedRoute>} />
 
+            <Route path="/admin/navigation-copy" element={<StaffProtectedRoute roles={['super_admin']}><AdminNavigationCopyPage /></StaffProtectedRoute>} />
+            <Route path="/admin/layout" element={<StaffProtectedRoute roles={['super_admin']}><AdminHomepageLayoutPage /></StaffProtectedRoute>} />
             <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />
             <Route path="/admin/welfare" element={<StaffProtectedRoute roles={['super_admin']}><AdminWelfarePage /></StaffProtectedRoute>} />
             <Route path="/admin/activities" element={<StaffProtectedRoute permission="news.view"><AdminActivitiesPage /></StaffProtectedRoute>} />
