@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import { memberAdminApi } from '../services/memberAdminApi';
 
-const keys = ['about_group','about_title','about_desc','board_title','board_desc','staff_title','staff_desc','finance_group','finance_title','finance_desc','dividends_title','dividends_desc','documents_title','documents_desc'];
+const keys = ['about_group','about_title','about_desc','board_title','board_desc','staff_title','staff_desc','finance_group','finance_title','finance_desc','dividends_title','dividends_desc','documents_title','documents_desc','home_nav','about_nav','finance_nav','welfare_nav','news_nav','member_nav','finance_highlight_desc'];
 
 export default function AdminNavigationCopyPage() {
   const [state, setState] = useState(null);
