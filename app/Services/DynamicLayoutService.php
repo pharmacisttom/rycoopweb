@@ -33,7 +33,27 @@ final class DynamicLayoutService
                 throw new InvalidArgumentException('Section colors must be 6-digit hex values');
             }
         }
+        if (self::contrastRatio($input['background'], $input['text']) < 4.5) {
+            throw new InvalidArgumentException('Section text/background contrast must be at least 4.5:1');
+        }
         return array_map('strtolower', $input);
+    }
+
+    private static function contrastRatio(string $background, string $text): float
+    {
+        $luminance = static function (string $color): float {
+            $channels = [];
+            foreach ([1, 3, 5] as $position) {
+                $channel = hexdec(substr($color, $position, 2)) / 255;
+                $channels[] = $channel <= 0.04045
+                    ? $channel / 12.92
+                    : (($channel + 0.055) / 1.055) ** 2.4;
+            }
+            return $channels[0] * 0.2126 + $channels[1] * 0.7152 + $channels[2] * 0.0722;
+        };
+        $a = $luminance($background);
+        $b = $luminance($text);
+        return (max($a, $b) + 0.05) / (min($a, $b) + 0.05);
     }
 
     private static function read(string $key, bool $lock = false): ?array
