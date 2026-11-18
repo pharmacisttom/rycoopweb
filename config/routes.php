@@ -568,6 +568,14 @@ $router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class,
 });
 
 
+// Public navigation/footer visibility: published settings only, MFA for mutations.
+$router->get('/api/public/site-chrome', 'Admin\\SiteChromeVisibilityController@published');
+$router->group(['prefix'=>'api/admin/site-chrome','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\SiteChromeVisibilityController@show');
+    $r->post('/draft', 'Admin\\SiteChromeVisibilityController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\SiteChromeVisibilityController@publish', [CsrfMiddleware::class]);
+});
+
 // Homepage layout: public published state only; admin edits require auth, CSRF and fresh MFA.
 $router->get('/api/public/layout', 'Admin\\HomepageLayoutController@published');
 $router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
