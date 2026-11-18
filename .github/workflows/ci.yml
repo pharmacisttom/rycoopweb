@@ -341,6 +341,9 @@ jobs:
       - name: Verify published site chrome visibility RC02
         run: node tests/SiteChromeVisibilityRC02Test.mjs
 
+      - name: Verify Dynamic Layout field contrast RC02
+        run: node tests/DynamicLayoutFieldsRC02Test.mjs
+
       - name: Build frontend
         run: npm run build
 
