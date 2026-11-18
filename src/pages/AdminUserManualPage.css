@@ -1,0 +1,17 @@
+.acc-shell .admin-manual{max-width:1100px;margin:0 auto;color:var(--acc-text,#15233a);line-height:1.65}
+.acc-shell .admin-manual-intro,.acc-shell .admin-manual-index,.acc-shell .admin-manual-section{background:var(--acc-surface,#fff);border:1px solid var(--acc-border,#d4deea);border-radius:14px;padding:clamp(18px,2vw,28px);margin-bottom:18px}
+.acc-shell .admin-manual h1{font-size:1.6rem;line-height:1.35}.acc-shell .admin-manual h2{font-size:1.2rem;margin:0 0 16px}
+.acc-shell .admin-manual h3{font-size:1rem;margin:0 0 5px}.acc-shell .admin-manual p{margin:0 0 10px}
+.acc-shell .admin-manual-index{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.acc-shell .admin-manual-index h2{flex-basis:100%;margin:0}
+.acc-shell .admin-manual-index a{padding:8px 12px;border:1px solid #9cb2ce;border-radius:8px;text-decoration:none}
+.acc-shell .admin-manual-item{padding:15px 0;border-bottom:1px solid var(--acc-border,#d4deea)}
+.acc-shell .admin-manual-item:last-child{border-bottom:0}
+.acc-shell .admin-manual-item a{display:inline-block;margin-top:4px}
+.acc-shell .admin-manual-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.acc-shell .admin-manual-actions button{border:1px solid #3469a9;border-radius:9px;background:#175cd3;color:white;padding:10px 14px;cursor:pointer}
+.acc-shell .admin-manual-section li{margin:7px 0}
+.acc-shell .admin-manual-section dt{font-weight:700;margin-top:12px}
+.acc-shell .admin-manual-section dd{margin:2px 0 10px}
+.acc-shell .admin-manual-footnote{font-size:.85rem;color:var(--acc-text-secondary,#475569)}
+@media print{.acc-shell .acc-sidebar,.acc-shell .acc-topbar,.acc-shell .acc-footer,.acc-shell .admin-manual-actions{display:none!important}.acc-shell,.acc-shell .acc-main-wrapper{display:block!important;margin:0!important;width:100%!important}.acc-shell .admin-manual-section{break-inside:avoid;box-shadow:none!important}.acc-shell .admin-manual{max-width:none}}

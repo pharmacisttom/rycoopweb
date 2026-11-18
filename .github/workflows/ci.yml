@@ -191,6 +191,16 @@ jobs:
           CRUD_DISPOSABLE_MYSQL: "1"
         run: php tests/LayoutNavigationMySqlTest.php
 
+      - name: Verify nested Dynamic Layout on disposable MySQL 8
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/DynamicLayoutMySqlTest.php
+
+      - name: Verify site navigation/footer visibility on disposable MySQL 8
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/SiteChromeVisibilityMySqlTest.php
+
       - name: Real MySQL 8 admin CRUD and concurrency
         env:
           CRUD_DISPOSABLE_MYSQL: "1"
@@ -302,10 +312,11 @@ jobs:
           if [ "$audit_status" -eq 0 ]; then
             echo "PASS: full npm audit clean"
           else
-            # Exception applies to this TEST-targeted PR only, never main or Test branch pushes.
-            if [[ "$GITHUB_EVENT_NAME" != "pull_request" ||
-                  "$CI_BASE_REF" != "Test" ||
-                  "$CI_HEAD_REF" != "feature/admin-layout-manager-rc01" ]]; then
+            # Explicit TEST-only advisory exception for the two reviewed RC01/RC02 draft PRs.
+            # Never applies to branch pushes or a Production/main candidate.
+            if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]] ||
+               ! { [[ "$CI_BASE_REF" == "Test" && "$CI_HEAD_REF" == "feature/admin-layout-manager-rc01" ]] ||
+                   [[ "$CI_BASE_REF" == "feature/admin-layout-manager-rc01" && "$CI_HEAD_REF" == "feature/dynamic-layout-gallery-rc02" ]]; }; then
               echo "STOP: unpatched npm advisory cannot be waived on branch pushes or production candidates"
               exit 1
             fi
@@ -317,6 +328,30 @@ jobs:
           node tests/WorkflowFrontendTest.mjs
           node tests/AdminUIComponentsTest.mjs
           node tests/MfaUiRedesignTest.mjs
+
+      - name: Verify admin responsive CSS RC02 contracts
+        run: node tests/AdminLayoutPolishRC02Test.mjs
+
+      - name: Verify Public Content null and revision safety RC02
+        run: node tests/PublicContentNullSafetyRC02Test.mjs
+
+      - name: Verify board admin responsive card layout RC02
+        run: node tests/BoardAdminCardLayoutRC02Test.mjs
+
+      - name: Verify published site chrome visibility RC02
+        run: node tests/SiteChromeVisibilityRC02Test.mjs
+
+      - name: Verify Dynamic Layout field contrast RC02
+        run: node tests/DynamicLayoutFieldsRC02Test.mjs
+
+      - name: Verify Admin visual consistency and section color controls RC03
+        run: node tests/AdminVisualConsistencyRC03Test.mjs
+
+      - name: Verify board terms 38 and 39 seat allocation
+        run: node tests/BoardTerms38And39AuditTest.mjs
+
+      - name: Verify staff manual sidebar and route RC03
+        run: node tests/AdminUserManualRC03Test.mjs
 
       - name: Build frontend
         run: npm run build

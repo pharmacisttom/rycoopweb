@@ -35,10 +35,21 @@ import './AdminControlCenter.css';
 import './AdminUI.css';
 import './AdminResponsiveFix.css';
 import './AdminModernRefresh.css';
+import './AdminLayoutPolishRC02.css';
+import './AdminVisualConsistencyRC03.css';
 import { AdminBreadcrumb } from './AdminUI';
 const ShellContext=createContext(false);
 
 export const ADMIN_SIDEBAR_GROUPS = [
+  {
+    id: 'help',
+    label: 'User Manual',
+    thaiLabel: 'คู่มือการใช้งาน',
+    icon: FileText,
+    items: [
+      { label: 'คู่มือการใช้งานระบบ', to: '/admin/manual', roles: ['super_admin','admin','staff','editor','loan_officer','finance_officer','member_service','auditor','member_admin','it_admin'] },
+    ],
+  },
   {
     id: 'dashboard',
     label: 'Dashboard',
@@ -219,6 +230,7 @@ function FullAdminControlCenterShell({
 
   const [openGroups, setOpenGroups] = useState(() => {
     const defaults = {
+      help: true,
       dashboard: true,
       operations: true,
       members: true,
