@@ -143,7 +143,7 @@ export default function Navbar() {
             style={navLinkStyle(isActive('/'))}
             onMouseEnter={() => setActiveMegaMenu(null)}
           >
-            หน้าแรก
+            {navText('home_nav', 'หน้าแรก')}
           </Link>
 
           {/* 2. เกี่ยวกับสหกรณ์ (Mega Menu) */}
@@ -158,7 +158,7 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>เกี่ยวกับสหกรณ์</span>
+              <span>{navText('about_nav', 'เกี่ยวกับสหกรณ์')}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'about' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
@@ -175,7 +175,7 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>บริการทางการเงิน</span>
+              <span>{navText('finance_nav', 'บริการทางการเงิน')}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'finance' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
@@ -192,7 +192,7 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>สวัสดิการ</span>
+              <span>{navText('welfare_nav', 'สวัสดิการ')}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'welfare' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
@@ -209,7 +209,7 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>ข่าวสารและเอกสาร</span>
+              <span>{navText('news_nav', 'ข่าวสารและเอกสาร')}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'news_docs' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
@@ -218,7 +218,7 @@ export default function Navbar() {
 
         {/* Right Action: User Profile Pill / Login */}
         <div className="navbar-actions">
-          <Link to={user?.role === 'member' ? '/member/dividends' : '/member/login'} className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก"><User size={18} aria-hidden="true" /><span>ระบบสมาชิก</span></Link>
+          <Link to={user?.role === 'member' ? '/member/dividends' : '/member/login'} className="btn btn-outline navbar-dividend-link navbar-member-link" aria-label="ระบบสมาชิก"><User size={18} aria-hidden="true" /><span>{navText('member_nav', 'ระบบสมาชิก')}</span></Link>
 
           {isLoggedIn ? (
             /* Logged-In User Pill with Dropdown matching user screenshot */
@@ -434,7 +434,7 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">{navText('documents_title', 'ข้อบังคับและระเบียบสหกรณ์')}</div>
-                        <div className="mega-menu-item-desc">กฎเกณฑ์ ความโปร่งใส และนโยบายคุ้มครองข้อมูล</div>
+                        <div className="mega-menu-item-desc">{navText('documents_desc', 'ข้อบังคับ ระเบียบ และนโยบายที่เผยแพร่')}</div>
                       </div>
                     </Link>
                   </div>
@@ -452,7 +452,7 @@ export default function Navbar() {
                       สหกรณ์ออมทรัพย์สาธารณสุขระยอง
                     </h4>
                     <p style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.45, marginBottom: '1rem' }}>
-                      สินทรัพย์รวมกว่า 4,850 ล้านบาท มุ่งมั่นดูแลคุณภาพชีวิตบุคลากรสาธารณสุขจังหวัดระยองอย่างยั่งยืน
+                      {navText('finance_highlight_desc', 'ติดตามข้อมูลฐานะการเงินที่สหกรณ์เผยแพร่อย่างเป็นทางการ')}
                     </p>
                   </div>
                   <Link
@@ -929,7 +929,7 @@ export default function Navbar() {
               onClick={() => toggleMobileAccordion('about')}
               style={{ ...mobileItemStyle, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
             >
-              <span>เกี่ยวกับสหกรณ์</span>
+              <span>{navText('about_nav', 'เกี่ยวกับสหกรณ์')}</span>
               <ChevronDown size={16} style={{ transform: mobileAccordion === 'about' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
             {mobileAccordion === 'about' && (
@@ -949,7 +949,7 @@ export default function Navbar() {
               onClick={() => toggleMobileAccordion('finance')}
               style={{ ...mobileItemStyle, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
             >
-              <span>บริการทางการเงิน</span>
+              <span>{navText('finance_nav', 'บริการทางการเงิน')}</span>
               <ChevronDown size={16} style={{ transform: mobileAccordion === 'finance' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
             {mobileAccordion === 'finance' && (
@@ -971,7 +971,7 @@ export default function Navbar() {
               onClick={() => toggleMobileAccordion('welfare')}
               style={{ ...mobileItemStyle, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
             >
-              <span>สวัสดิการ</span>
+              <span>{navText('welfare_nav', 'สวัสดิการ')}</span>
               <ChevronDown size={16} style={{ transform: mobileAccordion === 'welfare' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
             {mobileAccordion === 'welfare' && (
@@ -991,7 +991,7 @@ export default function Navbar() {
               onClick={() => toggleMobileAccordion('news_docs')}
               style={{ ...mobileItemStyle, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
             >
-              <span>ข่าวสารและเอกสาร</span>
+              <span>{navText('news_nav', 'ข่าวสารและเอกสาร')}</span>
               <ChevronDown size={16} style={{ transform: mobileAccordion === 'news_docs' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
             {mobileAccordion === 'news_docs' && (
