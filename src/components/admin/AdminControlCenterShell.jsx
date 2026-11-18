@@ -101,6 +101,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
       { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
       { label: 'จัดการ Layout หน้าแรก', to: '/admin/layout', roles: ['super_admin'] },
       { label: 'จัดการชุดกรรมการและอนุกรรมการ', to: '/admin/public-content?section=boards', permissions: ['people.view'] },
+      { label: 'จัดการคณะอนุกรรมการ', to: '/admin/public-content?section=groups', permissions: ['people.view'] },
       { label: 'ศูนย์เอกสาร', to: '/admin/documents', permissions: ['documents.view'] },
       { label: 'คลังรูปภาพ (Media Library)', to: '/admin/media', permissions: ['news.view'] },
     ],
