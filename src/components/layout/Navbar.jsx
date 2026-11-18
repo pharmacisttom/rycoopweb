@@ -412,7 +412,7 @@ export default function Navbar() {
                       <div>
                         <div className="mega-menu-item-title">
                           <span>{navText('finance_title', 'ฐานะและสถิติทางการเงิน')}</span>
-                          
+
                         </div>
                         <div className="mega-menu-item-desc">{navText('finance_desc', 'ข้อมูลฐานะการเงินและผลการดำเนินงานของสหกรณ์')}</div>
                       </div>
