@@ -34,7 +34,6 @@ final class SiteNavigationCopyService
         'member_nav' => 'ปุ่ม: ระบบสมาชิก',
         'documents_desc' => 'คำอธิบาย: ข้อบังคับและระเบียบ',
         'finance_highlight_desc' => 'คำอธิบายการเงินในการ์ดด้านข้าง',
-        'documents_desc' => 'คำอธิบาย: ข้อบังคับและระเบียบ',
     ];
     public static function defaults(): array
     {
