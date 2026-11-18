@@ -120,17 +120,31 @@ export default function PublicContentAdminPage() {
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
       {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
-      {section==='boards'&&row&&definition?.canEdit&&<div className="surface-card" style={{padding:16,margin:'1rem 0'}}>
-        <h3>จัดการชุดกรรมการและรูปภาพ</h3>
-        <p>สามารถคัดลอกกรรมการไปชุดใหม่โดยไม่เปลี่ยนชุดเดิม และเพิ่มกรรมการใหม่จากปุ่มเพิ่มรายการ</p>
-        <button type="button" disabled={busy} onClick={copyBoardToTerm}>คัดลอกกรรมการไปชุดใหม่</button>
-        <button type="button" disabled={busy} onClick={startBoardReplacement}>เพิ่มกรรมการทดแทนในชุดเดียวกัน</button>
-        <label>อัปโหลดรูปภาพกรรมการ (JPEG/PNG/WebP ไม่เกิน 10 MB)
-          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadBoardPhoto(file);}} />
-        </label>
-        {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพ...</p>}
-        {row.image&&<img src={row.image} alt={'ตัวอย่างรูป '+row.name} style={{width:120,height:120,objectFit:'cover',borderRadius:'50%'}}/>}
-      </div>}
+      {section==='boards'&&row&&definition?.canEdit&&<section className="surface-card public-content-board-tools" aria-labelledby="board-tools-heading">
+        <header className="public-content-board-tools-heading">
+          <h3 id="board-tools-heading">จัดการชุดกรรมการและรูปภาพ</h3>
+          <p>สามารถคัดลอกกรรมการไปชุดใหม่โดยไม่เปลี่ยนชุดเดิม และเพิ่มกรรมการใหม่จากปุ่มเพิ่มรายการ</p>
+        </header>
+        <div className="public-content-board-tools-grid">
+          <div className="public-content-board-actions">
+            <h4>จัดการข้อมูลกรรมการ</h4>
+            <div className="public-content-board-action-buttons">
+              <button type="button" className="btn btn-outline" disabled={busy||mediaBusy} onClick={copyBoardToTerm}>คัดลอกกรรมการไปชุดใหม่</button>
+              <button type="button" className="btn btn-outline" disabled={busy||mediaBusy} onClick={startBoardReplacement}>เพิ่มกรรมการทดแทนในชุดเดียวกัน</button>
+            </div>
+          </div>
+          <div className="public-content-board-media">
+            <h4>รูปภาพกรรมการ</h4>
+            <label htmlFor="public-content-board-photo">อัปโหลดรูปภาพ (JPEG/PNG/WebP ไม่เกิน 10 MB)</label>
+            <input id="public-content-board-photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadBoardPhoto(file);}} />
+            {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพ...</p>}
+            {row.image ? <figure className="public-content-board-photo-preview">
+              <img src={row.image} alt={'ตัวอย่างรูป '+row.name} loading="lazy"/>
+              <figcaption>ตัวอย่างรูปภาพ: {row.name}</figcaption>
+            </figure> : <p className="public-content-board-no-photo">ยังไม่มีภาพกรรมการในรายการนี้</p>}
+          </div>
+        </div>
+      </section>}
       <form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
         {row&&(fields[section]||[]).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-status'?<select value={row[key]||'active'} onChange={e=>change(key,e.target.value)}><option value="active">ดำรงตำแหน่ง</option><option value="former">พ้นตำแหน่ง</option></select>:type==='checkbox'?<input type="checkbox" checked={!!row[key]} onChange={e=>change(key,e.target.checked)}/>:<input type={type==='rate'?'number':type} disabled={section==='products'&&key==='rateValue'} step={type==='rate'?'0.001':undefined} min={['number','rate'].includes(type)?0:undefined} value={type==='rate'?String(row[key]??'').replace('%',''):row[key]??''} onChange={e=>change(key,type==='rate'&&key==='rate'?`${e.target.value}%`:e.target.value)} />}</label>)}
         {section==='products'&&<p>แก้อัตราดอกเบี้ยที่หมวดอัตราเงินกู้ เพื่อให้หน้าเว็บและเครื่องคำนวณใช้ตัวเลขเดียวกัน</p>}
