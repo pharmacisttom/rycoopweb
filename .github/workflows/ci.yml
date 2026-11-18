@@ -347,6 +347,9 @@ jobs:
       - name: Verify Admin visual consistency and section color controls RC03
         run: node tests/AdminVisualConsistencyRC03Test.mjs
 
+      - name: Verify board terms 38 and 39 seat allocation
+        run: node tests/BoardTerms38And39AuditTest.mjs
+
       - name: Build frontend
         run: npm run build
 
