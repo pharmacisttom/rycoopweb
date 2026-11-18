@@ -307,10 +307,11 @@ jobs:
           if [ "$audit_status" -eq 0 ]; then
             echo "PASS: full npm audit clean"
           else
-            # Exception applies to this TEST-targeted PR only, never main or Test branch pushes.
-            if [[ "$GITHUB_EVENT_NAME" != "pull_request" ||
-                  "$CI_BASE_REF" != "Test" ||
-                  "$CI_HEAD_REF" != "feature/admin-layout-manager-rc01" ]]; then
+            # Explicit TEST-only advisory exception for the two reviewed RC01/RC02 draft PRs.
+            # Never applies to branch pushes or a Production/main candidate.
+            if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]] ||
+               ! { [[ "$CI_BASE_REF" == "Test" && "$CI_HEAD_REF" == "feature/admin-layout-manager-rc01" ]] ||
+                   [[ "$CI_BASE_REF" == "feature/admin-layout-manager-rc01" && "$CI_HEAD_REF" == "feature/dynamic-layout-gallery-rc02" ]]; }; then
               echo "STOP: unpatched npm advisory cannot be waived on branch pushes or production candidates"
               exit 1
             fi
