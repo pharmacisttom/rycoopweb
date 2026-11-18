@@ -8,7 +8,7 @@ SHA="$(git rev-parse HEAD)"
 [[ "${EXPECTED_SHA:-}" == "$SHA" && "$SHA" =~ ^[a-f0-9]{40}$ ]] || { echo 'STOP: SHA not approved'; exit 1; }
 git diff --quiet && git diff --cached --quiet || { echo 'STOP: dirty worktree'; exit 1; }
 BASE='/var/www/rycoopweb'
-OLD="$BASE/test-releases/frontend-baseline-rc01-20261118T015616Z"
+OLD="$BASE/test-releases/layout-board-rc01-3ef63634419eafa84727135188d892508108ef0d"
 NEW="$BASE/test-releases/layout-board-rc01-$SHA"
 SHARED="$BASE/shared-test"
 CONF='/etc/nginx/sites-enabled/rycoopweb-test-v2'
@@ -49,7 +49,7 @@ import sys
 path, old, new = sys.argv[1:]
 config = Path(path).read_text()
 if config.count(old) != 3 or new in config:
-    raise SystemExit('STOP: active TEST release differs from approved RC01 baseline')
+    raise SystemExit('STOP: active TEST release differs from approved current TEST RC01 release')
 if 'server_name test.rayongcoop.org;' not in config:
     raise SystemExit('STOP: incorrect TEST host')
 if 'RYCOOPWEB TEST - Authorized Access' not in config:
