@@ -567,6 +567,15 @@ $router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class,
     $r->get('/schema', 'Admin\\LedController@schema');
 });
 
+
+// Homepage layout: public published state only; admin edits require auth, CSRF and fresh MFA.
+$router->get('/api/public/layout', 'Admin\\HomepageLayoutController@published');
+$router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::class]], function(\\App\\Core\\Router $r) {
+    $r->get('', 'Admin\\HomepageLayoutController@show');
+    $r->post('/draft', 'Admin\\HomepageLayoutController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\HomepageLayoutController@publish', [CsrfMiddleware::class]);
+});
+
 // Public CMS: controller checks the section's module and action on every call.
 $router->get('/api/public/content', 'Admin\\PublicContentController@publicCatalog');
 $router->group(['prefix'=>'api/admin/public-content','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r){
