@@ -21,13 +21,24 @@ const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok',
 const tupleSection = section => ['advisors','auditors'].includes(section);
 const viewRow = (row, section) => tupleSection(section) ? { name: row[0], position: row[1] } : row;
 const labelOf = row => row?.name || row?.title || row?.type || 'รายการใหม่';
+const safeRows = (value, section) => section === 'profile'
+  ? (value && !Array.isArray(value) && typeof value === 'object' ? [value] : [])
+  : (Array.isArray(value) ? value : []);
+const safeRevisionValue = (payload, section) => {
+  try {
+    const value = typeof payload === 'string' ? JSON.parse(payload) : payload;
+    return section === 'profile'
+      ? (value && !Array.isArray(value) && typeof value === 'object' ? value : null)
+      : (Array.isArray(value) ? value : []);
+  } catch { return section === 'profile' ? null : []; }
+};
 
 function Preview({ value, section, boardNames }) {
-  const rows = section === 'profile' ? [value] : value;
+  const rows = safeRows(value, section);
   return <div className="public-content-preview">{rows.map((original,index) => {
-    const row=viewRow(original,section);
-    return <article key={index}><strong>{labelOf(row)}</strong><dl>{fields[section].map(([key,label]) => row[key] != null && row[key] !== '' && <React.Fragment key={key}><dt>{label}</dt><dd>{Array.isArray(row[key]) ? row[key].join(' / ') : typeof row[key] === 'boolean' ? (row[key] ? 'ใช่' : 'ไม่') : String(row[key])}</dd></React.Fragment>)}</dl>
-      {section==='groups' && <ul>{row.members.map(([id,position])=><li key={id}>{boardNames[id] || `บุคลากร ${id}`} — {position}</li>)}</ul>}
+    const row=viewRow(original,section) || {};
+    return <article key={index}><strong>{labelOf(row)}</strong><dl>{(fields[section] || []).map(([key,label]) => row[key] != null && row[key] !== '' && <React.Fragment key={key}><dt>{label}</dt><dd>{Array.isArray(row[key]) ? row[key].join(' / ') : typeof row[key] === 'boolean' ? (row[key] ? 'ใช่' : 'ไม่') : String(row[key])}</dd></React.Fragment>)}</dl>
+      {section==='groups' && <ul>{(Array.isArray(row.members) ? row.members : []).map(([id,position],i)=><li key={`${id}-${i}`}>{boardNames[id] || `บุคลากร ${id}`} — {position}</li>)}</ul>}
     </article>;
   })}{!rows.length && <p>ไม่มีรายการ</p>}</div>;
 }
@@ -43,7 +54,7 @@ export default function PublicContentAdminPage() {
   const [dirty,setDirty]=useState(false),[preview,setPreview]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
   const definition=sections.find(item=>item.key===section);
-  const boardNames=Object.fromEntries(catalog.boardMembers.map(p=>[p.id,p.name]));
+  const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
     const available = result.sections || [];
     setSections(available);
@@ -59,14 +70,14 @@ export default function PublicContentAdminPage() {
     return()=>controller.abort();
   },[section,refresh]);
   useEffect(()=>{const warn=e=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
-  const rows=section==='profile'?[value]:value;
+  const rows=safeRows(value,section);
   const original=rows?.[selected];
   const row=original?viewRow(original,section):null;
   function change(key,newValue){setValue(current=>{
     if(section==='profile')return {...current,[key]:newValue};
     return current.map((item,index)=>index!==selected?item:tupleSection(section)?[key==='name'?newValue:item[0],key==='position'?newValue:item[1]]:{...item,[key]:newValue});
   });setDirty(true);}
-  function add(){let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:'',image:'',...(section==='boards'?{term:value[0]?.term||'ชุดที่ 38'}:{})};else if(section==='groups')entry={title:'',members:[],term:catalog.boardMembers[0]?.term||'ชุดที่ 38'};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
+  function add(){if(!Array.isArray(value) || section==='profile')return;let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:'',image:'',...(section==='boards'?{term:value[0]?.term||'ชุดที่ 38'}:{})};else if(section==='groups')entry={title:'',members:[],term:catalog.boardMembers[0]?.term||'ชุดที่ 38'};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
   function copyBoardToTerm(){
     if(section!=='boards'||!row)return;
     const target=window.prompt('ระบุชุดกรรมการใหม่ เช่น ชุดที่ 39', 'ชุดที่ 39');
@@ -108,7 +119,7 @@ export default function PublicContentAdminPage() {
     <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
-      {section!=='profile'&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
+      {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
       {section==='boards'&&row&&definition?.canEdit&&<div className="surface-card" style={{padding:16,margin:'1rem 0'}}>
         <h3>จัดการชุดกรรมการและรูปภาพ</h3>
         <p>สามารถคัดลอกกรรมการไปชุดใหม่โดยไม่เปลี่ยนชุดเดิม และเพิ่มกรรมการใหม่จากปุ่มเพิ่มรายการ</p>
@@ -121,15 +132,15 @@ export default function PublicContentAdminPage() {
         {row.image&&<img src={row.image} alt={'ตัวอย่างรูป '+row.name} style={{width:120,height:120,objectFit:'cover',borderRadius:'50%'}}/>}
       </div>}
       <form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
-        {row&&fields[section].map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-status'?<select value={row[key]||'active'} onChange={e=>change(key,e.target.value)}><option value="active">ดำรงตำแหน่ง</option><option value="former">พ้นตำแหน่ง</option></select>:type==='checkbox'?<input type="checkbox" checked={!!row[key]} onChange={e=>change(key,e.target.checked)}/>:<input type={type==='rate'?'number':type} disabled={section==='products'&&key==='rateValue'} step={type==='rate'?'0.001':undefined} min={['number','rate'].includes(type)?0:undefined} value={type==='rate'?String(row[key]??'').replace('%',''):row[key]??''} onChange={e=>change(key,type==='rate'&&key==='rate'?`${e.target.value}%`:e.target.value)} />}</label>)}
+        {row&&(fields[section]||[]).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-status'?<select value={row[key]||'active'} onChange={e=>change(key,e.target.value)}><option value="active">ดำรงตำแหน่ง</option><option value="former">พ้นตำแหน่ง</option></select>:type==='checkbox'?<input type="checkbox" checked={!!row[key]} onChange={e=>change(key,e.target.checked)}/>:<input type={type==='rate'?'number':type} disabled={section==='products'&&key==='rateValue'} step={type==='rate'?'0.001':undefined} min={['number','rate'].includes(type)?0:undefined} value={type==='rate'?String(row[key]??'').replace('%',''):row[key]??''} onChange={e=>change(key,type==='rate'&&key==='rate'?`${e.target.value}%`:e.target.value)} />}</label>)}
         {section==='products'&&<p>แก้อัตราดอกเบี้ยที่หมวดอัตราเงินกู้ เพื่อให้หน้าเว็บและเครื่องคำนวณใช้ตัวเลขเดียวกัน</p>}
-        {section==='groups'&&row&&<div><label>ชุดกรรมการ<input value={row.term||''} onChange={e=>change('term',e.target.value)} placeholder="ชุดที่ 38" /></label><h3>สมาชิกคณะย่อย</h3>{row.members.map(([id,position],index)=><div key={index} className="public-content-toolbar"><select aria-label="กรรมการ" value={id} onChange={e=>change('members',row.members.map((m,i)=>i===index?[Number(e.target.value),m[1]]:m))}>{catalog.boardMembers.filter(person=>!row.term||person.term===row.term).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><input aria-label="ตำแหน่งในคณะย่อย" value={position} onChange={e=>change('members',row.members.map((m,i)=>i===index?[m[0],e.target.value]:m))}/><button type="button" onClick={()=>change('members',row.members.filter((_,i)=>i!==index))}>นำออก</button></div>)}<button type="button" onClick={()=>change('members',[...row.members,[catalog.boardMembers.find(person=>!row.term||person.term===row.term)?.id,'กรรมการ']])}>เพิ่มกรรมการในคณะ</button></div>}
+        {section==='groups'&&row&&Array.isArray(row.members)&&<div><label>ชุดกรรมการ<input value={row.term||''} onChange={e=>change('term',e.target.value)} placeholder="ชุดที่ 38" /></label><h3>สมาชิกคณะย่อย</h3>{row.members.map(([id,position],index)=><div key={index} className="public-content-toolbar"><select aria-label="กรรมการ" value={id} onChange={e=>change('members',row.members.map((m,i)=>i===index?[Number(e.target.value),m[1]]:m))}>{catalog.boardMembers.filter(person=>!row.term||person.term===row.term).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><input aria-label="ตำแหน่งในคณะย่อย" value={position} onChange={e=>change('members',row.members.map((m,i)=>i===index?[m[0],e.target.value]:m))}/><button type="button" onClick={()=>change('members',row.members.filter((_,i)=>i!==index))}>นำออก</button></div>)}<button type="button" onClick={()=>change('members',[...row.members,[catalog.boardMembers.find(person=>!row.term||person.term===row.term)?.id,'กรรมการ']])}>เพิ่มกรรมการในคณะ</button></div>}
         <label>วันที่มีผล (ค.ศ.) <input type="date" required value={effective} onChange={e=>setEffective(e.target.value)}/></label><label>เอกสารหรือหน้าอ้างอิง (HTTPS) <input type="url" required value={source} onChange={e=>setSource(e.target.value)}/></label><label>เหตุผลการแก้ไข <textarea required maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
         <label>วันสิ้นสุด (ไม่บังคับ)<input type="date" min={effective} value={expires} onChange={e=>{setExpires(e.target.value);setDirty(true);}} /></label><button type="submit" className="btn btn-primary">บันทึกร่างเพื่อรอเผยแพร่</button>
       </fieldset></form>
       <button className="btn btn-outline" onClick={()=>setPreview(p=>!p)}>ดูตัวอย่างร่าง</button>{preview&&<Preview value={value} section={section} boardNames={boardNames}/>}
-      <section><h2>ร่างและประวัติการเผยแพร่</h2>{!data.history.length&&<p>ยังไม่มีประวัติในระบบใหม่นี้</p>}{data.history.map(revision=><article className="surface-card public-content-revision" key={revision.id}><h3>#{revision.id} · {revision.state==='draft'?'รอเผยแพร่':revision.state==='published'?'อนุมัติแล้ว':'ไม่อนุมัติ'}</h3><p>{revision.note}</p><p>มีผล {revision.effective_on} · ผู้แก้ไข #{revision.created_by}{revision.published_by&&` · ผู้เผยแพร่ #${revision.published_by}`}</p><a href={revision.source_url} target="_blank" rel="noopener noreferrer">แหล่งอ้างอิง</a><details><summary>ตรวจข้อมูลก่อน–หลัง</summary><h4>ก่อนแก้ไข</h4><Preview value={JSON.parse(revision.previous_payload)} section={section} boardNames={boardNames}/><h4>หลังแก้ไข</h4><Preview value={JSON.parse(revision.payload)} section={section} boardNames={boardNames}/></details>
-        <div className="public-content-toolbar">{revision.state==='draft'&&definition?.canPublish&&<button disabled={busy||dirty} className="btn btn-primary" onClick={()=>publish(revision)}>อนุมัติและเผยแพร่</button>}{definition?.canEdit&&<button disabled={busy} onClick={()=>{if(!dirty||window.confirm('แทนร่างปัจจุบันด้วยเวอร์ชันนี้?')){setValue(JSON.parse(revision.payload));setSelected(0);setNote(`นำข้อมูลเวอร์ชัน #${revision.id} มาจัดทำร่างใหม่`);setSource(revision.source_url);setEffective(today());setDirty(true);}}}>ใช้เวอร์ชันนี้สร้างร่างใหม่</button>}</div></article>)}</section>
+      <section><h2>ร่างและประวัติการเผยแพร่</h2>{!(Array.isArray(data.history) && data.history.length)&&<p>ยังไม่มีประวัติในระบบใหม่นี้</p>}{(Array.isArray(data.history) ? data.history : []).map(revision=><article className="surface-card public-content-revision" key={revision.id}><h3>#{revision.id} · {revision.state==='draft'?'รอเผยแพร่':revision.state==='published'?'อนุมัติแล้ว':'ไม่อนุมัติ'}</h3><p>{revision.note}</p><p>มีผล {revision.effective_on} · ผู้แก้ไข #{revision.created_by}{revision.published_by&&` · ผู้เผยแพร่ #${revision.published_by}`}</p><a href={revision.source_url} target="_blank" rel="noopener noreferrer">แหล่งอ้างอิง</a><details><summary>ตรวจข้อมูลก่อน–หลัง</summary><h4>ก่อนแก้ไข</h4><Preview value={safeRevisionValue(revision.previous_payload,section)} section={section} boardNames={boardNames}/><h4>หลังแก้ไข</h4><Preview value={safeRevisionValue(revision.payload,section)} section={section} boardNames={boardNames}/></details>
+        <div className="public-content-toolbar">{revision.state==='draft'&&definition?.canPublish&&<button disabled={busy||dirty} className="btn btn-primary" onClick={()=>publish(revision)}>อนุมัติและเผยแพร่</button>}{definition?.canEdit&&<button disabled={busy} onClick={()=>{if(!dirty||window.confirm('แทนร่างปัจจุบันด้วยเวอร์ชันนี้?')){setValue(safeRevisionValue(revision.payload,section));setSelected(0);setNote(`นำข้อมูลเวอร์ชัน #${revision.id} มาจัดทำร่างใหม่`);setSource(revision.source_url);setEffective(today());setDirty(true);}}}>ใช้เวอร์ชันนี้สร้างร่างใหม่</button>}</div></article>)}</section>
     </>}
   </section>;
 }
