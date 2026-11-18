@@ -75,8 +75,8 @@ export default function AdminHomepageLayoutPage() {
               <input type="password" inputMode="numeric" autoComplete="one-time-code" value={totp} maxLength={8} onChange={e=>setTotp(e.target.value)} placeholder="รหัสยืนยัน MFA" />
             </label>
             <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:16}}>
-              <button type="button" disabled={busy||!dirty||!/^\\d{6,8}$/.test(totp)} onClick={()=>perform('draft')}>บันทึกร่าง</button>
-              <button type="button" disabled={busy||dirty||!state.draft||!/^\\d{6,8}$/.test(totp)} onClick={()=>{if(window.confirm('ยืนยันเผยแพร่การเปิด–ปิดส่วนหน้าแรก?'))perform('publish');}}>อนุมัติเผยแพร่</button>
+              <button type="button" disabled={busy||!dirty||!/^\d{6,8}$/.test(totp)} onClick={()=>perform('draft')}>บันทึกร่าง</button>
+              <button type="button" disabled={busy||dirty||!state.draft||!/^\d{6,8}$/.test(totp)} onClick={()=>{if(window.confirm('ยืนยันเผยแพร่การเปิด–ปิดส่วนหน้าแรก?'))perform('publish');}}>อนุมัติเผยแพร่</button>
               <button type="button" disabled={busy} onClick={async()=>{try{await load();setNotice('โหลดข้อมูลล่าสุดแล้ว');setError('');}catch(e){setError(e.message);}}}>โหลดข้อมูลล่าสุด</button>
             </div>
           </div>
