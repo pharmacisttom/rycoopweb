@@ -576,6 +576,14 @@ $router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::clas
     $r->post('/publish', 'Admin\\HomepageLayoutController@publish', [CsrfMiddleware::class]);
 });
 
+// Navigation text CMS: public published values and MFA-gated admin drafts.
+$router->get('/api/public/navigation-copy', 'Admin\\SiteNavigationCopyController@published');
+$router->group(['prefix'=>'api/admin/navigation-copy','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\SiteNavigationCopyController@show');
+    $r->post('/draft', 'Admin\\SiteNavigationCopyController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\SiteNavigationCopyController@publish', [CsrfMiddleware::class]);
+});
+
 // Public CMS: controller checks the section's module and action on every call.
 $router->get('/api/public/content', 'Admin\\PublicContentController@publicCatalog');
 $router->group(['prefix'=>'api/admin/public-content','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r){
