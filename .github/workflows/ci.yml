@@ -323,6 +323,9 @@ jobs:
           node tests/AdminUIComponentsTest.mjs
           node tests/MfaUiRedesignTest.mjs
 
+      - name: Verify admin responsive CSS RC02 contracts
+        run: node tests/AdminLayoutPolishRC02Test.mjs
+
       - name: Build frontend
         run: npm run build
 
