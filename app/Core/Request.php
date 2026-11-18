@@ -65,14 +65,20 @@ class Request
 
     private function parseBody(): array
     {
+        if (!in_array($this->method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            return [];
+        }
+        $contentType = strtolower(trim(explode(';', (string)($_SERVER['CONTENT_TYPE'] ?? ''))[0]));
+        if ($contentType === 'application/json' || str_ends_with($contentType, '+json')) {
+            $json = json_decode((string)file_get_contents('php://input'), true);
+            return is_array($json) ? $this->sanitizeArray($json) : [];
+        }
         if ($this->method === 'POST') {
-            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-            if (str_contains($contentType, 'application/json')) {
-                $raw = file_get_contents('php://input');
-                $json = json_decode($raw, true);
-                return is_array($json) ? $this->sanitizeArray($json) : [];
-            }
             return $this->sanitizeArray($_POST);
+        }
+        if ($contentType === 'application/x-www-form-urlencoded') {
+            parse_str((string)file_get_contents('php://input'), $body);
+            return $this->sanitizeArray($body);
         }
         return [];
     }

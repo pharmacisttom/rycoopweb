@@ -670,3 +670,6 @@ $router->group(['prefix'=>'api/admin/public-content','middleware'=>[AuthMiddlewa
     $r->post('/revisions/{id}/publish', 'Admin\\PublicContentController@publish', [CsrfMiddleware::class]);
     $r->post('/upload', 'Admin\\PublicContentController@upload', [new PermissionMiddleware(['people', 'coop_info'], 'update'), CsrfMiddleware::class]);
 });
+
+// Versioned Dynamic Layout and Activity Gallery API.
+require __DIR__.'/dynamic-layout-routes.php';

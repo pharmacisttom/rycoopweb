@@ -95,6 +95,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
     icon: FileText,
     items: [
       { label: 'แคมเปญป๊อปอัป (Popup Manager)', to: '/admin/popups', permissions: ['news.view', 'content.view'] },
+      { label: 'โครงสร้างเว็บไซต์และรูปกิจกรรม', to: '/admin/layout', permissions: ['layout.view'] },
       { label: 'ภาพสไลด์แบนเนอร์ (Hero Slides)', to: '/admin/hero-slides', permissions: ['news.view', 'content.view'] },
       { label: 'ข่าวสาร & ประชาสัมพันธ์', to: '/admin/content?tab=news', permissions: ['news.view'] },
       { label: 'สวัสดิการสมาชิก', to: '/admin/welfare', permissions: ['welfare.view'] },

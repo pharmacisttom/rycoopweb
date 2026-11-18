@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {parse} from '@babel/parser';
+import {createHash} from 'node:crypto';
+const baseline=JSON.parse(fs.readFileSync('tests/fixtures/legacy-home-layout.json','utf8'));
+const source=fs.readFileSync('src/pages/HomePage.jsx','utf8').replaceAll('\r\n','\n');
+const ast=parse(source,{sourceType:'module',plugins:['jsx']});
+const component=ast.program.body.find(n=>n.type==='ExportDefaultDeclaration').declaration;
+const root=component.body.body.find(n=>n.type==='ReturnStatement').argument;
+assert.equal(root.openingElement.name.name,'DynamicHome');
+const slots=root.openingElement.attributes.find(a=>a.name.name==='legacy').value.expression.properties;
+assert.deepEqual(slots.map(p=>p.key.name),Object.keys(baseline));
+for(const slot of slots)assert.equal(createHash('sha256').update(source.slice(slot.value.start,slot.value.end)).digest('hex'),baseline[slot.key.name],`legacy block changed: ${slot.key.name}`);
+console.log('PASS: all eight existing homepage JSX blocks, conditional statistics, order and feature references preserved exactly');

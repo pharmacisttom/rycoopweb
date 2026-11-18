@@ -1,0 +1,51 @@
+name: Dynamic layout isolated QA
+on:
+  push:
+    branches: ['codex/dynamic-layout-gallery']
+  pull_request:
+    paths: ['app/Services/*Layout*', 'app/Services/LayoutImageService.php', 'database/migrations/032*', 'src/pages/*Dynamic*', 'tests/DynamicLayout*']
+permissions:
+  contents: read
+jobs:
+  layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-fixture-only
+          MYSQL_DATABASE: rycoopweb_test
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -pisolated-fixture-only" --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, pdo_sqlite, gd, mbstring, fileinfo
+          tools: composer:v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci
+      - run: php tests/DynamicLayoutTest.php
+      - run: php tests/DynamicLayoutMySqlTest.php
+        env:
+          DYNAMIC_LAYOUT_ISOLATED: '1'
+          DYNAMIC_LAYOUT_MYSQL_DSN: 'mysql:host=127.0.0.1;port=3306;dbname=rycoopweb_test'
+          DYNAMIC_LAYOUT_MYSQL_USER: root
+          DYNAMIC_LAYOUT_MYSQL_PASSWORD: isolated-fixture-only
+      - run: node tests/DynamicLayoutHttpTest.mjs
+      - run: node tests/DynamicLayoutRegressionTest.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/DynamicLayoutBrowserTest.mjs
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dynamic-layout-evidence
+          path: storage/tmp/dynamic-layout-*/
+          retention-days: 7

@@ -1,0 +1,47 @@
+[
+  {
+    "command": "php tests/DynamicLayoutTest.php",
+    "exit_code": 0,
+    "seconds": 3.36
+  },
+  {
+    "command": "node tests/DynamicLayoutHttpTest.mjs",
+    "exit_code": 0,
+    "seconds": 3.8
+  },
+  {
+    "command": "node tests/DynamicLayoutRegressionTest.mjs",
+    "exit_code": 0,
+    "seconds": 0.14
+  },
+  {
+    "command": "php tests/BoardTermManagementTest.php",
+    "exit_code": 0,
+    "seconds": 0.53
+  },
+  {
+    "command": "php tests/PublicContentWorkflowTest.php",
+    "exit_code": 0,
+    "seconds": 0.17
+  },
+  {
+    "command": "php tests/MediaUrlTest.php",
+    "exit_code": 0,
+    "seconds": 0.12
+  },
+  {
+    "command": "php tests/SecurityRegressionTest.php",
+    "exit_code": 0,
+    "seconds": 0.44
+  },
+  {
+    "command": "php tests/MfaWorkflowTest.php",
+    "exit_code": 0,
+    "seconds": 1.52
+  },
+  {
+    "command": "php tests/NewsGalleryTest.php",
+    "exit_code": 0,
+    "seconds": 2.45
+  }
+]

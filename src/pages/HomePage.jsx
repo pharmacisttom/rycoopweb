@@ -1,3 +1,4 @@
+import { DynamicHome } from '../components/layout/DynamicLayoutRenderer';
 import HeroSlider from '../components/home/HeroSlider';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -156,18 +157,8 @@ export default function HomePage() {
     setIsNewsSlideshowPaused(false);
   };
 
-  return (
-    <div>
-
-      {/* =========================================================================
-          HERO PROMOTIONAL SLIDER (Modern White & Blue High-Impact Carousel)
-          ========================================================================= */}
-      <HeroSlider slides={heroSlides} />
-
-      {/* =========================================================================
-          HOMEPAGE QUICK ACCESS CARDS (Clean White & Blue Responsive Grid)
-          ========================================================================= */}
-      <section style={{ padding: '2.5rem 0 2rem 0', background: 'var(--background-main, #F4F8FD)' }}>
+  return <DynamicHome legacy={{hero: (<HeroSlider slides={heroSlides} />),
+quick_access: (<section style={{ padding: '2.5rem 0 2rem 0', background: 'var(--background-main, #F4F8FD)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
@@ -369,12 +360,8 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
-
-      {/* =========================================================================
-          CHAIRPERSON WELCOME & COOPERATIVE GOVERNANCE (สารจากประธานกรรมการสหกรณ์)
-          ========================================================================= */}
-      <section className="section" style={{ background: '#FFFFFF', padding: '3.5rem 0', borderBottom: '1px solid #E2E8F0' }}>
+      </section>),
+introduction: (<section className="section" style={{ background: '#FFFFFF', padding: '3.5rem 0', borderBottom: '1px solid #E2E8F0' }}>
         <div className="container">
           <div style={{
             display: 'grid',
@@ -556,12 +543,8 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
-
-      {/* =========================================================================
-          NEWS, ANNOUNCEMENTS & HIGHLIGHT RATES (ข่าวสาร ประกาศ และอัตราดอกเบี้ยเด่น)
-          ========================================================================= */}
-      <section className="section" style={{ background: '#0F2B5C', padding: '3.5rem 0', color: '#ffffff' }}>
+      </section>),
+statistics_news: (<section className="section" style={{ background: '#0F2B5C', padding: '3.5rem 0', color: '#ffffff' }}>
         <div className="container">
           <div className="section-title-wrap" style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
             <span className="section-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}>
@@ -732,12 +715,8 @@ export default function HomePage() {
             </section>
           </div>
         </div>
-      </section>
-
-      {/* =========================================================================
-          KEY COOPERATIVE STATS
-          ========================================================================= */}
-      {keyStats.length > 0 && (
+      </section>),
+statistics: (keyStats.length > 0 && (
       <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
 
@@ -782,12 +761,8 @@ export default function HomePage() {
 
         </div>
       </section>
-      )}
-
-      {/* =========================================================================
-          FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)
-          ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-main)' }}>
+      )),
+loans: (<section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -841,21 +816,13 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
-
-      {/* =========================================================================
-          INTERACTIVE LOAN CALCULATOR SUITE EMBED
-          ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>),
+calculators: (<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           <LoanCalculator />
         </div>
-      </section>
-
-      {/* =========================================================================
-          MEMBER WELFARE HIGHLIGHTS
-          ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>),
+welfare: (<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -890,11 +857,7 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
-
-
-    </div>
-  );
+      </section>)}} />;
 }
 
 const quickServiceCardStyle = {

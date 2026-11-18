@@ -1,3 +1,4 @@
+import { DynamicNavigation, ActivityIndexPage, ActivityAlbumPage, DynamicSectionPage } from './components/layout/DynamicLayoutRenderer';
 import AdminStoredContentPage from './pages/AdminStoredContentPage';
 import AdminActionProvider from './components/admin/AdminActionProvider';
 import AdminAppShell from './components/admin/AdminAppShell';
@@ -33,6 +34,8 @@ const AdminMembersDashboardPage = lazy(() => import('./pages/AdminMembersDashboa
 const AdminMembersPage = lazy(() => import('./pages/AdminMembersPage'));
 const AdminMembersHealthPage = lazy(() => import('./pages/AdminMembersHealthPage'));
 const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage'));
+const AdminDynamicLayoutPage = lazy(() => import('./pages/AdminDynamicLayoutPage'));
+const DynamicLayoutPreviewPage = lazy(() => import('./pages/DynamicLayoutPreviewPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const AdminControlCenterPage = lazy(() => import('./pages/AdminControlCenterPage'));
 const AdminAccessPage = lazy(() => import('./pages/AdminAccessPage'));
@@ -223,7 +226,7 @@ export default function App() {
   return (
     <div className="app-container">
       <ScrollToTop />
-      {!memberAdminPage && <><TopBar /><Navbar /></>}
+      {!memberAdminPage && <><TopBar /><Navbar /><DynamicNavigation /></>}
 
       <main className="main-content">
         <Suspense fallback={<PageSkeletonLoader />}>
@@ -263,6 +266,11 @@ export default function App() {
             <Route path="/admin/backups/history" element={<StaffProtectedRoute><AdminControlCenterPage section="backups-history" /></StaffProtectedRoute>} />
             <Route path="/admin/health" element={<StaffProtectedRoute><AdminControlCenterPage section="health" /></StaffProtectedRoute>} />
             <Route path="/admin/reports" element={<StaffProtectedRoute><AdminControlCenterPage section="reports" /></StaffProtectedRoute>} />
+            <Route path="/admin/layout" element={<StaffProtectedRoute permission="layout.view"><AdminDynamicLayoutPage /></StaffProtectedRoute>} />
+            <Route path="/admin/layout/preview" element={<StaffProtectedRoute permission="layout.view"><DynamicLayoutPreviewPage /></StaffProtectedRoute>} />
+            <Route path="/gallery" element={<ActivityIndexPage />} />
+            <Route path="/gallery/:slug" element={<ActivityAlbumPage />} />
+            <Route path="/sections/:slug" element={<DynamicSectionPage />} />
             <Route path="/admin/settings" element={<StaffProtectedRoute><AdminControlCenterPage section="settings" /></StaffProtectedRoute>} />
             <Route path="/admin/access" element={<StaffProtectedRoute roles={['super_admin']}><AdminAccessPage /></StaffProtectedRoute>} />
             <Route path="/admin/workspace" element={<StaffProtectedRoute><AdminWorkspacePage /></StaffProtectedRoute>} />

@@ -1,0 +1,504 @@
+Actual executed checks from isolated clean source review; 2026-11-18 Asia/Bangkok. No remote TEST/Production changes.
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Controllers\Admin\DynamicLayoutController.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Controllers\Api\DynamicLayoutPublicController.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Core\Request.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Core\Router.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Services\AccessService.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Services\DynamicLayoutService.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Services\LayoutImageService.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\app\Services\LayoutSchema.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\config\dynamic-layout-routes.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\config\routes.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\tests\DynamicLayoutFixture.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\tests\DynamicLayoutMySqlTest.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\tests\DynamicLayoutTest.php
+
+No syntax errors detected in D:\rycoopweb\outputs\dynamic-layout\review\tests\fixtures\DynamicLayoutRouter.php
+
+
+CHECK: clean-DynamicLayoutTest
+PASS: all eight legacy homepage blocks are available without seed writes
+PASS: public has no draft fallback exposure
+PASS: draft and public GET are write-free
+PASS: member cannot create layout
+PASS: pending MFA cannot read drafts
+PASS: creating gallery leaves public website unchanged
+PASS: stale concurrent edit rejected
+PASS: duplicate section slug rejected
+PASS: hierarchy cycles rejected
+PASS: deleting a parent with children rejected
+PASS: foreign parent rejected
+PASS: category cycle rejected
+PASS: cannot delete referenced category
+PASS: invalid activity date rejected
+PASS: duplicate album slug rejected
+PASS: unsafe image URL rejected
+PASS: stored rich text sanitized by HTMLPurifier
+PASS: signature/unsupported/size upload rejection
+PASS: signature/unsupported/size upload rejection
+PASS: signature/unsupported/size upload rejection
+PASS: image path traversal rejected
+PASS: decoded full and thumbnail resized
+PASS: safe re-encoding removes appended payload and metadata
+PASS: JPEG EXIF metadata stripped by pixel re-encoding
+PASS: unpublished image denied to public
+PASS: editor cannot publish
+PASS: login MFA alone cannot publish
+PASS: step-up scope must match layout publication
+PASS: fresh real TOTP permits transactional publication
+PASS: parent category includes nested album
+PASS: published image membership grants access
+PASS: public album detail snapshot contract
+PASS: consumed TOTP grant cannot be replayed
+PASS: draft album edit cannot change published snapshot
+PASS: draft image edit cannot change published metadata
+PASS: duplicate image order rejected
+PASS: draft delete preserves historical published bytes
+PASS: bulk ordering persists
+PASS: incomplete and duplicate bulk order rejected
+PASS: concurrent publication stale version rejected
+PASS: required audit fault propagated
+PASS: failed publication rolls back revision pointer and version
+PASS: rollback creates new immutable publication
+PASS: rollback restores album content
+PASS: rollback preserves working draft
+PASS: all public reads remain write-free
+PASS: draft audit failure rolls back edit
+PASS: albums paginate beyond first twenty without an album-count cap
+PASS: unpublished new album pages do not leak to public
+PASS: authenticated route GET /api/admin/v1/layout/draft
+PASS: authenticated route GET /api/admin/v1/layout/preview
+PASS: authenticated route GET /api/admin/v1/layout/sections
+PASS: authenticated route GET /api/admin/v1/layout/sections/{id}
+PASS: authenticated route GET /api/admin/v1/layout/gallery/albums
+PASS: authenticated route GET /api/admin/v1/layout/gallery/albums/{id}
+PASS: authenticated route GET /api/admin/v1/layout/images/{image}/{size}
+PASS: authenticated route POST /api/admin/v1/layout/draft
+PASS: CSRF route POST /api/admin/v1/layout/draft
+PASS: authenticated route POST /api/admin/v1/layout/sections
+PASS: CSRF route POST /api/admin/v1/layout/sections
+PASS: authenticated route POST /api/admin/v1/layout/sections/{id}/subsections
+PASS: CSRF route POST /api/admin/v1/layout/sections/{id}/subsections
+PASS: authenticated route PATCH /api/admin/v1/layout/sections/reorder
+PASS: CSRF route PATCH /api/admin/v1/layout/sections/reorder
+PASS: authenticated route PATCH /api/admin/v1/layout/sections/{id}
+PASS: CSRF route PATCH /api/admin/v1/layout/sections/{id}
+PASS: authenticated route DELETE /api/admin/v1/layout/sections/{id}
+PASS: CSRF route DELETE /api/admin/v1/layout/sections/{id}
+PASS: authenticated route POST /api/admin/v1/layout/categories
+PASS: CSRF route POST /api/admin/v1/layout/categories
+PASS: authenticated route PATCH /api/admin/v1/layout/categories/{id}
+PASS: CSRF route PATCH /api/admin/v1/layout/categories/{id}
+PASS: authenticated route DELETE /api/admin/v1/layout/categories/{id}
+PASS: CSRF route DELETE /api/admin/v1/layout/categories/{id}
+PASS: authenticated route POST /api/admin/v1/layout/gallery/albums
+PASS: CSRF route POST /api/admin/v1/layout/gallery/albums
+PASS: authenticated route PATCH /api/admin/v1/layout/gallery/albums/{id}
+PASS: CSRF route PATCH /api/admin/v1/layout/gallery/albums/{id}
+PASS: authenticated route DELETE /api/admin/v1/layout/gallery/albums/{id}
+PASS: CSRF route DELETE /api/admin/v1/layout/gallery/albums/{id}
+PASS: authenticated route POST /api/admin/v1/layout/gallery/albums/{id}/images
+PASS: CSRF route POST /api/admin/v1/layout/gallery/albums/{id}/images
+PASS: authenticated route PATCH /api/admin/v1/layout/gallery/albums/{id}/images/order
+PASS: CSRF route PATCH /api/admin/v1/layout/gallery/albums/{id}/images/order
+PASS: authenticated route PATCH /api/admin/v1/layout/gallery/albums/{id}/images/{image}
+PASS: CSRF route PATCH /api/admin/v1/layout/gallery/albums/{id}/images/{image}
+PASS: authenticated route DELETE /api/admin/v1/layout/gallery/albums/{id}/images/{image}
+PASS: CSRF route DELETE /api/admin/v1/layout/gallery/albums/{id}/images/{image}
+PASS: authenticated route POST /api/admin/v1/layout/publish
+PASS: CSRF route POST /api/admin/v1/layout/publish
+PASS: authenticated route POST /api/admin/v1/layout/rollback/{id}
+PASS: CSRF route POST /api/admin/v1/layout/rollback/{id}
+
+
+CHECK: clean-DynamicLayoutHttpTest
+PASS: real PHP HTTP routing, sessions, MFA, CSRF, JSON PATCH/DELETE, persisted SQLite CRUD, multipart image signatures/re-encoding/private-public access, immutable publication and replay rejection
+
+
+CHECK: clean-DynamicLayoutRegressionTest
+PASS: all eight existing homepage JSX blocks, conditional statistics, order and feature references preserved exactly
+
+
+CHECK: clean-BoardTermManagementTest
+PASS: import preview performs zero writes
+PASS: legacy preview counts and contract
+PASS: no published term returns fallback
+PASS: import fault injected
+PASS: import rollback leaves board_terms empty
+PASS: import rollback leaves board_term_members empty
+PASS: import rollback leaves board_term_groups empty
+PASS: import rollback leaves board_term_group_members empty
+PASS: draft import leaves public catalog unchanged
+PASS: term 38 imported as draft
+PASS: re-import preserves every row and custom edit/photo
+PASS: destructive reconciliation rejected
+PASS: stale copy rejected
+PASS: duplicate selection rejected
+PASS: same source and destination rejected
+PASS: invalid source rejected
+PASS: foreign source member rejected
+PASS: copy fault injected
+PASS: failed copy rolls back destination and preserves source
+PASS: selective copy preserves source rows
+PASS: term 39 stays separate draft
+PASS: member photo preserved
+PASS: selected group relationships copied
+PASS: repeat copy rejected
+PASS: unapproved draft cannot publish
+PASS: editor cannot publish
+PASS: pending MFA rejected
+PASS: member cannot import
+PASS: changes invalidate approval
+PASS: exactly one current published term
+PASS: public GET paths perform zero database writes
+PASS: re-import cannot demote current term
+PASS: published term cannot be edited
+PASS: required audit failure propagated
+PASS: failed publication rolls back promotion and demotion
+PASS: replacement publication keeps one current term
+PASS: previous current archived only by explicit publication
+PASS: public API uses published board term
+PASS: BoardTerm takes precedence over published board revisions
+PASS: API rejects malformed term IDs with 422 contract
+PASS: API unauthorized publication returns 403
+PASS: Document API keeps active-only list contract
+PASS: Document API field id
+PASS: Document API field title
+PASS: Document API field category
+PASS: Document API field category_slug
+PASS: Document API field file_path
+PASS: Document API field file_size
+PASS: Document API field download_count
+PASS: Document API field file_url
+PASS: Document API refuses inactive download
+PASS: board route authenticated /api/admin/board-terms/import-38/preview
+PASS: board route authenticated /api/admin/board-terms/import-38
+PASS: board mutation CSRF /api/admin/board-terms/import-38
+PASS: board route authenticated /api/admin/board-terms/{id}/selection-candidates
+PASS: board route authenticated /api/admin/board-terms/{id}/selective-copy/preview
+PASS: board mutation CSRF /api/admin/board-terms/{id}/selective-copy/preview
+PASS: board route authenticated /api/admin/board-terms/{id}/selective-copy
+PASS: board mutation CSRF /api/admin/board-terms/{id}/selective-copy
+PASS: board route authenticated /api/admin/board-terms/{id}/approve
+PASS: board mutation CSRF /api/admin/board-terms/{id}/approve
+PASS: board route authenticated /api/admin/board-terms
+PASS: board route authenticated /api/admin/board-terms/{id}
+PASS: board route authenticated /api/admin/board-terms/{id}/preview
+PASS: board route authenticated /api/admin/board-terms
+PASS: board mutation CSRF /api/admin/board-terms
+PASS: board route authenticated /api/admin/board-terms/reconcile-38
+PASS: board mutation CSRF /api/admin/board-terms/reconcile-38
+PASS: board route authenticated /api/admin/board-terms/upload-photo
+PASS: board mutation CSRF /api/admin/board-terms/upload-photo
+PASS: board route authenticated /api/admin/board-terms/{id}/copy
+PASS: board mutation CSRF /api/admin/board-terms/{id}/copy
+PASS: board route authenticated /api/admin/board-terms/{id}
+PASS: board mutation CSRF /api/admin/board-terms/{id}
+PASS: board route authenticated /api/admin/board-terms/{id}/update
+PASS: board mutation CSRF /api/admin/board-terms/{id}/update
+PASS: board route authenticated /api/admin/board-terms/{id}/members
+PASS: board mutation CSRF /api/admin/board-terms/{id}/members
+PASS: board route authenticated /api/admin/board-terms/{id}/members
+PASS: board mutation CSRF /api/admin/board-terms/{id}/members
+PASS: board route authenticated /api/admin/board-terms/{id}/groups
+PASS: board mutation CSRF /api/admin/board-terms/{id}/groups
+PASS: board route authenticated /api/admin/board-terms/{id}/groups
+PASS: board mutation CSRF /api/admin/board-terms/{id}/groups
+PASS: board route authenticated /api/admin/board-terms/{id}/publish
+PASS: board mutation CSRF /api/admin/board-terms/{id}/publish
+PASS: board route authenticated /api/admin/board-terms/{id}/schedule
+PASS: board mutation CSRF /api/admin/board-terms/{id}/schedule
+PASS: state-changing request without CSRF is rejected
+PASS: caller-supplied actor ID ignored in favor of authenticated session
+
+
+CHECK: clean-PublicContentWorkflowTest
+PASS: member cannot read admin revisions
+PASS: saving draft does not alter public data
+PASS: editor cannot publish
+PASS: publisher cannot edit drafts
+PASS: publisher activates approved profile
+PASS: repeat publication rejected
+PASS: stale draft cannot overwrite newer publication
+PASS: failed stale publication retains draft
+PASS: future publication does not activate early
+PASS: expired publication not shown
+PASS: loan display and calculator follow published interest rate
+PASS: unsafe source URL rejected
+PASS: stale editor version rejected
+PASS: unknown profile fields rejected
+PASS: negative rate rejected
+PASS: expiry before effective date rejected
+PASS: cannot remove person still referenced in a committee
+PASS: restore through new reviewed revision succeeds
+PASS: stable product ID preserves rate sync after renaming
+PASS: legacy public API adapter uses published rates
+PASS: product API and calculator use the same published rate
+PASS: before/after audit records persisted
+PASS: audit failure rolls back publication
+PASS: audit failure leaves public data unchanged
+
+
+CHECK: clean-MediaUrlTest
+Media URL tests passed (13 cases).
+
+
+CHECK: clean-SecurityRegressionTest
+PASS: login controller contains no hardcoded username bypass
+PASS: login controller contains no hardcoded password bypass
+PASS: member lookup does not select a default member
+PASS: member lookup does not select the first member as a fallback
+PASS: MemberPortalController.php contains no default member profile
+PASS: TaxCertificateController.php contains no default member profile
+PASS: SurveyController.php contains no default member profile
+PASS: SuggestionController.php contains no default member profile
+PASS: DividendEstimatorController.php contains no default member profile
+PASS: /member/dashboard permits only member
+PASS: /staff/dashboard permits only staff, manager, executive, finance, loan_officer, welfare_officer, document_officer, complaint_officer, auditor, it_admin
+PASS: /admin/dashboard permits only super_admin
+PASS: /dashboard permits only super_admin
+PASS: /api/admin/users permits only super_admin
+PASS: /api/admin/access/roles permits only super_admin
+PASS: GET /api/admin/members/dashboard is registered
+PASS: GET /api/admin/members/dashboard requires authentication
+PASS: GET /api/admin/members/dashboard requires members.view
+PASS: GET /api/admin/members/health is registered
+PASS: GET /api/admin/members/health requires authentication
+PASS: GET /api/admin/members/health requires members.view
+PASS: GET /api/admin/members is registered
+PASS: GET /api/admin/members requires authentication
+PASS: GET /api/admin/members requires members.view
+PASS: GET /api/admin/members/{id} is registered
+PASS: GET /api/admin/members/{id} requires authentication
+PASS: GET /api/admin/members/{id} requires members.view
+PASS: POST /api/admin/members/{id} is registered
+PASS: POST /api/admin/members/{id} requires authentication
+PASS: POST /api/admin/members/{id} requires members.update
+PASS: POST /api/admin/members/{id} requires CSRF
+PASS: POST /api/admin/dividends/preview is registered
+PASS: POST /api/admin/dividends/preview requires authentication
+PASS: POST /api/admin/dividends/preview requires dividends.import
+PASS: POST /api/admin/dividends/preview requires CSRF
+PASS: POST /api/admin/dividends/confirm is registered
+PASS: POST /api/admin/dividends/confirm requires authentication
+PASS: POST /api/admin/dividends/confirm requires dividends.import
+PASS: POST /api/admin/dividends/confirm requires CSRF
+PASS: POST /api/admin/news/{id}/update is registered
+PASS: POST /api/admin/news/{id}/update requires authentication
+PASS: POST /api/admin/news/{id}/update requires news.update
+PASS: POST /api/admin/news/{id}/update requires CSRF
+PASS: POST /api/admin/news/{id}/publish is registered
+PASS: POST /api/admin/news/{id}/publish requires authentication
+PASS: POST /api/admin/news/{id}/publish requires news.publish
+PASS: POST /api/admin/news/{id}/publish requires CSRF
+PASS: POST /api/admin/faqs is registered
+PASS: POST /api/admin/faqs requires authentication
+PASS: POST /api/admin/faqs requires faqs.create
+PASS: POST /api/admin/faqs requires CSRF
+PASS: POST /api/admin/faqs/{id}/update is registered
+PASS: POST /api/admin/faqs/{id}/update requires authentication
+PASS: POST /api/admin/faqs/{id}/update requires faqs.update
+PASS: POST /api/admin/faqs/{id}/update requires CSRF
+PASS: POST /api/admin/faqs/{id}/delete is registered
+PASS: POST /api/admin/faqs/{id}/delete requires authentication
+PASS: POST /api/admin/faqs/{id}/delete requires faqs.delete
+PASS: POST /api/admin/faqs/{id}/delete requires CSRF
+PASS: rate limit uses shared database storage
+PASS: rate limit does not store counters in the browser session
+PASS: CSRF protection is not bypassed for AJAX login
+PASS: admin dashboard does not use LOAN_PRODUCTS without importing it
+PASS: member portal respects explicit feature flag and defaults to disabled
+PASS: member login respects explicit feature flag and defaults to dividend access
+PASS: /api/member/dashboard is protected by a backend feature flag
+PASS: /member/dashboard is protected by a backend feature flag
+PASS: /portal is protected by a backend feature flag
+PASS: missing role never defaults to super_admin
+PASS: member login is denied by the backend when disabled
+PASS: login fails closed when no role is assigned
+PASS: migration checks actual nested backup restore safety flag
+PASS: backup restore safety flag resolves through runtime configuration
+Security regression tests passed.
+
+
+CHECK: clean-MfaWorkflowTest
+PASS: anonymous is denied
+PASS: anonymous cannot enroll
+PASS: completed session cannot replace MFA
+PASS: partial session reaches enrollment status with authoritative server expiry
+PASS: enrollment issues a 160-bit secret
+PASS: confirmed enrollment completes the session
+PASS: enrollment returns recovery codes once
+PASS: TOTP secret is encrypted in database
+PASS: enrollment cannot be replayed
+PASS: valid TOTP completes partial login
+PASS: TOTP replay is denied
+PASS: atomic replay update rejects a concurrent stale challenge
+PASS: single-use recovery completes partial login
+PASS: consumed recovery code cannot be reused
+PASS: expired challenge denied
+PASS: revoked partial session denied
+PASS: suspended account cannot complete MFA
+PASS: invalid ciphertext fails closed
+PASS: absolute session lifetime cannot be extended by activity
+
+
+CHECK: clean-NewsGalleryTest
+PASS: member cannot upload activity images
+PASS: reject forged, unsupported or foreign image reference
+PASS: reject forged, unsupported or foreign image reference
+PASS: reject forged, unsupported or foreign image reference
+PASS: reject forged, unsupported or foreign image reference
+PASS: reject more than 20 images
+PASS: reject file above 5 MiB
+PASS: reject aggregate upload above 12 MiB
+PASS: aggregate rejection cleans earlier files from same save
+PASS: creates display image and thumbnail
+PASS: resizes image preserving aspect ratio
+PASS: re-encoding strips appended content and metadata
+PASS: first image is cover and upload stays draft
+PASS: reordering changes cover
+PASS: public API hides submitted albums
+PASS: publisher can publish reviewed album
+PASS: public API returns published album captions and images
+PASS: public API hides future publication
+PASS: public API hides deleted albums
+PASS: removal withdraws publication and preserves shared files
+PASS: legacy string gallery remains readable
+PASS: failed transaction removes only its newly created files
+PASS: failed audit rolls back article
+
+
+CHECK: clean-public-reference
+PASS: reference values, board groups and rendered public pages
+
+
+CHECK: clean-browser
+PASS: real PHP-backed browser section/category nesting/album/upload/alt/order/draft/TOTP publication, 1440/768/375 layouts, public SEO and keyboard lightbox; screenshots in D:\rycoopweb\outputs\dynamic-layout\review\storage\tmp\dynamic-layout-browser-1dc96202-c1c9-4e14-8b37-26462ad04814
+
+
+CHECK: clean-build
+
+> rayongcoop-react@1.0.0 build
+> vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 2753 modules transformed.
+rendering chunks...
+computing gzip size...
+public/app/index.html                                        1.94 kB │ gzip:   0.83 kB
+public/app/assets/coop-logo-C7DMvEhb.webp                  128.57 kB
+public/app/assets/hero-portrait-official-DBSK6WiW.png      160.48 kB
+public/app/assets/MemberDividendsPage-3QbO8RaV.css           1.85 kB │ gzip:   0.71 kB
+public/app/assets/PublicContentAdminPage-BzxwExu2.css        1.97 kB │ gzip:   0.65 kB
+public/app/assets/ActivitySlideshow-t50UfqkA.css             2.27 kB │ gzip:   0.85 kB
+public/app/assets/RichTextContent-G9oxLtS5.css               2.89 kB │ gzip:   0.92 kB
+public/app/assets/MemberPrivacyAckPage-CtTNftYB.css          2.93 kB │ gzip:   0.98 kB
+public/app/assets/AdminDynamicLayoutPage-Dtmh7gm7.css        3.39 kB │ gzip:   1.18 kB
+public/app/assets/AdminMembers-C7-ecsW-.css                  8.38 kB │ gzip:   1.99 kB
+public/app/assets/MfaPage-S1CCNPT7.css                      11.20 kB │ gzip:   2.88 kB
+public/app/assets/RichTextEditor-MPWXhL5q.css               24.40 kB │ gzip:   3.71 kB
+public/app/assets/index-yIGLpyNh.css                       133.00 kB │ gzip:  25.13 kB
+public/app/assets/smartphone-fdoDS_hj.js                     0.40 kB │ gzip:   0.31 kB
+public/app/assets/rotate-ccw-C4_MG_Xw.js                     0.41 kB │ gzip:   0.31 kB
+public/app/assets/circle-check-big-Cgls47Ig.js               0.42 kB │ gzip:   0.32 kB
+public/app/assets/circle-x-qrkLvXAt.js                       0.43 kB │ gzip:   0.31 kB
+public/app/assets/percent-Bwy035-5.js                        0.44 kB │ gzip:   0.31 kB
+public/app/assets/user-check-BAELT8HY.js                     0.44 kB │ gzip:   0.32 kB
+public/app/assets/monitor-_YiXuZIs.js                        0.46 kB │ gzip:   0.33 kB
+public/app/assets/image-FHV1tew5.js                          0.47 kB │ gzip:   0.35 kB
+public/app/assets/inbox-8RAqzE5r.js                          0.49 kB │ gzip:   0.35 kB
+public/app/assets/file-check-DqK04pjo.js                     0.52 kB │ gzip:   0.36 kB
+public/app/assets/save-BsR_Io1c.js                           0.53 kB │ gzip:   0.35 kB
+public/app/assets/scale-4c5_7IQo.js                          0.54 kB │ gzip:   0.34 kB
+public/app/assets/trash-B71kPYSj.js                          0.55 kB │ gzip:   0.35 kB
+public/app/assets/RichTextContent-CVA2cdJV.js                0.57 kB │ gzip:   0.41 kB
+public/app/assets/building-2-BYBWKEUZ.js                     0.59 kB │ gzip:   0.37 kB
+public/app/assets/layers-Dxeqenp3.js                         0.65 kB │ gzip:   0.38 kB
+public/app/assets/DynamicLayoutPreviewPage-B5CBujp2.js       0.69 kB │ gzip:   0.49 kB
+public/app/assets/building-LZ8HcFmS.js                       0.77 kB │ gzip:   0.41 kB
+public/app/assets/LoanChecklistPage-BAn6KOOm.js              0.87 kB │ gzip:   0.46 kB
+public/app/assets/cloud-upload-Bjm06Dpc.js                   0.97 kB │ gzip:   0.50 kB
+public/app/assets/MemberAdminWarnings-DW5Hv6tM.js            1.18 kB │ gzip:   0.65 kB
+public/app/assets/NotFoundPage-Dd5HxPKW.js                   1.26 kB │ gzip:   0.67 kB
+public/app/assets/PermissionGuard-BLyYKV8U.js                1.27 kB │ gzip:   0.73 kB
+public/app/assets/BoardOfficerPage-BMt-qg_c.js               1.31 kB │ gzip:   0.81 kB
+public/app/assets/ServiceUnavailablePage-B3VjIMu7.js         1.34 kB │ gzip:   0.77 kB
+public/app/assets/PageHeader-B31Q_fsP.js                     2.18 kB │ gzip:   0.93 kB
+public/app/assets/ActivitySlideshow-7sGdAtfv.js              3.49 kB │ gzip:   1.49 kB
+public/app/assets/BoardPage-BZspPYs7.js                      4.25 kB │ gzip:   1.67 kB
+public/app/assets/LedStatusBadge-CahiwaWa.js                 4.44 kB │ gzip:   1.47 kB
+public/app/assets/LedRunHistoryTable-DeZZtAWi.js             4.97 kB │ gzip:   1.68 kB
+public/app/assets/MemberDividendsPage-CThyTyfQ.js            5.06 kB │ gzip:   1.98 kB
+public/app/assets/PrOfficerInvitations-YJdZFysF.js           5.63 kB │ gzip:   2.11 kB
+public/app/assets/AdminLedSchemaPage-2umbFsCK.js             6.40 kB │ gzip:   2.16 kB
+public/app/assets/StatisticsPage-BTD6yMBy.js                 6.70 kB │ gzip:   2.04 kB
+public/app/assets/DepositsPage-yg4nK_ff.js                   6.83 kB │ gzip:   1.83 kB
+public/app/assets/NewsPage-Apa4vVTj.js                       7.23 kB │ gzip:   2.59 kB
+public/app/assets/LoanReadinessChecklist-rc5YmJXW.js         7.51 kB │ gzip:   2.33 kB
+public/app/assets/VerifyReceiptPage-Dp_PwrSV.js              7.82 kB │ gzip:   2.37 kB
+public/app/assets/MemberPrivacyAckPage-CJABCQBl.js           8.30 kB │ gzip:   2.75 kB
+public/app/assets/AdminDividendImportPage-BJFX3Kwl.js        8.34 kB │ gzip:   2.66 kB
+public/app/assets/EServicePage-BnGHhfPC.js                   8.36 kB │ gzip:   2.73 kB
+public/app/assets/ledApi-BHE0zjgP.js                         8.37 kB │ gzip:   2.98 kB
+public/app/assets/LoansPage-X64NpXyt.js                      8.43 kB │ gzip:   2.72 kB
+public/app/assets/AdminMembersHealthPage-DqbWxMaj.js         8.62 kB │ gzip:   2.79 kB
+public/app/assets/AdminDashboardPage-DbNiOxaw.js             8.62 kB │ gzip:   3.03 kB
+public/app/assets/AdminLedReviewPage-k9NUDNFR.js             8.68 kB │ gzip:   2.91 kB
+public/app/assets/PrivacyPolicyPage-B1FPYXnW.js              8.79 kB │ gzip:   2.55 kB
+public/app/assets/CalculatorPage-BkUgRc-J.js                 9.57 kB │ gzip:   2.41 kB
+public/app/assets/AdminMembersPage-DaXeL0db.js              10.14 kB │ gzip:   3.11 kB
+public/app/assets/AdminLedBatchPage-Bb1seOS9.js             10.28 kB │ gzip:   3.07 kB
+public/app/assets/ProfilePage-Cp9VdQQG.js                   11.78 kB │ gzip:   3.45 kB
+public/app/assets/ContentAdminPage-Cg_m_ooN.js              11.98 kB │ gzip:   3.96 kB
+public/app/assets/LoanSchedulePage-D7UkWNOA.js              12.37 kB │ gzip:   3.26 kB
+public/app/assets/AdminDocumentCategoriesPage-Twig2QD4.js   12.42 kB │ gzip:   3.80 kB
+public/app/assets/WelfarePage-B5iyOFqz.js                   12.50 kB │ gzip:   3.05 kB
+public/app/assets/AdminMembersDashboardPage-BVpEioaD.js     12.61 kB │ gzip:   3.18 kB
+public/app/assets/AdminHeroSlidesPage-DY5Vmeut.js           12.91 kB │ gzip:   3.86 kB
+public/app/assets/AdminLedSearchPage-CJSpIVKi.js            13.52 kB │ gzip:   3.77 kB
+public/app/assets/AdminWelfarePage-CLdqlAj1.js              13.53 kB │ gzip:   3.61 kB
+public/app/assets/AdminLedDashboardPage-BWeelpPz.js         13.60 kB │ gzip:   3.57 kB
+public/app/assets/PublicContentAdminPage-DXVp6U5q.js        14.28 kB │ gzip:   4.86 kB
+public/app/assets/AboutPage-C_2OmCRq.js                     14.70 kB │ gzip:   3.53 kB
+public/app/assets/DocumentsPage-CPW-EibG.js                 15.01 kB │ gzip:   3.99 kB
+public/app/assets/AdminAccessPage-DB44R-wj.js               15.06 kB │ gzip:   4.38 kB
+public/app/assets/LedReviewModal-CIiiz0Gf.js                15.78 kB │ gzip:   3.89 kB
+public/app/assets/ContactPage-tBFs7zDP.js                   16.84 kB │ gzip:   4.41 kB
+public/app/assets/AdminEServicesPage-DdsNGUPi.js            18.38 kB │ gzip:   5.10 kB
+public/app/assets/StatusBadge-BLTSwdcC.js                   19.46 kB │ gzip:   5.44 kB
+public/app/assets/AdminWorkspacePage-BtxsRIX9.js            19.62 kB │ gzip:   6.02 kB
+public/app/assets/MfaPage-Q6vCKzWV.js                       20.90 kB │ gzip:   6.20 kB
+public/app/assets/VisitorStatsPage-ZdICNens.js              21.45 kB │ gzip:   5.36 kB
+public/app/assets/AdminMemberDetailPage-CSxY5GRu.js         21.69 kB │ gzip:   5.54 kB
+public/app/assets/AdminDynamicLayoutPage-BL21kIlz.js        23.17 kB │ gzip:   6.67 kB
+public/app/assets/AdminPopupsPage-DxpDQqIG.js               24.74 kB │ gzip:   6.04 kB
+public/app/assets/AdminProductsPage-D7qjMKbG.js             25.61 kB │ gzip:   5.55 kB
+public/app/assets/AdminBoardPersonnelPage-DcBaIBr0.js       54.08 kB │ gzip:  11.64 kB
+public/app/assets/MemberDashboardPage-BH6kuy1o.js          114.74 kB │ gzip:  21.68 kB
+public/app/assets/AdminControlCenterPage-pWpqmjV9.js       119.17 kB │ gzip:  25.45 kB
+public/app/assets/RichTextEditor-63A_Vq3P.js               210.93 kB │ gzip:  63.77 kB
+public/app/assets/index-Ca7h2hEj.js                        649.73 kB │ gzip: 179.35 kB
+✓ built in 5.88s
+
+Direct tool stdout captured from the executed disposable SQL test (not remote TEST):
+COMMAND: php tests/DynamicLayoutMySqlTest.php
+DSN: mysql:host=127.0.0.1;port=13318;dbname=rycoopweb_test
+DYNAMIC_LAYOUT_ISOLATED=1; fresh workspace-only datadir, synthetic fixture credentials
+ENGINE: 10.4.32-MariaDB
+PASS: forward migration runs twice without overwriting or duplicate permissions
+PASS: two independent real-TOTP publishers serialize; exactly one succeeds, one stale rejection, one immutable revision, one current pointer and one audit
+Afterward: explicit mysqladmin shutdown succeeded; process 9372 was no longer running.

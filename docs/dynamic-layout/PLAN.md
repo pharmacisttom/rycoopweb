@@ -1,0 +1,10 @@
+# Dynamic Layout & Gallery implementation plan
+
+Baseline audit (2026-11-18): this checkout has no `/admin/layout` route, layout API, visibility table or published layout. HomePage renders eight direct blocks (hero, quick access, introduction, statistics/news, conditional statistics, loans, calculators, welfare). Existing Gallery is news-specific JSON, capped at twenty images; it is not an album/category manager. Reuse React/Vite, PHP PDO, session authentication, PermissionMiddleware, CSRF, scoped TOTP step-up, HTMLPurifier, SweetAlert2, GD and required transactional audit. Preserve every existing block and public URL as the unpublished fallback.
+
+1. Add forward-only migration 032, new `layout.view/update/publish` permissions without granting existing roles, a singleton workspace/version lock, immutable publication history, paginated draft albums, image records and versioned album snapshots. Never seed over existing data.
+2. Implement validated tree/category/section operations, global optimistic versioning, gallery/image CRUD, private decoded/re-encoded images, read-only published APIs, scoped MFA publication and rollback as a new immutable publication.
+3. Add a three-panel Thai editor at `/app/admin/layout`, accessible tree/DnD plus keyboard ordering, device configuration, shared live renderer, gallery manager and draft/published/history controls.
+4. Integrate published rendering into HomePage through existing-feature slots, independent additive navigation links, section detail and album pages/SEO. Keep legacy rendering if no publication or API unavailable.
+5. Run isolated PHP/security/upload/CRUD/concurrency-contract/browser/responsive/regression/build checks; add opt-in MySQL test. Capture actual outputs, distinguish fixture evidence from TEST UAT.
+6. Resolve the user's TEST SSH connection, verify TEST identity and database, back up before any authorized migration, and execute real persisted TEST workflow if access is available. Never use production credentials or restart production. Push only scoped work and provide QA/runbook/security/readiness/handoff documents. Any inaccessible TEST gate remains explicitly open.
