@@ -12,6 +12,7 @@ import heroPortrait from '../assets/hero-portrait-official.png';
 import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
+import PublishedDynamicSections from '../components/layout/PublishedDynamicSections';
 import reference from '../data/legacyReference.json';
 import { usePublicInformation } from '../context/PublicContentContext';
 
@@ -678,6 +679,7 @@ export default function HomePage() {
       </section>}
 
 
+      <PublishedDynamicSections />
     </div>
   );
 }
