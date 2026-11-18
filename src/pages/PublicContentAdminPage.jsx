@@ -5,10 +5,11 @@ import { memberAdminApi } from '../services/memberAdminApi';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
 import { usePublicContent } from '../context/PublicContentContext';
 import './PublicContentAdminPage.css';
+import {auditBoardTerms,BOARD_TERMS,BOARD_POSITION_OPTIONS} from '../utils/boardTermAudit';
 
 const fields = {
   profile: [['nameTh','ชื่อไทย'],['nameEn','ชื่ออังกฤษ'],['shortName','ชื่อย่อ'],['slogan','คำขวัญ'],['establishedYear','ปีจัดตั้ง พ.ศ.'],['address','ที่อยู่','textarea'],['phone','โทรศัพท์'],['fax','โทรสาร'],['email','อีเมล','email'],['workHours','เวลาทำการ'],['lineId','LINE ID ทางการ'],['facebook','Facebook (เช่น facebook.com/ชื่อเพจ)'],['mapUrl','ลิงก์แผนที่','url'],['mapEmbedUrl','ลิงก์แผนที่ฝัง','url']],
-  boards: [['id','รหัสบุคลากร','number'],['name','ชื่อและนามสกุล'],['position','ตำแหน่ง'],['term','วาระ / ชุดที่'],['workplace','หน่วยงาน'],['image','ลิงก์รูปภาพ'],['status','สถานะกรรมการ','board-status']],
+  boards: [['id','รหัสบุคลากร','number'],['name','ชื่อและนามสกุล'],['position','ตำแหน่ง','board-position'],['term','วาระ / ชุดที่','board-term'],['workplace','หน่วยงาน'],['image','ลิงก์รูปภาพ'],['status','สถานะกรรมการ','board-status']],
   staff: [['id','รหัสบุคลากร','number'],['name','ชื่อและนามสกุล'],['position','ตำแหน่ง'],['department','ฝ่าย'],['image','ลิงก์รูปภาพ']],
   advisors: [['name','ชื่อและนามสกุล'],['position','ตำแหน่ง']],
   auditors: [['name','ชื่อและนามสกุล'],['position','ตำแหน่ง']],
@@ -70,6 +71,7 @@ export default function PublicContentAdminPage() {
     return()=>controller.abort();
   },[section,refresh]);
   useEffect(()=>{const warn=e=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
+  const boardAudit=section==='boards'?auditBoardTerms(value):[];
   const rows=safeRows(value,section);
   const original=rows?.[selected];
   const row=original?viewRow(original,section):null;
@@ -77,7 +79,7 @@ export default function PublicContentAdminPage() {
     if(section==='profile')return {...current,[key]:newValue};
     return current.map((item,index)=>index!==selected?item:tupleSection(section)?[key==='name'?newValue:item[0],key==='position'?newValue:item[1]]:{...item,[key]:newValue});
   });setDirty(true);}
-  function add(){if(!Array.isArray(value) || section==='profile')return;let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:'',image:'',...(section==='boards'?{term:value[0]?.term||'ชุดที่ 38'}:{})};else if(section==='groups')entry={title:'',members:[],term:catalog.boardMembers[0]?.term||'ชุดที่ 38'};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
+  function add(){if(!Array.isArray(value) || section==='profile')return;let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:section==='boards'?'กรรมการ':'',image:'',...(section==='boards'?{term:BOARD_TERMS.find(term=>term===value[selected]?.term)||'ชุดที่ 39',status:'active'}:{})};else if(section==='groups')entry={title:'',members:[],term:catalog.boardMembers[0]?.term||'ชุดที่ 38'};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
   function copyBoardToTerm(){
     if(section!=='boards'||!row)return;
     const target=window.prompt('ระบุชุดกรรมการใหม่ เช่น ชุดที่ 39', 'ชุดที่ 39');
@@ -120,6 +122,21 @@ export default function PublicContentAdminPage() {
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
       {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
+      {section==='boards'&&<section className="public-content-board-audit surface-card" aria-labelledby="board-audit-heading">
+        <h3 id="board-audit-heading">ตรวจสอบคณะกรรมการชุดที่ 38 และ 39</h3>
+        <p>เกณฑ์ตรวจรับชุดละ 15 คน (ไม่รวมผู้พ้นตำแหน่ง) รายชื่อชุดเก่ายังคงเดิม และไม่รวมที่ปรึกษาหรือผู้ตรวจสอบกิจการ</p>
+        <div className="public-content-board-audit-grid">
+          {boardAudit.map(term=><article key={term.term} className="public-content-board-audit-term">
+            <h4>{term.term} — {term.count}/15 คน</h4>
+            <ul>{term.assigned.map(role=><li key={role.position}>{role.position}: {role.count} คน</li>)}</ul>
+            {term.complete?<p className="public-content-board-audit-ok">ผ่านเกณฑ์โครงสร้าง</p>:<div className="public-content-board-audit-warning">
+              <strong>ต้องตรวจสอบข้อมูล:</strong>
+              <ul>{term.issues.map(issue=><li key={issue}>{issue}</li>)}</ul>
+            </div>}
+          </article>)}
+        </div>
+        <p className="public-content-board-audit-note">เป็นการตรวจข้อมูลในตัวแก้ไขเท่านั้น ระบบไม่เปลี่ยนตำแหน่งหรือรายชื่ออัตโนมัติ กรุณาตรวจเอกสารแต่งตั้งก่อนเผยแพร่</p>
+      </section>}
       {section==='boards'&&row&&definition?.canEdit&&<section className="surface-card public-content-board-tools" aria-labelledby="board-tools-heading">
         <header className="public-content-board-tools-heading">
           <h3 id="board-tools-heading">จัดการชุดกรรมการและรูปภาพ</h3>
@@ -146,7 +163,13 @@ export default function PublicContentAdminPage() {
         </div>
       </section>}
       <form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
-        {row&&(fields[section]||[]).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-status'?<select value={row[key]||'active'} onChange={e=>change(key,e.target.value)}><option value="active">ดำรงตำแหน่ง</option><option value="former">พ้นตำแหน่ง</option></select>:type==='checkbox'?<input type="checkbox" checked={!!row[key]} onChange={e=>change(key,e.target.checked)}/>:<input type={type==='rate'?'number':type} disabled={section==='products'&&key==='rateValue'} step={type==='rate'?'0.001':undefined} min={['number','rate'].includes(type)?0:undefined} value={type==='rate'?String(row[key]??'').replace('%',''):row[key]??''} onChange={e=>change(key,type==='rate'&&key==='rate'?`${e.target.value}%`:e.target.value)} />}</label>)}
+        {row&&(fields[section]||[]).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-position'?<select value={row[key]||''} onChange={e=>change(key,e.target.value)}>
+            {row[key]&&!BOARD_POSITION_OPTIONS.includes(row[key])&&<option value={row[key]}>ข้อมูลเดิม: {row[key]} (ควรตรวจสอบ)</option>}
+            {BOARD_POSITION_OPTIONS.map(position=><option key={position} value={position}>{position}</option>)}
+          </select>:type==='board-term'?<select value={row[key]||''} onChange={e=>change(key,e.target.value)}>
+            {row[key]&&!BOARD_TERMS.includes(row[key])&&<option value={row[key]}>{row[key]} (ข้อมูลเดิม)</option>}
+            {BOARD_TERMS.map(term=><option key={term} value={term}>{term}</option>)}
+          </select>:type==='board-status'?<select value={row[key]||'active'} onChange={e=>change(key,e.target.value)}><option value="active">ดำรงตำแหน่ง</option><option value="former">พ้นตำแหน่ง</option></select>:type==='checkbox'?<input type="checkbox" checked={!!row[key]} onChange={e=>change(key,e.target.checked)}/>:<input type={type==='rate'?'number':type} disabled={section==='products'&&key==='rateValue'} step={type==='rate'?'0.001':undefined} min={['number','rate'].includes(type)?0:undefined} value={type==='rate'?String(row[key]??'').replace('%',''):row[key]??''} onChange={e=>change(key,type==='rate'&&key==='rate'?`${e.target.value}%`:e.target.value)} />}</label>)}
         {section==='products'&&<p>แก้อัตราดอกเบี้ยที่หมวดอัตราเงินกู้ เพื่อให้หน้าเว็บและเครื่องคำนวณใช้ตัวเลขเดียวกัน</p>}
         {section==='groups'&&row&&Array.isArray(row.members)&&<div><label>ชุดกรรมการ<input value={row.term||''} onChange={e=>change('term',e.target.value)} placeholder="ชุดที่ 38" /></label><h3>สมาชิกคณะย่อย</h3>{row.members.map(([id,position],index)=><div key={index} className="public-content-toolbar"><select aria-label="กรรมการ" value={id} onChange={e=>change('members',row.members.map((m,i)=>i===index?[Number(e.target.value),m[1]]:m))}>{catalog.boardMembers.filter(person=>!row.term||person.term===row.term).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><input aria-label="ตำแหน่งในคณะย่อย" value={position} onChange={e=>change('members',row.members.map((m,i)=>i===index?[m[0],e.target.value]:m))}/><button type="button" onClick={()=>change('members',row.members.filter((_,i)=>i!==index))}>นำออก</button></div>)}<button type="button" onClick={()=>change('members',[...row.members,[catalog.boardMembers.find(person=>!row.term||person.term===row.term)?.id,'กรรมการ']])}>เพิ่มกรรมการในคณะ</button></div>}
         <label>วันที่มีผล (ค.ศ.) <input type="date" required value={effective} onChange={e=>setEffective(e.target.value)}/></label><label>เอกสารหรือหน้าอ้างอิง (HTTPS) <input type="url" required value={source} onChange={e=>setSource(e.target.value)}/></label><label>เหตุผลการแก้ไข <textarea required maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
