@@ -2,6 +2,7 @@ import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { memberAdminApi } from '../services/memberAdminApi';
+import { mediaLibraryApi } from '../services/mediaLibraryApi';
 import { usePublicContent } from '../context/PublicContentContext';
 import './PublicContentAdminPage.css';
 
@@ -40,6 +41,7 @@ export default function PublicContentAdminPage() {
   const [note,setNote]=useState(''),[source,setSource]=useState('https://rayongcoop.com/'),[effective,setEffective]=useState(today),[expires,setExpires]=useState('');
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [dirty,setDirty]=useState(false),[preview,setPreview]=useState(false);
+  const [mediaBusy,setMediaBusy]=useState(false);
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries(catalog.boardMembers.map(p=>[p.id,p.name]));
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
@@ -64,7 +66,28 @@ export default function PublicContentAdminPage() {
     if(section==='profile')return {...current,[key]:newValue};
     return current.map((item,index)=>index!==selected?item:tupleSection(section)?[key==='name'?newValue:item[0],key==='position'?newValue:item[1]]:{...item,[key]:newValue});
   });setDirty(true);}
-  function add(){let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:'',image:''};else if(section==='groups')entry={title:'',members:[]};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
+  function add(){let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:'',image:''};else if(section==='groups')entry={title:'',members:[],term:catalog.boardMembers[0]?.term||'ชุดที่ 38'};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
+  function copyBoardToTerm(){
+    if(section!=='boards'||!row)return;
+    const target=window.prompt('ระบุชุดกรรมการใหม่ เช่น ชุดที่ 39', 'ชุดที่ 39');
+    if(!target?.trim() || target.trim()===row.term)return;
+    const id=Math.max(0,...value.map(person=>Number(person.id)||0))+1;
+    setValue(current=>[...current,{...row,id,term:target.trim()}]);
+    setSelected(value.length);setDirty(true);
+    setMessage('สร้างสำเนากรรมการในร่างใหม่แล้ว ชุดเดิมยังคงอยู่ ต้องบันทึกและเผยแพร่ร่างก่อนหน้าเว็บเปลี่ยน');
+  }
+  async function uploadBoardPhoto(file){
+    if(!file||section!=='boards'||!row)return;
+    setMediaBusy(true);setError('');
+    try {
+      const response=await mediaLibraryApi.upload(file,{folder:'board',altText:row.name||'ภาพกรรมการ'});
+      const photo=response.data?.url||response.data?.data?.url;
+      if(!photo)throw new Error('ไม่พบ URL รูปภาพหลังอัปโหลด');
+      change('image',photo);
+      setMessage('อัปโหลดรูปแล้ว กรุณาบันทึกร่างและเผยแพร่ก่อนหน้าเว็บเปลี่ยน');
+    } catch(e){setError(e.message||'อัปโหลดรูปไม่สำเร็จ กรุณาตรวจสิทธิ์ Media Library');}
+    finally {setMediaBusy(false);}
+  }
   async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');try{
     const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
     setDirty(false);setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);setRefresh(n=>n+1);
@@ -79,10 +102,20 @@ export default function PublicContentAdminPage() {
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
       {section!=='profile'&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
-      <form onSubmit={save}><fieldset disabled={busy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
+      {section==='boards'&&row&&definition?.canEdit&&<div className="surface-card" style={{padding:16,margin:'1rem 0'}}>
+        <h3>จัดการชุดกรรมการและรูปภาพ</h3>
+        <p>สามารถคัดลอกกรรมการไปชุดใหม่โดยไม่เปลี่ยนชุดเดิม และเพิ่มกรรมการใหม่จากปุ่มเพิ่มรายการ</p>
+        <button type="button" disabled={busy} onClick={copyBoardToTerm}>คัดลอกกรรมการไปชุดใหม่</button>
+        <label>อัปโหลดรูปภาพกรรมการ (JPEG/PNG/WebP ไม่เกิน 10 MB)
+          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadBoardPhoto(file);}} />
+        </label>
+        {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพ...</p>}
+        {row.image&&<img src={row.image} alt={'ตัวอย่างรูป '+row.name} style={{width:120,height:120,objectFit:'cover',borderRadius:'50%'}}/>}
+      </div>}
+      <form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
         {row&&fields[section].map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='checkbox'?<input type="checkbox" checked={!!row[key]} onChange={e=>change(key,e.target.checked)}/>:<input type={type==='rate'?'number':type} disabled={section==='products'&&key==='rateValue'} step={type==='rate'?'0.001':undefined} min={['number','rate'].includes(type)?0:undefined} value={type==='rate'?String(row[key]??'').replace('%',''):row[key]??''} onChange={e=>change(key,type==='rate'&&key==='rate'?`${e.target.value}%`:e.target.value)} />}</label>)}
         {section==='products'&&<p>แก้อัตราดอกเบี้ยที่หมวดอัตราเงินกู้ เพื่อให้หน้าเว็บและเครื่องคำนวณใช้ตัวเลขเดียวกัน</p>}
-        {section==='groups'&&row&&<div><h3>สมาชิกคณะย่อย</h3>{row.members.map(([id,position],index)=><div key={index} className="public-content-toolbar"><select aria-label="กรรมการ" value={id} onChange={e=>change('members',row.members.map((m,i)=>i===index?[Number(e.target.value),m[1]]:m))}>{catalog.boardMembers.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><input aria-label="ตำแหน่งในคณะย่อย" value={position} onChange={e=>change('members',row.members.map((m,i)=>i===index?[m[0],e.target.value]:m))}/><button type="button" onClick={()=>change('members',row.members.filter((_,i)=>i!==index))}>นำออก</button></div>)}<button type="button" onClick={()=>change('members',[...row.members,[catalog.boardMembers[0]?.id,'กรรมการ']])}>เพิ่มกรรมการในคณะ</button></div>}
+        {section==='groups'&&row&&<div><label>ชุดกรรมการ<input value={row.term||''} onChange={e=>change('term',e.target.value)} placeholder="ชุดที่ 38" /></label><h3>สมาชิกคณะย่อย</h3>{row.members.map(([id,position],index)=><div key={index} className="public-content-toolbar"><select aria-label="กรรมการ" value={id} onChange={e=>change('members',row.members.map((m,i)=>i===index?[Number(e.target.value),m[1]]:m))}>{catalog.boardMembers.filter(person=>!row.term||person.term===row.term).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><input aria-label="ตำแหน่งในคณะย่อย" value={position} onChange={e=>change('members',row.members.map((m,i)=>i===index?[m[0],e.target.value]:m))}/><button type="button" onClick={()=>change('members',row.members.filter((_,i)=>i!==index))}>นำออก</button></div>)}<button type="button" onClick={()=>change('members',[...row.members,[catalog.boardMembers.find(person=>!row.term||person.term===row.term)?.id,'กรรมการ']])}>เพิ่มกรรมการในคณะ</button></div>}
         <label>วันที่มีผล (ค.ศ.) <input type="date" required value={effective} onChange={e=>setEffective(e.target.value)}/></label><label>เอกสารหรือหน้าอ้างอิง (HTTPS) <input type="url" required value={source} onChange={e=>setSource(e.target.value)}/></label><label>เหตุผลการแก้ไข <textarea required maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
         <label>วันสิ้นสุด (ไม่บังคับ)<input type="date" min={effective} value={expires} onChange={e=>{setExpires(e.target.value);setDirty(true);}} /></label><button type="submit" className="btn btn-primary">บันทึกร่างเพื่อรอเผยแพร่</button>
       </fieldset></form>
