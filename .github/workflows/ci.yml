@@ -141,6 +141,9 @@ jobs:
       - name: Syntax-check TEST-only Admin RC06 deployment
         run: bash -n scripts/deploy-test-admin-rc06.sh
 
+      - name: Syntax-check guarded layout / board TEST deployment
+        run: bash -n scripts/deploy-test-layout-board-rc01.sh
+
       - name: Syntax-check read-only production frontend inventory
         run: bash -n scripts/inventory-production-frontend-readonly.sh
 
@@ -277,6 +280,9 @@ jobs:
 
       - name: Audit all dependencies and enforce restricted TEST-only build-tool exception
         shell: bash
+        env:
+          CI_BASE_REF: ${{ github.base_ref }}
+          CI_HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
           # Capture the full, non-zero audit and do not hide unexpected command errors.
@@ -291,6 +297,13 @@ jobs:
           if [ "$audit_status" -eq 0 ]; then
             echo "PASS: full npm audit clean"
           else
+            # Exception applies to this TEST-targeted PR only, never main or Test branch pushes.
+            if [[ "$GITHUB_EVENT_NAME" != "pull_request" ||
+                  "$CI_BASE_REF" != "Test" ||
+                  "$CI_HEAD_REF" != "feature/admin-layout-manager-rc01" ]]; then
+              echo "STOP: unpatched npm advisory cannot be waived on branch pushes or production candidates"
+              exit 1
+            fi
             node scripts/check-test-only-npm-advisory-exception.mjs /tmp/rycoop-npm-audit.json
           fi
 
