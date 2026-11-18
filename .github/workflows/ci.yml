@@ -344,6 +344,9 @@ jobs:
       - name: Verify Dynamic Layout field contrast RC02
         run: node tests/DynamicLayoutFieldsRC02Test.mjs
 
+      - name: Verify Admin visual consistency and section color controls RC03
+        run: node tests/AdminVisualConsistencyRC03Test.mjs
+
       - name: Build frontend
         run: npm run build
 
