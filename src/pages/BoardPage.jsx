@@ -108,7 +108,8 @@ export default function BoardPage() {
   const terms = useMemo(() => [...new Set(BOARD_MEMBERS.map(person => person.term).filter(Boolean))].sort((a,b) => b.localeCompare(a,'th', {numeric:true})), [BOARD_MEMBERS]);
   const [selectedTerm, setSelectedTerm] = useState('');
   const activeTerm = terms.includes(selectedTerm) ? selectedTerm : terms[0];
-  const selectedMembers = BOARD_MEMBERS.filter(person => !activeTerm || person.term === activeTerm);
+  const selectedMembers = BOARD_MEMBERS.filter(person => (!activeTerm || person.term === activeTerm) && person.status !== 'former');
+  const formerMembers = BOARD_MEMBERS.filter(person => person.term === activeTerm && person.status === 'former');
   const activeGroups = legacyReference.boardGroups.filter(group => {
     if (group.term) return group.term === activeTerm;
     // Older groups have no explicit term; inherit it from their original members.
@@ -144,6 +145,12 @@ export default function BoardPage() {
           ))}</ul>
         </section>
       ))}
+      {formerMembers.length > 0 && (
+        <section className="surface-card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
+          <h2>ทำเนียบกรรมการพ้นตำแหน่ง {activeTerm}</h2>
+          <ul>{formerMembers.map(person => <li key={person.id}>{person.name} — {person.position}</li>)}</ul>
+        </section>
+      )}
       {[["ที่ปรึกษาสหกรณ์", legacyReference.advisors], ["คณะผู้ตรวจสอบกิจการสหกรณ์", legacyReference.auditors]].map(([title, people]) => (
         <section key={title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
           <h2>{title}</h2>
