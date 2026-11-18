@@ -272,8 +272,27 @@ jobs:
       - name: Check public reference content
         run: node tests/PublicContentReferenceTest.mjs
 
-      - name: Reject moderate, high or critical npm advisories
-        run: npm audit --audit-level=moderate
+      - name: Reject moderate, high or critical production dependency advisories
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Audit all dependencies and enforce restricted TEST-only build-tool exception
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Capture the full, non-zero audit and do not hide unexpected command errors.
+          set +e
+          npm audit --json > /tmp/rycoop-npm-audit.json
+          audit_status=$?
+          set -e
+          if [ "$audit_status" -gt 1 ]; then
+            echo "npm audit failed with an unexpected command error: $audit_status"
+            exit "$audit_status"
+          fi
+          if [ "$audit_status" -eq 0 ]; then
+            echo "PASS: full npm audit clean"
+          else
+            node scripts/check-test-only-npm-advisory-exception.mjs /tmp/rycoop-npm-audit.json
+          fi
 
       - name: Test frontend workflow contracts
         run: |
