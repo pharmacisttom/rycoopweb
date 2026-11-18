@@ -383,7 +383,7 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">{navText('board_title', 'คณะกรรมการดำเนินการ')}</div>
-                        <div className="mega-menu-item-desc">{navText('board_desc', currentBoardTerm ? `ทำเนียบคณะกรรมการดำเนินการ ${currentBoardTerm}` : 'ทำเนียบคณะกรรมการดำเนินการ')}</div>
+                        <div className="mega-menu-item-desc">{navText('board_desc', 'ทำเนียบคณะกรรมการดำเนินการ {term}').replaceAll('{term}', currentBoardTerm)}</div>
                       </div>
                     </Link>
 
