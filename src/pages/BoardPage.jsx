@@ -109,7 +109,12 @@ export default function BoardPage() {
   const [selectedTerm, setSelectedTerm] = useState('');
   const activeTerm = terms.includes(selectedTerm) ? selectedTerm : terms[0];
   const selectedMembers = BOARD_MEMBERS.filter(person => !activeTerm || person.term === activeTerm);
-  const activeGroups = legacyReference.boardGroups.filter(group => !group.term || group.term === activeTerm);
+  const activeGroups = legacyReference.boardGroups.filter(group => {
+    if (group.term) return group.term === activeTerm;
+    // Older groups have no explicit term; inherit it from their original members.
+    const first = BOARD_MEMBERS.find(person => person.id === Number(group.members?.[0]?.[0]));
+    return first?.term === activeTerm;
+  });
   return (
     <PeopleDirectoryPage
       badge="คณะผู้บริหาร"
