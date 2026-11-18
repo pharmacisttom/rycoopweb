@@ -327,6 +327,9 @@ jobs:
       - name: Verify admin responsive CSS RC02 contracts
         run: node tests/AdminLayoutPolishRC02Test.mjs
 
+      - name: Verify Public Content null and revision safety RC02
+        run: node tests/PublicContentNullSafetyRC02Test.mjs
+
       - name: Build frontend
         run: npm run build
 
