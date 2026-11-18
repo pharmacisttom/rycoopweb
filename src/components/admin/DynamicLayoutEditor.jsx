@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {memberAdminApi} from '../services/memberAdminApi';
+import {memberAdminApi} from '../../services/memberAdminApi';
 
 const clone = value => JSON.parse(JSON.stringify(value));
 const getNodes = (nodes, depth = 1) => nodes.flatMap(n => [{...n, depth}, ...getNodes(n.children || [], depth + 1)]);
