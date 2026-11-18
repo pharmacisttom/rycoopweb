@@ -186,6 +186,11 @@ jobs:
           php bin/console db:seed
           php bin/console db:seed
 
+      - name: Real MySQL 8 homepage layout and navigation publication contract
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/LayoutNavigationMySqlTest.php
+
       - name: Real MySQL 8 admin CRUD and concurrency
         env:
           CRUD_DISPOSABLE_MYSQL: "1"
