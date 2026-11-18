@@ -109,3 +109,32 @@
   .public-content-admin .public-content-board-action-buttons button {width:100%;flex:1 1 100%}
   .public-content-admin .public-content-board-photo-preview img {width:96px;height:96px;flex-basis:96px}
 }
+
+
+.public-content-admin .public-content-board-audit {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #b3c4d8;
+  border-radius: 12px;
+}
+.public-content-admin .public-content-board-audit h3 {margin:0 0 8px;font-size:1.1rem}
+.public-content-admin .public-content-board-audit > p {margin:0 0 14px;color:var(--acc-text-secondary,#475569)}
+.public-content-admin .public-content-board-audit-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+.public-content-admin .public-content-board-audit-term {
+  min-width:0;
+  border:1px solid #bdcddd;
+  border-radius:12px;
+  background:#f8fafc;
+  color:#13263e;
+  padding:16px;
+}
+.public-content-admin .public-content-board-audit-term h4 {margin:0 0 8px}
+.public-content-admin .public-content-board-audit-term ul {margin:8px 0;padding-left:22px;line-height:1.65}
+.public-content-admin .public-content-board-audit-ok {color:#166534;font-weight:700}
+.public-content-admin .public-content-board-audit-warning {color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px}
+.public-content-admin .public-content-board-audit-note {margin-top:12px!important}
+@media(max-width:800px){.public-content-admin .public-content-board-audit-grid{grid-template-columns:minmax(0,1fr)}}
