@@ -9,7 +9,7 @@ const service=read('app/Services/DynamicLayoutService.php');
 const publicUI=read('src/components/layout/PublishedDynamicSections.jsx');
 assert(shell.includes("import './AdminVisualConsistencyRC03.css';"));
 assert(shell.indexOf("import './AdminLayoutPolishRC02.css';") < shell.indexOf("import './AdminVisualConsistencyRC03.css';"));
-for(const fragment of ['.acc-shell .acc-content','.admin-ui-gridline','border-right: 1px solid','overflow-x: auto','focus-visible','@media (max-width: 760px)']) {
+for(const fragment of ['.acc-shell .acc-content','--admin-ui-gridline','border-right: 1px solid','overflow-x: auto','focus-visible','@media (max-width: 760px)']) {
  assert(css.includes(fragment),'missing admin visual contract '+fragment);
 }
 assert(!/(^|\n)\s*(?:html|body)\s*\{/m.test(css),'global CSS forbidden');
