@@ -66,7 +66,7 @@ export default function PublicContentAdminPage() {
     if(section==='profile')return {...current,[key]:newValue};
     return current.map((item,index)=>index!==selected?item:tupleSection(section)?[key==='name'?newValue:item[0],key==='position'?newValue:item[1]]:{...item,[key]:newValue});
   });setDirty(true);}
-  function add(){let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:'',image:''};else if(section==='groups')entry={title:'',members:[],term:catalog.boardMembers[0]?.term||'ชุดที่ 38'};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
+  function add(){let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:'',image:'',...(section==='boards'?{term:value[0]?.term||'ชุดที่ 38'}:{})};else if(section==='groups')entry={title:'',members:[],term:catalog.boardMembers[0]?.term||'ชุดที่ 38'};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
   function copyBoardToTerm(){
     if(section!=='boards'||!row)return;
     const target=window.prompt('ระบุชุดกรรมการใหม่ เช่น ชุดที่ 39', 'ชุดที่ 39');
@@ -75,6 +75,13 @@ export default function PublicContentAdminPage() {
     setValue(current=>[...current,{...row,id,term:target.trim()}]);
     setSelected(value.length);setDirty(true);
     setMessage('สร้างสำเนากรรมการในร่างใหม่แล้ว ชุดเดิมยังคงอยู่ ต้องบันทึกและเผยแพร่ร่างก่อนหน้าเว็บเปลี่ยน');
+  }
+  function startBoardReplacement(){
+    if(section!=='boards'||!row)return;
+    const id=Math.max(0,...value.map(person=>Number(person.id)||0))+1;
+    setValue(current=>[...current,{id,name:'',position:row.position||'กรรมการ',term:row.term||'',workplace:row.workplace||'',image:''}]);
+    setSelected(value.length);setDirty(true);
+    setMessage('เพิ่มรายการกรรมการทดแทนเป็นร่างแล้ว: กรอกข้อมูลและเผยแพร่ก่อน จากนั้นปรับคณะอนุกรรมการให้ชี้รายการใหม่ แล้วจึงนำกรรมการเดิมออกตามขั้นตอนรักษาประวัติ');
   }
   async function uploadBoardPhoto(file){
     if(!file||section!=='boards'||!row)return;
@@ -106,6 +113,7 @@ export default function PublicContentAdminPage() {
         <h3>จัดการชุดกรรมการและรูปภาพ</h3>
         <p>สามารถคัดลอกกรรมการไปชุดใหม่โดยไม่เปลี่ยนชุดเดิม และเพิ่มกรรมการใหม่จากปุ่มเพิ่มรายการ</p>
         <button type="button" disabled={busy} onClick={copyBoardToTerm}>คัดลอกกรรมการไปชุดใหม่</button>
+        <button type="button" disabled={busy} onClick={startBoardReplacement}>เพิ่มกรรมการทดแทนในชุดเดียวกัน</button>
         <label>อัปโหลดรูปภาพกรรมการ (JPEG/PNG/WebP ไม่เกิน 10 MB)
           <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadBoardPhoto(file);}} />
         </label>
