@@ -41,6 +41,7 @@ jobs:
           php -l app/Controllers/Admin/SiteNavigationCopyController.php
           python3 tests/AdminSidebarPublicContentRouteTest.py
           python3 tests/HomepageLayoutBoardContractTest.py
+          node tests/LayoutManagerCrudUiTest.mjs
           python3 tests/SiteNavigationCopyContractTest.py
       - name: Install dependencies and build (security audit remains a separate required gate)
         run: |
