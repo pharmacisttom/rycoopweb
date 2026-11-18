@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2, 
-  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall, 
+import {
+  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2,
+  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall,
   ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award
 } from 'lucide-react';
 import { fetchHomeData, fetchCoopInfo } from '../services/api';
@@ -172,7 +172,7 @@ export default function HomePage() {
 
   return (
     <div>
-      
+
       {/* =========================================================================
           HERO SECTION (High Impact Modern Banner)
           ========================================================================= */}
@@ -212,7 +212,7 @@ export default function HomePage() {
 
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
           <div className="home-hero-grid">
-            
+
             {/* Left Hero Content */}
             <div className="animate-fade-in">
               <div style={{
@@ -461,14 +461,14 @@ export default function HomePage() {
       {/* =========================================================================
           QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
           ========================================================================= */}
-      {showSection('quick_services') && <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}> 
+      {showSection('quick_services') && <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             gap: '1.25rem'
           }}>
-            
+
             <Link to="/calculator" className="surface-card" style={quickServiceCardStyle}>
               <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
                 <Calculator size={24} />
@@ -526,7 +526,7 @@ export default function HomePage() {
           ========================================================================= */}
       {showSection('statistics') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ฐานะความมั่นคง</span>
             <h2 className="section-title">สถิติและผลการดำเนินงานที่โดดเด่น</h2>
@@ -550,13 +550,13 @@ export default function HomePage() {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.25rem' }}>
                   {stat.unit}
                 </div>
-                <div style={{ 
-                  marginTop: '0.85rem', 
-                  display: 'inline-block', 
-                  fontSize: '0.75rem', 
-                  padding: '0.2rem 0.6rem', 
-                  borderRadius: 'var(--radius-full)', 
-                  background: 'var(--accent-emerald-light)', 
+                <div style={{
+                  marginTop: '0.85rem',
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--accent-emerald-light)',
                   color: 'var(--accent-emerald-dark)',
                   fontWeight: 600
                 }}>
@@ -574,7 +574,7 @@ export default function HomePage() {
           ========================================================================= */}
       {showSection('products') && <section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
             <h2 className="section-title">สินเชื่อเพื่อบุคลากรสาธารณสุข</h2>
@@ -642,7 +642,7 @@ export default function HomePage() {
           ========================================================================= */}
       {showSection('welfare') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">สวัสดิการสมาชิก</span>
             <h2 className="section-title">ดูแลสมาชิกและครอบครัวในทุกช่วงชีวิต</h2>
