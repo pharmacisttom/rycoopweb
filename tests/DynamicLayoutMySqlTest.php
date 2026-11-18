@@ -29,6 +29,16 @@ try {
  checkDynamic(true,'stale version rejected');
  Layout::publish(['version'=>$saved['version']]);
  checkDynamic(Layout::published()[0]['title']==='รูปกิจกรรมของสหกรณ์','published snapshot persists');
+ checkDynamic(Layout::published()[0]['appearance']['background']==='#ffffff','legacy section defaults preserve white background');
+ $styled=$node('blue-section','สีกรมท่า');
+ $styled['appearance']=['background'=>'#0b1c40','text'=>'#ffffff','accent'=>'#fbbf24'];
+ checkDynamic(Layout::validate([$styled])[0]['appearance']['background']==='#0b1c40','valid theme colors preserved');
+ $bad=$styled;$bad['appearance']['background']='url(javascript:evil)';
+ try{Layout::validate([$bad]);throw new RuntimeException('unsafe color accepted');}
+ catch(InvalidArgumentException $e){checkDynamic(true,'unsafe CSS values rejected');}
+ $bad=$styled;$bad['appearance']=['background'=>'#ffffff','text'=>'#ffffff','accent'=>'#175cd3'];
+ try{Layout::validate([$bad]);throw new RuntimeException('low contrast accepted');}
+ catch(InvalidArgumentException $e){checkDynamic(true,'inaccessible text contrast rejected');}
  $invalid=[$node('duplicate-id','parent',[$node('duplicate-id','child')])];
  try{Layout::validate($invalid);throw new RuntimeException('duplicate accepted');}
  catch(InvalidArgumentException $e){checkDynamic(true,'duplicate IDs rejected');}
