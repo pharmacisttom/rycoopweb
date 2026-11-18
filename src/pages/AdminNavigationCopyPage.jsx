@@ -66,7 +66,7 @@ export default function AdminNavigationCopyPage() {
             <h2>ข้อความเมนูเกี่ยวกับสหกรณ์</h2>
             {keys.map(key => (
               <label key={key} style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:16,padding:'0.75rem',borderBottom:'1px solid var(--border-subtle)'}}>
-                <span>{state.sections?.[key] || key}</span>
+                <span>{state.labels?.[key] || key}</span>
                 <input style={{width:'min(100%, 460px)'}} maxLength={240} value={sections[key]||''} disabled={busy} onChange={event => {setSections(prev => ({...prev,[key]:event.target.value}));setDirty(true);}} />
               </label>
             ))}
@@ -76,7 +76,7 @@ export default function AdminNavigationCopyPage() {
             </label>
             <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:16}}>
               <button type="button" disabled={busy||!dirty||!/^\d{6,8}$/.test(totp)} onClick={()=>perform('draft')}>บันทึกร่าง</button>
-              <button type="button" disabled={busy||dirty||!state.draft||!/^\d{6,8}$/.test(totp)} onClick={()=>{if(window.confirm('ยืนยันเผยแพร่การข้อความในเมนู?'))perform('publish');}}>อนุมัติเผยแพร่</button>
+              <button type="button" disabled={busy||dirty||!state.draft||!/^\d{6,8}$/.test(totp)} onClick={()=>{if(window.confirm('ยืนยันเผยแพร่ข้อความในเมนู?'))perform('publish');}}>อนุมัติเผยแพร่</button>
               <button type="button" disabled={busy} onClick={async()=>{try{await load();setNotice('โหลดข้อมูลล่าสุดแล้ว');setError('');}catch(e){setError(e.message);}}}>โหลดข้อมูลล่าสุด</button>
             </div>
           </div>
