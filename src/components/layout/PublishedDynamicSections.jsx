@@ -20,11 +20,11 @@ export default function PublishedDynamicSections() {
     <div key={s.id} style={{marginTop: depth > 1 ? 16 : 0}}>
       {depth === 1 ? <h2 className="section-title">{s.title}</h2> : <h3>{s.title}</h3>}
       {s.description && <p className="section-subtitle">{s.description}</p>}
-      {s.type === 'gallery' && depth === 1 && albums.length > 0 && <div style={{
+      {s.type === 'gallery' && albums.length > 0 && <div style={{
         display:'grid',gridTemplateColumns:s.layout==='carousel'?'repeat(auto-fit,minmax(min(100%,250px),1fr))':'repeat(auto-fit,minmax(min(100%,240px),1fr))',
         gap:18,marginTop:22
       }}>
-        {albums.slice(0,8).map(album=><article className="surface-card" key={album.id} style={{overflow:'hidden'}}>
+        {albums.filter(album => !s.album_ids?.length || s.album_ids.includes(Number(album.id))).slice(0,8).map(album=><article className="surface-card" key={album.id} style={{overflow:'hidden'}}>
           <Link to="/activities" aria-label={'ดูอัลบั้ม '+album.title}>
             {album.cover_url && <img src={album.cover_url} alt={album.title} loading="lazy" style={{width:'100%',aspectRatio:'4/3',objectFit:'cover'}}/>}
             <div style={{padding:14}}><strong>{album.title}</strong><p>{album.event_date||''}</p></div>
