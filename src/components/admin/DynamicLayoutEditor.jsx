@@ -30,9 +30,11 @@ export default function DynamicLayoutEditor() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [preview, setPreview] = useState(false);
+  const [albumInput, setAlbumInput] = useState('');
   const [loading, setLoading] = useState(true);
   const allNodes = useMemo(() => getNodes(tree), [tree]);
   const current = allNodes.find(n => n.id === selected);
+  useEffect(() => setAlbumInput((current?.album_ids || []).join(', ')), [selected]);
   const dirty = server && JSON.stringify(tree) !== JSON.stringify(server.draft ?? server.published);
   const validTotp = /^\d{6}$/.test(totp);
 
@@ -120,9 +122,10 @@ export default function DynamicLayoutEditor() {
             <label>รูปแบบ<select style={fieldStyle} value={current.layout} onChange={e=>update({layout:e.target.value})}>
               <option value="grid">Grid</option><option value="cards">Cards</option><option value="carousel">Carousel</option>
             </select></label>
-            <label>รหัสอัลบั้มกิจกรรม (คั่นด้วยเครื่องหมายจุลภาค)<input style={fieldStyle} value={(current.album_ids || []).join(', ')} placeholder="เช่น 1, 3, 5 — เว้นว่าง = ทุกอัลบั้ม" onChange={e => {
-              const ids = e.target.value.split(',').map(v => Number(v.trim())).filter(v => Number.isSafeInteger(v) && v > 0);
-              update({album_ids: [...new Set(ids)]});
+            <label>รหัสอัลบั้มกิจกรรม (คั่นด้วยเครื่องหมายจุลภาค)<input style={fieldStyle} value={albumInput} placeholder="เช่น 1, 3, 5 — เว้นว่าง = ทุกอัลบั้ม" onChange={e=>setAlbumInput(e.target.value)} onBlur={() => {
+              const ids = albumInput.split(',').map(v => Number(v.trim())).filter(v => Number.isSafeInteger(v) && v > 0);
+              if (albumInput.trim() && (ids.length === 0 || ids.length !== albumInput.split(',').length)) { setError('รหัสอัลบั้มต้องเป็นตัวเลขบวกคั่นด้วยจุลภาค'); return; }
+              update({album_ids:[...new Set(ids)]});setError('');
             }}/></label>
             <label>ลิงก์ภายในเว็บไซต์<input style={fieldStyle} value={current.link} placeholder="/activities" onChange={e=>update({link:e.target.value})}/></label>
             <label><input type="checkbox" checked={current.visible} onChange={e=>update({visible:e.target.checked})}/> แสดงหัวข้อนี้</label>
