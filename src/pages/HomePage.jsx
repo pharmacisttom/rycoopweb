@@ -25,6 +25,21 @@ export default function HomePage() {
   const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
   const coopInfo = COOP_INFO;
   const { setShowAuthModal, isLoggedIn } = useAuth();
+  // Published-only visibility. No draft config is consumed by the public UI.
+  const [layout, setLayout] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/public/layout', { signal: controller.signal, credentials: 'same-origin', cache: 'no-cache' })
+      .then(response => response.ok ? response.json() : null)
+      .then(payload => {
+        const candidate = payload?.data;
+        const keys = ['hero','quick_services','statistics','products','calculator','welfare'];
+        if (candidate && keys.every(key => typeof candidate[key] === 'boolean')) setLayout(candidate);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const showSection = key => layout?.[key] !== false;
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
   const [activeNewsSlide, setActiveNewsSlide] = useState(0);
@@ -161,7 +176,7 @@ export default function HomePage() {
       {/* =========================================================================
           HERO SECTION (High Impact Modern Banner)
           ========================================================================= */}
-      <section style={{
+      {showSection('hero') && <section style={{
         position: 'relative',
         backgroundImage: heroSettings.bgImageUrl ? `linear-gradient(135deg, rgba(15, 43, 92, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%), url(${heroSettings.bgImageUrl})` : 'var(--gradient-hero)',
         backgroundSize: 'cover',
@@ -441,12 +456,12 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
           ========================================================================= */}
-      <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
+      {showSection('quick_services') && <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}> 
         <div className="container">
           <div style={{
             display: 'grid',
@@ -504,12 +519,12 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           KEY COOPERATIVE STATS
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('statistics') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           
           <div className="section-title-wrap">
@@ -552,12 +567,12 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-main)' }}>
+      {showSection('products') && <section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
           
           <div className="section-title-wrap">
@@ -611,21 +626,21 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           INTERACTIVE LOAN CALCULATOR SUITE EMBED
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('calculator') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           <LoanCalculator />
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           MEMBER WELFARE HIGHLIGHTS
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('welfare') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           
           <div className="section-title-wrap">
@@ -660,7 +675,7 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
 
     </div>
