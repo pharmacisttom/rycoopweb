@@ -1,0 +1,110 @@
+/* RC02 Admin layout hardening: scoped to authenticated Control Center only.
+   No public-site or member-specific CSS overrides. */
+.acc-shell .acc-main-wrapper,
+.acc-shell .acc-content,
+.acc-shell .admin-module,
+.acc-shell .admin-card,
+.acc-shell .surface-card,
+.acc-shell .acc-card,
+.acc-shell .card,
+.acc-shell .card-body {
+  min-width: 0;
+  max-width: 100%;
+}
+.acc-shell .acc-content > *,
+.acc-shell .admin-module > *,
+.acc-shell .admin-card > *,
+.acc-shell .surface-card > * { min-width: 0; }
+.acc-shell :is(.admin-card,.surface-card,.acc-card,.card) {
+  overflow-wrap: break-word;
+  border: 1px solid var(--acc-border, #dce5f1);
+  border-radius: 14px;
+  background: var(--acc-surface,#fff);
+}
+.acc-shell :is(.admin-card,.surface-card,.acc-card,.card) + :is(.admin-card,.surface-card,.acc-card,.card) {
+  margin-top: 12px;
+}
+.acc-shell :is(.admin-actions,.admin-toolbar,.acc-page-actions,.acc-filter-bar,.card-header,.admin-card-heading) {
+  min-width: 0;
+  column-gap: 12px;
+  row-gap: 10px;
+}
+.acc-shell :is(.admin-actions,.admin-toolbar,.acc-page-actions,.acc-filter-bar) {
+  flex-wrap: wrap;
+}
+.acc-shell :is(.admin-actions,.admin-toolbar,.acc-page-actions,.acc-filter-bar) > * {
+  max-width: 100%;
+  min-width: 0;
+}
+.acc-shell :is(.admin-form-grid,.acc-grid-2,.acc-grid-3,.acc-kpi-grid) > * {
+  min-width: 0;
+}
+.acc-shell .admin-module :is(input:not([type=checkbox]):not([type=radio]),textarea,select) {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) table {
+  min-width: 640px;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) :is(th,td) {
+  box-sizing: border-box;
+  vertical-align: middle;
+  padding: 12px 14px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: break-word;
+  border-bottom: 1px solid var(--acc-border,#e2e8f0);
+}
+.acc-shell :is(.admin-table,.acc-table) :is(th,td) {
+  position: static;
+}
+.acc-shell :is(.admin-table,.acc-table) th {
+  background: var(--acc-surface-elevated,#f8fafc);
+}
+.acc-shell :is(.admin-table,.acc-table) :is(td,th) .btn,
+.acc-shell :is(.admin-table,.acc-table) :is(td,th) button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.acc-shell :is(.admin-table,.acc-table) :is(td,th) .admin-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.acc-shell :is(.admin-module,.acc-content) :is(.row,.col,.col-md-6,.col-lg-4) {
+  min-width: 0;
+}
+.acc-shell :is(.admin-module,.acc-content) :is(h1,h2,h3,h4,p,label) {
+  overflow-wrap: break-word;
+}
+.acc-shell .admin-module :is(.btn,button,input,select,textarea) {
+  min-height: 38px;
+}
+.acc-shell .admin-module :is(.btn,button) {
+  line-height: 1.35;
+  white-space: normal;
+}
+@media (max-width: 760px) {
+  .acc-shell .acc-content { padding-inline: 12px; }
+  .acc-shell :is(.admin-card,.surface-card,.acc-card,.card) { padding-inline: 12px; }
+  .acc-shell :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) table { min-width: 640px; }
+  .acc-shell :is(.admin-actions,.admin-toolbar,.acc-page-actions,.acc-filter-bar) > button {
+    flex: 0 1 auto;
+  }
+}
+/* Admin-only override for overlapping fixed-width custom forms. */
+.acc-shell .admin-module :is(.form-row,.form-grid) {
+  min-width: 0;
+  max-width: 100%;
+}
