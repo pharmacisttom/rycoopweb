@@ -19,7 +19,7 @@ import UserStatusBadge from '../common/UserStatusBadge';
 export default function Navbar() {
   const { COOP_INFO, BOARD_MEMBERS } = usePublicInformation();
   const [navigationCopy, setNavigationCopy] = useState(null);
-  const currentBoardTerm = BOARD_MEMBERS.find(person => person.status !== 'former')?.term || '';
+  const currentBoardTerm = [...new Set(BOARD_MEMBERS.filter(person => person.status !== 'former').map(person => person.term).filter(Boolean))].sort((a,b) => b.localeCompare(a,'th',{numeric:true}))[0] || '';
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/public/navigation-copy', { signal: controller.signal, cache: 'no-cache' })
