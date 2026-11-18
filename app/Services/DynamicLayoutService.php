@@ -65,6 +65,7 @@ final class DynamicLayoutService
                 $description = $node['description'] ?? '';
                 $link = $node['link'] ?? '';
                 $children = $node['children'] ?? [];
+                $albumIds = $node['album_ids'] ?? [];
                 if (!is_string($id) || !preg_match('/^[a-z0-9-]{8,64}$/D', $id) || isset($ids[$id])
                     || !is_string($title) || trim($title) === '' || mb_strlen($title) > 120
                     || !in_array($type, self::TYPES, true)
@@ -73,8 +74,12 @@ final class DynamicLayoutService
                     || !is_string($description) || mb_strlen($description) > 1000
                     || !is_string($link) || strlen($link) > 255
                     || ($link !== '' && !preg_match('~^/(?:activities(?:/[0-9]+)?|news|documents|about|welfare|contact)/?$~D', $link))
-                    || !is_array($children)) {
+                    || !is_array($children) || !is_array($albumIds) || !array_is_list($albumIds)
+                    || count($albumIds) > 50 || count(array_unique($albumIds)) !== count($albumIds)) {
                     throw new InvalidArgumentException('Invalid section fields');
+                }
+                foreach ($albumIds as $albumId) {
+                    if (!is_int($albumId) || $albumId < 1) throw new InvalidArgumentException('Invalid album selection');
                 }
                 $ids[$id] = true;
                 $output[] = [
@@ -85,6 +90,7 @@ final class DynamicLayoutService
                     'visible' => $visible,
                     'description' => trim($description),
                     'link' => $link,
+                    'album_ids' => $albumIds,
                     'children' => $walk($children, $depth + 1),
                 ];
                 if (count($ids) > 120) throw new InvalidArgumentException('Too many sections');
