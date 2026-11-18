@@ -333,6 +333,9 @@ jobs:
       - name: Verify board admin responsive card layout RC02
         run: node tests/BoardAdminCardLayoutRC02Test.mjs
 
+      - name: Verify published site chrome visibility RC02
+        run: node tests/SiteChromeVisibilityRC02Test.mjs
+
       - name: Build frontend
         run: npm run build
 
