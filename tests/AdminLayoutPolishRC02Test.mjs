@@ -11,5 +11,5 @@ for (const part of [
   '.acc-shell :is(.admin-card,.surface-card,.acc-card,.card)',
   '@media (max-width: 760px)',
 ]) assert(css.includes(part), 'missing layout guard ' + part);
-assert(!css.includes('body {') && !css.includes('html {'), 'global document CSS is forbidden');
+assert(!/(?:^|\\n)\\s*(?:body|html)\\s*\\{/m.test(css), 'global document CSS is forbidden');
 console.log('PASS: Admin Layout RC02 scoped responsive CSS contract');
