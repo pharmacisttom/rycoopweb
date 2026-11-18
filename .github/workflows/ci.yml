@@ -191,6 +191,11 @@ jobs:
           CRUD_DISPOSABLE_MYSQL: "1"
         run: php tests/LayoutNavigationMySqlTest.php
 
+      - name: Verify nested Dynamic Layout on disposable MySQL 8
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/DynamicLayoutMySqlTest.php
+
       - name: Real MySQL 8 admin CRUD and concurrency
         env:
           CRUD_DISPOSABLE_MYSQL: "1"
