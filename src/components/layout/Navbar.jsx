@@ -460,7 +460,7 @@ export default function Navbar() {
                     className="btn btn-gold btn-sm"
                     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', width: '100%' }}
                   >
-                    <span>ดูรายงานฐานะการเงิน</span>
+                    <span>{navText('finance_report_button', 'ดูรายงานฐานะการเงิน')}</span>
                     <ArrowRight size={14} />
                   </Link>
                 </div>
@@ -475,7 +475,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <PiggyBank size={14} style={{ color: 'var(--accent-teal)' }} />
-                    <span>เงินฝากและผลตอบแทน</span>
+                    <span>{navText('finance_deposit_group', 'เงินฝากและผลตอบแทน')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/deposits" className="mega-menu-card-item">
@@ -484,10 +484,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>เงินฝากออมทรัพย์ & ประจำ</span>
+                          <span>{navText('deposit_savings_title', 'เงินฝากออมทรัพย์ & ประจำ')}</span>
                           <span className="badge badge-teal" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>ปลอดภาษี</span>
                         </div>
-                        <div className="mega-menu-item-desc">ดอกเบี้ยสูง รับดอกเบี้ยรายเดือนและรายปี</div>
+                        <div className="mega-menu-item-desc">{navText('deposit_savings_desc', 'ดอกเบี้ยสูง รับดอกเบี้ยรายเดือนและรายปี')}</div>
                       </div>
                     </Link>
 
@@ -496,8 +496,8 @@ export default function Navbar() {
                         <TrendingUp size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ตารางอัตราดอกเบี้ยเงินฝาก</div>
-                        <div className="mega-menu-item-desc">อัปเดตอัตราดอกเบี้ยเงินฝากประจำและออมทรัพย์ล่าสุด</div>
+                        <div className="mega-menu-item-title">{navText('deposit_rates_title', 'ตารางอัตราดอกเบี้ยเงินฝาก')}</div>
+                        <div className="mega-menu-item-desc">{navText('deposit_rates_desc', 'อัปเดตอัตราดอกเบี้ยเงินฝากประจำและออมทรัพย์ล่าสุด')}</div>
                       </div>
                     </Link>
 
@@ -507,10 +507,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>ประมาณการเงินปันผล-เฉลี่ยคืน</span>
+                          <span>{navText('dividend_estimator_title', 'ประมาณการเงินปันผล-เฉลี่ยคืน')}</span>
                           <span className="badge badge-gold" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>ยอดนิยม</span>
                         </div>
-                        <div className="mega-menu-item-desc">คำนวณผลตอบแทนหุ้นและเงินเฉลี่ยคืนสิ้นปีล่วงหน้า</div>
+                        <div className="mega-menu-item-desc">{navText('dividend_estimator_desc', 'คำนวณผลตอบแทนหุ้นและเงินเฉลี่ยคืนสิ้นปีล่วงหน้า')}</div>
                       </div>
                     </Link>
                   </div>
@@ -519,7 +519,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <Banknote size={14} style={{ color: 'var(--primary-600)' }} />
-                    <span>ผลิตภัณฑ์สินเชื่อ & เงินกู้</span>
+                    <span>{navText('loan_group', 'ผลิตภัณฑ์สินเชื่อ & เงินกู้')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/loans#emergency" className="mega-menu-card-item">
@@ -528,10 +528,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>เงินกู้เพื่อเหตุฉุกเฉิน</span>
+                          <span>{navText('emergency_title', 'เงินกู้เพื่อเหตุฉุกเฉิน')}</span>
                           <span className="badge badge-rose" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>อนุมัติไว</span>
                         </div>
-                        <div className="mega-menu-item-desc">วงเงินตามความจำเป็น ไม่ต้องมีผู้ค้ำประกัน</div>
+                        <div className="mega-menu-item-desc">{navText('emergency_desc', 'วงเงินตามความจำเป็น ไม่ต้องมีผู้ค้ำประกัน')}</div>
                       </div>
                     </Link>
 
@@ -540,8 +540,8 @@ export default function Navbar() {
                         <Banknote size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">เงินกู้สามัญ & สามัญศึกษา</div>
-                        <div className="mega-menu-item-desc">เพื่อการลงทุน สวัสดิการ และการศึกษาต่อ</div>
+                        <div className="mega-menu-item-title">{navText('ordinary_title', 'เงินกู้สามัญ & สามัญศึกษา')}</div>
+                        <div className="mega-menu-item-desc">{navText('ordinary_desc', 'เพื่อการลงทุน สวัสดิการ และการศึกษาต่อ')}</div>
                       </div>
                     </Link>
 
@@ -550,8 +550,8 @@ export default function Navbar() {
                         <Home size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">เงินกู้พิเศษเพื่อเคหะ</div>
-                        <div className="mega-menu-item-desc">ซื้อที่อยู่อาศัย ปลูกสร้าง หรือไถ่ถอนจำนอง</div>
+                        <div className="mega-menu-item-title">{navText('housing_title', 'เงินกู้พิเศษเพื่อเคหะ')}</div>
+                        <div className="mega-menu-item-desc">{navText('housing_desc', 'ซื้อที่อยู่อาศัย ปลูกสร้าง หรือไถ่ถอนจำนอง')}</div>
                       </div>
                     </Link>
 
@@ -561,10 +561,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>ยื่นคำขอกู้เงินออนไลน์ & ติดตามสถานะ</span>
+                          <span>{navText('loan_apply_title', 'ยื่นคำขอกู้เงินออนไลน์ & ติดตามสถานะ')}</span>
                           <span className="badge badge-teal" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>ออนไลน์ 24 ชม.</span>
                         </div>
-                        <div className="mega-menu-item-desc">ยื่นกู้ฉุกเฉิน กู้สามัญ และติดตามผลการอนุมัติแบบเรียลไทม์</div>
+                        <div className="mega-menu-item-desc">{navText('loan_apply_desc', 'ยื่นกู้ฉุกเฉิน กู้สามัญ และติดตามผลการอนุมัติแบบเรียลไทม์')}</div>
                       </div>
                     </Link>
 
@@ -573,8 +573,8 @@ export default function Navbar() {
                         <CheckSquare size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">เช็คความพร้อมและเอกสารขอกู้</div>
-                        <div className="mega-menu-item-desc">ตรวจสอบคุณสมบัติและรายการเอกสารที่ต้องใช้</div>
+                        <div className="mega-menu-item-title">{navText('loan_checklist_title', 'เช็คความพร้อมและเอกสารขอกู้')}</div>
+                        <div className="mega-menu-item-desc">{navText('loan_checklist_desc', 'ตรวจสอบคุณสมบัติและรายการเอกสารที่ต้องใช้')}</div>
                       </div>
                     </Link>
                   </div>
@@ -601,7 +601,7 @@ export default function Navbar() {
                     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', width: '100%' }}
                   >
                     <Calculator size={15} />
-                    <span>เปิดโปรแกรมคำนวณ</span>
+                    <span>{navText('calc_button', 'เปิดโปรแกรมคำนวณ')}</span>
                   </Link>
                 </div>
               </div>
@@ -615,7 +615,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <HeartHandshake size={14} style={{ color: 'var(--accent-rose)' }} />
-                    <span>กองทุนสวัสดิการสมาชิก</span>
+                    <span>{navText('welfare_fund_group', 'กองทุนสวัสดิการสมาชิก')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/welfare" className="mega-menu-card-item">
@@ -624,10 +624,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>สวัสดิการสงเคราะห์ 6 ประเภท</span>
+                          <span>{navText('welfare_six_title', 'สวัสดิการสงเคราะห์ 6 ประเภท')}</span>
                           <span className="badge badge-rose" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>ครอบคลุม</span>
                         </div>
-                        <div className="mega-menu-item-desc">ดูแลสมาชิกตั้งแต่แรกเข้า ตลอดจนถึงวัยเกษียณ</div>
+                        <div className="mega-menu-item-desc">{navText('welfare_six_desc', 'ดูแลสมาชิกตั้งแต่แรกเข้า ตลอดจนถึงวัยเกษียณ')}</div>
                       </div>
                     </Link>
 
@@ -636,8 +636,8 @@ export default function Navbar() {
                         <GraduationCap size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ทุนการศึกษาบุตรสมาชิก</div>
-                        <div className="mega-menu-item-desc">สนับสนุนการศึกษาตั้งแต่ระดับประถมจนถึงปริญญาตรี</div>
+                        <div className="mega-menu-item-title">{navText('welfare_education_title', 'ทุนการศึกษาบุตรสมาชิก')}</div>
+                        <div className="mega-menu-item-desc">{navText('welfare_education_desc', 'สนับสนุนการศึกษาตั้งแต่ระดับประถมจนถึงปริญญาตรี')}</div>
                       </div>
                     </Link>
 
@@ -646,8 +646,8 @@ export default function Navbar() {
                         <Stethoscope size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">สวัสดิการรักษาพยาบาล/เจ็บป่วย</div>
-                        <div className="mega-menu-item-desc">เงินช่วยเหลือเมื่อเข้ารับการรักษาตัวในโรงพยาบาล</div>
+                        <div className="mega-menu-item-title">{navText('welfare_medical_title', 'สวัสดิการรักษาพยาบาล/เจ็บป่วย')}</div>
+                        <div className="mega-menu-item-desc">{navText('welfare_medical_desc', 'เงินช่วยเหลือเมื่อเข้ารับการรักษาตัวในโรงพยาบาล')}</div>
                       </div>
                     </Link>
                   </div>
@@ -656,7 +656,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <Shield size={14} style={{ color: 'var(--primary-600)' }} />
-                    <span>สวัสดิการคุ้มครองและเกียรติยศ</span>
+                    <span>{navText('welfare_protection_group', 'สวัสดิการคุ้มครองและเกียรติยศ')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/welfare" className="mega-menu-card-item">
@@ -664,8 +664,8 @@ export default function Navbar() {
                         <Medal size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">สวัสดิการสมาชิกผู้สูงอายุ</div>
-                        <div className="mega-menu-item-desc">บำเหน็จเกียรติยศและเงินขวัญถุงแด่สมาชิกอาวุโส</div>
+                        <div className="mega-menu-item-title">{navText('welfare_senior_title', 'สวัสดิการสมาชิกผู้สูงอายุ')}</div>
+                        <div className="mega-menu-item-desc">{navText('welfare_senior_desc', 'บำเหน็จเกียรติยศและเงินขวัญถุงแด่สมาชิกอาวุโส')}</div>
                       </div>
                     </Link>
 
@@ -674,8 +674,8 @@ export default function Navbar() {
                         <Shield size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">คุ้มครองหนี้ & ฌาปนกิจ (สสธท.)</div>
-                        <div className="mega-menu-item-desc">ปกป้องครอบครัวและทายาท วงเงินสงเคราะห์สูงสุด</div>
+                        <div className="mega-menu-item-title">{navText('welfare_debt_title', 'คุ้มครองหนี้ & ฌาปนกิจ (สสธท.)')}</div>
+                        <div className="mega-menu-item-desc">{navText('welfare_debt_desc', 'ปกป้องครอบครัวและทายาท วงเงินสงเคราะห์สูงสุด')}</div>
                       </div>
                     </Link>
 
@@ -684,8 +684,8 @@ export default function Navbar() {
                         <FileText size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ดาวน์โหลดฟอร์มขอรับสวัสดิการ</div>
-                        <div className="mega-menu-item-desc">แบบคำขอและเอกสารแนบเพื่อยื่นขอสวัสดิการ</div>
+                        <div className="mega-menu-item-title">{navText('welfare_forms_title', 'ดาวน์โหลดฟอร์มขอรับสวัสดิการ')}</div>
+                        <div className="mega-menu-item-desc">{navText('welfare_forms_desc', 'แบบคำขอและเอกสารแนบเพื่อยื่นขอสวัสดิการ')}</div>
                       </div>
                     </Link>
                   </div>
@@ -711,7 +711,7 @@ export default function Navbar() {
                     className="btn btn-light btn-sm"
                     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', width: '100%', background: '#ffffff', color: '#881337', fontWeight: 700 }}
                   >
-                    <span>ดูสวัสดิการทั้งหมด</span>
+                    <span>{navText('welfare_button', 'ดูสวัสดิการทั้งหมด')}</span>
                     <ArrowRight size={14} />
                   </Link>
                 </div>
@@ -726,7 +726,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <Newspaper size={14} style={{ color: 'var(--primary-600)' }} />
-                    <span>ข่าวสารและกิจกรรมสหกรณ์</span>
+                    <span>{navText('news_group', 'ข่าวสารและกิจกรรมสหกรณ์')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/news" className="mega-menu-card-item">
@@ -735,10 +735,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>ข่าวประชาสัมพันธ์ & กิจกรรม</span>
+                          <span>{navText('news_activity_title', 'ข่าวประชาสัมพันธ์ & กิจกรรม')}</span>
                           <span className="badge badge-primary" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>อัปเดต</span>
                         </div>
-                        <div className="mega-menu-item-desc">ข่าวสารโครงการ สัมมนา และภาพกิจกรรมสหกรณ์</div>
+                        <div className="mega-menu-item-desc">{navText('news_activity_desc', 'ข่าวสารโครงการ สัมมนา และภาพกิจกรรมสหกรณ์')}</div>
                       </div>
                     </Link>
 
@@ -747,8 +747,8 @@ export default function Navbar() {
                         <Megaphone size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ประกาศทางการสหกรณ์</div>
-                        <div className="mega-menu-item-desc">ประกาศอัตราดอกเบี้ย วันหยุด และมติที่ประชุม</div>
+                        <div className="mega-menu-item-title">{navText('announcement_title', 'ประกาศทางการสหกรณ์')}</div>
+                        <div className="mega-menu-item-desc">{navText('announcement_desc', 'ประกาศอัตราดอกเบี้ย วันหยุด และมติที่ประชุม')}</div>
                       </div>
                     </Link>
 
@@ -757,8 +757,8 @@ export default function Navbar() {
                         <Calendar size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ปฏิทินกิจกรรมและการประชุม</div>
-                        <div className="mega-menu-item-desc">กำหนดการประชุมใหญ่สามัญและวันจ่ายเงินปันผล</div>
+                        <div className="mega-menu-item-title">{navText('calendar_title', 'ปฏิทินกิจกรรมและการประชุม')}</div>
+                        <div className="mega-menu-item-desc">{navText('calendar_desc', 'กำหนดการประชุมใหญ่สามัญและวันจ่ายเงินปันผล')}</div>
                       </div>
                     </Link>
                   </div>
@@ -767,7 +767,7 @@ export default function Navbar() {
                 <div>
                   <div className="mega-menu-category-title">
                     <FileText size={14} style={{ color: 'var(--accent-emerald-dark)' }} />
-                    <span>เอกสารและศูนย์บริการดิจิทัล</span>
+                    <span>{navText('docs_services_group', 'เอกสารและศูนย์บริการดิจิทัล')}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <Link to="/documents" className="mega-menu-card-item">
@@ -776,10 +776,10 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="mega-menu-item-title">
-                          <span>ดาวน์โหลดแบบฟอร์ม & รายงาน</span>
+                          <span>{navText('forms_title', 'ดาวน์โหลดแบบฟอร์ม & รายงาน')}</span>
                           <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>PDF</span>
                         </div>
-                        <div className="mega-menu-item-desc">คำขอกู้เงิน สมัครสมาชิก และรายงานประจำปี</div>
+                        <div className="mega-menu-item-desc">{navText('forms_desc', 'คำขอกู้เงิน สมัครสมาชิก และรายงานประจำปี')}</div>
                       </div>
                     </Link>
 
@@ -788,8 +788,8 @@ export default function Navbar() {
                         <Globe size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ศูนย์บริการออนไลน์ e-Services</div>
-                        <div className="mega-menu-item-desc">ยื่นคำขอออนไลน์ ปรับค่าหุ้น ขอหนังสือรับรองภาษี</div>
+                        <div className="mega-menu-item-title">{navText('eservices_title', 'ศูนย์บริการออนไลน์ e-Services')}</div>
+                        <div className="mega-menu-item-desc">{navText('eservices_desc', 'ยื่นคำขอออนไลน์ ปรับค่าหุ้น ขอหนังสือรับรองภาษี')}</div>
                       </div>
                     </Link>
 
@@ -798,8 +798,8 @@ export default function Navbar() {
                         <QrCode size={18} />
                       </div>
                       <div>
-                        <div className="mega-menu-item-title">ตรวจสอบใบเสร็จ e-Receipt</div>
-                        <div className="mega-menu-item-desc">ตรวจสอบความถูกต้องและลายมือชื่อดิจิทัล</div>
+                        <div className="mega-menu-item-title">{navText('receipt_title', 'ตรวจสอบใบเสร็จ e-Receipt')}</div>
+                        <div className="mega-menu-item-desc">{navText('receipt_desc', 'ตรวจสอบความถูกต้องและลายมือชื่อดิจิทัล')}</div>
                       </div>
                     </Link>
                   </div>
@@ -826,7 +826,7 @@ export default function Navbar() {
                     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', width: '100%' }}
                   >
                     <Download size={14} />
-                    <span>ไปที่คลังเอกสาร</span>
+                    <span>{navText('docs_button', 'ไปที่คลังเอกสาร')}</span>
                   </Link>
                 </div>
               </div>
