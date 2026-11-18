@@ -15,9 +15,11 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 import UserStatusBadge from '../common/UserStatusBadge';
+import useSiteChromeVisibility from '../../hooks/useSiteChromeVisibility';
 
 export default function Navbar() {
   const { COOP_INFO, BOARD_MEMBERS } = usePublicInformation();
+  const { nav_menu: showNavMenu } = useSiteChromeVisibility();
   const [navigationCopy, setNavigationCopy] = useState(null);
   const currentBoardTerm = [...new Set(BOARD_MEMBERS.filter(person => person.status !== 'former').map(person => person.term).filter(Boolean))].sort((a,b) => b.localeCompare(a,'th',{numeric:true}))[0] || '';
   useEffect(() => {
@@ -134,7 +136,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation - 5 MAIN CATEGORIES */}
-        <nav className="hide-mobile navbar-desktop-nav" aria-label="เมนูหลัก">
+        {showNavMenu && <nav className="hide-mobile navbar-desktop-nav" aria-label="เมนูหลัก">
 
           {/* 1. หน้าแรก */}
           <Link
@@ -214,7 +216,7 @@ export default function Navbar() {
             </button>
           </div>
 
-        </nav>
+        </nav>}
 
         {/* Right Action: User Profile Pill / Login */}
         <div className="navbar-actions">
@@ -338,6 +340,8 @@ export default function Navbar() {
           {/* Mobile Menu Toggle Button */}
           <button
             className="show-mobile-btn"
+            style={{display:showNavMenu?undefined:"none"}}
+            disabled={!showNavMenu}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle navigation menu"
           >
@@ -351,7 +355,7 @@ export default function Navbar() {
       {/* ========================================================================= */}
       {/* DESKTOP MEGA MENUS CONTAINER                                            */}
       {/* ========================================================================= */}
-      {activeMegaMenu && (
+      {showNavMenu && activeMegaMenu && (
         <div
           className="mega-menu-wrapper"
           onMouseLeave={() => setActiveMegaMenu(null)}
@@ -839,7 +843,7 @@ export default function Navbar() {
       {/* ========================================================================= */}
       {/* MOBILE DRAWER NAVIGATION                                                 */}
       {/* ========================================================================= */}
-      {mobileMenuOpen && (
+      {showNavMenu && mobileMenuOpen && (
         <div className="animate-fade-in" style={{
           background: 'var(--bg-surface)',
           borderTop: '1px solid var(--border-subtle)',
