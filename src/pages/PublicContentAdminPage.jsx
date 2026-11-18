@@ -1,6 +1,6 @@
 import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { memberAdminApi } from '../services/memberAdminApi';
 import { usePublicContent } from '../context/PublicContentContext';
 import './PublicContentAdminPage.css';
@@ -33,6 +33,8 @@ function Preview({ value, section, boardNames }) {
 
 export default function PublicContentAdminPage() {
   const { catalog, reload }=usePublicContent();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get('section');
   const [sections,setSections]=useState([]),[section,setSection]=useState(''),[data,setData]=useState(null);
   const [value,setValue]=useState(null),[selected,setSelected]=useState(0),[refresh,setRefresh]=useState(0);
   const [note,setNote]=useState(''),[source,setSource]=useState('https://rayongcoop.com/'),[effective,setEffective]=useState(today),[expires,setExpires]=useState('');
@@ -41,8 +43,15 @@ export default function PublicContentAdminPage() {
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries(catalog.boardMembers.map(p=>[p.id,p.name]));
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
-    setSections(result.sections);setSection(result.sections[0]?.key||'');if(!result.sections.length)setLoading(false);
+    const available = result.sections || [];
+    setSections(available);
+    setSection(available.some(item => item.key === requestedSection) ? requestedSection : (available[0]?.key || ''));
+    if (!available.length) setLoading(false);
   }).catch(e=>{if(e.name!=='AbortError'){setError(e.message);setLoading(false);}});return()=>controller.abort();},[]);
+  useEffect(() => {
+    if (!sections.length || !requestedSection || requestedSection === section || dirty) return;
+    if (sections.some(item => item.key === requestedSection)) setSection(requestedSection);
+  }, [requestedSection, sections, section, dirty]);
   useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');
     memberAdminApi(`/api/admin/public-content/sections/${section}`,{signal:controller.signal}).then(result=>{setData(result);setValue(result.value);}).catch(e=>{if(e.name!=='AbortError')setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
@@ -65,7 +74,7 @@ export default function PublicContentAdminPage() {
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   return <section className="admin-module public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่"/>
     {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
-    <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?'))setSection(e.target.value);}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+    <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?')){setSection(e.target.value);setSearchParams(params=>{const next=new URLSearchParams(params);next.set('section',e.target.value);return next;});}}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
     <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
