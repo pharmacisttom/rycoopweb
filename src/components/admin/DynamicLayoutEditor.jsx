@@ -31,6 +31,7 @@ export default function DynamicLayoutEditor() {
   const [notice, setNotice] = useState('');
   const [preview, setPreview] = useState(false);
   const [albumInput, setAlbumInput] = useState('');
+  const [availableAlbums, setAvailableAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const allNodes = useMemo(() => getNodes(tree), [tree]);
   const current = allNodes.find(n => n.id === selected);
@@ -49,6 +50,9 @@ export default function DynamicLayoutEditor() {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { memberAdminApi('/api/admin/activities').then(r => {
+    if (Array.isArray(r.data)) setAvailableAlbums(r.data);
+  }).catch(() => {}); }, []);
   useEffect(() => {
     const beforeUnload = e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', beforeUnload);
@@ -127,6 +131,17 @@ export default function DynamicLayoutEditor() {
               if (albumInput.trim() && (ids.length === 0 || ids.length !== albumInput.split(',').length)) { setError('รหัสอัลบั้มต้องเป็นตัวเลขบวกคั่นด้วยจุลภาค'); return; }
               update({album_ids:[...new Set(ids)]});setError('');
             }}/></label>
+            {current.type === 'gallery' && availableAlbums.length > 0 && <fieldset style={{marginBottom:12}}>
+              <legend>เลือกอัลบั้มกิจกรรม (ไม่เลือก = ทุกอัลบั้มที่เผยแพร่)</legend>
+              {availableAlbums.map(a => <label key={a.id} style={{display:'block',marginBottom:5}}>
+                <input type="checkbox" checked={(current.album_ids||[]).includes(Number(a.id))}
+                  onChange={e => {
+                    const chosen = e.target.checked ? [...new Set([...(current.album_ids||[]), Number(a.id)])]
+                      : (current.album_ids||[]).filter(id => id !== Number(a.id));
+                    update({album_ids: chosen});setAlbumInput(chosen.join(', '));
+                  }}/> {a.title} — {a.status === 'published' ? 'เผยแพร่' : 'ร่าง'}
+              </label>)}
+            </fieldset>}
             <label>ลิงก์ภายในเว็บไซต์<input style={fieldStyle} value={current.link} placeholder="/activities" onChange={e=>update({link:e.target.value})}/></label>
             <label><input type="checkbox" checked={current.visible} onChange={e=>update({visible:e.target.checked})}/> แสดงหัวข้อนี้</label>
             <div style={{marginTop:18}}>
