@@ -153,7 +153,7 @@ class PublicContentService
                 continue;
             }
             $allowed=match($section){
-                'boards'=>['id','name','position','image','term','workplace'],
+                'boards'=>['id','name','position','image','term','workplace','status'],
                 'staff'=>['id','name','position','image','department'],
                 'deposits'=>['type','rate','minDeposit','payFreq','highlight'],
                 'loan_rates'=>['type','rate','maxTerm','condition','productId'],
@@ -165,6 +165,7 @@ class PublicContentService
                 elseif ($key==='features') { if (!is_array($field) || !array_is_list($field) || count($field)>20) throw new InvalidArgumentException('รายละเอียดไม่ถูกต้อง');foreach($field as $line)self::text($line,1000,true); }
                 elseif ($section==='products' && in_array($key,['maxLimit','maxTerm'],true)) $item[$key]=self::integer($field,$key==='maxTerm'?600:999999999);
                 elseif ($key==='id' && $section!=='products') $item[$key]=self::integer($field,999999);
+                elseif ($key==='status' && $section==='boards') { if (!in_array($field,['active','former'],true)) throw new InvalidArgumentException('สถานะกรรมการไม่ถูกต้อง'); } 
                 elseif ($key==='highlight') $item[$key]=(bool)$field;
                 elseif (in_array($key,['rate','rateValue'],true)) { $number=rtrim((string)$field,'%');if (!preg_match('/^\d{1,3}(?:\.\d{1,3})?$/D',$number) || (float)$number>100) throw new InvalidArgumentException('ดอกเบี้ยต้องอยู่ระหว่าง 0–100% และทศนิยมไม่เกิน 3 ตำแหน่ง'); }
                 else $item[$key]=self::text($field,1000);
@@ -188,7 +189,10 @@ class PublicContentService
         }
         if ($section==='boards') {
             $ids=array_column($value,'id');
-            foreach(self::catalog()['boardGroups'] as $group)foreach($group['members'] as [$id])if(!in_array((int)$id,array_map('intval',$ids),true))throw new InvalidArgumentException('กรุณานำกรรมการออกจากคณะย่อยและเผยแพร่ก่อนนำออกจากทำเนียบ');
+            foreach(self::catalog()['boardGroups'] as $group)foreach($group['members'] as [$id]){
+                $match = current(array_filter($value, static fn($person) => (int)$person['id']===(int)$id));
+                if(!$match || ($match['status']??'active')==='former') throw new InvalidArgumentException('กรุณาย้ายสมาชิกคณะอนุกรรมการไปยังผู้รับตำแหน่งและเผยแพร่ก่อนเปลี่ยนสถานะกรรมการเดิม');
+            }
         }
         return $value;
     }
