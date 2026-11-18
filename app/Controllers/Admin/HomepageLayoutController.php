@@ -13,6 +13,8 @@ final class HomepageLayoutController extends Controller
         header('Cache-Control: no-store');
         try {
             $this->json(['success' => true, 'data' => $work()]);
+        } catch (\App\Exceptions\SecurityGateException $e) {
+            $this->json(['success' => false, 'code' => $e->getErrorCode(), 'message' => $e->getMessage()], $e->getHttpStatus());
         } catch (\InvalidArgumentException $e) {
             $this->json(['success' => false, 'code' => 'VALIDATION_ERROR', 'message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
