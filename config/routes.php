@@ -570,7 +570,7 @@ $router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class,
 
 // Homepage layout: public published state only; admin edits require auth, CSRF and fresh MFA.
 $router->get('/api/public/layout', 'Admin\\HomepageLayoutController@published');
-$router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::class]], function(\\App\\Core\\Router $r) {
+$router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
     $r->get('', 'Admin\\HomepageLayoutController@show');
     $r->post('/draft', 'Admin\\HomepageLayoutController@draft', [CsrfMiddleware::class]);
     $r->post('/publish', 'Admin\\HomepageLayoutController@publish', [CsrfMiddleware::class]);
