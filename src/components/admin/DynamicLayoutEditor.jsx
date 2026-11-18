@@ -16,10 +16,18 @@ const shiftNode = (nodes, id, direction) => {
   }
   return nodes.map(n => ({...n, children: shiftNode(n.children || [], id, direction)}));
 };
+const DEFAULT_APPEARANCE = {background:'#ffffff',text:'#10294b',accent:'#175cd3'};
+const APPEARANCE_PRESETS = [
+  {label:'พื้นขาว',colors:{background:'#ffffff',text:'#10294b',accent:'#175cd3'}},
+  {label:'ฟ้าอ่อน',colors:{background:'#eff6ff',text:'#10294b',accent:'#175cd3'}},
+  {label:'น้ำเงินกรมท่า',colors:{background:'#0b1c40',text:'#ffffff',accent:'#fbbf24'}},
+  {label:'เขียวมิ้นต์',colors:{background:'#ecfdf5',text:'#064e3b',accent:'#047857'}},
+  {label:'ครีมอบอุ่น',colors:{background:'#fff7ed',text:'#7c2d12',accent:'#c2410c'}}
+];
 const initialNode = () => ({
   id: 'section-' + crypto.randomUUID().replaceAll('-', '').slice(0,20),
   title: 'หัวข้อใหม่', description: '', type: 'gallery', layout: 'grid',
-  link: '/activities', album_ids: [], visible: true, children: []
+  link: '/activities', album_ids: [], appearance:{...DEFAULT_APPEARANCE}, visible: true, children: []
 });
 
 export default function DynamicLayoutEditor() {
@@ -127,6 +135,35 @@ export default function DynamicLayoutEditor() {
             <label>รูปแบบ<select style={fieldStyle} value={current.layout} onChange={e=>update({layout:e.target.value})}>
               <option value="grid">Grid</option><option value="cards">Cards</option><option value="carousel">Carousel</option>
             </select></label>
+            <fieldset className="dynamic-layout-appearance">
+              <legend>สีและพื้นหลังของหัวข้อนี้</legend>
+              <div className="dynamic-layout-presets" role="group" aria-label="ชุดสีสำเร็จรูป">
+                {APPEARANCE_PRESETS.map(preset=><button type="button" key={preset.label}
+                  className="dynamic-layout-preset" disabled={busy} onClick={()=>update({appearance:{...preset.colors}})}>
+                  <span className="dynamic-layout-swatch" style={{background:preset.colors.background,color:preset.colors.text,borderColor:preset.colors.accent}}>Aa</span>
+                  {preset.label}
+                </button>)}
+              </div>
+              <div className="dynamic-layout-color-grid">
+                {[
+                  ['background','สีพื้นหลัง'],
+                  ['text','สีข้อความ'],
+                  ['accent','สีเน้น / ปุ่ม']
+                ].map(([key,label])=><label key={key}>{label}
+                  <span className="dynamic-layout-color-input">
+                    <input type="color" aria-label={label} value={current.appearance?.[key]||DEFAULT_APPEARANCE[key]}
+                      disabled={busy} onChange={e=>update({appearance:{...DEFAULT_APPEARANCE,...current.appearance,[key]:e.target.value}})}/>
+                    <code>{current.appearance?.[key]||DEFAULT_APPEARANCE[key]}</code>
+                  </span>
+                </label>)}
+              </div>
+              <div className="dynamic-layout-color-preview" style={{backgroundColor:current.appearance?.background||DEFAULT_APPEARANCE.background,color:current.appearance?.text||DEFAULT_APPEARANCE.text}}>
+                <strong>{current.title||'หัวข้อตัวอย่าง'}</strong>
+                <p>{current.description||'ตัวอย่างข้อความที่จะแสดงบนพื้นหลังที่เลือก'}</p>
+                <span style={{backgroundColor:current.appearance?.accent||DEFAULT_APPEARANCE.accent,color:'#ffffff'}}>ตัวอย่างสีปุ่ม/ส่วนเน้น</span>
+              </div>
+              <p className="dynamic-layout-color-hint">ระบบจะตรวจความชัดเจนของสีข้อความกับพื้นหลังก่อนบันทึก (ขั้นต่ำ 4.5:1)</p>
+            </fieldset>
             <label className="dynamic-layout-field-full">รหัสอัลบั้มกิจกรรม (คั่นด้วยเครื่องหมายจุลภาค)<input style={fieldStyle} value={albumInput} placeholder="เช่น 1, 3, 5 — เว้นว่าง = ทุกอัลบั้ม" onChange={e=>setAlbumInput(e.target.value)} onBlur={() => {
               const ids = albumInput.split(',').map(v => Number(v.trim())).filter(v => Number.isSafeInteger(v) && v > 0);
               if (albumInput.trim() && (ids.length === 0 || ids.length !== albumInput.split(',').length)) { setError('รหัสอัลบั้มต้องเป็นตัวเลขบวกคั่นด้วยจุลภาค'); return; }
@@ -158,7 +195,9 @@ export default function DynamicLayoutEditor() {
       {preview && <div style={{marginTop:18,padding:15,border:'1px dashed #7d92b0'}}>
         <h3>ตัวอย่างร่าง (ไม่แสดงต่อสาธารณะ)</h3>
         {allNodes.filter(n => n.visible).map(n => <div key={n.id} style={{marginLeft:(n.depth-1)*18,padding:7}}>
-          <strong>{n.title}</strong> <small>({n.layout})</small><p>{n.description}</p>
+          <div style={{backgroundColor:n.appearance?.background||DEFAULT_APPEARANCE.background,color:n.appearance?.text||DEFAULT_APPEARANCE.text,padding:16,borderRadius:12}}>
+            <strong>{n.title}</strong> <small>({n.layout})</small><p style={{color:'inherit'}}>{n.description}</p>
+          </div>
         </div>)}
       </div>}
       <div style={{marginTop:18}}>
