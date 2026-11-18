@@ -1,6 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
 
+const DEFAULT_APPEARANCE = {background:'#ffffff',text:'#10294b',accent:'#175cd3'};
+const allowedColor = (value, fallback) => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
 /** Published dynamic sections only; no draft content is fetched by public visitors. */
 export default function PublishedDynamicSections() {
   const [sections, setSections] = useState([]);
@@ -17,9 +19,12 @@ export default function PublishedDynamicSections() {
     return ()=>controller.abort();
   },[]);
   const renderNodes = (items, depth=1) => items.filter(s=>s.visible).map(s => (
-    <div key={s.id} style={{marginTop: depth > 1 ? 16 : 0}}>
-      {depth === 1 ? <h2 className="section-title">{s.title}</h2> : <h3>{s.title}</h3>}
-      {s.description && <p className="section-subtitle">{s.description}</p>}
+    <div key={s.id} className="dynamic-published-section" style={{marginTop: depth > 1 ? 16 : 0,padding:'clamp(20px,3vw,44px)',borderRadius:16,
+      backgroundColor:allowedColor(s.appearance?.background,DEFAULT_APPEARANCE.background),
+      color:allowedColor(s.appearance?.text,DEFAULT_APPEARANCE.text),
+      '--section-accent':allowedColor(s.appearance?.accent,DEFAULT_APPEARANCE.accent)}}>
+      {depth === 1 ? <h2 className="section-title" style={{color:"inherit"}}>{s.title}</h2> : <h3 style={{color:"inherit"}}>{s.title}</h3>}
+      {s.description && <p className="section-subtitle" style={{color:"inherit"}}>{s.description}</p>}
       {s.type === 'gallery' && albums.length > 0 && <div style={{
         display:'grid',gridTemplateColumns:s.layout==='carousel'?'repeat(auto-fit,minmax(min(100%,250px),1fr))':'repeat(auto-fit,minmax(min(100%,240px),1fr))',
         gap:18,marginTop:22
@@ -31,7 +36,7 @@ export default function PublishedDynamicSections() {
           </Link>
         </article>)}
       </div>}
-      {s.link && <Link to={s.link} className="btn btn-outline" style={{marginTop:12}}>
+      {s.link && <Link to={s.link} className="btn btn-outline" style={{marginTop:12,borderColor:"var(--section-accent)",color:"inherit",backgroundColor:"transparent"}}>
         {s.type === 'gallery' ? 'ดูภาพกิจกรรมทั้งหมด' : 'ดูรายละเอียด'}
       </Link>}
       {(s.children?.length > 0) && <div style={{marginLeft:depth*12,marginTop:14}}>{renderNodes(s.children, depth+1)}</div>}
