@@ -24,7 +24,7 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
   function chooseCatalog(image) {
     if (images.length >= 20) { setCatalogError('อัลบั้มมีได้ไม่เกิน 20 ภาพ'); return; }
     if (images.some(item => item.src === image.url)) { setCatalogError('ภาพนี้อยู่ในอัลบั้มแล้ว'); return; }
-    onChange([...images, { media_id: image.id, src: image.url, alt: image.alt_text || '', caption: image.caption || '' }]);
+    onChange([...images, { media_id: image.id, src: image.url, thumbnail: image.preview_url || image.url, alt: image.alt_text || '', caption: image.caption || '' }]);
     setPickerOpen(false);
   }
   async function add(event) {
