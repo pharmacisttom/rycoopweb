@@ -9,7 +9,8 @@ assert.equal(identity.id,7);assert.equal(mergeServerIdentity({id:99,permissions:
 const server=await createServer({configFile:false,cacheDir:'storage/tmp/vite-admin-components',plugins:[react()],resolve:{alias:{'react-router-dom':'react-router'}},optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true},appType:'custom'});
 try{
   const{hasControlCenterAccess,ADMIN_SIDEBAR_GROUPS}=await server.ssrLoadModule('/src/components/admin/AdminControlCenterShell.jsx');
-  assert.equal(ADMIN_SIDEBAR_GROUPS.length,14);
+  assert.equal(ADMIN_SIDEBAR_GROUPS.length,15);
+  assert(ADMIN_SIDEBAR_GROUPS.some(group=>group.id==='help' && group.items.some(item=>item.to==='/admin/manual')),'staff handbook must be in Sidebar');
   assert.equal(hasControlCenterAccess({role:'it_admin'},()=>false,['settings.view']),false,'role name alone cannot grant navigation');
   assert.equal(hasControlCenterAccess({role:'custom_editor'},permission=>permission==='news.view',['news.view']),true);
   assert.equal(hasControlCenterAccess({role:'member'},()=>true,['news.view']),false);

@@ -1,0 +1,108 @@
+/* Admin presentation coherence RC03.
+   Scope to authenticated Control Center only; do not reset Bootstrap or public pages.
+   Preserve native table semantics and existing modal/overlay stacking. */
+.acc-shell .acc-content {
+  --admin-ui-border: #94a3b8;
+  --admin-ui-gridline: #d3deea;
+  --admin-ui-focus: #175cd3;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin,.admin-card,.acc-card) {
+  min-width: 0;
+  max-width: 100%;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),select,textarea),
+.acc-shell .acc-content :is(.admin-field,.form-group) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),select,textarea) {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 42px;
+  border: 1.5px solid var(--admin-ui-border);
+  border-radius: 9px;
+  background: var(--acc-surface,#fff);
+  color: var(--acc-text,#172033);
+  font: inherit;
+  line-height: 1.45;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(input,select,textarea):focus-visible {
+  outline: 2px solid var(--admin-ui-focus);
+  outline-offset: 1px;
+  border-color: var(--admin-ui-focus);
+  box-shadow: 0 0 0 3px rgba(23,92,211,.12);
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(input,select,textarea):disabled {
+  opacity: 1;
+  background: var(--acc-surface-elevated,#f1f5f9);
+  cursor: not-allowed;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(label,legend) {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-form-grid,.form-row,.form-grid,.row) > * {
+  min-width: 0;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-toolbar,.admin-actions,.public-content-toolbar,.acc-page-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-width: 0;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-toolbar,.admin-actions,.public-content-toolbar,.acc-page-actions) > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-card,.surface-card,.acc-card,.card,.public-content-fields) {
+  border: 1px solid var(--admin-ui-gridline);
+  border-radius: 12px;
+  background: var(--acc-surface,#fff);
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-table,.acc-table,.table,.public-content-table) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--admin-ui-gridline);
+  border-radius: 10px;
+  background: var(--acc-surface,#fff);
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-table,.acc-table,.table,.public-content-table) :is(th,td) {
+  position: static;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--admin-ui-gridline);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-table,.acc-table,.table,.public-content-table) :is(th,td):not(:last-child) {
+  border-right: 1px solid var(--admin-ui-gridline);
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-table,.acc-table,.table,.public-content-table) thead th {
+  background: var(--acc-surface-elevated,#f8fafc);
+  color: var(--acc-text,#172033);
+  font-weight: 700;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior-x: contain;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-table-scroll,.acc-table-wrap,.table-responsive) > table {
+  min-width: 640px;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-table,.acc-table,.table,.public-content-table) tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.btn,button) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-form-grid,.form-grid) {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .acc-shell .acc-content :is(.admin-module,.member-admin,.public-content-admin) :is(.admin-toolbar,.admin-actions,.public-content-toolbar) {
+    align-items: stretch;
+  }
+}
