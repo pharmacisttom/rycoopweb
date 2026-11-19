@@ -732,85 +732,9 @@ export default function MemberDashboardPage() {
             ROLE 3: AUDITOR / MANAGER (READ-ONLY OVERSIGHT)
             ========================================================================= */}
         {userRole === 'auditor' && (
-          <div className="animate-fade-in">
-            {/* KPI Summary Cards */}
-            <div className="dashboard-kpi-grid">
-              <KpiCard
-                title="คะแนนความถูกต้องทางบัญชี"
-                value="99.8%"
-                subtitle="ผ่านเกณฑ์มาตรฐานกรมส่งเสริมสหกรณ์"
-                icon={ShieldCheck}
-                variant="gold"
-              />
-              <KpiCard
-                title="สินทรัพย์ที่ตรวจสอบแล้ว"
-                value="3,210.80"
-                unit="ล้านบาท"
-                subtitle="กระทบยอดตรงกับสมุดบัญชีแยกประเภท"
-                icon={Landmark}
-                variant="teal"
-              />
-              <KpiCard
-                title="รายการที่รอตรวจสอบ"
-                value="0"
-                unit="รายการ"
-                subtitle="ตรวจสอบครบถ้วนทุกรอบเดือน"
-                icon={CheckCircle2}
-                variant="emerald"
-              />
-              <KpiCard
-                title="อัตราผลตอบแทนต่อสินทรัพย์ (ROA)"
-                value="4.85%"
-                subtitle="ประสิทธิภาพการบริหารจัดการเงินทุน"
-                icon={TrendingUp}
-                variant="primary"
-              />
-            </div>
-
-            <div className="surface-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2rem' }}>
-              <SectionHeader
-                title="รายงานการตรวจสอบงบการเงินและเงินปันผลประจำงวด (Auditor Verification)"
-                subtitle="รายงานการสุ่มตรวจยอดเงินกู้ เงินฝาก และสูตรคำนวณเงินปันผลเฉลี่ยคืนตามระเบียบข้อบังคับ"
-                icon={FileSpreadsheet}
-                iconColor="var(--accent-gold-dark)"
-                actionButton={
-                  <button onClick={() => toast.info('จำลองการดาวน์โหลดรายงานผลการตรวจสอบกิจการฉบับเต็ม (PDF)')} className="btn btn-gold btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Download size={15} />
-                    <span>ดาวน์โหลดรายงานผลการตรวจสอบ (PDF)</span>
-                  </button>
-                }
-              />
-
-              <div style={{ background: 'var(--bg-subtle)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-subtle)', lineHeight: 1.6, fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '1.5rem' }}>
-                <div style={{ fontWeight: 700, color: 'var(--primary-900)', marginBottom: '0.5rem' }}>
-                  สรุปความเห็นของผู้ตรวจสอบกิจการ:
-                </div>
-                <p style={{ margin: 0 }}>
-                  ผู้ตรวจสอบกิจการได้ทำการสุ่มตรวจยอดเงินกู้ เงินฝาก และสูตรคำนวณเงินปันผลหุ้น 5.25% และเงินเฉลี่ยคืน 12.50% พบว่าถูกต้องตามระเบียบข้อบังคับ และการบันทึกบัญชีเป็นไปตามมาตรฐานการบัญชีของสหกรณ์ออมทรัพย์
-                </p>
-              </div>
-
-              {/* Read-only Audit Trail */}
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary-900)', marginBottom: '0.75rem' }}>
-                  ประวัติการตรวจสอบล่าสุด (Audit Trail - Read Only):
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
-                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>ตรวจสอบการกระทบยอดบัญชีเงินฝากธนาคารพาณิชย์</span>
-                    <span className="badge badge-emerald">ตรงกับยอดบัญชี</span>
-                  </div>
-                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>สุ่มตรวจสัญญาสินเชื่อเงินกู้สามัญ ประจำงวด ก.พ. 2567</span>
-                    <span className="badge badge-emerald">เอกสารครบถ้วน</span>
-                  </div>
-                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>ตรวจสอบการคำนวณเงินปันผลและเงินเฉลี่ยคืน</span>
-                    <span className="badge badge-emerald">สูตรคำนวณถูกต้อง</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="surface-card" role="status" style={{ padding: '2rem' }}>
+            <h2>รายงานสำหรับผู้ตรวจสอบกิจการ</h2>
+            <p>ยังไม่มีผลการตรวจสอบที่ยืนยันจากระบบหลังบ้านในหน้านี้ โปรดใช้รายงานที่ได้รับอนุมัติและบันทึก Audit Log จริง</p>
           </div>
         )}
 
