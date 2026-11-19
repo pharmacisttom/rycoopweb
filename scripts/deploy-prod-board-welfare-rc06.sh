@@ -56,6 +56,7 @@ runuser -u coopadmin -- node tests/LoanCalculatorRoutingRC05Test.mjs
 runuser -u coopadmin -- node tests/LoanCalculatorManualFallbackTest.mjs
 runuser -u coopadmin -- node tests/PublicPageRenderGuardTest.mjs
 runuser -u coopadmin -- node tests/RC06BoardWelfareGuardTest.mjs
+runuser -u coopadmin -- node scripts/check-rc06-jsx.mjs
 runuser -u coopadmin -- npm run build
 test -f "$WORK/public/app/index.html"
 echo "BUILD=PASS"
