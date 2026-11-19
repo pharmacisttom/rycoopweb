@@ -87,6 +87,7 @@ $router->post('/api/popups/event', 'Public\\ApiController@logPopupEvent');
 |--------------------------------------------------------------------------
 */
 $router->get('/api/public/home', 'Api\\SpaApiController@home');
+$router->get('/api/public/popups', 'Api\\SpaApiController@publicPopups');
 $router->get('/api/public/coop-info', 'Api\\SpaApiController@coopInfo');
 $router->get('/api/public/interest-rates', 'Api\\SpaApiController@interestRates');
 $router->get('/api/public/loan-products', 'Api\\SpaApiController@loanProducts');
