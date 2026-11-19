@@ -60,9 +60,11 @@ PY
 
 cd "$WORK"
 echo "===== BUILD, TEST AND PHP LINT ====="
-npm ci
-node tests/PublicContentReferenceTest.mjs
-npm run build
+# Keep generated dependencies owned by the unprivileged workspace user.
+[ "$(stat -c '%U' "$WORK")" = "coopadmin" ] || abort "Unexpected workspace owner"
+runuser -u coopadmin -- npm ci
+runuser -u coopadmin -- node tests/PublicContentReferenceTest.mjs
+runuser -u coopadmin -- npm run build
 test -f public/app/index.html
 for p in app/Services/PublicContentService.php \
          app/Services/NewsGalleryService.php \
