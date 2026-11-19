@@ -21,7 +21,7 @@ export default function AdminWelfarePage(){
       actions={<Link className="acc-btn" to="/admin/workspace">กลับพื้นที่ทำงาน</Link>}
     />
     <div className="welfare-admin-notice" role="status">
-      หน้าสาธารณะยังถูกระงับด้วย Nginx — การบันทึกที่นี่ไม่เปิดเผยแพร่หน้าสาธารณะอัตโนมัติ
+      การแสดงรายการบนหน้าสาธารณะขึ้นกับสถานะ Active ของรายการและการเปิดใช้งานเส้นทาง Nginx Production ตรวจสอบหน้าสาธารณะหลังบันทึกทุกครั้ง
     </div>
     {error && <AdminErrorState message={error}/>}
     <AdminCard title="รายการสวัสดิการ" description="บริหารสถานะและข้อมูลสิทธิประโยชน์ของสมาชิก">
@@ -40,7 +40,7 @@ export default function AdminWelfarePage(){
                 <td>{item.sort_order}</td>
                 <td>{item.title}</td>
                 <td>{item.benefit_amount || '—'}</td>
-                <td><AdminStatusBadge status={item.status}>{item.status==='active'?'พร้อมเผยแพร่เมื่อเปิดโมดูล':'ร่าง/ไม่ใช้งาน'}</AdminStatusBadge></td>
+                <td><AdminStatusBadge status={item.status}>{item.status==='active'?'Active — ตรวจสอบการเปิด Public API':'ร่าง/ไม่ใช้งาน'}</AdminStatusBadge></td>
                 <td>
                   <div className="welfare-admin-row-actions">
                     <button type="button" className="acc-btn" disabled={busy} onClick={()=>setEditing({...item})}>แก้ไข</button>
@@ -70,7 +70,7 @@ export default function AdminWelfarePage(){
             <label className="admin-field">สถานะ
               <select value={editing.status} onChange={e=>setEditing(v=>({...v,status:e.target.value}))}>
                 <option value="inactive">ร่าง/ไม่ใช้งาน</option>
-                <option value="active">พร้อมเผยแพร่หลังเปิดโมดูล</option>
+                <option value="active">Active — แสดงเมื่อเปิด Public API</option>
               </select>
             </label>
           </div>
