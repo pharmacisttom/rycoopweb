@@ -6,7 +6,6 @@ import {
   MapPin, Phone, Mail, Clock, MessageSquare,
   Send, CheckCircle2, ChevronDown, ChevronUp, Search, ShieldCheck, AlertCircle
 } from 'lucide-react';
-import { FAQS, MEMBER_COMPLAINTS } from '../data/mockData';
 
 export default function ContactPage() {
   const { COOP_INFO } = usePublicInformation();
@@ -27,59 +26,9 @@ export default function ContactPage() {
     message: ''
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newId = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
-    const newEntry = {
-      id: newId,
-      name: form.name,
-      phone: form.phone,
-      email: form.email || '-',
-      department: 'สมาชิกทั่วไป',
-      topic: form.topic,
-      message: form.message,
-      date: new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
-      status: 'รอดำเนินการ',
-      adminReply: '',
-      replyDate: ''
-    };
-
-    try {
-      const saved = localStorage.getItem('coop_member_complaints');
-      const list = saved ? JSON.parse(saved) : MEMBER_COMPLAINTS;
-      const updated = [newEntry, ...list];
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-    } catch (err) {
-      // ignore
-    }
-
-    setLastSubmittedId(newId);
-    setSubmitted(true);
-  };
-
-  const handleTrack = (e) => {
-    e.preventDefault();
-    if (!trackingId) return;
-
-    let list = MEMBER_COMPLAINTS;
-    try {
-      const saved = localStorage.getItem('coop_member_complaints');
-      if (saved) list = JSON.parse(saved);
-    } catch (err) {
-      // ignore
-    }
-
-    const found = list.find(item => item.id.toLowerCase() === trackingId.trim().toLowerCase());
-    if (found) {
-      setTrackingResult(found);
-    } else {
-      setTrackingResult({
-        notFound: true,
-        id: trackingId
-      });
-    }
-  };
+  // No fake ticket numbers or browser-only complaint records in production.
+  const handleSubmit = (e) => e.preventDefault();
+  const handleTrack = (e) => e.preventDefault();
 
   return (
     <div className="section">
@@ -215,6 +164,7 @@ export default function ContactPage() {
                   </button>
                 </div>
               ) : (
+                <p role="status" className="surface-card" style={{padding:12}}>ระบบส่งเรื่องร้องเรียนออนไลน์ยังไม่เชื่อมฐานข้อมูลจริง กรุณาติดต่อเจ้าหน้าที่สหกรณ์โดยตรง ขณะนี้ยังไม่รับบันทึกเรื่องผ่านเว็บไซต์</p>
                 <form onSubmit={handleSubmit}>
                   <div className="form-group">
                     <label className="form-label">หัวข้อเรื่อง</label>
@@ -247,7 +197,7 @@ export default function ContactPage() {
                     <textarea className="form-control" rows={4} required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="พิมพ์รายละเอียดที่ต้องการแจ้ง..." />
                   </div>
 
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem' }}>
+                  <button type="submit" disabled title="ระบบยังไม่เปิดรับเรื่องออนไลน์" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem' }}>
                     <Send size={16} />
                     <span>ส่งข้อความ</span>
                   </button>
@@ -267,6 +217,7 @@ export default function ContactPage() {
               กรอกรหัสติดตามเรื่อง (Ticket ID เช่น TKT-670301) ที่ได้รับเพื่อตรวจสอบความคืบหน้า
             </p>
 
+            <p role="status">ระบบติดตามเรื่องร้องเรียนยังไม่เชื่อมฐานข้อมูลจริง กรุณาติดต่อเจ้าหน้าที่เพื่อตรวจสอบสถานะ</p>
             <form onSubmit={handleTrack} style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
               <input
                 type="text"
@@ -276,7 +227,7 @@ export default function ContactPage() {
                 onChange={(e) => setTrackingId(e.target.value)}
                 required
               />
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" disabled title="ระบบยังไม่เปิดใช้งาน" className="btn btn-primary">
                 <Search size={16} />
                 <span>ตรวจสอบ</span>
               </button>
