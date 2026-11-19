@@ -60,13 +60,7 @@ export default function MemberDashboardPage() {
   const [memberLoanFilter, setMemberLoanFilter] = useState('all');
 
   // Complaints & Feedback State
-  const [complaintsList, setComplaintsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('coop_member_complaints');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return []; // No fabricated member complaints on a fresh production session.
-  });
+  const [complaintsList] = useState([]); // No browser-local complaints shown as server records.
   const [complaintFilter, setComplaintFilter] = useState('all');
   const [selectedAdminComplaint, setSelectedAdminComplaint] = useState(null);
   const [adminReplyText, setAdminReplyText] = useState('');
@@ -79,45 +73,10 @@ export default function MemberDashboardPage() {
     message: ''
   });
 
-  // Auto-sync complaints and loan requests from localStorage whenever updated
-  useEffect(() => {
-    const syncData = () => {
-      try {
-        const savedComplaints = localStorage.getItem('coop_member_complaints');
-        if (savedComplaints) {
-          setComplaintsList(JSON.parse(savedComplaints));
-        }
-        const savedLoans = localStorage.getItem('coop_service_requests');
-        if (savedLoans) {
-          setLoanQueue(JSON.parse(savedLoans));
-        }
-      } catch (e) {}
-    };
-
-    syncData();
-    window.addEventListener('storage', syncData);
-    window.addEventListener('focus', syncData);
-    return () => {
-      window.removeEventListener('storage', syncData);
-      window.removeEventListener('focus', syncData);
-    };
-  }, []);
+  // Production must not treat browser-local requests as persisted cooperative records.
 
   // Loan/Service requests queue
-  const [loanQueue, setLoanQueue] = useState(() => {
-    try {
-      const saved = localStorage.getItem('coop_service_requests');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {}
-    return [
-      { id: 'LN-6703-01', memberName: 'นายสมชาย มีสุข', memberId: '04892', department: 'โรงพยาบาลระยอง', phone: '081-234-5678', type: 'คำขอกู้เงินฉุกเฉินออนไลน์', amount: '50,000 บาท', date: '11 มี.ค. 2567', status: 'รอดำเนินการ', currentStep: 2, note: 'รอการตรวจสอบเอกสารและอนุมัติจากเจ้าหน้าที่สินเชื่อ' },
-      { id: 'LN-6703-02', memberName: 'นางสาววิมลรัตน์ จันทร์เพ็ญ', memberId: '05120', department: 'สสจ.ระยอง', phone: '089-987-6543', type: 'เงินกู้สามัญเพื่อสวัสดิการ', amount: '400,000 บาท', date: '10 มี.ค. 2567', status: 'รอตรวจเอกสารผู้ค้ำ', currentStep: 2, note: 'ตรวจสอบเอกสารผู้ค้ำประกัน 2 ท่าน' },
-      { id: 'REQ-6703-09', memberName: 'นายเอกชัย บุญรอด', memberId: '03411', department: 'รพ.สต.บ้านแลง', phone: '086-555-4321', type: 'ขอเปลี่ยนแปลงค่าหุ้นรายเดือน', amount: '4,000 บ./ด.', date: '10 มี.ค. 2567', status: 'รอดำเนินการ', currentStep: 2, note: 'ขอปรับเพิ่มค่าหุ้นรายเดือนเป็น 4,000 บาท' },
-      { id: 'WF-6703-05', memberName: 'นางสาวจารุณี รัตนโชติ', memberId: '06214', department: 'รพ.แกลง', phone: '082-111-2233', type: 'ขอรับสวัสดิการคลอดบุตร', amount: '3,000 บาท', date: '09 มี.ค. 2567', status: 'อนุมัติเรียบร้อยแล้ว', currentStep: 4, note: 'โอนเงินสวัสดิการเข้าบัญชีเรียบร้อย' }
-    ];
-  });
+  const [loanQueue] = useState([]); // No fabricated requests or browser-local approvals.
 
   if (!isLoggedIn || !user) {
     return (
@@ -147,155 +106,21 @@ export default function MemberDashboardPage() {
     navigate('/');
   };
 
-  const handleApproveLoan = (id, remarks) => {
-    const updated = loanQueue.map(item => item.id === id ? {
-      ...item,
-      status: 'อนุมัติเรียบร้อยแล้ว',
-      currentStep: 3,
-      note: remarks || 'ผ่านการตรวจสอบและอนุมัติจากเจ้าหน้าที่สินเชื่อเรียบร้อยแล้ว',
-      lastUpdated: new Date().toLocaleDateString('th-TH')
-    } : item);
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-    } catch (e) {}
-    toast.success(`อนุมัติคำขอ ${id} เรียบร้อยแล้ว`);
-  };
+  const handleApproveLoan = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleRejectLoan = (id, remarks) => {
-    const updated = loanQueue.map(item => item.id === id ? {
-      ...item,
-      status: 'ส่งกลับแก้ไข',
-      currentStep: 2,
-      note: remarks || 'เอกสารไม่สมบูรณ์ กรุณาแนบหลักฐานเพิ่มเติม',
-      lastUpdated: new Date().toLocaleDateString('th-TH')
-    } : item);
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-    } catch (e) {}
-    toast.info(`ส่งกลับคำขอ ${id} ให้สมาชิกแก้ไขเรียบร้อยแล้ว`);
-  };
+  const handleRejectLoan = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleAddNote = (id, remarks) => {
-    const updated = loanQueue.map(item => item.id === id ? {
-      ...item,
-      note: remarks,
-      lastUpdated: new Date().toLocaleDateString('th-TH')
-    } : item);
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-    } catch (e) {}
-    toast.success(`บันทึกหมายเหตุสำหรับคำขอ ${id} เรียบร้อยแล้ว`);
-  };
+  const handleAddNote = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleUpdateComplaintStatus = (id, newStatus) => {
-    const updated = complaintsList.map(c => c.id === id ? { ...c, status: newStatus } : c);
-    setComplaintsList(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-    } catch (e) {}
-    if (selectedAdminComplaint && selectedAdminComplaint.id === id) {
-      setSelectedAdminComplaint({ ...selectedAdminComplaint, status: newStatus });
-    }
-  };
+  const handleUpdateComplaintStatus = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleSaveAdminComplaintReply = (id, replyText) => {
-    const now = new Date().toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' น.';
-    const updated = complaintsList.map(c => c.id === id ? {
-      ...c,
-      adminReply: replyText,
-      status: 'ตอบกลับแล้ว',
-      replyDate: now
-    } : c);
-    setComplaintsList(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-    } catch (e) {}
-    if (selectedAdminComplaint && selectedAdminComplaint.id === id) {
-      setSelectedAdminComplaint({
-        ...selectedAdminComplaint,
-        adminReply: replyText,
-        status: 'ตอบกลับแล้ว',
-        replyDate: now
-      });
-    }
-    toast.success(`บันทึกข้อความตอบกลับสำหรับรหัส ${id} เรียบร้อยแล้ว`);
-  };
+  const handleSaveAdminComplaintReply = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleDeleteComplaint = async (id) => {
-    const confirmed = await confirmDialog({
-      title: 'ยืนยันการลบรายการ',
-      message: `ยืนยันการลบรายการ ${id} หรือไม่? รายการที่ถูกลบจะไม่สามารถกู้คืนได้`,
-      confirmText: 'ลบรายการ',
-      cancelText: 'ยกเลิก',
-      type: 'danger'
-    });
+  const handleDeleteComplaint = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-    if (confirmed) {
-      const updated = complaintsList.filter(c => c.id !== id);
-      setComplaintsList(updated);
-      try {
-        localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-        window.dispatchEvent(new Event('storage'));
-      } catch (e) {}
-      if (selectedAdminComplaint && selectedAdminComplaint.id === id) {
-        setSelectedAdminComplaint(null);
-      }
-      toast.success(`ลบรายการ ${id} เรียบร้อยแล้ว`);
-    }
-  };
+  const handleMemberSubmitComplaint = (event) => { event?.preventDefault?.(); toast.error('ยังไม่เปิดให้ส่งเรื่องผ่านเว็บไซต์: ไม่มีการบันทึกเข้าระบบสหกรณ์'); };
 
-  const handleMemberSubmitComplaint = (e) => {
-    e.preventDefault();
-    if (!newMemberComplaint.message.trim()) {
-      toast.error('กรุณากรอกรายละเอียดเรื่องร้องเรียน / ข้อเสนอแนะ');
-      return;
-    }
-
-    const randomSuffix = Math.floor(10 + Math.random() * 90);
-    const newId = `TKT-6703${randomSuffix}`;
-    const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-
-    const newEntry = {
-      id: newId,
-      name: user.name || 'สมาชิกสหกรณ์',
-      phone: user.phone || '081-234-5678',
-      email: user.email || '',
-      department: user.department || 'โรงพยาบาลระยอง',
-      memberId: user.memberId || user.username || '04892',
-      topic: newMemberComplaint.topic || 'ข้อเสนอแนะการให้บริการ',
-      message: newMemberComplaint.message.trim(),
-      date: dateStr,
-      status: 'รอดำเนินการ',
-      adminReply: '',
-      replyDate: ''
-    };
-
-    const updated = [newEntry, ...complaintsList];
-    setComplaintsList(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-    } catch (e) {}
-
-    setNewMemberComplaint({ topic: 'ข้อเสนอแนะการให้บริการ', message: '' });
-    setMemberComplaintModalOpen(false);
-    setActiveTab('complaints');
-    toast.success(`ส่งเรื่องร้องเรียน / ข้อเสนอแนะเรียบร้อยแล้ว (รหัสติดตามเรื่อง: ${newId})`, 'ส่งเรื่องสำเร็จ');
-  };
-
-  const handleMemberSubmitLoan = (newLoanItem) => {
-    const updated = [newLoanItem, ...loanQueue];
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-    } catch (e) {}
-    setActiveTab('loans');
-    toast.success(`ยื่นคำขอกู้เงินออนไลน์เรียบร้อยแล้ว! รหัสคำขอ: ${newLoanItem.id} วงเงิน: ${newLoanItem.amount}`, 'ยื่นกู้เงินสำเร็จ');
-  };
+  const handleMemberSubmitLoan = () => { toast.error('ยังไม่เปิดให้ยื่นคำขอกู้ผ่านหน้านี้: ไม่มีการบันทึกเข้าระบบสหกรณ์'); };
 
   const userRole = user.role || 'member';
 
