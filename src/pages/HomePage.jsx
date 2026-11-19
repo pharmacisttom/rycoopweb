@@ -163,7 +163,7 @@ export default function HomePage() {
 
   const heroSettings = {
     title: coopInfo.nameTh,
-    subtitle: `${coopInfo.slogan || FALLBACK_COOP.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`,
+    subtitle: coopInfo.slogan || '',
     badgeText: 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล',
     bgImageUrl: '/assets/img/hero_bg_coop.jpg'
   };
@@ -250,7 +250,7 @@ export default function HomePage() {
                 marginBottom: '2rem',
                 maxWidth: '560px'
               }}>
-                {heroSettings.subtitle || `${COOP_INFO.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`}
+                {heroSettings.subtitle || ''}
               </p>
 
               {/* Action Buttons */}
@@ -576,7 +576,7 @@ export default function HomePage() {
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
             <h2 className="section-title">สินเชื่อเพื่อบุคลากรสาธารณสุข</h2>
-            <p className="section-subtitle">วงเงินกู้สูง ดอกเบี้ยต่ำ ผ่อนชำระสบาย ยื่นกู้ง่าย อนุมัติรวดเร็ว</p>
+            <p className="section-subtitle">ตรวจสอบผลิตภัณฑ์เงินกู้ที่สหกรณ์เผยแพร่แล้ว</p>
             <div className="section-line" />
           </div>
 
