@@ -82,6 +82,19 @@ cp -a "$LOOP" "$BACKUP/loop.conf"
 cp -a "$OLD" "$NEW"
 rm -rf "$NEW/public/app"
 cp -a "$WORK/public/app" "$NEW/public/app"
+# npm/Vite artifacts may be 0600 due to umask 077. Public SPA assets must
+# be readable by nginx; do not touch the private .env or application tree.
+if find "$NEW/public/app" -type l -print -quit | grep -q .; then
+  abort "Unexpected symlink inside SPA build"
+fi
+chown -R root:www-data "$NEW/public/app"
+find "$NEW/public/app" -type d -exec chmod 0755 {} +
+find "$NEW/public/app" -type f -exec chmod 0644 {} +
+runuser -u www-data -- test -r "$NEW/public/app/index.html" || abort "nginx cannot read SPA index"
+if find "$NEW/public/app" -type f ! -perm /004 -print -quit | grep -q .; then
+  abort "SPA contains unreadable assets"
+fi
+echo "SPA_NGINX_PERMISSIONS=PASS"
 for p in app/Services/PublicContentService.php \
          app/Services/NewsGalleryService.php \
          app/Controllers/Admin/PublicContentController.php \
