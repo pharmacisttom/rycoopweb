@@ -28,29 +28,33 @@ for (const [id, expected] of Object.entries(expectedLimits)) {
   assert.deepEqual([p.maxLimit, p.maxTerm], expected);
 }
 
-// Render the real pages to catch imports, JSON wiring, omitted groups and stale visible rates.
+// Public pages initially render without network data. They must not present the bundled
+// historical seed/reference records as *current* official data. Staff-approved records
+// arrive asynchronously from /api/public/content after a successful server response.
 const server = await createServer({ configFile: false, plugins: [react()], resolve: { alias: { 'react-router-dom': 'react-router' } }, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, appType: 'custom' });
 try {
   const { StaticRouter } = await server.ssrLoadModule('react-router');
-  for (const [path, strings] of [
-    ['/src/pages/BoardPage.jsx', ['ชุดที่ 38', ...reference.boardMembers.map(p => p.name), ...reference.boardGroups.map(g => g.title), ...reference.advisors.map(p => p[0]), ...reference.auditors.map(p => p[0])]],
-    ['/src/pages/BoardOfficerPage.jsx', reference.staffMembers.map(p => p.name)],
-    ['/src/pages/ContactPage.jsx', [reference.coopInfo.address, reference.coopInfo.phone, reference.coopInfo.email]],
-    ['/src/components/layout/Footer.jsx', [reference.coopInfo.address, reference.coopInfo.phone, reference.coopInfo.email, reference.coopInfo.slogan]],
-    ['/src/pages/DepositsPage.jsx', ['1.75%', '1.50%', '1,000 บาท', '100 บาท', reference.sources.deposits.url]],
-    ['/src/pages/LoansPage.jsx', ['200,000', '300,000', '400,000', 'ไม่มีเงินเฉลี่ยคืน', reference.sources.loans.url]],
+  for (const path of [
+    '/src/pages/BoardPage.jsx',
+    '/src/pages/BoardOfficerPage.jsx',
+    '/src/pages/ContactPage.jsx',
+    '/src/components/layout/Footer.jsx',
+    '/src/pages/DepositsPage.jsx',
+    '/src/pages/LoansPage.jsx',
   ]) {
     const { default: Page } = await server.ssrLoadModule(path);
     const html = renderToStaticMarkup(React.createElement(StaticRouter, { location: '/' }, React.createElement(Page)));
-    for (const value of strings) assert.ok(html.includes(value), `${path}: missing ${value}`);
-    if (path.includes('Deposits')) assert.ok(!html.includes('3.10%'));
-    if (path.includes('Contact') || path.includes('Footer')) {
-      assert.ok(!html.includes('facebook.com/rayongcoop'));
-      assert.ok(!html.includes('038-611178'));
-      assert.ok(!html.includes('contact@rayongcoop.com'));
+    for (const member of [...reference.boardMembers, ...reference.staffMembers]) {
+      assert.ok(!html.includes(member.name), `${path}: must not display historical seed person ${member.id} before publication`);
     }
+    for (const value of [reference.coopInfo.address, reference.coopInfo.phone, reference.coopInfo.email]) {
+      assert.ok(!html.includes(value), `${path}: must not display unverified contact data before publication`);
+    }
+    if (path.includes('BoardPage')) assert.ok(!html.includes('ชุดที่ 38'), 'Never force a historical board term without published records');
+    if (path.includes('Deposits')) assert.ok(!html.includes('1.75%') && !html.includes('1.50%'), 'Never display seeded rates before publication');
+    if (path.includes('Loans')) assert.ok(!html.includes(reference.loanProducts[0].title), 'Never display seeded products before publication');
   }
-  console.log('PASS: reference values, board groups and rendered public pages');
+  console.log('PASS: historical fixtures retained for audit, not shown as published public facts');
 } finally {
   await server.close();
 }
