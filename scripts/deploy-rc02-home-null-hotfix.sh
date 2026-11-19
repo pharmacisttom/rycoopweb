@@ -3,13 +3,13 @@ set -Eeuo pipefail
 umask 077
 
 WORK="$(cd "$(dirname "$0")/.." && pwd)"
-BRANCH="hotfix/rc02-home-null-rate-source-20261119"
-OLD="/var/www/rycoopweb/production-releases/real-content-rc02-20261119T110048Z"
+BRANCH="hotfix/rc02-loan-calculator-empty-products-20261119"
+OLD="/var/www/rycoopweb/production-releases/rc02-home-null-hotfix-20261119T110805Z"
 MAIN="/etc/nginx/sites-available/rycoopweb-main-ssl"
 LOOP="/etc/nginx/conf.d/rycoop-prod-loopback.conf"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-NEW="/var/www/rycoopweb/production-releases/rc02-home-null-hotfix-$STAMP"
-BACKUP="/var/backups/rycoop-production/rc02-home-null-hotfix-$STAMP"
+NEW="/var/www/rycoopweb/production-releases/rc02-loan-empty-hotfix-$STAMP"
+BACKUP="/var/backups/rycoop-production/rc02-loan-empty-hotfix-$STAMP"
 HOST="www.rayongcoop.org"
 SWITCHED=0
 SUCCESS=0
@@ -34,7 +34,7 @@ trap cleanup EXIT
 [[ -f "$MAIN" && -f "$LOOP" ]] || abort "Nginx config missing"
 [[ $(stat -c '%U' "$WORK") == coopadmin ]] || abort "Unexpected workspace owner"
 [[ $(runuser -u coopadmin -- git -C "$WORK" branch --show-current) == "$BRANCH" ]] || abort "Wrong branch"
-runuser -u coopadmin -- git -C "$WORK" merge-base --is-ancestor e1bf66bdda02fc3fe159bfd70b4ae584ea4216b3 HEAD || abort "Missing RC02 baseline"
+runuser -u coopadmin -- git -C "$WORK" merge-base --is-ancestor 370dadf4ba624e835434a5acd6306c01cb688d6b HEAD || abort "Missing RC02 baseline"
 [[ -z $(runuser -u coopadmin -- git -C "$WORK" status --porcelain --untracked-files=no) ]] || abort "Uncommitted changes"
 python3 - "$MAIN" "$LOOP" "$OLD" <<'PY'
 from pathlib import Path
@@ -52,6 +52,7 @@ runuser -u coopadmin -- node tests/PublicContentReferenceTest.mjs
 runuser -u coopadmin -- npm run build
 test -f "$WORK/public/app/index.html"
 grep -q "INTEREST_RATES?.depositSource?.url" "$WORK/src/pages/HomePage.jsx" || abort "Null guard missing"
+grep -q "if (!activeProduct)" "$WORK/src/components/calculators/LoanCalculator.jsx" || abort "Loan empty-state missing"
 echo "BUILD=PASS"
 
 echo "===== STAGE FRONTEND-ONLY HOTFIX ====="
@@ -93,7 +94,7 @@ for path in /app/ /app/admin/cms /api/public/home /api/public/content /api/publi
   [[ "$code" == 200 ]] || abort "Smoke failed: $path"
 done
 SUCCESS=1
-echo "RC02_HOMEPAGE_HOTFIX=PASS"
+echo "RC02_LOAN_CALCULATOR_HOTFIX=PASS"
 echo "RELEASE=$NEW"
 echo "BACKUP=$BACKUP"
 echo "SOURCE_COMMIT=$(runuser -u coopadmin -- git -C "$WORK" rev-parse HEAD)"
