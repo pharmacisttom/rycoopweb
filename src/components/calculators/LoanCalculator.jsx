@@ -1,5 +1,6 @@
 import { usePublicInformation } from '../../context/PublicContentContext';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import ManualLoanCalculator from './ManualLoanCalculator';
 import { Calculator, DollarSign, Calendar, Percent, FileText, CheckCircle, RefreshCw, Printer, Sparkles } from 'lucide-react';
 
 
@@ -7,11 +8,12 @@ export default function LoanCalculator() {
   const { LOAN_PRODUCTS } = usePublicInformation();
   // Published catalog can be empty; never synthesize loan products or rates.
   const publishedProducts = Array.isArray(LOAN_PRODUCTS)
-    ? LOAN_PRODUCTS.filter(p => p && p.id && p.title && Number.isFinite(Number(p.rateValue)) && Number(p.maxLimit) > 0 && Number(p.maxTerm) > 0)
+    ? LOAN_PRODUCTS.filter(p => p && p.id && p.title && p.rateValue !== '' && p.rateValue != null && Number.isFinite(Number(p.rateValue)) && Number(p.maxLimit) > 0 && Number(p.maxTerm) > 0)
+      .map(p => ({...p, rateValue:Number(p.rateValue), maxLimit:Number(p.maxLimit), maxTerm:Number(p.maxTerm)}))
     : [];
   const [selectedProductId, setSelectedProductId] = useState('ordinary');
   const [principal, setPrincipal] = useState(300000);
-  const [rate, setRate] = useState(6.15);
+  const [rate, setRate] = useState('');
   const [months, setMonths] = useState(60);
   const [showAmortization, setShowAmortization] = useState(false);
 
@@ -19,6 +21,13 @@ export default function LoanCalculator() {
   const activeProduct = useMemo(() => {
     return publishedProducts.find(p => p.id === selectedProductId) || publishedProducts[0] || null;
   }, [selectedProductId, LOAN_PRODUCTS]);
+
+  useEffect(() => {
+    if (!activeProduct) return;
+    setRate(activeProduct.rateValue);
+    setPrincipal(current => Math.max(1, Math.min(Number(current) || 1, activeProduct.maxLimit)));
+    setMonths(current => Math.max(1, Math.min(Number(current) || 1, activeProduct.maxTerm)));
+  }, [activeProduct?.id, activeProduct?.rateValue, activeProduct?.maxLimit, activeProduct?.maxTerm]);
 
   // Handle loan type selection - strictly sets matching Master Data rate
   const handleTypeChange = (productId) => {
@@ -85,14 +94,7 @@ export default function LoanCalculator() {
     };
   }, [principal, rate, months]);
 
-  if (!activeProduct) {
-    return (
-      <div className="glass-card" role="status" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
-        <h3 style={{ fontSize: '1.3rem', marginBottom: '0.75rem' }}>โปรแกรมคำนวณเงินกู้สหกรณ์</h3>
-        <p>ยังไม่มีข้อมูลผลิตภัณฑ์เงินกู้และอัตราดอกเบี้ยที่ได้รับอนุมัติให้เผยแพร่ จึงยังไม่สามารถคำนวณจากอัตราของสหกรณ์ได้</p>
-      </div>
-    );
-  }
+  if (!activeProduct) return <ManualLoanCalculator />;
 
   return (
     <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
@@ -105,7 +107,7 @@ export default function LoanCalculator() {
             <span>โปรแกรมคำนวณเงินกู้สหกรณ์</span>
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            ประมาณการค่างวดแบบลดต้นลดดอก โดยใช้อัตราอ้างอิงจากเว็บเดิม กรุณาตรวจสอบประกาศและสิทธิของสมาชิกก่อนยื่นกู้
+            คำนวณค่างวดแบบลดต้นลดดอกจากข้อมูลผลิตภัณฑ์ที่เผยแพร่ล่าสุด กรุณาตรวจสอบประกาศและสิทธิของสมาชิกก่อนยื่นกู้
           </p>
         </div>
 
