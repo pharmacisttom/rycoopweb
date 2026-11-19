@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { COOP_INFO } from '../data/mockData';
+import { usePublicInformation } from '../context/PublicContentContext';
 import { fetchAdminDashboard, fetchAdminNews, createAdminNews, deleteAdminNews, fetchFaqs, apiPost, fetchAdminRates, updateAdminRate, updateAdminLoanProduct } from '../services/api';
 import { normalizeNewsItem } from '../utils/news';
 import { richTextPlain } from '../utils/richText';
@@ -27,6 +27,7 @@ import StatusBadge from '../components/dashboard/StatusBadge';
 import EmptyState from '../components/dashboard/EmptyState';
 
 export function LegacyAdminDashboardPage() {
+  const { COOP_INFO } = usePublicInformation();
   const { user, isLoggedIn, logout, setShowAuthModal } = useAuth();
   const { toast, confirmDialog } = useToast();
   const [activeTab, setActiveTab] = useState('announcements');
