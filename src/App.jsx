@@ -108,6 +108,8 @@ const publicRoutes = [
   ['/rates', DepositsPage],
   ['/loans', LoansPage],
   ['/calculator', CalculatorPage],
+  ['/loan-calculator', CalculatorPage],
+  ['/loans/calculator', CalculatorPage],
   ['/loan-checklist', LoanChecklistPage],
   ['/loan-readiness', LoanChecklistPage],
   ['/loans/checklist', LoanChecklistPage],
