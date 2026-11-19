@@ -27,7 +27,7 @@ const APPEARANCE_PRESETS = [
 const initialNode = () => ({
   id: 'section-' + crypto.randomUUID().replaceAll('-', '').slice(0,20),
   title: 'หัวข้อใหม่', description: '', type: 'gallery', layout: 'grid',
-  link: '/activities', album_ids: [], appearance:{...DEFAULT_APPEARANCE}, visible: true, children: []
+  link: '/activities', album_ids: [], slides: [], slide_interval: 6, appearance:{...DEFAULT_APPEARANCE}, visible: true, children: []
 });
 
 export default function DynamicLayoutEditor() {
@@ -78,6 +78,8 @@ export default function DynamicLayoutEditor() {
   };
 
   const update = patch => setTree(prev => patchNodes(prev, selected, patch));
+  const updateSlides = slides => update({slides});
+  const emptySlide = () => ({image:'',title:'',caption:'',button_text:'',button_link:'',fit:'cover'});
   const save = async action => {
     if (busy || !validTotp || !server || (action === 'draft' ? !dirty : dirty || !server.draft)) return;
     setBusy(true); setError(''); setNotice('');
@@ -97,8 +99,8 @@ export default function DynamicLayoutEditor() {
   const fieldStyle = {};
   const btn = {padding:'8px 12px',marginRight:7,marginBottom:7};
   return <section className="surface-card dynamic-layout-editor" style={{padding:'1.5rem',marginTop:24}}>
-    <h2>Dynamic Layout & รูปกิจกรรมของสหกรณ์</h2>
-    <p>เพิ่มหัวข้อหลัก หัวข้อย่อย และอัลบั้มกิจกรรม โดยไม่กระทบส่วนหน้าแรก 6 รายการเดิม</p>
+    <h2>Dynamic Layout — จัดการบล็อกเว็บไซต์ สไลด์ และรูปกิจกรรม</h2>
+    <p>เพิ่ม Section ประเภทข้อความ ลิงก์ แกลเลอรี และ Slideshow พร้อมแก้ไขข้อความ/ภาพ/ลำดับในฉบับร่างก่อนเผยแพร่</p>
     {error && <p role="alert" style={{color:'#b42318'}}>{error}</p>}
     {notice && <p role="status">{notice}</p>}
     {loading ? <p>กำลังโหลดหัวข้อ...</p> : server && <>
@@ -130,7 +132,7 @@ export default function DynamicLayoutEditor() {
             <label>ชื่อหัวข้อ<input style={fieldStyle} value={current.title} maxLength={120} onChange={e=>update({title:e.target.value})}/></label>
             <label className="dynamic-layout-field-full">คำอธิบาย<textarea style={fieldStyle} value={current.description} maxLength={1000} rows={3} onChange={e=>update({description:e.target.value})}/></label>
             <label>ประเภท<select style={fieldStyle} value={current.type} onChange={e=>update({type:e.target.value})}>
-              <option value="gallery">แกลเลอรีกิจกรรม</option><option value="links">ลิงก์</option><option value="text">ข้อความ</option>
+              <option value="gallery">แกลเลอรีกิจกรรม</option><option value="links">ลิงก์</option><option value="text">ข้อความ</option><option value="slideshow">Slide / Slideshow</option>
             </select></label>
             <label>รูปแบบ<select style={fieldStyle} value={current.layout} onChange={e=>update({layout:e.target.value})}>
               <option value="grid">Grid</option><option value="cards">Cards</option><option value="carousel">Carousel</option>
@@ -164,6 +166,57 @@ export default function DynamicLayoutEditor() {
               </div>
               <p className="dynamic-layout-color-hint">ระบบจะตรวจความชัดเจนของสีข้อความกับพื้นหลังก่อนบันทึก (ขั้นต่ำ 4.5:1)</p>
             </fieldset>
+            {current.type === 'slideshow' && <fieldset className="dynamic-slides-editor">
+              <legend>จัดการสไลด์ — เพิ่ม / แก้ไข / ลบ / จัดลำดับ</legend>
+              <p>เลือกรูปที่อัปโหลดผ่านคลังภาพของหลังบ้าน แล้วนำ URL ภายในเว็บไซต์มาใส่ (เช่น /storage/uploads/.../banner.webp) ไม่อนุญาตรูปจากเว็บไซต์ภายนอก</p>
+              <a href="/app/admin/media" target="_blank" rel="noopener noreferrer">เปิดคลังภาพ CMS เพื่อเลือกรูป</a>
+              <label className="dynamic-layout-slide-interval">เวลาเปลี่ยนภาพอัตโนมัติ (วินาที)
+                <select value={current.slide_interval || 6} onChange={e=>update({slide_interval:Number(e.target.value)})}>
+                  {[4,5,6,7,8,9,10,11,12].map(n=><option value={n} key={n}>{n} วินาที</option>)}
+                </select>
+              </label>
+              {(current.slides || []).map((slide,i)=><div className="dynamic-slide-edit-card" key={i}>
+                <div className="dynamic-slide-edit-head">
+                  <strong>สไลด์ {i+1}</strong>
+                  <div className="dynamic-slide-edit-actions">
+                    <button type="button" disabled={busy||i===0} onClick={()=>{
+                      const slides=[...(current.slides||[])]; [slides[i-1],slides[i]]=[slides[i],slides[i-1]];updateSlides(slides);
+                    }}>↑ เลื่อนขึ้น</button>
+                    <button type="button" disabled={busy||i===(current.slides||[]).length-1} onClick={()=>{
+                      const slides=[...(current.slides||[])]; [slides[i+1],slides[i]]=[slides[i],slides[i+1]];updateSlides(slides);
+                    }}>↓ เลื่อนลง</button>
+                    <button type="button" disabled={busy} onClick={()=>{
+                      if(!window.confirm('ลบสไลด์นี้ออกจากฉบับร่าง?'))return;
+                      updateSlides((current.slides||[]).filter((_,pos)=>pos!==i));
+                    }}>ลบ</button>
+                  </div>
+                </div>
+                <label>URL รูปภาพ (ภายในเว็บไซต์)
+                  <input required value={slide.image||''} placeholder="/storage/uploads/news/gallery/example.webp"
+                    onChange={e=>updateSlides((current.slides||[]).map((old,pos)=>pos===i?{...old,image:e.target.value}:old))} />
+                </label>
+                {slide.image?.startsWith('/') && <img className="dynamic-slide-edit-preview" src={slide.image} alt="ตัวอย่างภาพสไลด์" loading="lazy" />}
+                <label>หัวข้อบนสไลด์
+                  <input value={slide.title||''} maxLength={120} onChange={e=>updateSlides((current.slides||[]).map((old,pos)=>pos===i?{...old,title:e.target.value}:old))} />
+                </label>
+                <label>รายละเอียด
+                  <textarea rows={3} maxLength={500} value={slide.caption||''} onChange={e=>updateSlides((current.slides||[]).map((old,pos)=>pos===i?{...old,caption:e.target.value}:old))} />
+                </label>
+                <label>รูปแบบแสดงรูป
+                  <select value={slide.fit||'cover'} onChange={e=>updateSlides((current.slides||[]).map((old,pos)=>pos===i?{...old,fit:e.target.value}:old))}>
+                    <option value="cover">เต็มกรอบ (Cover)</option><option value="contain">เห็นรูปเต็ม (Contain)</option>
+                  </select>
+                </label>
+                <label>ข้อความปุ่ม
+                  <input value={slide.button_text||''} maxLength={60} onChange={e=>updateSlides((current.slides||[]).map((old,pos)=>pos===i?{...old,button_text:e.target.value}:old))} />
+                </label>
+                <label>ลิงก์ปุ่มภายในเว็บไซต์
+                  <input value={slide.button_link||''} maxLength={255} placeholder="/activities" onChange={e=>updateSlides((current.slides||[]).map((old,pos)=>pos===i?{...old,button_link:e.target.value}:old))} />
+                </label>
+              </div>)}
+              <button type="button" disabled={busy||(current.slides||[]).length>=12}
+                onClick={()=>updateSlides([...(current.slides||[]),emptySlide()])}>+ เพิ่มสไลด์ (สูงสุด 12 รูป)</button>
+            </fieldset>}
             <label className="dynamic-layout-field-full">รหัสอัลบั้มกิจกรรม (คั่นด้วยเครื่องหมายจุลภาค)<input style={fieldStyle} value={albumInput} placeholder="เช่น 1, 3, 5 — เว้นว่าง = ทุกอัลบั้ม" onChange={e=>setAlbumInput(e.target.value)} onBlur={() => {
               const ids = albumInput.split(',').map(v => Number(v.trim())).filter(v => Number.isSafeInteger(v) && v > 0);
               if (albumInput.trim() && (ids.length === 0 || ids.length !== albumInput.split(',').length)) { setError('รหัสอัลบั้มต้องเป็นตัวเลขบวกคั่นด้วยจุลภาค'); return; }
