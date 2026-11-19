@@ -23,6 +23,53 @@ class SpaApiController extends Controller
     // PUBLIC DATA ENDPOINTS (no auth required)
     // ──────────────────────────────────────────────
 
+    /** Stream only a currently published campaign's actual stored image. */
+    public function publicPopupImage(string $id): void
+    {
+        $this->streamPublishedCampaignImage('popups', $id);
+    }
+
+    /** Stream only a currently published hero slide's actual stored image. */
+    public function publicHeroImage(string $id): void
+    {
+        $this->streamPublishedCampaignImage('hero_slides', $id);
+    }
+
+    private function streamPublishedCampaignImage(string $table, string $id): void
+    {
+        if (!preg_match('/^[1-9][0-9]*$/D', $id)
+            || !in_array($table, ['popups', 'hero_slides'], true)) {
+            http_response_code(404); return;
+        }
+        $sql = $table === 'popups'
+            ? "SELECT * FROM popups WHERE id=? AND status='active' AND deleted_at IS NULL AND (start_at IS NULL OR start_at<=NOW())"
+            : "SELECT * FROM hero_slides WHERE id=? AND status='active' AND deleted_at IS NULL AND (start_at IS NULL OR start_at<=NOW()) AND (end_at IS NULL OR end_at>=NOW())";
+        try {
+            $row = Database::first($sql, [(int)$id]);
+            $stored = (string)($row['desktop_image'] ?? $row['image_url'] ?? '');
+            if (!$row || $stored === '') { http_response_code(404); return; }
+            $base = realpath(storage_upload_path());
+            $file = realpath(storage_upload_path($stored));
+            if (!$base || !$file || !str_starts_with($file, $base . DIRECTORY_SEPARATOR)
+                || !is_file($file) || !is_readable($file)) {
+                http_response_code(404); return;
+            }
+            $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file);
+            if (!in_array($mime, ['image/jpeg','image/png','image/webp','image/gif'], true)
+                || @getimagesize($file) === false) {
+                http_response_code(415); return;
+            }
+            header('Content-Type: ' . $mime);
+            header('X-Content-Type-Options: nosniff');
+            header('Cache-Control: public, max-age=300');
+            header('Content-Length: ' . filesize($file));
+            if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') readfile($file);
+        } catch (\Throwable $e) {
+            \App\Core\Logger::error('Published campaign image failed: ' . get_class($e));
+            http_response_code(404);
+        }
+    }
+
     /** Public-only published campaign feed. No client-local campaign or demo defaults. */
     public function publicPopups(): void
     {
@@ -33,7 +80,7 @@ class SpaApiController extends Controller
                 AND (start_at IS NULL OR start_at <= NOW())
                 ORDER BY FIELD(priority, 'critical', 'high', 'normal', 'low'), id DESC LIMIT 3");
             $items = array_map(static function (array $row): array {
-                $row['desktop_image'] = resolve_media_url($row['desktop_image'] ?? null);
+                $row['desktop_image'] = !empty($row['desktop_image']) ? '/api/public/popups/' . (int)$row['id'] . '/image' : null;
                 $row['mobile_image'] = resolve_media_url($row['mobile_image'] ?? null);
                 return $row;
             }, $rows);
@@ -64,7 +111,12 @@ class SpaApiController extends Controller
 
         try {
             $heroSlides = Database::query("SELECT * FROM hero_slides WHERE status = 'active' AND deleted_at IS NULL AND (start_at IS NULL OR start_at <= NOW()) AND (end_at IS NULL OR end_at >= NOW()) ORDER BY priority DESC, sort_order ASC");
-            $heroSlides = array_map(fn(array $slide): array => $this->withResolvedMediaUrls($slide, ['image_url', 'desktop_image', 'mobile_image']), $heroSlides);
+            $heroSlides = array_map(static function (array $slide): array {
+                $publicImage = !empty($slide['desktop_image']) || !empty($slide['image_url']);
+                if ($publicImage) $slide['desktop_image'] = '/api/public/hero-slides/' . (int)$slide['id'] . '/image';
+                $slide['image_url'] = $publicImage ? $slide['desktop_image'] : null;
+                return $slide;
+            }, $heroSlides);
         } catch (\Throwable $e) {}
 
         try {
