@@ -154,36 +154,26 @@ export default function MemberDashboardPage() {
   const memberDividendEst = user.dividendEstimated ?? 0;
   const memberLoanRefundEst = user.loanRefundEstimated ?? 0;
 
-  const memberAccounts = apiSummary?.deposits?.accounts && apiSummary.deposits.accounts.length > 0
+  const memberAccounts = Array.isArray(apiSummary?.deposits?.accounts)
     ? apiSummary.deposits.accounts.map(acc => ({
         accNo: acc.account_no,
         type: acc.account_type || 'บัญชีเงินฝาก',
-        balance: parseFloat(acc.balance || 0),
+        balance: Number(acc.balance || 0),
         status: acc.status === 'active' ? 'ปกติ' : acc.status
       }))
-    : (user.accounts && user.accounts.length > 0 ? user.accounts : [
-        { accNo: '101-2-04892-1', type: 'ออมทรัพย์สุขใจ', balance: 45300.50, status: 'ปกติ' },
-        { accNo: '201-4-04892-8', type: 'ออมทรัพย์พิเศษพลัส', balance: 200000.00, status: 'ปกติ' },
-      ]);
-
-  const memberLoans = apiSummary?.loans?.active_loans && apiSummary.loans.active_loans.length > 0
+    : [];
+  const memberLoans = Array.isArray(apiSummary?.loans?.active_loans)
     ? apiSummary.loans.active_loans.map(loan => ({
         contractNo: loan.contract_no,
-        type: loan.loan_type || 'เงินกู้สามัญ',
-        principal: parseFloat(loan.principal_amount || 0),
-        balance: parseFloat(loan.balance || 0),
-        monthlyPay: parseFloat(loan.monthly_installment || 0),
+        type: loan.loan_type || 'เงินกู้',
+        principal: Number(loan.principal_amount || 0),
+        balance: Number(loan.balance || 0),
+        monthlyPay: Number(loan.monthly_installment || 0),
         termRemaining: `${loan.remaining_months || 0} งวด`
       }))
-    : (user.loans && user.loans.length > 0 ? user.loans : [
-        { contractNo: 'ส.66/0129', type: 'เงินกู้สามัญ', principal: 1000000, balance: 820000, monthlyPay: 12500, termRemaining: '96 งวด' },
-      ]);
-
-  const memberReceipts = user.recentReceipts && user.recentReceipts.length > 0 ? user.recentReceipts : [
-    { receiptNo: 'RC-67020084', period: 'กุมภาพันธ์ 2567', date: '28 ก.พ. 2567', totalAmount: 15500, status: 'ชำระแล้ว' },
-    { receiptNo: 'RC-67010079', period: 'มกราคม 2567', date: '31 ม.ค. 2567', totalAmount: 15500, status: 'ชำระแล้ว' },
-    { receiptNo: 'RC-66120092', period: 'ธันวาคม 2566', date: '29 ธ.ค. 2566', totalAmount: 15500, status: 'ชำระแล้ว' },
-  ];
+    : [];
+  // Never present example receipts as statements of real member transactions.
+  const memberReceipts = Array.isArray(user.recentReceipts) ? user.recentReceipts : [];
 
   return (
     <div className="section" style={{ background: 'var(--bg-main)', minHeight: '85vh', paddingBottom: '3.5rem' }}>
@@ -227,25 +217,25 @@ export default function MemberDashboardPage() {
             <div className="dashboard-kpi-grid">
               <KpiCard
                 title="ผู้ใช้งานทั้งหมดในระบบ"
-                value="4,850"
+                value="—"
                 unit="คน"
-                subtitle="Admin 3 / Staff 12 / Member 4,835"
+                subtitle="ตรวจข้อมูลผู้ใช้จริงจากแผงจัดการสมาชิก"
                 icon={Users}
                 variant="rose"
               />
               <KpiCard
                 title="สถานะความปลอดภัยเซิร์ฟเวอร์"
-                value="100%"
-                subtitle="TLS 1.3 / Firewall Active"
+                value="—"
+                subtitle="ตรวจสถานะจริงผ่านระบบความปลอดภัย"
                 icon={Activity}
                 variant="emerald"
-                badgeText="ปกติ"
+                badgeText="ยังไม่ยืนยัน"
                 badgeVariant="emerald"
               />
               <KpiCard
                 title="ฐานข้อมูลและการสำรอง"
-                value="Auto Backup"
-                subtitle="สำรองข้อมูลล่าสุด: วันนี้ 04:00 น."
+                value="—"
+                subtitle="ตรวจสอบบันทึกสำรองข้อมูลจากระบบสำรองจริง"
                 icon={Database}
                 variant="gold"
               />
@@ -458,17 +448,7 @@ export default function MemberDashboardPage() {
                   title="บันทึกความปลอดภัยล่าสุด (System Audit Trail)"
                   icon={ShieldCheck}
                 />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.82rem' }}>
-                  <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>วันนี้ 13:45 น.</span> • เจ้าหน้าที่อนุมัติคำขอยื่นกู้ฉุกเฉินออนไลน์ LN-6703-01
-                  </div>
-                  <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>วันนี้ 12:30 น.</span> • ผู้ดูแลระบบอัปเดตการตั้งค่าประกาศทางการ
-                  </div>
-                  <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>วันนี้ 04:00 น.</span> • สำรองฐานข้อมูลอัตโนมัติประจำวันเสร็จสมบูรณ์
-                  </div>
-                </div>
+                <p role="status">ข้อมูล Audit Trail ต้องโหลดจากระบบบันทึกเหตุการณ์จริง จึงยังไม่แสดงเหตุการณ์ตัวอย่าง</p>
               </div>
             </div>
 
@@ -492,9 +472,9 @@ export default function MemberDashboardPage() {
               />
               <KpiCard
                 title="วงเงินรอเบิกจ่ายรวม"
-                value="450,000"
+                value="—"
                 unit="บาท"
-                subtitle="พร้อมโอนเข้าบัญชีสมาชิก"
+                subtitle="ยังไม่มีข้อมูลรายการรอเบิกจ่ายจาก Backend"
                 icon={Coins}
                 variant="primary"
               />
