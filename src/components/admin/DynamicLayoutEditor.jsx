@@ -131,7 +131,7 @@ export default function DynamicLayoutEditor() {
           {!current ? <p>เลือกหัวข้อทางซ้ายเพื่อแก้ไข</p> : <>
             <label>ชื่อหัวข้อ<input style={fieldStyle} value={current.title} maxLength={120} onChange={e=>update({title:e.target.value})}/></label>
             <label className="dynamic-layout-field-full">คำอธิบาย<textarea style={fieldStyle} value={current.description} maxLength={1000} rows={3} onChange={e=>update({description:e.target.value})}/></label>
-            <label>ประเภท<select style={fieldStyle} value={current.type} onChange={e=>update({type:e.target.value})}>
+            <label>ประเภท<select style={fieldStyle} value={current.type} onChange={e=>update({type:e.target.value, ...(e.target.value === 'slideshow' ? {link:''} : {slides:[]})})}>
               <option value="gallery">แกลเลอรีกิจกรรม</option><option value="links">ลิงก์</option><option value="text">ข้อความ</option><option value="slideshow">Slide / Slideshow</option>
             </select></label>
             <label>รูปแบบ<select style={fieldStyle} value={current.layout} onChange={e=>update({layout:e.target.value})}>
