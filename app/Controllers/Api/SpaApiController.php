@@ -836,6 +836,22 @@ class SpaApiController extends Controller
             }, \App\Services\NewsGalleryService::decode($item['gallery_images']));
         }
 
+        // Never emit a URL under /storage/ (Nginx intentionally denies it).
+        // Use a gallery image only if it was verified in this published article.
+        $cover = $item[$key] ?? null;
+        if (is_string($cover) && str_starts_with($cover, '/storage/')) {
+            $basename = basename((string)parse_url($cover, PHP_URL_PATH));
+            $matched = null;
+            foreach ($item['gallery_images'] ?? [] as $entry) {
+                foreach (['src', 'thumbnail'] as $variant) {
+                    if (basename((string)($entry[$variant] ?? '')) === $basename) {
+                        $matched = $entry[$variant]; break 2;
+                    }
+                }
+            }
+            $item[$key] = $matched;
+        }
+
         return $item;
     }
 
