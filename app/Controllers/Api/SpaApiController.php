@@ -23,6 +23,27 @@ class SpaApiController extends Controller
     // PUBLIC DATA ENDPOINTS (no auth required)
     // ──────────────────────────────────────────────
 
+    /** Public-only published campaign feed. No client-local campaign or demo defaults. */
+    public function publicPopups(): void
+    {
+        header('Cache-Control: no-cache');
+        try {
+            $rows = Database::query("SELECT id, title, content, desktop_image, mobile_image, button_text, button_url, delay_seconds, frequency, priority
+                FROM popups WHERE status = 'active' AND deleted_at IS NULL
+                AND (start_at IS NULL OR start_at <= NOW())
+                ORDER BY FIELD(priority, 'critical', 'high', 'normal', 'low'), id DESC LIMIT 3");
+            $items = array_map(static function (array $row): array {
+                $row['desktop_image'] = resolve_media_url($row['desktop_image'] ?? null);
+                $row['mobile_image'] = resolve_media_url($row['mobile_image'] ?? null);
+                return $row;
+            }, $rows);
+            $this->json(['success' => true, 'data' => $items]);
+        } catch (\\Throwable $e) {
+            \\App\\Core\\Logger::error('Public popup feed unavailable: ' . get_class($e));
+            $this->json(['success' => false, 'message' => 'ยังไม่สามารถโหลดประกาศประชาสัมพันธ์ได้'], 503);
+        }
+    }
+
     /**
      * GET /api/public/home
      * Returns all data needed for the homepage.
