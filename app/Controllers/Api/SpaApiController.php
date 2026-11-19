@@ -186,9 +186,13 @@ class SpaApiController extends Controller
     {
         $docs = [];
         try {
-            $docs = Database::query("SELECT id, title, category, file_path, file_size, download_count, created_at FROM documents WHERE status = 'published' ORDER BY created_at DESC");
+            $docs = Database::query("SELECT d.id, d.title, c.name AS category, d.file_path, d.file_size, d.file_type, d.download_count, d.created_at FROM documents d JOIN document_categories c ON c.id = d.category_id WHERE d.status = 'active' AND d.deleted_at IS NULL AND c.status = 'active' AND c.deleted_at IS NULL ORDER BY d.created_at DESC");
             $docs = array_map(fn(array $doc): array => $this->withResolvedMediaUrls($doc, ['thumbnail', 'thumbnail_url', 'image_url']), $docs);
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            error_log('Public documents API failed: ' . get_class($e));
+            $this->json(['success' => false, 'message' => 'ไม่สามารถโหลดรายการเอกสารได้'], 503);
+            return;
+        }
 
         $this->json(['success' => true, 'data' => $docs]);
     }
