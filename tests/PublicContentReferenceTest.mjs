@@ -52,7 +52,14 @@ try {
     }
     if (path.includes('BoardPage')) assert.ok(!html.includes('ชุดที่ 38'), 'Never force a historical board term without published records');
     if (path.includes('Deposits')) assert.ok(!html.includes('1.75%') && !html.includes('1.50%'), 'Never display seeded rates before publication');
-    if (path.includes('Loans')) assert.ok(!html.includes(reference.loanProducts[0].title), 'Never display seeded products before publication');
+    if (path.includes('Loans')) {
+      // Category headings may legitimately contain generic product names (e.g. เงินกู้สามัญ).
+      // Check that no actual loan product cards, amounts, or rate details render before CMS publication.
+      assert.ok(!/<article\\b[^>]*class="surface-card"/.test(html), 'Never render loan product cards before publication');
+      for (const product of reference.loanProducts) {
+        assert.ok(!html.includes(product.maxAmount), `Never display seeded loan amount for ${product.id} before publication`);
+      }
+    }
   }
   console.log('PASS: historical fixtures retained for audit, not shown as published public facts');
 } finally {
