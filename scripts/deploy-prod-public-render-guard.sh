@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 umask 077
 WORK="$(cd "$(dirname "$0")/.." && pwd)"
-OLD="/var/www/rycoopweb/production-releases/prod-loan-manual-fallback-20261119T141841Z"
+OLD="/var/www/rycoopweb/production-releases/prod-layout-label-fix-20261119T143444Z"
 MAIN="/etc/nginx/sites-available/rycoopweb-main-ssl"
 LOOP="/etc/nginx/conf.d/rycoop-prod-loopback.conf"
 BRANCH="hotfix/prod-public-page-render-guard-20261119"
@@ -40,6 +40,7 @@ for file in (main,loop):
     assert data.count(f"root {old}/public;")==1, "Unexpected live release: "+file
 assert "RYCOOP_PUBLIC_GALLERY_RC02" in Path(main).read_text()
 PY
+! grep -q 'ฐานข้อมูล TEST\|หน้าเว็บ TEST' "$WORK/src/pages/AdminHomepageLayoutPage.jsx" || abort "Layout production label regression"
 grep -Fq "['/calculator', CalculatorPage]" "$WORK/src/App.jsx" || abort "Calculator route missing"
 grep -Fq "['/loan-calculator', CalculatorPage]" "$WORK/src/App.jsx" || abort "Calculator alias missing"
 grep -Fq "['/loans/calculator', CalculatorPage]" "$WORK/src/App.jsx" || abort "Calculator nested alias missing"
