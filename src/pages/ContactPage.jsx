@@ -224,7 +224,7 @@ export default function ContactPage() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="เช่น TKT-670301, TKT-670303"
+                placeholder="ระบบติดตามเรื่องยังไม่เปิดให้บริการ"
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
                 required
