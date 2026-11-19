@@ -13,14 +13,11 @@ import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
 import PublishedDynamicSections from '../components/layout/PublishedDynamicSections';
-import reference from '../data/legacyReference.json';
+
 import { usePublicInformation } from '../context/PublicContentContext';
 
-// Fallback defaults when API is unreachable (development/offline mode)
-const FALLBACK_COOP = {
-  nameTh: 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
-  slogan: reference.coopInfo.slogan,
-};
+// No publication should be simulated when the public API is unavailable.
+const FALLBACK_COOP = { nameTh: '', slogan: '' };
 
 export default function HomePage() {
   const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
@@ -85,19 +82,19 @@ export default function HomePage() {
             const s = d.latestStats;
             setKeyStats([
               { label: 'จำนวนสมาชิก', value: Number(s.total_members || 0).toLocaleString(), unit: 'คน', change: `ข้อมูล ${s.month}/${s.year}` },
-              { label: 'สินทรัพย์รวม', value: (Number(s.total_assets || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'มั่นคง' },
-              { label: 'ทุนเรือนหุ้น', value: (Number(s.total_shares || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'เติบโตต่อเนื่อง' },
-              { label: 'เงินฝากรวม', value: (Number(s.total_deposits || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'สูงสุดเป็นประวัติการณ์' },
-              { label: 'เงินกู้คงเหลือ', value: (Number(s.total_loans || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'คุณภาพดี' },
+              { label: 'สินทรัพย์รวม', value: (Number(s.total_assets || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
+              { label: 'ทุนเรือนหุ้น', value: (Number(s.total_shares || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
+              { label: 'เงินฝากรวม', value: (Number(s.total_deposits || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
+              { label: 'เงินกู้คงเหลือ', value: (Number(s.total_loans || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
               { label: 'อัตราปันผล', value: s.dividend_rate || '-', unit: '% ต่อปี', change: `เฉลี่ยคืน ${s.loan_refund_rate || '-'}%` },
             ]);
           }
         }
         if (coopRes?.success && coopRes.data) {
           setCoopInfo({
-            nameTh: coopRes.data.name_th || FALLBACK_COOP.nameTh,
+            nameTh: coopRes.data.name_th || '',
             nameEn: coopRes.data.name_en || '',
-            slogan: FALLBACK_COOP.slogan,
+            slogan: coopRes.data.slogan || '',
             phone: coopRes.data.phone || '',
             email: coopRes.data.email || '',
             address: coopRes.data.address || '',
