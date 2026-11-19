@@ -95,6 +95,9 @@ $router->get('/api/public/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageC
 $router->get('/api/admin/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@admin');
 $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements');
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
+// Public downloads are served through the existing validated PHP controller;
+// the HTTPS SPA gateway intentionally denies /documents/* outside /api/.
+$router->get('/api/public/documents/{id}/download', 'Public\\DocumentController@download');
 $router->get('/api/public/activities', 'Api\\ActivityGalleryController@publicAlbums');
 $router->get('/api/public/activities/{id}', 'Api\\ActivityGalleryController@publicAlbum');
 $router->get('/api/public/activities/{album}/photos/{photo}', 'Api\\ActivityGalleryController@photo');
