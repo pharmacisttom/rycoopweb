@@ -298,9 +298,15 @@ export default function HomePage() {
               </div>
 
               <p style={{ marginBottom: '1.5rem', color: '#cbd5e1' }}>
-                {INTEREST_RATES.deposits.map(item => `${item.type} ${item.rate} ต่อปี`).join(' / ')}
-                <br />
-                <a href={INTEREST_RATES.depositSource.url} style={{ color: '#cbd5e1' }}>ข้อมูลตามเว็บเดิม — ตรวจสอบประกาศล่าสุดก่อนทำรายการ</a>
+                {(Array.isArray(INTEREST_RATES?.deposits) && INTEREST_RATES.deposits.length > 0)
+                  ? INTEREST_RATES.deposits.map(item => `${item.type} ${item.rate} ต่อปี`).join(' / ')
+                  : 'ยังไม่มีอัตราดอกเบี้ยเงินฝากที่เผยแพร่'}
+                {INTEREST_RATES?.depositSource?.url && (
+                  <>
+                    <br />
+                    <a href={INTEREST_RATES.depositSource.url} style={{ color: '#cbd5e1' }}>ตรวจสอบประกาศอัตราดอกเบี้ยล่าสุด</a>
+                  </>
+                )}
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
