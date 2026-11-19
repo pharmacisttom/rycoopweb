@@ -142,13 +142,27 @@ class Router
             }
         }
 
-        // 404 Not Found
+        // API errors must be JSON regardless of the client Accept/X-Requested-With
+        // headers. Never attempt to render an HTML 404 for an API route: a missing
+        // HTML layout can otherwise turn a valid 404 into a misleading HTTP 500.
+        if ($uri === '/api' || str_starts_with($uri, '/api/')) {
+            $response->header('Cache-Control', 'no-store');
+            $response->json(['success' => false, 'message' => '404 ไม่พบเส้นทาง API'], 404);
+            return;
+        }
+
+        // Keep the existing HTML 404 experience for non-API visitors, but fail
+        // safely if the error template itself cannot be rendered.
         $response->setStatusCode(404);
         if ($request->isAjax()) {
             $response->json(['success' => false, 'message' => '404 ไม่พบหน้าที่ต้องการ'], 404);
-        } else {
-            $html = View::render('public.404', ['title' => '404 - ไม่พบหน้าเว็บ'], 'layouts.public');
-            $response->setContent($html)->send();
+            return;
         }
+        try {
+            $html = View::render('public.404', ['title' => '404 - ไม่พบหน้าเว็บ'], 'layouts.public');
+        } catch (\Throwable $e) {
+            $html = '<!doctype html><html lang="th"><meta charset="utf-8"><title>404 Not Found</title><body><h1>404 Not Found</h1></body></html>';
+        }
+        $response->setContent($html)->send();
     }
 }
