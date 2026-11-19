@@ -16,7 +16,7 @@ $source = file_get_contents($root . '/app/Core/Router.php');
 if (!is_string($source) || !str_contains($source, "str_starts_with(\$uri, '/api/')")) {
     failTest('API fallback guard is missing');
 }
-if (!str_contains($source, 'catch (\\Throwable $e)')) {
+if (!str_contains($source, 'catch (\Throwable $e)')) {
     failTest('HTML 404 safe fallback is missing');
 }
 
@@ -26,8 +26,8 @@ $_SERVER['REQUEST_METHOD']='GET';
 $_SERVER['REQUEST_URI']='/api/admin/welfare/1/update';
 $_SERVER['SCRIPT_NAME']='/index.php';
 unset($_SERVER['HTTP_ACCEPT'], $_SERVER['HTTP_X_REQUESTED_WITH']);
-$router = new \\App\\Core\\Router();
-$router->dispatch(new \\App\\Core\\Request(), new \\App\\Core\\Response());
+$router = new \App\Core\Router();
+$router->dispatch(new \App\Core\Request(), new \App\Core\Response());
 PHP;
 $command = escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($code) . ' ' . escapeshellarg($root);
 $output = [];
