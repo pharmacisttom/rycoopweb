@@ -95,6 +95,7 @@ $router->get('/api/public/interest-rates', 'Api\\SpaApiController@interestRates'
 $router->get('/api/public/loan-products', 'Api\\SpaApiController@loanProducts');
 $router->get('/api/public/news', 'Api\\SpaApiController@news');
 $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements');
+$router->get('/api/public/announcements/{id}/image', 'Api\\AnnouncementImageController@published');
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
 $router->get('/api/public/activities', 'Api\\ActivityGalleryController@publicAlbums');
 $router->get('/api/public/activities/{id}', 'Api\\ActivityGalleryController@publicAlbum');
@@ -222,6 +223,7 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->get('/departments','Admin\\ControlCenterApiController@departments');
     $r->get('/reports/catalog','Admin\\ControlCenterApiController@reportsCatalog');
     $r->get('/announcements','Admin\\AnnouncementController@index',[new PermissionMiddleware('announcements','view')]);
+    $r->get('/announcements/{id}/image','Api\\AnnouncementImageController@admin',[new PermissionMiddleware('announcements','view')]);
     $r->post('/announcements','Admin\\AnnouncementController@store',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','create'),CsrfMiddleware::class]);
     $r->post('/announcements/{id}/update','Admin\\AnnouncementController@update',[new PermissionMiddleware('announcements','view'),new PermissionMiddleware('announcements','edit'),CsrfMiddleware::class]);
     $r->get('/news','Api\\SpaApiController@adminNews',[new PermissionMiddleware('news','view')]);
