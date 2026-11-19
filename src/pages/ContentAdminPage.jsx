@@ -8,7 +8,7 @@ import RichTextContent from '../components/common/RichTextContent';
 import NewsGalleryEditor from '../components/common/NewsGalleryEditor';
 import ActivitySlideshow from '../components/common/ActivitySlideshow';
 import { normalizeGallery } from '../utils/news';
-const empty={title:'',category:'ข่าวประชาสัมพันธ์',excerpt:'',content:'',image:'/assets/img/news_placeholder.jpg',workflow_status:'draft',gallery_images:[]};
+const empty={title:'',category:'ข่าวประชาสัมพันธ์',excerpt:'',content:'',image:'',workflow_status:'draft',gallery_images:[]};
 export default function ContentAdminPage(){
  const {can}=useAuth();const [params,setParams]=useSearchParams();
  const tab=params.get('tab')==='faqs'?'faqs':'news';const allowed=can(`${tab}.view`);
