@@ -21,7 +21,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (sessionStatus === 'mfa-enroll' || sessionStatus === 'mfa-verify') { navigate(sessionStatus === 'mfa-enroll' ? '/admin/mfa/enroll' : '/admin/mfa/verify', { replace: true }); return; }
     if (sessionStatus !== 'online' || !user) return;
-    navigate(user.role === 'member' ? '/member/dividends' : user.role === 'member_admin' ? '/admin/members/dashboard' : user.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace', { replace: true });
+    navigate(user.role === 'member' ? '/member/dividends' : user.role === 'member_admin' ? '/admin/members/dashboard' : user.role === 'super_admin' ? '/admin/cms' : '/admin/workspace', { replace: true });
   }, [navigate, sessionStatus, user]);
 
   const handleSubmit = async (event) => {
@@ -44,7 +44,7 @@ export default function LoginPage() {
         navigate(normalizeSameOriginRedirect(result.redirect, '/admin/mfa/verify'), { replace: true });
         return;
       }
-      const fallback = result.user.role === 'member' ? '/member/dividends' : result.user.role === 'member_admin' ? '/admin/members/dashboard' : result.user.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace';
+      const fallback = result.user.role === 'member' ? '/member/dividends' : result.user.role === 'member_admin' ? '/admin/members/dashboard' : result.user.role === 'super_admin' ? '/admin/cms' : '/admin/workspace';
       navigate(normalizeSameOriginRedirect(result.redirect, fallback), { replace: true });
     } catch {
       setError('ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');

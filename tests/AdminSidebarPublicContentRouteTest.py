@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Static regression checks for the Public Content sidebar deep link."""
+from pathlib import Path
+import re
+
+shell = Path("src/components/admin/AdminControlCenterShell.jsx").read_text()
+page = Path("src/pages/PublicContentAdminPage.jsx").read_text()
+router = Path("src/App.jsx").read_text()
+
+assert "to: '/admin/public-content?section=products'" in shell
+assert 'path="/admin/public-content"' in router
+assert 'useSearchParams' in page
+assert "searchParams.get('section')" in page
+assert "available.some(item => item.key === requestedSection)" in page
+assert "setSection(requestedSection)" in page
+assert "next.set('section',e.target.value)" in page
+assert "if (!sections.length || !requestedSection || requestedSection === section || dirty) return;" in page
+assert re.search(r"memberAdminApi\('/api/admin/public-content/sections'",page)
+print("PASS: public content sidebar route / section query contract")

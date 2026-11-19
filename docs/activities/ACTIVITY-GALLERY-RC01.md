@@ -10,7 +10,7 @@ Admin: `/app/admin/activities` under the existing Content sidebar:
 4. Explicitly publish when approved; publishing with no photos fails. Published albums are read-only; archive hides without deleting photo data.
 
 ## Backend
-Additive migration `database/migrations/031_create_activity_photo_albums.sql` (two InnoDB tables, default Draft). It is **not executed** by a PR. Controller: `app/Controllers/Api/ActivityGalleryController.php`.
+Additive migration `database/migrations/032_create_activity_photo_albums.sql` (two InnoDB tables, default Draft). It is **not executed** by a PR. Controller: `app/Controllers/Api/ActivityGalleryController.php`.
 
 Authorizations reuse existing `news.view`, `news.update`, `news.publish` rather than silently granting a new role. Every admin mutation requires CSRF and fully MFA-complete backend auth, with required audit for change/publish. No scheduled publication. No client-supplied actor IDs.
 
