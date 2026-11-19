@@ -24,7 +24,10 @@ assert.match(welfare, /role="alert"/);
 assert.match(welfare, /aria-expanded=\{expanded\}/);
 assert.match(welfare, /ยังไม่มีรายการสวัสดิการที่เผยแพร่/);
 assert.match(service, /public_content_revisions/);
-assert.match(service, /required:true/);
+// PHP validation requires each board member to have an ID, name and position.
+assert.match(service, /'boards','staff'=>\['id','name','position'\]/);
+assert.match(service, /if \(\$key==='image'\) \$item\[\$key\]=self::url\(\$field,true\)/);
+assert.match(service, /if \(\$section==='boards'\)/);
 assert.match(media, /memberAdminApi\('\/api\/admin\/media'/);
 assert.match(context, /Array\.isArray\(rawRates\.deposits\)/);
 console.log('RC06_BOARD_WELFARE_GUARDS=PASS');
