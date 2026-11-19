@@ -48,6 +48,7 @@ echo "===== BUILD ====="
 cd "$WORK"
 runuser -u coopadmin -- npm ci
 runuser -u coopadmin -- node tests/PublicContentReferenceTest.mjs
+runuser -u coopadmin -- node tests/LoanCalculatorRoutingRC05Test.mjs
 runuser -u coopadmin -- npm run build
 test -f "$WORK/public/app/index.html"
 echo "BUILD=PASS"
