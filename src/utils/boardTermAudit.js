@@ -1,4 +1,5 @@
-export const BOARD_TERMS = ['ชุดที่ 38','ชุดที่ 39'];
+// Historical terms remain selectable and newer terms can be prepared without code changes.
+export const BOARD_TERMS = Array.from({ length: 50 }, (_, index) => `ชุดที่ ${50 - index}`);
 export const BOARD_EXPECTED_COUNT = 15;
 export const BOARD_POSITION_OPTIONS = Object.freeze([
  'ประธานกรรมการ',
@@ -10,7 +11,9 @@ export const BOARD_POSITION_OPTIONS = Object.freeze([
 
 export function auditBoardTerms(entries) {
  const values=Array.isArray(entries)?entries:[];
- return BOARD_TERMS.map(term=>{
+ const auditedTerms=[...new Set([...values.map(p=>p?.term).filter(Boolean), 'ชุดที่ 38', 'ชุดที่ 39'])]
+   .sort((a,b)=>b.localeCompare(a,'th',{numeric:true}));
+ return auditedTerms.map(term=>{
    const people=values.filter(p=>p && p.term===term && p.status!=='former');
    const assigned=BOARD_POSITION_OPTIONS.map(position=>({
      position,count:people.filter(p=>p.position===position).length
