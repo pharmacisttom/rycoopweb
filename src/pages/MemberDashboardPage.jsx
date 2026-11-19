@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { COOP_INFO, MEMBER_COMPLAINTS } from '../data/mockData';
+import { COOP_INFO } from '../data/mockData';
 import { fetchMemberDashboard } from '../services/api';
 import StaffReviewModal from '../components/staff/StaffReviewModal';
 import EditProfileModal from '../components/member/EditProfileModal';
@@ -65,7 +65,7 @@ export default function MemberDashboardPage() {
       const saved = localStorage.getItem('coop_member_complaints');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return MEMBER_COMPLAINTS;
+    return []; // No fabricated member complaints on a fresh production session.
   });
   const [complaintFilter, setComplaintFilter] = useState('all');
   const [selectedAdminComplaint, setSelectedAdminComplaint] = useState(null);
