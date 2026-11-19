@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Clock, Eye, ChevronRight, Search, X } from 'lucide-react';
-import { fetchNews } from '../services/api';
+import { fetchNews, fetchAnnouncements } from '../services/api';
 import { normalizeNewsItem } from '../utils/news';
 import SafeImage from '../components/common/SafeImage';
 import RichTextContent from '../components/common/RichTextContent';
@@ -8,6 +9,8 @@ import RichTextContent from '../components/common/RichTextContent';
 import ActivitySlideshow from '../components/common/ActivitySlideshow';
 
 export default function NewsPage() {
+  const { pathname } = useLocation();
+  const isAnnouncements = pathname === '/announcements' || pathname.endsWith('/announcements');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNews, setSelectedNews] = useState(null);
   const [newsList, setNewsList] = useState([]);
@@ -21,9 +24,16 @@ export default function NewsPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);setError('');
-    fetchNews(page).then((result) => {
+    (isAnnouncements ? fetchAnnouncements() : fetchNews(page)).then((result) => {
       if (!cancelled && result?.success && Array.isArray(result.data)) {
-        setNewsList(result.data.map(normalizeNewsItem));setTotal(result.meta?.total||0);
+        const records = isAnnouncements ? result.data.map(item => ({
+          id: item.id, title: item.title || '', category: 'ประกาศสำคัญ',
+          image: item.image_url || '', gallery_images: [],
+          date: String(item.publication_date || '').slice(0,10),
+          content: item.content || '', excerpt: String(item.content || '').replace(/<[^>]*>/g, '').slice(0,180),
+          views: null
+        })) : result.data.map(normalizeNewsItem);
+        setNewsList(records);setTotal(isAnnouncements ? records.length : result.meta?.total || 0);
       } else if(!cancelled) {
         setError(result?.message||'โหลดข่าวไม่สำเร็จ');
       }
@@ -31,7 +41,7 @@ export default function NewsPage() {
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [page]);
+  }, [page, isAnnouncements]);
 
   const filteredNews = newsList.filter(item =>
     item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -43,8 +53,8 @@ export default function NewsPage() {
       <div className="container">
 
         <div className="section-title-wrap">
-          <span className="section-badge">ข่าวสารและกิจกรรม</span>
-          <h1 className="section-title">ข่าวสารประชาสัมพันธ์</h1>
+          <span className="section-badge">{isAnnouncements ? 'ประกาศที่เผยแพร่แล้ว' : 'ข่าวสารและกิจกรรม'}</span>
+          <h1 className="section-title">{isAnnouncements ? 'ประกาศสำคัญ' : 'ข่าวสารประชาสัมพันธ์'}</h1>
           <p className="section-subtitle">ติดตามข่าวสาร กิจกรรม และความเคลื่อนไหวล่าสุดของสหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด</p>
           <div className="section-line" />
         </div>
@@ -83,7 +93,7 @@ export default function NewsPage() {
                 <div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={13} /> {item.date}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Eye size={13} /> {item.views} ครั้ง</span>
+                    {item.views !== null && <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Eye size={13} /> {item.views} ครั้ง</span>}
                   </div>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.4, marginBottom: '0.65rem', color: 'var(--text-main)' }}>
                     {item.title}
@@ -113,9 +123,9 @@ export default function NewsPage() {
         )}
 
         <nav aria-label="หน้าข่าว" className="activity-controls">
-          <button type="button" className="btn btn-outline" disabled={loading||page===1} onClick={()=>setPage(value=>value-1)}>หน้าก่อนหน้า</button>
+          <button type="button" className="btn btn-outline" disabled={isAnnouncements||loading||page===1} onClick={()=>setPage(value=>value-1)}>หน้าก่อนหน้า</button>
           <span>หน้า {page}</span>
-          <button type="button" className="btn btn-outline" disabled={loading||page*12>=total} onClick={()=>setPage(value=>value+1)}>หน้าถัดไป</button>
+          <button type="button" className="btn btn-outline" disabled={isAnnouncements||loading||page*12>=total} onClick={()=>setPage(value=>value+1)}>หน้าถัดไป</button>
         </nav>
         {/* News Detail Modal */}
         {selectedNews && (
