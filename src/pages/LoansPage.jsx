@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { usePublicInformation } from '../context/PublicContentContext';
 
 function makeCategories(LOAN_PRODUCTS) {
-const loanById = (id) => LOAN_PRODUCTS.find((product) => product.id === id);
+const products = Array.isArray(LOAN_PRODUCTS) ? LOAN_PRODUCTS.filter(product => product && typeof product === 'object' && product.id) : [];
+const loanById = (id) => products.find((product) => product.id === id);
 
 const categories = [
   {
@@ -30,7 +31,7 @@ const categories = [
   },
  ];
 const assigned = new Set(categories.flatMap(c=>c.products.filter(Boolean).map(p=>p.id)));
-categories[categories.length-1].products.push(...LOAN_PRODUCTS.filter(p=>!assigned.has(p.id)));
+categories[categories.length-1].products.push(...products.filter(p=>!assigned.has(p.id)));
 return categories;
 
 }
@@ -52,7 +53,7 @@ function LoanProductCard({ product }) {
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>หลักประกัน: {product.guarantee}</div>
         </div>
         <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.87rem' }}>
-          {product.features.map((feature) => (
+          {(Array.isArray(product.features) ? product.features : []).map((feature) => (
             <li key={feature} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
               <CheckCircle2 size={16} style={{ color: 'var(--accent-teal)', flexShrink: 0, marginTop: '0.2rem' }} aria-hidden="true" />
               <span>{feature}</span>
@@ -79,7 +80,7 @@ export default function LoansPage() {
           <h1 className="section-title">สินเชื่อและอัตราดอกเบี้ยเงินกู้</h1>
           <p className="section-subtitle">เลือกประเภทสินเชื่อให้เหมาะกับวัตถุประสงค์และแผนการชำระเงินของคุณ</p>
           <div className="section-line" />
-          <p className="section-subtitle">{INTEREST_RATES.loanSource?.note}{' '}<a href={INTEREST_RATES.loanSource?.url || '#'}>ดูข้อมูลอ้างอิง</a></p>
+          <p className="section-subtitle">{INTEREST_RATES.loanSource?.note || 'โปรดตรวจสอบประกาศสินเชื่อและอัตราดอกเบี้ยที่ได้รับอนุมัติจากสหกรณ์'}{' '}{typeof INTEREST_RATES.loanSource?.url === 'string' && /^https?:\/\//i.test(INTEREST_RATES.loanSource.url) && <a href={INTEREST_RATES.loanSource.url}>ดูข้อมูลอ้างอิง</a>}</p>
         </div>
 
         <nav aria-label="ประเภทเงินกู้" style={{ display: 'flex', justifyContent: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
@@ -100,6 +101,7 @@ export default function LoansPage() {
                     <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{category.description}</p>
                   </div>
                 </div>
+                {products.length === 0 && <p role="status" style={{padding:'1rem',color:'var(--text-muted)'}}>ยังไม่มีผลิตภัณฑ์สินเชื่อที่เผยแพร่ในหมวดนี้</p>}
                 <div className={products.length > 1 ? 'grid-2' : undefined} style={products.length === 1 ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
                   {products.map((product) => <LoanProductCard key={product.id} product={product} />)}
                 </div>
