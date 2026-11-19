@@ -181,7 +181,7 @@ export default function PublicContentAdminPage() {
             const checked=carrySelection.includes(Number(person.id));
             return <label className="board-carry-person" key={person.id}>
               <input type="checkbox" checked={checked} disabled={busy||mediaBusy}
-                onChange={e=>setCarrySelection(prev=>e.target.checked?[...prev,Number(person.id)]:prev.filter(id=>id!==Number(person.id))}/>
+                onChange={e=>setCarrySelection(prev=>e.target.checked?[...prev,Number(person.id)]:prev.filter(id=>id!==Number(person.id)))}/>
               {person.image?<img src={person.image} alt="" loading="lazy"/>:<span className="board-carry-placeholder">ไม่มีรูป</span>}
               <span><strong>{person.name}</strong><small>{person.position}</small></span>
             </label>;
