@@ -89,7 +89,7 @@ export default function AdminHomepageLayoutPage() {
         <p>เลือกแสดงหรือซ่อนแต่ละส่วน บันทึกร่างก่อน แล้วอนุมัติเผยแพร่เพื่อให้หน้าเว็บเปลี่ยนจริง ระบบจะตรวจสอบสิทธิ์และรหัส MFA ทุกครั้ง</p>
         {error && <p role="alert" style={{color:'var(--danger, #b42318)'}}>{error}</p>}
         {notice && <p role="status">{notice}</p>}
-        {loading && <p role="status">กำลังโหลดข้อมูลจากฐานข้อมูล TEST...</p>}
+        {loading && <p role="status">กำลังโหลดข้อมูล Layout จาก API ของเว็บไซต์ปัจจุบัน...</p>}
         {!loading && !state && <button type="button" onClick={load}>ลองโหลดอีกครั้ง</button>}
         {state && sections && (
           <div className="surface-card" style={{padding:'1.5rem',maxWidth:850}}>
@@ -129,7 +129,7 @@ export default function AdminHomepageLayoutPage() {
             <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:16}}>
               <button type="button" disabled={!canSave} onClick={() => perform('draft')}>1. บันทึกร่าง</button>
               <button type="button" disabled={!canPublish} onClick={() => {
-                if (window.confirm('ยืนยันเผยแพร่ Layout จากร่างล่าสุดไปยังหน้าเว็บ TEST?')) perform('publish');
+                if (window.confirm('ยืนยันเผยแพร่ Layout จากร่างล่าสุดไปยังเว็บไซต์ที่กำลังใช้งานอยู่?')) perform('publish');
               }}>2. อนุมัติเผยแพร่</button>
               <button type="button" disabled={busy || loading} onClick={() => {
                 if (dirty && !window.confirm('มีข้อมูลแก้ไขที่ยังไม่บันทึก ต้องการทิ้งการแก้ไขแล้วโหลดล่าสุด?')) return;
