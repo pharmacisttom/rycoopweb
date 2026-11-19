@@ -5,6 +5,10 @@ import { Calculator, DollarSign, Calendar, Percent, FileText, CheckCircle, Refre
 
 export default function LoanCalculator() {
   const { LOAN_PRODUCTS } = usePublicInformation();
+  // Published catalog can be empty; never synthesize loan products or rates.
+  const publishedProducts = Array.isArray(LOAN_PRODUCTS)
+    ? LOAN_PRODUCTS.filter(p => p && p.id && p.title && Number.isFinite(Number(p.rateValue)) && Number(p.maxLimit) > 0 && Number(p.maxTerm) > 0)
+    : [];
   const [selectedProductId, setSelectedProductId] = useState('ordinary');
   const [principal, setPrincipal] = useState(300000);
   const [rate, setRate] = useState(6.15);
@@ -13,12 +17,12 @@ export default function LoanCalculator() {
 
   // Active product details
   const activeProduct = useMemo(() => {
-    return LOAN_PRODUCTS.find(p => p.id === selectedProductId) || LOAN_PRODUCTS[0];
-  }, [selectedProductId]);
+    return publishedProducts.find(p => p.id === selectedProductId) || publishedProducts[0] || null;
+  }, [selectedProductId, LOAN_PRODUCTS]);
 
   // Handle loan type selection - strictly sets matching Master Data rate
   const handleTypeChange = (productId) => {
-    const prod = LOAN_PRODUCTS.find(p => p.id === productId);
+    const prod = publishedProducts.find(p => p.id === productId);
     if (!prod) return;
 
     setSelectedProductId(prod.id);
@@ -81,6 +85,15 @@ export default function LoanCalculator() {
     };
   }, [principal, rate, months]);
 
+  if (!activeProduct) {
+    return (
+      <div className="glass-card" role="status" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
+        <h3 style={{ fontSize: '1.3rem', marginBottom: '0.75rem' }}>โปรแกรมคำนวณเงินกู้สหกรณ์</h3>
+        <p>ยังไม่มีข้อมูลผลิตภัณฑ์เงินกู้และอัตราดอกเบี้ยที่ได้รับอนุมัติให้เผยแพร่ จึงยังไม่สามารถคำนวณจากอัตราของสหกรณ์ได้</p>
+      </div>
+    );
+  }
+
   return (
     <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
       
@@ -110,7 +123,7 @@ export default function LoanCalculator() {
           เลือกประเภทสินเชื่อ (10 ประเภทตามประกาศสหกรณ์):
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.5rem' }}>
-          {LOAN_PRODUCTS.map((p) => {
+          {publishedProducts.map((p) => {
             const isSelected = selectedProductId === p.id;
             return (
               <button

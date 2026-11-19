@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import {auditBoardTerms,BOARD_EXPECTED_COUNT,BOARD_POSITION_OPTIONS} from '../src/utils/boardTermAudit.js';
+import {readFileSync} from 'node:fs';
+const source=JSON.parse(readFileSync('src/data/legacyReference.json','utf8'));
+const old=auditBoardTerms(source.boardMembers);
+assert.equal(BOARD_EXPECTED_COUNT,15);
+assert.equal(old.find(x=>x.term==='ชุดที่ 38').count,15,'reference term 38 has 15 members');
+assert.equal(old.find(x=>x.term==='ชุดที่ 39').count,0,'no invented term 39 members');
+const roles=[...BOARD_POSITION_OPTIONS.slice(0,4),...Array(11).fill('กรรมการ')];
+const term39=roles.map((position,i)=>({id:300+i,name:'ทดสอบ '+(i+1),term:'ชุดที่ 39',position,status:'active'}));
+assert.equal(auditBoardTerms([...source.boardMembers,...term39]).find(x=>x.term==='ชุดที่ 39').complete,true);
+assert.equal(auditBoardTerms([...term39.slice(0,14)]).find(x=>x.term==='ชุดที่ 39').complete,false);
+const oldIssue=auditBoardTerms(source.boardMembers).find(x=>x.term==='ชุดที่ 38');
+assert(oldIssue.issues.some(x=>x.includes('กรรมการและเลขานุการ')),'legacy role labels must not be silently rewritten');
+assert.equal(auditBoardTerms([...term39,{...term39[0],name:'ทดสอบ 1',id:999}]).find(x=>x.term==='ชุดที่ 39').complete,false);
+const jsx=readFileSync('src/pages/PublicContentAdminPage.jsx','utf8');
+assert(jsx.includes('auditBoardTerms(value)'));
+assert(jsx.includes("type==='board-position'"));
+assert(jsx.includes("type==='board-term'"));
+assert(jsx.includes('BOARD_TERMS.map'));
+console.log('PASS: board term 38 and 39 remain separate with 15 seats, explicit roles and no invented names');
