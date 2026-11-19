@@ -73,6 +73,23 @@ class PublicContentService
         $catalog['publication'] = $metadata;
         return $catalog;
     }
+    /** Public-only view: legacy seed values are never evidence of staff publication.
+     * Do not mutate the editorial baseline or any stored revision.
+     */
+    public static function publishedCatalog(): array
+    {
+        $catalog = self::catalog();
+        $approved = $catalog['publication'] ?? [];
+        foreach (self::SECTIONS as $section => $definition) {
+            if (isset($approved[$section])) continue;
+            $empty = $section === 'profile'
+                ? array_fill_keys(array_keys($catalog['coopInfo'] ?? []), '')
+                : [];
+            self::assign($catalog, $section, $empty);
+        }
+        return $catalog;
+    }
+
     public static function apiRates(array $catalog): array {
         $result=['deposit'=>[],'loan'=>[]];
         foreach(['deposit'=>'deposits','loan'=>'loans'] as $type=>$key)foreach($catalog['interestRates'][$key] as $index=>$rate){
