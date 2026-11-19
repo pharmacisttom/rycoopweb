@@ -164,6 +164,7 @@ export default function ContactPage() {
                   </button>
                 </div>
               ) : (
+                <>
                 <p role="status" className="surface-card" style={{padding:12}}>ระบบส่งเรื่องร้องเรียนออนไลน์ยังไม่เชื่อมฐานข้อมูลจริง กรุณาติดต่อเจ้าหน้าที่สหกรณ์โดยตรง ขณะนี้ยังไม่รับบันทึกเรื่องผ่านเว็บไซต์</p>
                 <form onSubmit={handleSubmit}>
                   <div className="form-group">
@@ -202,6 +203,7 @@ export default function ContactPage() {
                     <span>ส่งข้อความ</span>
                   </button>
                 </form>
+                </>
               )}
 
             </div>
