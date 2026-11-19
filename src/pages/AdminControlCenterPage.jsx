@@ -203,7 +203,7 @@ const SECTION_META = {
   'visitor-analytics': {
     title: 'วิเคราะห์สถิติผู้เข้าชมและทราฟฟิกเว็บไซต์ (Enterprise Web & Visitor Analytics)',
     subtitle: 'ติดตามผู้เข้าชมตามช่วงเวลาที่เลือก แนวโน้มรายวัน/รายเดือน พฤติกรรมรายชั่วโมง การคัดกรองบอท และส่งออกรายงานภายใต้ Audit Trail',
-    breadcrumbs: [{ label: 'Executive Dashboard', to: '/admin/dashboard' }, { label: 'Visitor Analytics' }],
+    breadcrumbs: [{ label: 'Executive Dashboard', to: '/admin/control-center' }, { label: 'Visitor Analytics' }],
     permissions: ['analytics.visitors.view', 'analytics.view'],
   },
   operations: {
