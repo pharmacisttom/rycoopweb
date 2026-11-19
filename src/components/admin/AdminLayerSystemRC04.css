@@ -1,0 +1,117 @@
+/* RYCOOP Admin Layer & Layout Foundation RC04.
+   Scoped to Control Center; no global public CSS selectors. */
+.acc-shell{
+  --acc-layer-content:1;
+  --acc-layer-sticky:20;
+  --acc-layer-topbar:30;
+  --acc-layer-backdrop:50;
+  --acc-layer-sidebar:60;
+  --acc-layer-popover:70;
+  --acc-field-radius:10px;
+  --acc-card-radius:16px;
+  isolation:isolate;
+}
+.acc-shell,.acc-main-wrapper,.acc-content{min-width:0}
+.acc-shell .acc-main-wrapper{isolation:isolate}
+.acc-shell .acc-topbar{z-index:var(--acc-layer-topbar)}
+.acc-shell .acc-sidebar{z-index:var(--acc-layer-sidebar)}
+.acc-shell .acc-backdrop.is-open{z-index:var(--acc-layer-backdrop)}
+.acc-shell .acc-content{position:relative;z-index:var(--acc-layer-content);overflow:visible}
+.acc-shell .admin-module,
+.acc-shell .admin-card,
+.acc-shell .surface-card,
+.acc-shell .dynamic-layout-editor{
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+.acc-shell .admin-module,
+.acc-shell .dynamic-layout-editor{width:100%;overflow:visible}
+.acc-shell :is(.admin-page-heading,.admin-card-heading,.admin-actions){
+  min-width:0;flex-wrap:wrap;row-gap:12px;
+}
+.acc-shell :is(h1,h2,h3,h4,p,label,span){overflow-wrap:break-word}
+.acc-shell .admin-page-heading h1{font-size:clamp(1.4rem,2vw,2rem);line-height:1.3}
+.acc-shell .admin-card,
+.acc-shell .surface-card:not(.admin-dialog){
+  border-radius:var(--acc-card-radius);
+  box-shadow:0 3px 16px rgba(15,23,42,.055);
+}
+.acc-shell .admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}
+.acc-shell :is(.admin-form-grid,.dynamic-layout-fields)>*{min-width:0}
+.acc-shell :is(input:not([type=checkbox]):not([type=radio]),select,textarea){
+  max-width:100%;box-sizing:border-box;
+}
+.acc-shell .admin-table-scroll,
+.acc-shell :is(.table-responsive,.admin-table-wrapper){
+  max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;
+}
+.acc-shell .admin-table{width:100%;min-width:580px;border-collapse:separate;border-spacing:0}
+.acc-shell .admin-table :is(th,td){vertical-align:middle}
+.acc-shell .admin-actions button{white-space:normal}
+.acc-shell .dynamic-layout-editor .dynamic-layout-fields{
+  align-items:start;
+}
+.acc-shell .dynamic-layout-editor .dynamic-slides-editor{
+  grid-column:1/-1;min-width:0;display:grid;gap:14px;
+  border:1px solid var(--acc-border-strong);border-radius:14px;
+  padding:clamp(12px,2vw,22px);background:var(--acc-surface-elevated);
+}
+.acc-shell .dynamic-slides-editor>p{color:var(--acc-text-secondary);line-height:1.7;margin:0}
+.acc-shell .dynamic-slides-editor>a{width:fit-content}
+.acc-shell .dynamic-slides-editor .dynamic-layout-slide-interval{display:grid;gap:8px;max-width:320px}
+.acc-shell .dynamic-slide-edit-card{
+  min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px 18px;
+  padding:18px;border-radius:14px;
+  background:var(--acc-surface);border:1px solid var(--acc-border);
+  box-shadow:0 2px 8px rgba(15,23,42,.05);
+}
+.acc-shell .dynamic-slide-edit-card>label{display:grid;gap:7px;align-content:start;min-width:0}
+.acc-shell .dynamic-slide-edit-card>label:has(textarea),
+.acc-shell .dynamic-slide-edit-card>label:has(input[required]),
+.acc-shell .dynamic-slide-edit-head{grid-column:1/-1}
+.acc-shell .dynamic-slide-edit-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.acc-shell .dynamic-slide-edit-head>strong{font-size:1.05rem}
+.acc-shell .dynamic-slide-edit-actions{display:flex;flex-wrap:wrap;gap:6px}
+.acc-shell .dynamic-slide-edit-card button,
+.acc-shell .dynamic-slides-editor>button{
+  min-height:42px;border:1px solid var(--acc-border-strong);
+  padding:8px 12px;border-radius:9px;
+  background:var(--acc-surface);color:var(--acc-text);font:inherit;cursor:pointer;
+}
+.acc-shell .dynamic-slide-edit-card button:disabled{opacity:.45;cursor:not-allowed}
+.acc-shell .dynamic-slide-edit-preview{grid-column:1/-1;display:block;width:100%;max-height:290px;object-fit:contain;background:#102742;border-radius:12px}
+.acc-shell .dynamic-slides-editor>button:last-child{justify-self:start;background:#175cd3;color:#fff;border-color:#175cd3}
+.acc-shell .dynamic-slide-edit-card :is(input,select,textarea){width:100%;min-height:44px;border:1.5px solid var(--acc-border-strong)!important;border-radius:var(--acc-field-radius)}
+/* Native modal dialogs are in the browser top layer, avoiding sticky sidebar stacking contexts. */
+.admin-dialog{
+  position:fixed;
+  inset:0;
+  margin:auto;
+  width:min(1000px,calc(100vw - 32px));
+  max-width:calc(100vw - 20px);
+  max-height:min(90dvh,940px);
+  box-sizing:border-box;
+  overscroll-behavior:contain;
+  box-shadow:0 24px 76px rgba(2,16,39,.36);
+}
+.admin-dialog::backdrop{background:rgba(3,15,34,.78);backdrop-filter:blur(4px)}
+.admin-dialog .admin-dialog-heading{position:sticky;top:-24px;z-index:2;border-bottom:1px solid var(--acc-border);margin-bottom:16px}
+.admin-dialog :is(input,select,textarea){max-width:100%;box-sizing:border-box}
+.admin-dialog .admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px}
+.admin-dialog :is(.admin-table-scroll,.table-responsive){max-width:100%;overflow-x:auto}
+@media(max-width:920px){
+ .acc-shell .acc-content{padding:clamp(12px,3vw,22px)}
+ .acc-shell .admin-card{padding:clamp(14px,2vw,20px)}
+}
+@media(max-width:680px){
+ .acc-shell .dynamic-slide-edit-card{grid-template-columns:minmax(0,1fr);padding:12px}
+ .acc-shell .dynamic-slide-edit-card>label{grid-column:1/-1}
+ .acc-shell .admin-actions{width:100%}
+ .admin-dialog{width:calc(100vw - 16px);padding:16px;max-height:calc(100dvh - 16px)}
+ .admin-dialog .admin-dialog-heading{top:-16px}
+}
+@media(prefers-reduced-motion:reduce){
+ .acc-shell *, .admin-dialog{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
