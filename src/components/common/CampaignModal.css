@@ -1,0 +1,93 @@
+/* Campaign modal XL: 500px -> up to 1000px on desktop; responsive and scroll-safe. */
+.rycoop-campaign-overlay {
+  position: fixed; inset: 0; z-index: 2500;
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(12px, 3vw, 30px);
+  overflow-y: auto;
+  background: rgba(9, 19, 40, .82);
+  backdrop-filter: blur(10px);
+}
+.rycoop-campaign-modal {
+  position: relative;
+  width: min(100%, 1000px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  flex-shrink: 0;
+  border-radius: 24px;
+  background: #fff;
+  color: #122449;
+  border: 1px solid rgba(255,255,255,.35);
+  box-shadow: 0 30px 100px rgba(0, 13, 42, .4);
+  isolation: isolate;
+}
+.rycoop-campaign-visual {
+  position: relative; min-height: 350px; height: clamp(350px, 43vh, 440px);
+  background: linear-gradient(140deg, #07336b, #1557b5 65%, #10254c);
+  overflow: hidden;
+}
+.rycoop-campaign-image { width: 100%; height: 100%; display: block; object-fit: contain; }
+.rycoop-campaign-visual-shade {
+  position: absolute; inset: 0;
+  background: linear-gradient(0deg, rgba(5,19,45,.96) 0%, rgba(5,19,45,.15) 65%, rgba(5,19,45,.25) 100%);
+  pointer-events: none;
+}
+.rycoop-campaign-heading {
+  position: absolute; left: 0; bottom: 0; width: 100%;
+  padding: clamp(20px, 4vw, 42px);
+  color: #fff;
+}
+.rycoop-campaign-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px; margin-bottom: 14px;
+  border-radius: 999px; background: #ffdc81; color: #773d09;
+  font-size: .95rem; font-weight: 700;
+}
+.rycoop-campaign-heading h2 {
+  margin: 0; max-width: 920px; color: #fff;
+  font-size: clamp(1.55rem, 2.6vw, 2.6rem);
+  line-height: 1.3; letter-spacing: -.015em;
+  overflow-wrap: anywhere;
+}
+.rycoop-campaign-details { padding: clamp(22px, 3vw, 36px) clamp(22px, 4vw, 42px); }
+.rycoop-campaign-details p {
+  margin: 0 0 26px;
+  font-size: clamp(1.05rem, 1.35vw, 1.28rem);
+  line-height: 1.8; color: #405373; overflow-wrap: anywhere;
+}
+.rycoop-campaign-actions { display: flex; align-items: stretch; gap: 14px; }
+.rycoop-campaign-actions > * {
+  min-height: 58px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 9px; text-decoration: none; padding: 12px 20px;
+  font: inherit; font-weight: 750; font-size: 1.04rem;
+  cursor: pointer; border: 1px solid transparent;
+}
+.rycoop-campaign-dismiss { flex: 1; background: #edf2f8; color: #172746; border-color: #dce5f0; }
+.rycoop-campaign-primary {
+  flex: 1.6; background: linear-gradient(110deg, #103a88, #2466e7);
+  color: white; box-shadow: 0 8px 20px rgba(35,86,194,.18);
+}
+.rycoop-campaign-close {
+  position: absolute; z-index: 3; right: 20px; top: 20px;
+  width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.3);
+  background: rgba(8,24,52,.84); color: #fff; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+}
+.rycoop-campaign-modal button:focus-visible,
+.rycoop-campaign-modal a:focus-visible { outline: 3px solid #fcd34d; outline-offset: 3px; }
+@media (max-width: 640px) {
+  .rycoop-campaign-overlay { padding: 10px; align-items: center; }
+  .rycoop-campaign-modal { border-radius: 18px; max-height: calc(100dvh - 20px); }
+  .rycoop-campaign-visual { min-height: 230px; height: min(42dvh, 320px); }
+  .rycoop-campaign-heading { padding: 18px; }
+  .rycoop-campaign-heading h2 { font-size: clamp(1.25rem, 5vw, 1.75rem); }
+  .rycoop-campaign-eyebrow { font-size: .75rem; margin-bottom: 9px; padding: 5px 10px; }
+  .rycoop-campaign-details { padding: 20px; }
+  .rycoop-campaign-details p { font-size: 1rem; margin-bottom: 17px; }
+  .rycoop-campaign-actions { flex-direction: column-reverse; gap: 9px; }
+  .rycoop-campaign-actions > * { min-height: 48px; width: 100%; }
+  .rycoop-campaign-close { width: 42px; height: 42px; right: 12px; top: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rycoop-campaign-modal { animation: none !important; transition: none !important; }
+}
