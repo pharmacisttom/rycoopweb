@@ -98,11 +98,30 @@ for path in /app/calculator /app/loan-calculator /app/loans/calculator; do
   page="$(curl --noproxy '*' -4 -fsS --max-time 20 --resolve "$HOST:443:127.0.0.1" "https://$HOST$path")"
   grep -Fq '/app/assets/index-' <<< "$page" || abort "SPA index missing: $path"
 done
-for path in /app/deposits /app/rates /app/loans /app/board_committee /app/welfare /app/admin/content; do
+for path in /app/deposits /app/rates /app/loans /app/board_committee /app/admin/content; do
   page="$(curl --noproxy '*' -4 -fsS --max-time 20 --resolve "$HOST:443:127.0.0.1" "https://$HOST$path")"
   grep -Fq '/app/assets/index-' <<< "$page" || abort "SPA shell missing: $path"
   echo "$path SPA=PASS"
 done
+# Welfare route may be explicitly held by the existing production Nginx policy.
+# Verify that the response is either the SPA shell or the exact approved hold redirect.
+# Do not disable welfare-hold.conf or widen access to member services.
+welfare_headers="$(curl --noproxy '*' -4 -sS --max-time 20 --resolve "$HOST:443:127.0.0.1" -D - -o /dev/null "https://$HOST/app/welfare")"
+welfare_status="$(printf '%s\n' "$welfare_headers" | awk 'toupper($1) ~ /^HTTP\// {code=$2} END {print code}')"
+welfare_location="$(printf '%s\n' "$welfare_headers" | awk 'tolower($1)=="location:" {gsub("\\r","",$2);value=$2} END {print value}')"
+if [[ "$welfare_status" == 200 ]]; then
+  welfare_page="$(curl --noproxy '*' -4 -fsS --max-time 20 --resolve "$HOST:443:127.0.0.1" "https://$HOST/app/welfare")"
+  grep -Fq '/app/assets/index-' <<< "$welfare_page" || abort "Welfare returned 200 without SPA shell"
+  echo "WELFARE_ROUTE=SPA_READY"
+elif [[ "$welfare_status" == 301 || "$welfare_status" == 302 || "$welfare_status" == 307 || "$welfare_status" == 308 ]]; then
+  case "$welfare_location" in
+    /welfare-not-open.html|https://www.rayongcoop.org/welfare-not-open.html)
+      echo "WELFARE_ROUTE=INTENTIONAL_HOLD HTTP=$welfare_status";;
+    *) abort "Unexpected welfare redirect HTTP=$welfare_status LOCATION=$welfare_location";;
+  esac
+else
+  abort "Unexpected /app/welfare HTTP=$welfare_status"
+fi
 echo "CALCULATOR_SPA_FALLBACK=PASS"
 # The welfare endpoint may be intentionally held by Nginx. Do not alter hold flags.
 welfare_http="$(curl --noproxy '*' -4 -sS --max-time 20 --resolve "$HOST:443:127.0.0.1" -o /dev/null -w '%{http_code}' "https://$HOST/api/public/welfare")"
