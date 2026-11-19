@@ -87,6 +87,19 @@ class PublicContentService
                 : [];
             self::assign($catalog, $section, $empty);
         }
+        // Sources and rate metadata bundled with the original reference are not
+        // publication records. Approved revision metadata is retained separately.
+        if (isset($catalog['sources']) && is_array($catalog['sources'])) {
+            $catalog['sources'] = array_map(
+                static fn($source): array => ['url' => '', 'checkedOn' => ''],
+                $catalog['sources']
+            );
+        }
+        if (!isset($approved['deposits']) && !isset($approved['loan_rates'])) {
+            $catalog['interestRates']['effectiveDate'] = '';
+        }
+        $catalog['interestRates']['depositSource'] = null;
+        $catalog['interestRates']['loanSource'] = null;
         return $catalog;
     }
 
