@@ -9,10 +9,11 @@ LIVE_ROOT="$(sed -n 's/^[[:space:]]*root \(\/var\/www\/rycoopweb\/production-rel
 test -n "$LIVE_ROOT" && test -f "$LIVE_ROOT/.env" || { echo "ERROR: cannot resolve active release/env" >&2; exit 1; }
 echo "===== ACTIVE PRODUCTION ====="
 echo "RELEASE=$LIVE_ROOT"
-echo "INDEX_ASSET=$(grep -oE '/app/assets/[^" ]+\.js' "$LIVE_ROOT/public/app/index.html" | head -1 || :)"
+INDEX_ASSET="$(grep -oE '/app/assets/[^" ]+\.js' "$LIVE_ROOT/public/app/index.html" | head -1 || :)"
+echo "INDEX_ASSET=$INDEX_ASSET"
 echo "===== SAFE ENV LABELS (no credentials) ====="
 for key in APP_ENV APP_URL DB_HOST DB_PORT DB_DATABASE; do
-  value="$(sed -n "s/^\${key}=//p" "$LIVE_ROOT/.env" | tail -1 | tr -d '\r' | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
+  value="$(sed -n "s/^${key}=//p" "$LIVE_ROOT/.env" | tail -1 | tr -d '\r' | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
   if [[ "$key" == "DB_HOST" ]]; then
     case "$value" in 127.0.0.1|localhost|::1) echo "$key=LOCALHOST";; '') echo "$key=UNSET";; *) echo "$key=NON_LOCAL_REDACTED";; esac
   else echo "$key=${value:-UNSET}"; fi
