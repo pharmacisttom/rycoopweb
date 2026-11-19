@@ -55,6 +55,7 @@ export default function PublicContentAdminPage() {
   const [dirty,setDirty]=useState(false),[preview,setPreview]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [carrySelection,setCarrySelection]=useState([]);
+  const [boardTermFilter,setBoardTermFilter]=useState('ชุดที่ 39');
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
@@ -135,6 +136,27 @@ export default function PublicContentAdminPage() {
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
       {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
+      {section==='boards'&&Array.isArray(value)&&<section className="surface-card public-content-board-directory" aria-label="เลือกกรรมการเพื่อแก้ไขข้อมูลและรูปภาพ">
+        <header className="public-content-board-tools-heading">
+          <h3>ทำเนียบกรรมการแยกตามชุด · จัดการรูปทุกท่าน</h3>
+          <p>เลือกกรรมการเพื่อแก้ชื่อ ตำแหน่ง รูปภาพและสถานะ โดยการเปลี่ยนแปลงจะบันทึกเป็นร่างและต้องอนุมัติเผยแพร่</p>
+        </header>
+        <div className="public-content-board-term-tabs">
+          {['ชุดที่ 39','ชุดที่ 38','ทั้งหมด'].map(term=><button key={term} type="button"
+            className={boardTermFilter===term?'is-active':''}
+            aria-pressed={boardTermFilter===term} onClick={()=>boardTermFilter!==term&&setBoardTermFilter(term)}>{term}</button>)}
+        </div>
+        <div className="public-content-board-people-grid">
+          {value.map((person,index)=>({...person,index})).filter(person=>boardTermFilter==='ทั้งหมด'||person.term===boardTermFilter).map(person=>
+            <button type="button" key={person.id||person.index} className={'public-content-board-person-tile'+(selected===person.index?' is-selected':'')}
+              aria-pressed={selected===person.index} onClick={()=>setSelected(person.index)}>
+              {person.image?<img src={person.image} alt="" loading="lazy"/>:<span className="public-content-board-person-noimg">ยังไม่มีรูป</span>}
+              <strong>{person.name||'รอกรอกชื่อ'}</strong>
+              <small>{person.position||'ยังไม่ระบุตำแหน่ง'}</small>
+              <span>{person.status==='former'?'พ้นตำแหน่ง':person.term}</span>
+            </button>)}
+        </div>
+      </section>}
       {section==='boards'&&<section className="public-content-board-audit surface-card" aria-labelledby="board-audit-heading">
         <h3 id="board-audit-heading">ตรวจสอบคณะกรรมการชุดที่ 38 และ 39</h3>
         <p>เกณฑ์ตรวจรับชุดละ 15 คน (ไม่รวมผู้พ้นตำแหน่ง) รายชื่อชุดเก่ายังคงเดิม และไม่รวมที่ปรึกษาหรือผู้ตรวจสอบกิจการ</p>
