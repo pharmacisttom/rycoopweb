@@ -63,6 +63,16 @@ final class AdminCrudService
                         if(mb_strlen($data['document_number'])>100||mb_strlen($data['tag'])>100)throw new \InvalidArgumentException('เลขเอกสารหรือแท็กยาวเกินกำหนด');
                     }
                     if($file&&($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE){
+                        if ($module === 'announcements') {
+                            if (($file['error'] ?? 0) !== UPLOAD_ERR_OK || ($file['size'] ?? 0) > 5 * 1024 * 1024 || ($file['size'] ?? 0) <= 0
+                                || !is_uploaded_file((string)($file['tmp_name'] ?? ''))) {
+                                throw new \InvalidArgumentException('รูปประกาศต้องมีขนาดไม่เกิน 5 MB');
+                            }
+                            $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+                            if (!in_array($mime, ['image/jpeg','image/png','image/webp'], true) || @getimagesize($file['tmp_name']) === false) {
+                                throw new \InvalidArgumentException('รองรับเฉพาะ JPEG, PNG และ WebP ที่เป็นไฟล์ภาพจริง');
+                            }
+                        }
                         try{$uploaded=MediaService::upload($file,$module);}catch(\InvalidArgumentException $e){throw new \InvalidArgumentException('ไฟล์ไม่ถูกต้องหรือไม่สามารถอัปโหลดได้');}
                         if($module==='documents'){$data['file_path']=$uploaded['path'];$data['file_size']=$uploaded['size'];$data['file_type']=$uploaded['mime'];}
                         else{$data['attachment_path']=$uploaded['path'];$data['attachment_name']=basename((string)$file['name']);}
