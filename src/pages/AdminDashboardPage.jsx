@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { COOP_INFO, KEY_STATS, INTEREST_RATES, ANNOUNCEMENTS, NEWS_LIST, FAQS, MEMBER_COMPLAINTS, LOAN_PRODUCTS } from '../data/mockData';
+import { COOP_INFO } from '../data/mockData';
 import { fetchAdminDashboard, fetchAdminNews, createAdminNews, deleteAdminNews, fetchFaqs, apiPost, fetchAdminRates, updateAdminRate, updateAdminLoanProduct } from '../services/api';
 import { normalizeNewsItem } from '../utils/news';
 import { richTextPlain } from '../utils/richText';
@@ -35,7 +35,7 @@ export function LegacyAdminDashboardPage() {
   const navigate = useNavigate();
 
   // 1. Announcements State
-  const [announcements, setAnnouncements] = useState(ANNOUNCEMENTS);
+  const [announcements, setAnnouncements] = useState([]);
   const [annModal, setAnnModal] = useState(false);
   const [newAnn, setNewAnn] = useState({ title: '', date: '11 มี.ค. 2567', fileSize: '850 KB', important: true });
 
@@ -49,7 +49,7 @@ export function LegacyAdminDashboardPage() {
     date: '11 มี.ค. 2567',
     excerpt: '',
     content: '',
-    image: '/assets/img/news_placeholder.jpg'
+    image: ''
   });
 
   // 3. Hero Section Settings State
@@ -142,43 +142,15 @@ export function LegacyAdminDashboardPage() {
   };
 
   // 5. Member Feedback & Complaints State
-  const [feedbacks, setFeedbacks] = useState(() => {
-    try {
-      const saved = localStorage.getItem('coop_member_complaints');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return [];
-  });
+  const [feedbacks] = useState([]); // Browser-local data is not authoritative.
   const [feedbackFilter, setFeedbackFilter] = useState('all');
   const [feedbackSearch, setFeedbackSearch] = useState('');
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [replyInput, setReplyInput] = useState('');
 
-  // Auto-sync complaints from localStorage and check URL tab
   useEffect(() => {
-    const syncData = () => {
-      try {
-        const saved = localStorage.getItem('coop_member_complaints');
-        if (saved) {
-          setFeedbacks(JSON.parse(saved));
-        }
-      } catch (e) {}
-    };
-
-    syncData();
-    window.addEventListener('storage', syncData);
-    window.addEventListener('focus', syncData);
-
-    const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get('tab');
-    if (tabParam) {
-      setActiveTab(tabParam);
-    }
-
-    return () => {
-      window.removeEventListener('storage', syncData);
-      window.removeEventListener('focus', syncData);
-    };
+    const tabParam = new URLSearchParams(window.location.search).get('tab');
+    if (tabParam) setActiveTab(tabParam);
   }, []);
 
   // 6. FAQs State
@@ -193,7 +165,7 @@ export function LegacyAdminDashboardPage() {
   const [newFaq, setNewFaq] = useState({ q: '', a: '' });
 
   // 7. Loan Products & Interest Rates State (Master Data 10 Items)
-  const [loanProductsList, setLoanProductsList] = useState(LOAN_PRODUCTS);
+  const [loanProductsList, setLoanProductsList] = useState([]);
   const [ratesSubTab, setRatesSubTab] = useState('loans');
   const [adminRatesData, setAdminRatesData] = useState({ deposit: [], loan: [], loanProducts: [], history: [] });
   const [ratesLoading, setRatesLoading] = useState(false);
@@ -317,47 +289,13 @@ export function LegacyAdminDashboardPage() {
   }
 
   // Handlers
-  const handleSaveHero = (e) => {
-    e.preventDefault();
-    if(!heroSettings.subtitle.trim()){toast.error('กรุณากรอกคำบรรยายหน้าแรก');return;}
-    localStorage.setItem('coop_hero_settings', JSON.stringify(heroSettings));
-    toast.success('บันทึกการตั้งค่า Hero Section เรียบร้อยแล้ว! (แสดงผลที่หน้าแรกทันที)');
-  };
+  const handleSaveHero = (event) => { event.preventDefault(); toast.error('ยังไม่เปิดให้บันทึกผ่านเครื่องมือเดิม โปรดใช้ระบบ CMS ที่เชื่อมกับฐานข้อมูลจริง'); };
 
-  const handleSavePopup = (e) => {
-    e.preventDefault();
-    if(!popupCampaign.subtitle.trim()){toast.error('กรุณากรอกคำบรรยายประชาสัมพันธ์');return;}
-    localStorage.setItem('coop_popup_campaign', JSON.stringify(popupCampaign));
-    sessionStorage.removeItem('coop_campaign_shown'); // reset so it shows on next homepage visit
-    toast.success('บันทึกการตั้งค่า Pop-up Campaign เรียบร้อยแล้ว! (เปิดหน้าเว็บเพื่อดูพรีวิวได้ทันที)');
-  };
+  const handleSavePopup = (event) => { event.preventDefault(); toast.error('ยังไม่เปิดให้บันทึกผ่านเครื่องมือเดิม โปรดใช้ระบบ CMS ที่เชื่อมกับฐานข้อมูลจริง'); };
 
-  const handleAddAnnouncement = (e) => {
-    e.preventDefault();
-    const item = {
-      id: `ann-${Date.now()}`,
-      title: newAnn.title,
-      date: newAnn.date,
-      fileSize: newAnn.fileSize,
-      important: newAnn.important
-    };
-    setAnnouncements([item, ...announcements]);
-    setAnnModal(false);
-    setNewAnn({ title: '', date: '11 มี.ค. 2567', fileSize: '850 KB', important: true });
-    toast.success('เพิ่มประกาศใหม่เรียบร้อยแล้ว');
-  };
+  const handleAddAnnouncement = (event) => { event.preventDefault(); toast.error('ยังไม่เปิดให้บันทึกผ่านเครื่องมือเดิม โปรดใช้ระบบ CMS ที่เชื่อมกับฐานข้อมูลจริง'); };
 
-  const handleDeleteAnnouncement = async (id) => {
-    const confirmed = await confirmDialog({
-      title: 'ยืนยันการลบประกาศ',
-      message: 'ท่านแน่ใจหรือไม่ว่าต้องการลบประกาศนี้?',
-      type: 'danger'
-    });
-    if (confirmed) {
-      setAnnouncements(announcements.filter(a => a.id !== id));
-      toast.success('ลบประกาศเรียบร้อยแล้ว');
-    }
-  };
+  const handleDeleteAnnouncement = () => { toast.error('ยังไม่เปิดดำเนินการผ่านเครื่องมือเดิม เพราะไม่มีการยืนยันผลจาก Backend'); };
 
   const handleAddNews = async (e) => {
     e.preventDefault();
@@ -369,7 +307,7 @@ export function LegacyAdminDashboardPage() {
     if(!result?.success){toast.error(result?.message || 'บันทึกข่าวไม่สำเร็จ');return;}
     setNews(current=>newNews.id?current.map(item=>item.id===newNews.id?normalizeNewsItem(result.data):item):[normalizeNewsItem(result.data), ...current]);
     setNewsModal(false);
-    setNewNews({ title: '', category: 'ข่าวประชาสัมพันธ์', date: '', excerpt: '', content: '', image: '/assets/img/news_placeholder.jpg' });
+    setNewNews({ title: '', category: 'ข่าวประชาสัมพันธ์', date: '', excerpt: '', content: '', image: '' });
     toast.success('บันทึกข่าวประชาสัมพันธ์เรียบร้อยแล้ว');
   };
 
@@ -416,58 +354,11 @@ export function LegacyAdminDashboardPage() {
     }
   };
 
-  const handleUpdateFeedbackStatus = (id, newStatus) => {
-    const updated = feedbacks.map(f => f.id === id ? { ...f, status: newStatus } : f);
-    setFeedbacks(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-    } catch (e) {}
-    if (selectedFeedback && selectedFeedback.id === id) {
-      setSelectedFeedback({ ...selectedFeedback, status: newStatus });
-    }
-  };
+  const handleUpdateFeedbackStatus = () => { toast.error('ยังไม่เปิดดำเนินการผ่านเครื่องมือเดิม เพราะไม่มีการยืนยันผลจาก Backend'); };
 
-  const handleSaveAdminReply = (id, replyText) => {
-    const now = new Date().toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' น.';
-    const updated = feedbacks.map(f => f.id === id ? {
-      ...f,
-      adminReply: replyText,
-      status: 'ตอบกลับแล้ว',
-      replyDate: now
-    } : f);
-    setFeedbacks(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-    } catch (e) {}
-    if (selectedFeedback && selectedFeedback.id === id) {
-      setSelectedFeedback({
-        ...selectedFeedback,
-        adminReply: replyText,
-        status: 'ตอบกลับแล้ว',
-        replyDate: now
-      });
-    }
-    toast.success(`บันทึกข้อความตอบกลับสำหรับรหัส ${id} เรียบร้อยแล้ว (สมาชิกสามารถตรวจสอบผลได้ทันที)`);
-  };
+  const handleSaveAdminReply = () => { toast.error('ยังไม่เปิดดำเนินการผ่านเครื่องมือเดิม เพราะไม่มีการยืนยันผลจาก Backend'); };
 
-  const handleDeleteFeedback = async (id) => {
-    const confirmed = await confirmDialog({
-      title: 'ยืนยันการลบเรื่องร้องเรียน',
-      message: `ยืนยันการลบรายการเรื่องร้องเรียน ${id}?`,
-      type: 'danger'
-    });
-    if (confirmed) {
-      const updated = feedbacks.filter(f => f.id !== id);
-      setFeedbacks(updated);
-      try {
-        localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-      } catch (e) {}
-      if (selectedFeedback && selectedFeedback.id === id) {
-        setSelectedFeedback(null);
-      }
-      toast.success(`ลบรายการเรื่องร้องเรียน ${id} เรียบร้อยแล้ว`);
-    }
-  };
+  const handleDeleteFeedback = () => { toast.error('ยังไม่เปิดดำเนินการผ่านเครื่องมือเดิม เพราะไม่มีการยืนยันผลจาก Backend'); };
 
   return (
     <div className="admin-module admin-legacy-cms">
