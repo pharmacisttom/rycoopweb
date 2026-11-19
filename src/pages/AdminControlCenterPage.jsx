@@ -489,7 +489,7 @@ export default function AdminControlCenterPage({ section: propSection }) {
           </p>
           <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
             <Link to="/admin/workspace" className="acc-btn primary">กลับพื้นที่ทำงานเจ้าหน้าที่</Link>
-            <Link to="/admin/dashboard" className="acc-btn">กลับหน้าภาพรวม</Link>
+            <Link to="/admin/control-center" className="acc-btn">กลับหน้าภาพรวม</Link>
           </div>
         </div>
       </AdminControlCenterShell>
