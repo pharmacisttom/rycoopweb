@@ -1,108 +1,93 @@
-import React, { useState } from 'react';
-import { Download, FileText, Search, Filter } from 'lucide-react';
-import { DOCUMENTS } from '../data/mockData';
-import { useToast } from '../context/ToastContext';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Download, FileText, Search } from 'lucide-react';
+import { fetchDocuments } from '../services/api';
+
+const formatBytes = (bytes) => {
+  const size = Number(bytes);
+  if (!Number.isFinite(size) || size < 0) return '—';
+  return size < 1024 * 1024 ? `${(size / 1024).toFixed(1)} KB` : `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export default function DocumentsPage() {
-  const { toast } = useToast();
+  const [documents, setDocuments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const categories = ['ทั้งหมด', 'แบบฟอร์มเงินกู้', 'แบบฟอร์มเงินฝาก', 'สวัสดิการ', 'รายงานประจำปี', 'ข้อบังคับ/ระเบียบ'];
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    fetchDocuments()
+      .then((result) => {
+        if (!active) return;
+        if (!result?.success || !Array.isArray(result.data)) {
+          throw new Error(result?.message || 'ข้อมูลเอกสารไม่ถูกต้อง');
+        }
+        setDocuments(result.data);
+        setError('');
+      })
+      .catch((err) => {
+        if (active) setError(err.message || 'ไม่สามารถโหลดเอกสารได้');
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  const filteredDocs = DOCUMENTS.filter((doc) => {
-    const matchCategory = selectedCategory === 'ทั้งหมด' || doc.category === selectedCategory;
-    const matchSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) || doc.category.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchCategory && matchSearch;
-  });
+  const categories = useMemo(() => ['ทั้งหมด', ...new Set(documents.map((doc) => doc.category).filter(Boolean))], [documents]);
+  const filteredDocs = useMemo(() => {
+    const term = searchTerm.trim().toLocaleLowerCase('th-TH');
+    return documents.filter((doc) => {
+      const category = String(doc.category || '');
+      const title = String(doc.title || '');
+      return (selectedCategory === 'ทั้งหมด' || category === selectedCategory)
+        && (!term || title.toLocaleLowerCase('th-TH').includes(term) || category.toLocaleLowerCase('th-TH').includes(term));
+    });
+  }, [documents, searchTerm, selectedCategory]);
 
   return (
     <div className="section">
       <div className="container">
-        
         <div className="section-title-wrap">
           <span className="section-badge">ศูนย์ดาวน์โหลด</span>
           <h1 className="section-title">เอกสารและแบบฟอร์ม</h1>
           <p className="section-subtitle">ดาวน์โหลดแบบฟอร์มคำขอ ระเบียบ ข้อบังคับ และรายงานประจำปีของสหกรณ์</p>
           <div className="section-line" />
         </div>
-
-        {/* Search & Category Filter Bar */}
-        <div className="surface-card" style={{ padding: '1.5rem', marginBottom: '2rem', borderRadius: 'var(--radius-lg)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            
-            {/* Search Input */}
-            <div style={{ position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input 
-                type="text"
-                className="form-control"
-                placeholder="ค้นหาชื่อแบบฟอร์ม หรือหมวดหมู่เอกสาร..."
-                style={{ paddingLeft: '2.75rem' }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* Category Pills */}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  style={{
-                    padding: '0.4rem 0.9rem',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    background: selectedCategory === cat ? 'var(--primary-600)' : 'var(--bg-subtle)',
-                    color: selectedCategory === cat ? '#ffffff' : 'var(--text-main)',
-                    border: '1px solid var(--border-subtle)',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
+        <div className="surface-card" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+          <label htmlFor="document-search">ค้นหาเอกสาร</label>
+          <div style={{ position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: 14, top: 14 }} />
+            <input id="document-search" className="form-control" style={{ paddingLeft: '2.75rem' }}
+              placeholder="ค้นหาชื่อแบบฟอร์มหรือหมวดหมู่" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
+            {categories.map((category) => (
+              <button type="button" key={category} className={selectedCategory === category ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
+                onClick={() => setSelectedCategory(category)}>{category}</button>
+            ))}
           </div>
         </div>
-
-        {/* Documents List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          {filteredDocs.length > 0 ? (
-            filteredDocs.map((doc) => (
-              <div key={doc.id} className="surface-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'var(--primary-100)', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileText size={22} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                      <span className="badge badge-primary">{doc.category}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{doc.format} • {doc.size}</span>
-                    </div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>{doc.title}</h4>
-                  </div>
-                </div>
-
-                <button 
-                  className="btn btn-outline btn-sm"
-                  onClick={() => toast.info(`จำลองการดาวน์โหลด: ${doc.title} (${doc.size})`)}
-                >
-                  <Download size={15} />
-                  <span>ดาวน์โหลดไฟล์</span>
-                </button>
-              </div>
-            ))
-          ) : (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-              ไม่พบเอกสารที่ค้นหา
+        {loading && <p role="status">กำลังโหลดรายการเอกสาร…</p>}
+        {error && <div role="alert" className="surface-card" style={{ padding: 20 }}>
+          <p>{error}</p><button type="button" className="btn btn-outline" onClick={() => window.location.reload()}>ลองใหม่</button>
+        </div>}
+        {!loading && !error && <p role="status">พบเอกสาร {filteredDocs.length} รายการ</p>}
+        {!loading && !error && filteredDocs.map((doc) => (
+          <article key={doc.id} className="surface-card" style={{ padding: '1.25rem 1.5rem', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <FileText size={24} aria-hidden="true" />
+              <div><span className="badge badge-primary">{doc.category || 'เอกสาร'}</span>
+                <h3 style={{ margin: '8px 0 4px', fontSize: '1rem' }}>{doc.title}</h3>
+                <small>{formatBytes(doc.file_size)}</small></div>
             </div>
-          )}
-        </div>
-
+            <a className="btn btn-outline btn-sm" href={`/api/public/documents/${encodeURIComponent(doc.id)}/download`}
+              target="_blank" rel="noopener noreferrer" aria-label={`เปิดเอกสาร ${doc.title}`}>
+              <Download size={16} aria-hidden="true" /> เปิด/ดาวน์โหลด
+            </a>
+          </article>
+        ))}
+        {!loading && !error && filteredDocs.length === 0 && <p>ไม่พบเอกสารที่ค้นหา</p>}
       </div>
     </div>
   );

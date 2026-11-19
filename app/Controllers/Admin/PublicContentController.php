@@ -31,7 +31,7 @@ class PublicContentController extends Controller
     public function publicCatalog(): void
     {
         header('Cache-Control: no-cache');
-        try { $catalog=Content::catalog(); $this->json(['success'=>true,'data'=>$catalog]); }
+        try { $catalog=Content::publishedCatalog(); $this->json(['success'=>true,'data'=>$catalog]); }
         catch (\Throwable $e) { Logger::error('Public content unavailable: '.get_class($e));$this->json(['success'=>false,'code'=>'CONTENT_UNAVAILABLE','message'=>'ยังโหลดข้อมูลเผยแพร่ไม่ได้'],503); }
     }
 }

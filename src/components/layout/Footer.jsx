@@ -7,10 +7,12 @@ import {
   ExternalLink, MessageCircle, FileText, ChevronRight, LockKeyhole
 } from 'lucide-react';
 import VisitorCounter from '../analytics/VisitorCounter';
+import useSiteChromeVisibility from '../../hooks/useSiteChromeVisibility';
 
 
 export default function Footer() {
   const { COOP_INFO } = usePublicInformation();
+  const visibility = useSiteChromeVisibility();
   return (
     <footer style={{
       background: 'var(--primary-950)',
@@ -32,7 +34,7 @@ export default function Footer() {
         }}>
 
           {/* Col 1: About & Trust */}
-          <div>
+          {visibility.footer_brand && <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
               <CoopBrandLogo tone="dark" showEstablished establishedYear={COOP_INFO.establishedYear} nameTh={COOP_INFO.nameTh} />
             </div>
@@ -56,10 +58,10 @@ export default function Footer() {
                 <span>ข้อมูลบริการสหกรณ์</span>
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* Col 2: Quick Links */}
-          <div>
+          {visibility.footer_finance && <div>
             <h4 style={{ color: '#ffffff', fontSize: '1.05rem', marginBottom: '1.25rem', borderBottom: '2px solid var(--primary-600)', display: 'inline-block', paddingBottom: '0.35rem' }}>
               บริการทางการเงิน
             </h4>
@@ -95,10 +97,10 @@ export default function Footer() {
                 </Link>
               </li>
             </ul>
-          </div>
+          </div>}
 
           {/* Col 3: Member & e-Services */}
-          <div>
+          {visibility.footer_welfare && <div>
             <h4 style={{ color: '#ffffff', fontSize: '1.05rem', marginBottom: '1.25rem', borderBottom: '2px solid var(--accent-teal)', display: 'inline-block', paddingBottom: '0.35rem' }}>
               สวัสดิการและสมาชิก
             </h4>
@@ -134,10 +136,10 @@ export default function Footer() {
                 </Link>
               </li>
             </ul>
-          </div>
+          </div>}
 
           {/* Col 4: Contact Info */}
-          <div>
+          {visibility.footer_contact && <div>
             <h4 style={{ color: '#ffffff', fontSize: '1.05rem', marginBottom: '1.25rem', borderBottom: '2px solid var(--accent-gold)', display: 'inline-block', paddingBottom: '0.35rem' }}>
               ติดต่อสำนักงาน
             </h4>
@@ -187,14 +189,14 @@ export default function Footer() {
                 </a>}
               </div>
             </div>
-          </div>
+          </div>}
 
         </div>
 
         {/* Public Visitor Counter Widget */}
-        <div style={{ marginBottom: '2rem' }}>
+        {visibility.footer_counter && <div style={{ marginBottom: '2rem' }}>
           <VisitorCounter variant="footer" />
-        </div>
+        </div>}
 
         {/* Bottom Bar */}
         <div style={{
