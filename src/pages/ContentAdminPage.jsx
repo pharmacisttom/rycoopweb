@@ -30,7 +30,7 @@ export default function ContentAdminPage(){
  <label>{tab==='news'?'หัวข้อข่าว':'คำถาม'}<input required className="form-control" value={tab==='news'?edit.title:edit.question} onChange={e=>setEdit({...edit,[tab==='news'?'title':'question']:e.target.value})}/></label>
  {tab==='faqs'&&<label>สถานะ<select aria-label="สถานะ" value={edit.status||'active'} onChange={e=>setEdit({...edit,status:e.target.value})}><option value="active">ใช้งาน</option><option value="inactive">ปิดใช้งาน</option></select></label>}
  {tab==='news'&&<><label>หมวดหมู่<input required className="form-control" value={edit.category} onChange={e=>setEdit({...edit,category:e.target.value})}/></label><label>คำโปรย<textarea className="form-control" value={edit.excerpt||''} onChange={e=>setEdit({...edit,excerpt:e.target.value})}/></label></>}
- {tab==='news'&&<NewsGalleryEditor images={edit.gallery_images||[]} disabled={busy||readingImages} onBusyChange={setReadingImages} onChange={gallery_images=>setEdit(previous=>({...previous,gallery_images}))}/>}
+ {tab==='news'&&<NewsGalleryEditor newsId={edit.id} images={edit.gallery_images||[]} disabled={busy||readingImages} onBusyChange={setReadingImages} onChange={gallery_images=>setEdit(previous=>({...previous,gallery_images}))}/>}
  <RichTextEditor value={tab==='news'?edit.content:edit.answer} onChange={value=>setEdit({...edit,[tab==='news'?'content':'answer']:value})}/>
  {tab==='news'&&<label>สถานะ<select className="form-control" value={edit.workflow_status} onChange={e=>setEdit({...edit,workflow_status:e.target.value})}><option value="draft">ร่าง</option><option value="submitted">ส่งตรวจเพื่อเผยแพร่</option></select></label>}
  {tab==='news'&&edit.id&&<p>การแก้ไขจะกลับเป็นร่าง / ส่งตรวจ และพักการแสดงข่าวนี้จนเผยแพร่อีกครั้ง</p>}
