@@ -54,6 +54,7 @@ export default function PublicContentAdminPage() {
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [dirty,setDirty]=useState(false),[preview,setPreview]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
+  const [carrySelection,setCarrySelection]=useState([]);
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
@@ -66,7 +67,7 @@ export default function PublicContentAdminPage() {
     if (!sections.length || !requestedSection || requestedSection === section || dirty) return;
     if (sections.some(item => item.key === requestedSection)) setSection(requestedSection);
   }, [requestedSection, sections, section, dirty]);
-  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');
+  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);
     memberAdminApi(`/api/admin/public-content/sections/${section}`,{signal:controller.signal}).then(result=>{setData(result);setValue(result.value);}).catch(e=>{if(e.name!=='AbortError')setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[section,refresh]);
@@ -88,6 +89,18 @@ export default function PublicContentAdminPage() {
     setValue(current=>[...current,{...row,id,term:target.trim()}]);
     setSelected(value.length);setDirty(true);
     setMessage('สร้างสำเนากรรมการในร่างใหม่แล้ว ชุดเดิมยังคงอยู่ ต้องบันทึกและเผยแพร่ร่างก่อนหน้าเว็บเปลี่ยน');
+  }
+  function carryBoardsTo39(){
+    if(section!=='boards' || !Array.isArray(value) || !carrySelection.length || busy)return;
+    const from38=value.filter(p=>p && p.term==='ชุดที่ 38' && p.status!=='former' && carrySelection.includes(Number(p.id)));
+    const existing39=new Set(value.filter(p=>p && p.term==='ชุดที่ 39').map(p=>String(p.name||'').trim()));
+    const eligible=from38.filter(p=>!existing39.has(String(p.name||'').trim()));
+    if(!eligible.length){setMessage('ไม่มีกรรมการที่ต้องคัดลอกใหม่: รายชื่อที่เลือกมีในชุดที่ 39 แล้ว');return;}
+    if(!window.confirm(`คัดลอกกรรมการ ${eligible.length} ท่านจากชุด 38 ไปเป็นร่างชุด 39 โดยคงชุด 38 ไว้ทั้งหมด? กรุณาตรวจตำแหน่งและรูปภาพก่อนเผยแพร่`))return;
+    let nextId=Math.max(0,...value.map(p=>Number(p.id)||0));
+    const additions=eligible.map(person=>({...person,id:++nextId,term:'ชุดที่ 39',status:'active'}));
+    setValue(current=>[...current,...additions]);setSelected(value.length);setDirty(true);setCarrySelection([]);
+    setMessage(`เพิ่มร่างกรรมการชุด 39 จำนวน ${additions.length} ท่านแล้ว ชุด 38 ไม่ถูกเปลี่ยน โปรดตรวจสอบรายชื่อ รูปภาพ ตำแหน่ง และเอกสารแต่งตั้งก่อนบันทึกร่าง`);
   }
   function startBoardReplacement(){
     if(section!=='boards'||!row)return;
@@ -136,6 +149,24 @@ export default function PublicContentAdminPage() {
           </article>)}
         </div>
         <p className="public-content-board-audit-note">เป็นการตรวจข้อมูลในตัวแก้ไขเท่านั้น ระบบไม่เปลี่ยนตำแหน่งหรือรายชื่ออัตโนมัติ กรุณาตรวจเอกสารแต่งตั้งก่อนเผยแพร่</p>
+      </section>}
+      {section==='boards'&&definition?.canEdit&&<section className="surface-card public-content-board-tools" aria-label="คัดเลือกกรรมการดำรงตำแหน่งต่อในชุด 39" style={{marginBottom:20}}>
+        <h3>คัดเลือกกรรมการที่ดำรงตำแหน่งต่อ: ชุดที่ 38 → ชุดที่ 39</h3>
+        <p>เลือกรายชื่อหลายท่านเพื่อสร้างสำเนาในร่างชุดที่ 39 โดยข้อมูลและรูปเดิมของชุด 38 ไม่ถูกแก้ไข ระบบจะไม่คัดลอกรายชื่อที่อยู่ในชุด 39 แล้ว</p>
+        <div className="board-carry-grid">
+          {value.filter(p=>p?.term==='ชุดที่ 38'&&p.status!=='former').map(person=>{
+            const checked=carrySelection.includes(Number(person.id));
+            return <label className="board-carry-person" key={person.id}>
+              <input type="checkbox" checked={checked} disabled={busy||mediaBusy}
+                onChange={e=>setCarrySelection(prev=>e.target.checked?[...prev,Number(person.id)]:prev.filter(id=>id!==Number(person.id))}/>
+              {person.image?<img src={person.image} alt="" loading="lazy"/>:<span className="board-carry-placeholder">ไม่มีรูป</span>}
+              <span><strong>{person.name}</strong><small>{person.position}</small></span>
+            </label>;
+          })}
+        </div>
+        <button type="button" className="btn btn-primary" disabled={busy||mediaBusy||carrySelection.length===0}
+          onClick={carryBoardsTo39}>คัดลอก {carrySelection.length} ท่านไปเป็นร่างชุดที่ 39</button>
+        <p className="public-content-board-audit-note">ต้องตรวจรายชื่อและตำแหน่งจริงจากเอกสารแต่งตั้งก่อน Publish ห้ามถือว่าการคัดลอกเป็นคำสั่งแต่งตั้งอัตโนมัติ</p>
       </section>}
       {section==='boards'&&row&&definition?.canEdit&&<section className="surface-card public-content-board-tools" aria-labelledby="board-tools-heading">
         <header className="public-content-board-tools-heading">
