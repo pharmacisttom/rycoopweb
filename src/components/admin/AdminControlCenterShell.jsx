@@ -56,11 +56,11 @@ export const ADMIN_SIDEBAR_GROUPS = [
     thaiLabel: 'แดชบอร์ดผู้บริหาร',
     icon: LayoutDashboard,
     items: [
-      { label: 'ภาพรวมระบบ', to: '/admin/dashboard', permissions: ['dashboard.view'] },
-      { label: 'Executive Analytics', to: '/admin/dashboard?tab=analytics', permissions: ['analytics.view', 'dashboard.view'] },
-      { label: 'สถิติการใช้งาน', to: '/admin/dashboard?tab=usage', permissions: ['analytics.view', 'dashboard.view'] },
+      { label: 'ภาพรวมระบบและสุขภาพระบบ', to: '/admin/control-center', permissions: ['dashboard.view'] },
+      { label: 'Executive Analytics', to: '/admin/control-center?tab=analytics', permissions: ['analytics.view', 'dashboard.view'] },
+      { label: 'สถิติการใช้งาน', to: '/admin/control-center?tab=usage', permissions: ['analytics.view', 'dashboard.view'] },
       { label: 'สถิติผู้เข้าชมเว็บไซต์ (Visitor Analytics)', to: '/admin/analytics/visitors', permissions: ['analytics.visitors.view', 'analytics.view'] },
-      { label: 'ระบบจัดการเว็บไซต์เดิม (CMS)', to: '/admin/cms', roles: ['super_admin', 'admin', 'staff', 'editor', 'loan_officer', 'finance_officer', 'member_service', 'auditor'] },
+      { label: 'ศูนย์จัดการเว็บไซต์ (CMS)', to: '/admin/cms', roles: ['super_admin', 'admin', 'staff', 'editor', 'loan_officer', 'finance_officer', 'member_service', 'auditor'] },
     ],
   },
   {
@@ -110,6 +110,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
       { label: 'ประกาศสำคัญ', to: '/admin/workspace', permissions: ['announcements.view'] },
       { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view'] },
       { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
+      { label: 'คลังภาพกิจกรรม', to: '/admin/activities', permissions: ['news.view'] },
       { label: 'จัดการ Layout หน้าแรก', to: '/admin/layout', roles: ['super_admin'] },
       { label: 'แก้ไขข้อความเมนูเว็บไซต์', to: '/admin/navigation-copy', roles: ['super_admin'] },
       { label: 'จัดการชุดกรรมการและอนุกรรมการ', to: '/admin/public-content?section=boards', permissions: ['people.view'] },
@@ -327,7 +328,8 @@ function FullAdminControlCenterShell({
   // Keep everyday tasks in the sidebar; move operational/system utilities into the footer.
   // Search continues to reveal all permitted menu groups.
   const footerGroupIds = new Set(['security', 'monitoring', 'audit', 'backups', 'settings', 'compliance', 'reports', 'tools']);
-  const primaryGroups = visibleGroups.filter(group => !footerGroupIds.has(group.id) || navSearch.trim());
+  const primaryGroups = visibleGroups.filter(group => !footerGroupIds.has(group.id) || navSearch.trim())
+    .sort((a, b) => a.id === 'content' ? -1 : b.id === 'content' ? 1 : 0);
   const footerGroups = visibleGroups.filter(group => footerGroupIds.has(group.id));
 
   const isItemActive = (to) => {
@@ -369,7 +371,7 @@ function FullAdminControlCenterShell({
       >
         <div className="acc-sidebar-header">
           {mobileOpen&&<button type="button" className="acc-icon-btn" onClick={()=>setMobileOpen(false)} aria-label="ปิดเมนูผู้ดูแลระบบ"><X size={18}/></button>}
-          <Link to={hasControlCenterAccess(user,can,['dashboard.view','analytics.view'])?'/admin/dashboard':'/admin/workspace'} className="acc-brand" title="ศูนย์ควบคุมผู้ดูแลระบบ สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด">
+          <Link to={user?.role === 'super_admin' ? '/admin/cms' : '/admin/workspace'} className="acc-brand" title="ศูนย์ควบคุมผู้ดูแลระบบ สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด">
             <CoopBrandLogo variant={collapsed ? 'emblem' : 'sidebar'} tone="dark" showEstablished size={collapsed ? 38 : 44} />
           </Link>
 
@@ -488,7 +490,7 @@ function FullAdminControlCenterShell({
             </button>
 
             <nav className="acc-breadcrumbs" aria-label="Breadcrumb">
-              <Link to={hasControlCenterAccess(user,can,['dashboard.view','analytics.view'])?'/admin/dashboard':'/admin/workspace'}>Admin Control Center</Link>
+              <Link to={user?.role === 'super_admin' ? '/admin/cms' : '/admin/workspace'}>Admin Control Center</Link>
               {breadcrumbs.map((crumb, idx) => (
                 <React.Fragment key={crumb.label + idx}>
                   <span aria-hidden="true">/</span>
