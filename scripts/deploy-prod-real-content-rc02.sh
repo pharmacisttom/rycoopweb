@@ -32,9 +32,9 @@ trap cleanup EXIT
 [ "$(id -u)" -eq 0 ] || abort "Use sudo"
 [ -f "$OLD/public/app/index.html" ] || abort "Unexpected old release"
 [ -f "$MAIN" ] && [ -f "$LOOP" ] || abort "Nginx config missing"
-[ "$(git -C "$WORK" branch --show-current)" = "$BRANCH" ] || abort "Wrong branch"
-git -C "$WORK" merge-base --is-ancestor "$BASE" HEAD || abort "Incorrect baseline"
-[ -z "$(git -C "$WORK" status --porcelain --untracked-files=no)" ] || abort "Uncommitted edits"
+[ "$(runuser -u coopadmin -- git -C "$WORK" branch --show-current)" = "$BRANCH" ] || abort "Wrong branch"
+runuser -u coopadmin -- git -C "$WORK" merge-base --is-ancestor "$BASE" HEAD || abort "Incorrect baseline"
+[ -z "$(runuser -u coopadmin -- git -C "$WORK" status --porcelain --untracked-files=no)" ] || abort "Uncommitted edits"
 
 while IFS= read -r p; do
   [ -z "$p" ] && continue
@@ -47,7 +47,7 @@ while IFS= read -r p; do
     scripts/deploy-prod-real-content-rc02.sh) ;;
     *) abort "Unexpected diff file: $p";;
   esac
-done < <(git -C "$WORK" diff --name-only "$BASE" HEAD)
+done < <(runuser -u coopadmin -- git -C "$WORK" diff --name-only "$BASE" HEAD)
 
 python3 - "$OLD" <<'PY'
 from pathlib import Path
@@ -149,6 +149,6 @@ SUCCESS=1
 echo "REAL_CONTENT_RC02_DEPLOY=PASS"
 echo "RELEASE=$NEW"
 echo "BACKUP=$BACKUP"
-echo "SOURCE_COMMIT=$(git -C "$WORK" rev-parse HEAD)"
+echo "SOURCE_COMMIT=$(runuser -u coopadmin -- git -C "$WORK" rev-parse HEAD)"
 echo "DATABASE=UNCHANGED"
 echo "MFA=PRESERVED"
