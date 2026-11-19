@@ -439,6 +439,17 @@ function FullAdminControlCenterShell({
                   {!collapsed && (isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />)}
                 </button>
 
+                {!collapsed && group.items.length > 0 && (
+                  <Link
+                    to={group.items[0].to}
+                    className="acc-nav-link"
+                    style={{fontSize:'0.75rem',padding:'4px 14px',margin:'0 8px 4px'}}
+                    aria-label={`เปิดหน้าหลักหมวด${group.thaiLabel}`}
+                  >
+                    เปิดหน้าหลักหมวด
+                  </Link>
+                )}
+
                 {!collapsed && isOpen && (
                   <div className="acc-nav-items">
                     {group.items.map((item) => {
