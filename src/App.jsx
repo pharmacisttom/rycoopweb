@@ -140,6 +140,14 @@ const staffRoles = [
   'document_officer', 'complaint_officer', 'auditor', 'it_admin'
 ];
 
+/** Canonical admin entry: CMS for the site owner, not the analytics-only dashboard. */
+function AdminLandingRedirect() {
+  const { user } = useAuth();
+  if (user?.role === 'super_admin') return <Navigate to="/admin/cms" replace />;
+  if (user?.role === 'member_admin') return <Navigate to="/admin/members/dashboard" replace />;
+  return <Navigate to="/admin/workspace" replace />;
+}
+
 function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
   const { user, isLoggedIn, sessionStatus, can } = useAuth();
 
@@ -153,7 +161,7 @@ function StaffProtectedRoute({ children, roles, permission, anyPermissions }) {
   }
   if (user?.role === 'member') return <Navigate to="/service-unavailable" replace />;
   if (roles && !roles.includes(user?.role)) {
-    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'} replace />;
+    return <Navigate to={user?.role === 'member_admin' ? '/admin/members/dashboard' : user?.role === 'member' ? '/member/dividends' : user?.role === 'super_admin' ? '/admin/cms' : '/admin/workspace'} replace />;
   }
   if(permission && !can(permission))return <div className="container section"><p>คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link></div>;
   if (anyPermissions && !anyPermissions.some(can)) return <div className="container section"><p role="alert">คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p></div>;
@@ -222,7 +230,7 @@ export default function App() {
             <Route path="/service-unavailable" element={<ServiceUnavailablePage />} />
             <Route path="/staff" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
             <Route path="/staff/dashboard" element={<StaffProtectedRoute roles={staffRoles}><AdminDashboardPage /></StaffProtectedRoute>} />
-            {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute><AdminControlCenterPage section="dashboard" /></StaffProtectedRoute>} />)}
+            {adminRoutes.map((path) => <Route key={path} path={path} element={<StaffProtectedRoute><AdminLandingRedirect /></StaffProtectedRoute>} />)}
             <Route path="/admin/approvals" element={<StaffProtectedRoute><AdminControlCenterPage section="approvals" /></StaffProtectedRoute>} />
             <Route path="/admin/control-center" element={<StaffProtectedRoute><AdminControlCenterPage section="dashboard" /></StaffProtectedRoute>} />
             <Route path="/admin/analytics/visitors" element={<StaffProtectedRoute><AdminControlCenterPage section="visitor-analytics" /></StaffProtectedRoute>} />
