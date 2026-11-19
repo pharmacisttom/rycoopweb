@@ -5,6 +5,7 @@ import { memberAdminApi } from '../services/memberAdminApi';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
 import { usePublicContent } from '../context/PublicContentContext';
 import './PublicContentAdminPage.css';
+import './BoardTermAdminRC06.css';
 import {auditBoardTerms,BOARD_TERMS,BOARD_POSITION_OPTIONS} from '../utils/boardTermAudit';
 
 const fields = {
