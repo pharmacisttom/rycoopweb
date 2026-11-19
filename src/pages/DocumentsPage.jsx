@@ -81,7 +81,7 @@ export default function DocumentsPage() {
                 <h3 style={{ margin: '8px 0 4px', fontSize: '1rem' }}>{doc.title}</h3>
                 <small>{formatBytes(doc.file_size)}</small></div>
             </div>
-            <a className="btn btn-outline btn-sm" href={`/documents/${encodeURIComponent(doc.id)}/download`}
+            <a className="btn btn-outline btn-sm" href={`/api/public/documents/${encodeURIComponent(doc.id)}/download`}
               target="_blank" rel="noopener noreferrer" aria-label={`เปิดเอกสาร ${doc.title}`}>
               <Download size={16} aria-hidden="true" /> เปิด/ดาวน์โหลด
             </a>
