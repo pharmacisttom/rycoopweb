@@ -187,7 +187,7 @@ export function AuthProvider({ children }) {
                 success: true,
                 redirect: normalizeSameOriginRedirect(
                   data.redirect,
-                  roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/dashboard' : '/admin/workspace'
+                  roleSlug === 'member_admin' ? '/admin/members/dashboard' : roleSlug === 'super_admin' ? '/admin/cms' : '/admin/workspace'
                 ),
                 user: authUser
               };
