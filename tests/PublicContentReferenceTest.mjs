@@ -55,7 +55,7 @@ try {
     if (path.includes('Loans')) {
       // Category headings may legitimately contain generic product names (e.g. เงินกู้สามัญ).
       // Check that no actual loan product cards, amounts, or rate details render before CMS publication.
-      assert.ok(!/<article\\b[^>]*class="surface-card"/.test(html), 'Never render loan product cards before publication');
+      assert.ok(!/<article\b[^>]*class="surface-card"/.test(html), 'Never render loan product cards before publication');
       for (const product of reference.loanProducts) {
         assert.ok(!html.includes(product.maxAmount), `Never display seeded loan amount for ${product.id} before publication`);
       }
