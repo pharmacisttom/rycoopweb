@@ -84,6 +84,14 @@ final class SiteNavigationCopyService
         'calc_button' => 'ปุ่มเครื่องคำนวณ',
         'welfare_button' => 'ปุ่มสวัสดิการ',
         'docs_button' => 'ปุ่มเอกสาร',
+        'home_hero_badge' => 'หน้าแรก: ข้อความป้าย Hero',
+        'home_rates_title' => 'หน้าแรก: หัวข้ออัตราดอกเบี้ย',
+        'home_news_title' => 'หน้าแรก: หัวข้อข่าวสาร',
+        'home_loans_title' => 'หน้าแรก: หัวข้อผลิตภัณฑ์สินเชื่อ',
+        'home_loans_desc' => 'หน้าแรก: คำอธิบายผลิตภัณฑ์สินเชื่อ',
+        'home_welfare_title' => 'หน้าแรก: หัวข้อสวัสดิการ',
+        'docs_page_title' => 'ดาวน์โหลด: หัวข้อหน้าเอกสาร',
+        'docs_page_desc' => 'ดาวน์โหลด: คำอธิบายหน้าเอกสาร',
     ];
     public static function defaults(): array
     {
@@ -159,6 +167,14 @@ final class SiteNavigationCopyService
             'calc_button' => 'เปิดโปรแกรมคำนวณ',
             'welfare_button' => 'ดูสวัสดิการทั้งหมด',
             'docs_button' => 'ไปที่คลังเอกสาร',
+            'home_hero_badge' => 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล',
+            'home_rates_title' => 'อัตราดอกเบี้ยเด่นวันนี้',
+            'home_news_title' => 'ข่าวสารล่าสุด',
+            'home_loans_title' => 'สินเชื่อเพื่อบุคลากรสาธารณสุข',
+            'home_loans_desc' => 'ตรวจสอบผลิตภัณฑ์เงินกู้ที่สหกรณ์เผยแพร่แล้ว',
+            'home_welfare_title' => 'ดูแลสมาชิกและครอบครัวในทุกช่วงชีวิต',
+            'docs_page_title' => 'เอกสารและแบบฟอร์ม',
+            'docs_page_desc' => 'ดาวน์โหลดแบบฟอร์มคำขอ ระเบียบ ข้อบังคับ และรายงานประจำปีของสหกรณ์',
             'documents_desc' => 'ข้อบังคับ ระเบียบ และเอกสารที่สหกรณ์เผยแพร่',
         ];
     }
@@ -183,7 +199,12 @@ final class SiteNavigationCopyService
         if (!$row) return null;
         $value = json_decode((string) $row['value'], true);
         if (!is_array($value)) throw new RuntimeException('Invalid navigation copy');
-        return self::validate($value);
+        // Add new approved copy keys without overwriting published legacy values.
+        // Reject unknown fields so a draft cannot silently define arbitrary keys.
+        foreach (array_keys($value) as $field) {
+            if (!array_key_exists($field, self::LABELS)) throw new RuntimeException('Unknown navigation field');
+        }
+        return self::validate(array_replace(self::defaults(), $value));
     }
     public static function published(): array { return self::read(self::PUBLISHED) ?? self::defaults(); }
     public static function state(bool $lock = false): array
