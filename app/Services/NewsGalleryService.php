@@ -60,7 +60,16 @@ final class NewsGalleryService
                 }
                 $actualMime = (new \finfo(FILEINFO_MIME_TYPE))->file($file);
                 if ($actualMime !== $media['mime_type']) throw new \InvalidArgumentException('ชนิดไฟล์ภาพจากคลังไม่ถูกต้อง');
-                $image = ['src' => $expected, 'thumbnail' => $expected];
+                $binary = file_get_contents($file);
+                if ($binary === false || strlen($binary) > 5 * 1024 * 1024) {
+                    throw new \InvalidArgumentException('ภาพจากคลังใหญ่เกิน 5 MB');
+                }
+                $total += strlen($binary);
+                if ($total > self::MAX_TOTAL_BYTES) {
+                    throw new \InvalidArgumentException('ภาพรวมเกิน 12 MB ต่อการบันทึก');
+                }
+                // Publish independent WebP copies inside this news gallery; never expose a private media URL.
+                $image = self::store($binary, $created);
             }
             else {
                 if (!preg_match('#^data:image/(?:jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$#D', $src, $matches) || strlen($src) > 7 * 1024 * 1024) {
