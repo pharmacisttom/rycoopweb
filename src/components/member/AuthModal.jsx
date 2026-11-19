@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Lock, User, KeyRound, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { COOP_INFO } from '../../data/mockData';
+import { usePublicInformation } from '../../context/PublicContentContext';
 
 export default function AuthModal() {
+  const { COOP_INFO } = usePublicInformation();
   const { showAuthModal, setShowAuthModal, login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

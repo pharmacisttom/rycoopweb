@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Database, Scale, LockKeyhole, UserCheck, Mail, Phone } from 'lucide-react';
-import { COOP_INFO } from '../data/mockData';
+import { usePublicInformation } from '../context/PublicContentContext';
 
 const topics = [
   ['ข้อมูลที่เก็บรวบรวม', Database, 'ข้อมูลระบุตัวตนและข้อมูลติดต่อ ข้อมูลสมาชิกและธุรกรรมทางการเงิน ข้อมูลการใช้บริการ เอกสารประกอบคำขอ และข้อมูลทางเทคนิคที่จำเป็นต่อความปลอดภัย โดยเก็บเท่าที่จำเป็นต่อการให้บริการ'],
@@ -20,6 +20,7 @@ const rights = [
 ];
 
 export default function PrivacyPolicyPage() {
+  const { COOP_INFO } = usePublicInformation();
   return (
     <div className="section" style={{ background: 'var(--bg-subtle)' }}>
       <div className="container" style={{ maxWidth: 1080 }}>

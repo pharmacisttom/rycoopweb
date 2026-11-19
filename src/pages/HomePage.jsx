@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2, 
-  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall, 
+import {
+  Calculator, TrendingUp, ShieldCheck, Coins, Users, Building2,
+  ArrowRight, Landmark, FileText, HeartHandshake, PhoneCall,
   ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Award
 } from 'lucide-react';
 import { fetchHomeData, fetchCoopInfo } from '../services/api';
@@ -12,19 +12,32 @@ import heroPortrait from '../assets/hero-portrait-official.png';
 import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
-import reference from '../data/legacyReference.json';
+import PublishedDynamicSections from '../components/layout/PublishedDynamicSections';
+
 import { usePublicInformation } from '../context/PublicContentContext';
 
-// Fallback defaults when API is unreachable (development/offline mode)
-const FALLBACK_COOP = {
-  nameTh: 'สหกรณ์ออมทรัพย์สาธารณสุขระยอง จำกัด',
-  slogan: reference.coopInfo.slogan,
-};
+// No publication should be simulated when the public API is unavailable.
+const FALLBACK_COOP = { nameTh: '', slogan: '' };
 
 export default function HomePage() {
   const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
   const coopInfo = COOP_INFO;
   const { setShowAuthModal, isLoggedIn } = useAuth();
+  // Published-only visibility. No draft config is consumed by the public UI.
+  const [layout, setLayout] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/public/layout', { signal: controller.signal, credentials: 'same-origin', cache: 'no-cache' })
+      .then(response => response.ok ? response.json() : null)
+      .then(payload => {
+        const candidate = payload?.data;
+        const keys = ['hero','quick_services','statistics','products','calculator','welfare'];
+        if (candidate && keys.every(key => typeof candidate[key] === 'boolean')) setLayout(candidate);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const showSection = key => layout?.[key] !== false;
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
   const [activeNewsSlide, setActiveNewsSlide] = useState(0);
@@ -69,19 +82,19 @@ export default function HomePage() {
             const s = d.latestStats;
             setKeyStats([
               { label: 'จำนวนสมาชิก', value: Number(s.total_members || 0).toLocaleString(), unit: 'คน', change: `ข้อมูล ${s.month}/${s.year}` },
-              { label: 'สินทรัพย์รวม', value: (Number(s.total_assets || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'มั่นคง' },
-              { label: 'ทุนเรือนหุ้น', value: (Number(s.total_shares || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'เติบโตต่อเนื่อง' },
-              { label: 'เงินฝากรวม', value: (Number(s.total_deposits || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'สูงสุดเป็นประวัติการณ์' },
-              { label: 'เงินกู้คงเหลือ', value: (Number(s.total_loans || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: 'คุณภาพดี' },
+              { label: 'สินทรัพย์รวม', value: (Number(s.total_assets || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
+              { label: 'ทุนเรือนหุ้น', value: (Number(s.total_shares || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
+              { label: 'เงินฝากรวม', value: (Number(s.total_deposits || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
+              { label: 'เงินกู้คงเหลือ', value: (Number(s.total_loans || 0) / 1e6).toFixed(0), unit: 'ล้านบาท', change: '' },
               { label: 'อัตราปันผล', value: s.dividend_rate || '-', unit: '% ต่อปี', change: `เฉลี่ยคืน ${s.loan_refund_rate || '-'}%` },
             ]);
           }
         }
         if (coopRes?.success && coopRes.data) {
           setCoopInfo({
-            nameTh: coopRes.data.name_th || FALLBACK_COOP.nameTh,
+            nameTh: coopRes.data.name_th || '',
             nameEn: coopRes.data.name_en || '',
-            slogan: FALLBACK_COOP.slogan,
+            slogan: coopRes.data.slogan || '',
             phone: coopRes.data.phone || '',
             email: coopRes.data.email || '',
             address: coopRes.data.address || '',
@@ -150,18 +163,18 @@ export default function HomePage() {
 
   const heroSettings = {
     title: coopInfo.nameTh,
-    subtitle: `${coopInfo.slogan || FALLBACK_COOP.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`,
+    subtitle: coopInfo.slogan || '',
     badgeText: 'ยินดีต้อนรับสู่ระบบสหกรณ์ดิจิทัล',
     bgImageUrl: '/assets/img/hero_bg_coop.jpg'
   };
 
   return (
     <div>
-      
+
       {/* =========================================================================
           HERO SECTION (High Impact Modern Banner)
           ========================================================================= */}
-      <section style={{
+      {showSection('hero') && <section style={{
         position: 'relative',
         backgroundImage: heroSettings.bgImageUrl ? `linear-gradient(135deg, rgba(15, 43, 92, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%), url(${heroSettings.bgImageUrl})` : 'var(--gradient-hero)',
         backgroundSize: 'cover',
@@ -197,7 +210,7 @@ export default function HomePage() {
 
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
           <div className="home-hero-grid">
-            
+
             {/* Left Hero Content */}
             <div className="animate-fade-in">
               <div style={{
@@ -237,7 +250,7 @@ export default function HomePage() {
                 marginBottom: '2rem',
                 maxWidth: '560px'
               }}>
-                {heroSettings.subtitle || `${COOP_INFO.slogan} มอบความมั่นคงทางการเงิน ดอกเบี้ยเงินฝากคุ้มค่า สินเชื่ออัตราดอกเบี้ยเป็นธรรม พร้อมสวัสดิการดูแลตลอดทุกช่วงชีวิต`}
+                {heroSettings.subtitle || ''}
               </p>
 
               {/* Action Buttons */}
@@ -285,9 +298,15 @@ export default function HomePage() {
               </div>
 
               <p style={{ marginBottom: '1.5rem', color: '#cbd5e1' }}>
-                {INTEREST_RATES.deposits.map(item => `${item.type} ${item.rate} ต่อปี`).join(' / ')}
-                <br />
-                <a href={INTEREST_RATES.depositSource.url} style={{ color: '#cbd5e1' }}>ข้อมูลตามเว็บเดิม — ตรวจสอบประกาศล่าสุดก่อนทำรายการ</a>
+                {(Array.isArray(INTEREST_RATES?.deposits) && INTEREST_RATES.deposits.length > 0)
+                  ? INTEREST_RATES.deposits.map(item => `${item.type} ${item.rate} ต่อปี`).join(' / ')
+                  : 'ยังไม่มีอัตราดอกเบี้ยเงินฝากที่เผยแพร่'}
+                {INTEREST_RATES?.depositSource?.url && (
+                  <>
+                    <br />
+                    <a href={INTEREST_RATES.depositSource.url} style={{ color: '#cbd5e1' }}>ตรวจสอบประกาศอัตราดอกเบี้ยล่าสุด</a>
+                  </>
+                )}
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -441,19 +460,19 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
           ========================================================================= */}
-      <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
+      {showSection('quick_services') && <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             gap: '1.25rem'
           }}>
-            
+
             <Link to="/calculator" className="surface-card" style={quickServiceCardStyle}>
               <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
                 <Calculator size={24} />
@@ -504,14 +523,14 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           KEY COOPERATIVE STATS
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('statistics') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ฐานะความมั่นคง</span>
             <h2 className="section-title">สถิติและผลการดำเนินงานที่โดดเด่น</h2>
@@ -535,13 +554,13 @@ export default function HomePage() {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.25rem' }}>
                   {stat.unit}
                 </div>
-                <div style={{ 
-                  marginTop: '0.85rem', 
-                  display: 'inline-block', 
-                  fontSize: '0.75rem', 
-                  padding: '0.2rem 0.6rem', 
-                  borderRadius: 'var(--radius-full)', 
-                  background: 'var(--accent-emerald-light)', 
+                <div style={{
+                  marginTop: '0.85rem',
+                  display: 'inline-block',
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--accent-emerald-light)',
                   color: 'var(--accent-emerald-dark)',
                   fontWeight: 600
                 }}>
@@ -552,18 +571,18 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-main)' }}>
+      {showSection('products') && <section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
             <h2 className="section-title">สินเชื่อเพื่อบุคลากรสาธารณสุข</h2>
-            <p className="section-subtitle">วงเงินกู้สูง ดอกเบี้ยต่ำ ผ่อนชำระสบาย ยื่นกู้ง่าย อนุมัติรวดเร็ว</p>
+            <p className="section-subtitle">ตรวจสอบผลิตภัณฑ์เงินกู้ที่สหกรณ์เผยแพร่แล้ว</p>
             <div className="section-line" />
           </div>
 
@@ -611,23 +630,23 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           INTERACTIVE LOAN CALCULATOR SUITE EMBED
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('calculator') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           <LoanCalculator />
         </div>
-      </section>
+      </section>}
 
       {/* =========================================================================
           MEMBER WELFARE HIGHLIGHTS
           ========================================================================= */}
-      <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      {showSection('welfare') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
-          
+
           <div className="section-title-wrap">
             <span className="section-badge">สวัสดิการสมาชิก</span>
             <h2 className="section-title">ดูแลสมาชิกและครอบครัวในทุกช่วงชีวิต</h2>
@@ -660,9 +679,10 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </section>}
 
 
+      <PublishedDynamicSections />
     </div>
   );
 }

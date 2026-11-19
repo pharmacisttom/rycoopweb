@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { COOP_INFO, MEMBER_COMPLAINTS } from '../data/mockData';
 import { fetchMemberDashboard } from '../services/api';
 import StaffReviewModal from '../components/staff/StaffReviewModal';
 import EditProfileModal from '../components/member/EditProfileModal';
@@ -60,13 +59,7 @@ export default function MemberDashboardPage() {
   const [memberLoanFilter, setMemberLoanFilter] = useState('all');
 
   // Complaints & Feedback State
-  const [complaintsList, setComplaintsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('coop_member_complaints');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return MEMBER_COMPLAINTS;
-  });
+  const [complaintsList] = useState([]); // No browser-local complaints shown as server records.
   const [complaintFilter, setComplaintFilter] = useState('all');
   const [selectedAdminComplaint, setSelectedAdminComplaint] = useState(null);
   const [adminReplyText, setAdminReplyText] = useState('');
@@ -79,45 +72,10 @@ export default function MemberDashboardPage() {
     message: ''
   });
 
-  // Auto-sync complaints and loan requests from localStorage whenever updated
-  useEffect(() => {
-    const syncData = () => {
-      try {
-        const savedComplaints = localStorage.getItem('coop_member_complaints');
-        if (savedComplaints) {
-          setComplaintsList(JSON.parse(savedComplaints));
-        }
-        const savedLoans = localStorage.getItem('coop_service_requests');
-        if (savedLoans) {
-          setLoanQueue(JSON.parse(savedLoans));
-        }
-      } catch (e) {}
-    };
-
-    syncData();
-    window.addEventListener('storage', syncData);
-    window.addEventListener('focus', syncData);
-    return () => {
-      window.removeEventListener('storage', syncData);
-      window.removeEventListener('focus', syncData);
-    };
-  }, []);
+  // Production must not treat browser-local requests as persisted cooperative records.
 
   // Loan/Service requests queue
-  const [loanQueue, setLoanQueue] = useState(() => {
-    try {
-      const saved = localStorage.getItem('coop_service_requests');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {}
-    return [
-      { id: 'LN-6703-01', memberName: 'นายสมชาย มีสุข', memberId: '04892', department: 'โรงพยาบาลระยอง', phone: '081-234-5678', type: 'คำขอกู้เงินฉุกเฉินออนไลน์', amount: '50,000 บาท', date: '11 มี.ค. 2567', status: 'รอดำเนินการ', currentStep: 2, note: 'รอการตรวจสอบเอกสารและอนุมัติจากเจ้าหน้าที่สินเชื่อ' },
-      { id: 'LN-6703-02', memberName: 'นางสาววิมลรัตน์ จันทร์เพ็ญ', memberId: '05120', department: 'สสจ.ระยอง', phone: '089-987-6543', type: 'เงินกู้สามัญเพื่อสวัสดิการ', amount: '400,000 บาท', date: '10 มี.ค. 2567', status: 'รอตรวจเอกสารผู้ค้ำ', currentStep: 2, note: 'ตรวจสอบเอกสารผู้ค้ำประกัน 2 ท่าน' },
-      { id: 'REQ-6703-09', memberName: 'นายเอกชัย บุญรอด', memberId: '03411', department: 'รพ.สต.บ้านแลง', phone: '086-555-4321', type: 'ขอเปลี่ยนแปลงค่าหุ้นรายเดือน', amount: '4,000 บ./ด.', date: '10 มี.ค. 2567', status: 'รอดำเนินการ', currentStep: 2, note: 'ขอปรับเพิ่มค่าหุ้นรายเดือนเป็น 4,000 บาท' },
-      { id: 'WF-6703-05', memberName: 'นางสาวจารุณี รัตนโชติ', memberId: '06214', department: 'รพ.แกลง', phone: '082-111-2233', type: 'ขอรับสวัสดิการคลอดบุตร', amount: '3,000 บาท', date: '09 มี.ค. 2567', status: 'อนุมัติเรียบร้อยแล้ว', currentStep: 4, note: 'โอนเงินสวัสดิการเข้าบัญชีเรียบร้อย' }
-    ];
-  });
+  const [loanQueue] = useState([]); // No fabricated requests or browser-local approvals.
 
   if (!isLoggedIn || !user) {
     return (
@@ -147,155 +105,21 @@ export default function MemberDashboardPage() {
     navigate('/');
   };
 
-  const handleApproveLoan = (id, remarks) => {
-    const updated = loanQueue.map(item => item.id === id ? {
-      ...item,
-      status: 'อนุมัติเรียบร้อยแล้ว',
-      currentStep: 3,
-      note: remarks || 'ผ่านการตรวจสอบและอนุมัติจากเจ้าหน้าที่สินเชื่อเรียบร้อยแล้ว',
-      lastUpdated: new Date().toLocaleDateString('th-TH')
-    } : item);
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-    } catch (e) {}
-    toast.success(`อนุมัติคำขอ ${id} เรียบร้อยแล้ว`);
-  };
+  const handleApproveLoan = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleRejectLoan = (id, remarks) => {
-    const updated = loanQueue.map(item => item.id === id ? {
-      ...item,
-      status: 'ส่งกลับแก้ไข',
-      currentStep: 2,
-      note: remarks || 'เอกสารไม่สมบูรณ์ กรุณาแนบหลักฐานเพิ่มเติม',
-      lastUpdated: new Date().toLocaleDateString('th-TH')
-    } : item);
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-    } catch (e) {}
-    toast.info(`ส่งกลับคำขอ ${id} ให้สมาชิกแก้ไขเรียบร้อยแล้ว`);
-  };
+  const handleRejectLoan = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleAddNote = (id, remarks) => {
-    const updated = loanQueue.map(item => item.id === id ? {
-      ...item,
-      note: remarks,
-      lastUpdated: new Date().toLocaleDateString('th-TH')
-    } : item);
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-    } catch (e) {}
-    toast.success(`บันทึกหมายเหตุสำหรับคำขอ ${id} เรียบร้อยแล้ว`);
-  };
+  const handleAddNote = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleUpdateComplaintStatus = (id, newStatus) => {
-    const updated = complaintsList.map(c => c.id === id ? { ...c, status: newStatus } : c);
-    setComplaintsList(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-    } catch (e) {}
-    if (selectedAdminComplaint && selectedAdminComplaint.id === id) {
-      setSelectedAdminComplaint({ ...selectedAdminComplaint, status: newStatus });
-    }
-  };
+  const handleUpdateComplaintStatus = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleSaveAdminComplaintReply = (id, replyText) => {
-    const now = new Date().toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' น.';
-    const updated = complaintsList.map(c => c.id === id ? {
-      ...c,
-      adminReply: replyText,
-      status: 'ตอบกลับแล้ว',
-      replyDate: now
-    } : c);
-    setComplaintsList(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-    } catch (e) {}
-    if (selectedAdminComplaint && selectedAdminComplaint.id === id) {
-      setSelectedAdminComplaint({
-        ...selectedAdminComplaint,
-        adminReply: replyText,
-        status: 'ตอบกลับแล้ว',
-        replyDate: now
-      });
-    }
-    toast.success(`บันทึกข้อความตอบกลับสำหรับรหัส ${id} เรียบร้อยแล้ว`);
-  };
+  const handleSaveAdminComplaintReply = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-  const handleDeleteComplaint = async (id) => {
-    const confirmed = await confirmDialog({
-      title: 'ยืนยันการลบรายการ',
-      message: `ยืนยันการลบรายการ ${id} หรือไม่? รายการที่ถูกลบจะไม่สามารถกู้คืนได้`,
-      confirmText: 'ลบรายการ',
-      cancelText: 'ยกเลิก',
-      type: 'danger'
-    });
+  const handleDeleteComplaint = () => { toast.error('ยังไม่เปิดดำเนินการรายการนี้: ต้องเชื่อมต่อและยืนยันผลจากระบบสหกรณ์ก่อน'); };
 
-    if (confirmed) {
-      const updated = complaintsList.filter(c => c.id !== id);
-      setComplaintsList(updated);
-      try {
-        localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-        window.dispatchEvent(new Event('storage'));
-      } catch (e) {}
-      if (selectedAdminComplaint && selectedAdminComplaint.id === id) {
-        setSelectedAdminComplaint(null);
-      }
-      toast.success(`ลบรายการ ${id} เรียบร้อยแล้ว`);
-    }
-  };
+  const handleMemberSubmitComplaint = (event) => { event?.preventDefault?.(); toast.error('ยังไม่เปิดให้ส่งเรื่องผ่านเว็บไซต์: ไม่มีการบันทึกเข้าระบบสหกรณ์'); };
 
-  const handleMemberSubmitComplaint = (e) => {
-    e.preventDefault();
-    if (!newMemberComplaint.message.trim()) {
-      toast.error('กรุณากรอกรายละเอียดเรื่องร้องเรียน / ข้อเสนอแนะ');
-      return;
-    }
-
-    const randomSuffix = Math.floor(10 + Math.random() * 90);
-    const newId = `TKT-6703${randomSuffix}`;
-    const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-
-    const newEntry = {
-      id: newId,
-      name: user.name || 'สมาชิกสหกรณ์',
-      phone: user.phone || '081-234-5678',
-      email: user.email || '',
-      department: user.department || 'โรงพยาบาลระยอง',
-      memberId: user.memberId || user.username || '04892',
-      topic: newMemberComplaint.topic || 'ข้อเสนอแนะการให้บริการ',
-      message: newMemberComplaint.message.trim(),
-      date: dateStr,
-      status: 'รอดำเนินการ',
-      adminReply: '',
-      replyDate: ''
-    };
-
-    const updated = [newEntry, ...complaintsList];
-    setComplaintsList(updated);
-    try {
-      localStorage.setItem('coop_member_complaints', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-    } catch (e) {}
-
-    setNewMemberComplaint({ topic: 'ข้อเสนอแนะการให้บริการ', message: '' });
-    setMemberComplaintModalOpen(false);
-    setActiveTab('complaints');
-    toast.success(`ส่งเรื่องร้องเรียน / ข้อเสนอแนะเรียบร้อยแล้ว (รหัสติดตามเรื่อง: ${newId})`, 'ส่งเรื่องสำเร็จ');
-  };
-
-  const handleMemberSubmitLoan = (newLoanItem) => {
-    const updated = [newLoanItem, ...loanQueue];
-    setLoanQueue(updated);
-    try {
-      localStorage.setItem('coop_service_requests', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-    } catch (e) {}
-    setActiveTab('loans');
-    toast.success(`ยื่นคำขอกู้เงินออนไลน์เรียบร้อยแล้ว! รหัสคำขอ: ${newLoanItem.id} วงเงิน: ${newLoanItem.amount}`, 'ยื่นกู้เงินสำเร็จ');
-  };
+  const handleMemberSubmitLoan = () => { toast.error('ยังไม่เปิดให้ยื่นคำขอกู้ผ่านหน้านี้: ไม่มีการบันทึกเข้าระบบสหกรณ์'); };
 
   const userRole = user.role || 'member';
 
@@ -330,36 +154,26 @@ export default function MemberDashboardPage() {
   const memberDividendEst = user.dividendEstimated ?? 0;
   const memberLoanRefundEst = user.loanRefundEstimated ?? 0;
 
-  const memberAccounts = apiSummary?.deposits?.accounts && apiSummary.deposits.accounts.length > 0
+  const memberAccounts = Array.isArray(apiSummary?.deposits?.accounts)
     ? apiSummary.deposits.accounts.map(acc => ({
         accNo: acc.account_no,
         type: acc.account_type || 'บัญชีเงินฝาก',
-        balance: parseFloat(acc.balance || 0),
+        balance: Number(acc.balance || 0),
         status: acc.status === 'active' ? 'ปกติ' : acc.status
       }))
-    : (user.accounts && user.accounts.length > 0 ? user.accounts : [
-        { accNo: '101-2-04892-1', type: 'ออมทรัพย์สุขใจ', balance: 45300.50, status: 'ปกติ' },
-        { accNo: '201-4-04892-8', type: 'ออมทรัพย์พิเศษพลัส', balance: 200000.00, status: 'ปกติ' },
-      ]);
-
-  const memberLoans = apiSummary?.loans?.active_loans && apiSummary.loans.active_loans.length > 0
+    : [];
+  const memberLoans = Array.isArray(apiSummary?.loans?.active_loans)
     ? apiSummary.loans.active_loans.map(loan => ({
         contractNo: loan.contract_no,
-        type: loan.loan_type || 'เงินกู้สามัญ',
-        principal: parseFloat(loan.principal_amount || 0),
-        balance: parseFloat(loan.balance || 0),
-        monthlyPay: parseFloat(loan.monthly_installment || 0),
+        type: loan.loan_type || 'เงินกู้',
+        principal: Number(loan.principal_amount || 0),
+        balance: Number(loan.balance || 0),
+        monthlyPay: Number(loan.monthly_installment || 0),
         termRemaining: `${loan.remaining_months || 0} งวด`
       }))
-    : (user.loans && user.loans.length > 0 ? user.loans : [
-        { contractNo: 'ส.66/0129', type: 'เงินกู้สามัญ', principal: 1000000, balance: 820000, monthlyPay: 12500, termRemaining: '96 งวด' },
-      ]);
-
-  const memberReceipts = user.recentReceipts && user.recentReceipts.length > 0 ? user.recentReceipts : [
-    { receiptNo: 'RC-67020084', period: 'กุมภาพันธ์ 2567', date: '28 ก.พ. 2567', totalAmount: 15500, status: 'ชำระแล้ว' },
-    { receiptNo: 'RC-67010079', period: 'มกราคม 2567', date: '31 ม.ค. 2567', totalAmount: 15500, status: 'ชำระแล้ว' },
-    { receiptNo: 'RC-66120092', period: 'ธันวาคม 2566', date: '29 ธ.ค. 2566', totalAmount: 15500, status: 'ชำระแล้ว' },
-  ];
+    : [];
+  // Never present example receipts as statements of real member transactions.
+  const memberReceipts = Array.isArray(user.recentReceipts) ? user.recentReceipts : [];
 
   return (
     <div className="section" style={{ background: 'var(--bg-main)', minHeight: '85vh', paddingBottom: '3.5rem' }}>
@@ -403,25 +217,25 @@ export default function MemberDashboardPage() {
             <div className="dashboard-kpi-grid">
               <KpiCard
                 title="ผู้ใช้งานทั้งหมดในระบบ"
-                value="4,850"
+                value="—"
                 unit="คน"
-                subtitle="Admin 3 / Staff 12 / Member 4,835"
+                subtitle="ตรวจข้อมูลผู้ใช้จริงจากแผงจัดการสมาชิก"
                 icon={Users}
                 variant="rose"
               />
               <KpiCard
                 title="สถานะความปลอดภัยเซิร์ฟเวอร์"
-                value="100%"
-                subtitle="TLS 1.3 / Firewall Active"
+                value="—"
+                subtitle="ตรวจสถานะจริงผ่านระบบความปลอดภัย"
                 icon={Activity}
                 variant="emerald"
-                badgeText="ปกติ"
+                badgeText="ยังไม่ยืนยัน"
                 badgeVariant="emerald"
               />
               <KpiCard
                 title="ฐานข้อมูลและการสำรอง"
-                value="Auto Backup"
-                subtitle="สำรองข้อมูลล่าสุด: วันนี้ 04:00 น."
+                value="—"
+                subtitle="ตรวจสอบบันทึกสำรองข้อมูลจากระบบสำรองจริง"
                 icon={Database}
                 variant="gold"
               />
@@ -634,17 +448,7 @@ export default function MemberDashboardPage() {
                   title="บันทึกความปลอดภัยล่าสุด (System Audit Trail)"
                   icon={ShieldCheck}
                 />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.82rem' }}>
-                  <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>วันนี้ 13:45 น.</span> • เจ้าหน้าที่อนุมัติคำขอยื่นกู้ฉุกเฉินออนไลน์ LN-6703-01
-                  </div>
-                  <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>วันนี้ 12:30 น.</span> • ผู้ดูแลระบบอัปเดตการตั้งค่าประกาศทางการ
-                  </div>
-                  <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>วันนี้ 04:00 น.</span> • สำรองฐานข้อมูลอัตโนมัติประจำวันเสร็จสมบูรณ์
-                  </div>
-                </div>
+                <p role="status">ข้อมูล Audit Trail ต้องโหลดจากระบบบันทึกเหตุการณ์จริง จึงยังไม่แสดงเหตุการณ์ตัวอย่าง</p>
               </div>
             </div>
 
@@ -668,9 +472,9 @@ export default function MemberDashboardPage() {
               />
               <KpiCard
                 title="วงเงินรอเบิกจ่ายรวม"
-                value="450,000"
+                value="—"
                 unit="บาท"
-                subtitle="พร้อมโอนเข้าบัญชีสมาชิก"
+                subtitle="ยังไม่มีข้อมูลรายการรอเบิกจ่ายจาก Backend"
                 icon={Coins}
                 variant="primary"
               />
@@ -928,85 +732,9 @@ export default function MemberDashboardPage() {
             ROLE 3: AUDITOR / MANAGER (READ-ONLY OVERSIGHT)
             ========================================================================= */}
         {userRole === 'auditor' && (
-          <div className="animate-fade-in">
-            {/* KPI Summary Cards */}
-            <div className="dashboard-kpi-grid">
-              <KpiCard
-                title="คะแนนความถูกต้องทางบัญชี"
-                value="99.8%"
-                subtitle="ผ่านเกณฑ์มาตรฐานกรมส่งเสริมสหกรณ์"
-                icon={ShieldCheck}
-                variant="gold"
-              />
-              <KpiCard
-                title="สินทรัพย์ที่ตรวจสอบแล้ว"
-                value="3,210.80"
-                unit="ล้านบาท"
-                subtitle="กระทบยอดตรงกับสมุดบัญชีแยกประเภท"
-                icon={Landmark}
-                variant="teal"
-              />
-              <KpiCard
-                title="รายการที่รอตรวจสอบ"
-                value="0"
-                unit="รายการ"
-                subtitle="ตรวจสอบครบถ้วนทุกรอบเดือน"
-                icon={CheckCircle2}
-                variant="emerald"
-              />
-              <KpiCard
-                title="อัตราผลตอบแทนต่อสินทรัพย์ (ROA)"
-                value="4.85%"
-                subtitle="ประสิทธิภาพการบริหารจัดการเงินทุน"
-                icon={TrendingUp}
-                variant="primary"
-              />
-            </div>
-
-            <div className="surface-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '2rem' }}>
-              <SectionHeader
-                title="รายงานการตรวจสอบงบการเงินและเงินปันผลประจำงวด (Auditor Verification)"
-                subtitle="รายงานการสุ่มตรวจยอดเงินกู้ เงินฝาก และสูตรคำนวณเงินปันผลเฉลี่ยคืนตามระเบียบข้อบังคับ"
-                icon={FileSpreadsheet}
-                iconColor="var(--accent-gold-dark)"
-                actionButton={
-                  <button onClick={() => toast.info('จำลองการดาวน์โหลดรายงานผลการตรวจสอบกิจการฉบับเต็ม (PDF)')} className="btn btn-gold btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Download size={15} />
-                    <span>ดาวน์โหลดรายงานผลการตรวจสอบ (PDF)</span>
-                  </button>
-                }
-              />
-
-              <div style={{ background: 'var(--bg-subtle)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-subtle)', lineHeight: 1.6, fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '1.5rem' }}>
-                <div style={{ fontWeight: 700, color: 'var(--primary-900)', marginBottom: '0.5rem' }}>
-                  สรุปความเห็นของผู้ตรวจสอบกิจการ:
-                </div>
-                <p style={{ margin: 0 }}>
-                  ผู้ตรวจสอบกิจการได้ทำการสุ่มตรวจยอดเงินกู้ เงินฝาก และสูตรคำนวณเงินปันผลหุ้น 5.25% และเงินเฉลี่ยคืน 12.50% พบว่าถูกต้องตามระเบียบข้อบังคับ และการบันทึกบัญชีเป็นไปตามมาตรฐานการบัญชีของสหกรณ์ออมทรัพย์
-                </p>
-              </div>
-
-              {/* Read-only Audit Trail */}
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary-900)', marginBottom: '0.75rem' }}>
-                  ประวัติการตรวจสอบล่าสุด (Audit Trail - Read Only):
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
-                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>ตรวจสอบการกระทบยอดบัญชีเงินฝากธนาคารพาณิชย์</span>
-                    <span className="badge badge-emerald">ตรงกับยอดบัญชี</span>
-                  </div>
-                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>สุ่มตรวจสัญญาสินเชื่อเงินกู้สามัญ ประจำงวด ก.พ. 2567</span>
-                    <span className="badge badge-emerald">เอกสารครบถ้วน</span>
-                  </div>
-                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>ตรวจสอบการคำนวณเงินปันผลและเงินเฉลี่ยคืน</span>
-                    <span className="badge badge-emerald">สูตรคำนวณถูกต้อง</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="surface-card" role="status" style={{ padding: '2rem' }}>
+            <h2>รายงานสำหรับผู้ตรวจสอบกิจการ</h2>
+            <p>ยังไม่มีผลการตรวจสอบที่ยืนยันจากระบบหลังบ้านในหน้านี้ โปรดใช้รายงานที่ได้รับอนุมัติและบันทึก Audit Log จริง</p>
           </div>
         )}
 

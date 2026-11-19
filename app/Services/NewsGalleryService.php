@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace App\Services;
 
+use App\Core\Database;
+
 /** Gallery metadata lives in the existing news.gallery_images JSON column. */
 final class NewsGalleryService
 {
@@ -37,6 +39,38 @@ final class NewsGalleryService
             if (mb_strlen($alt) > 255 || mb_strlen($caption) > 1000) throw new \InvalidArgumentException('คำบรรยายภาพยาวเกินกำหนด');
             $src = $entry['src'];
             if (isset($known[$src])) $image = $known[$src];
+            elseif (isset($entry['media_id'])) {
+                // Media Library references must match an existing authorized catalog record.
+                // Never accept arbitrary client-provided URLs or filesystem paths.
+                $id = filter_var($entry['media_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($id === false) throw new \InvalidArgumentException('รหัสภาพจากคลังไม่ถูกต้อง');
+                $media = Database::first("SELECT id, path, mime_type FROM media WHERE id=? AND deleted_at IS NULL", [$id]);
+                if (!$media || !in_array((string)$media['mime_type'], ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
+                    throw new \InvalidArgumentException('ไม่พบรูปภาพในคลังที่อนุญาต');
+                }
+                $expected = resolve_media_url($media['path']);
+                if (!is_string($expected) || !hash_equals($expected, $src)) {
+                    throw new \InvalidArgumentException('เส้นทางภาพจากคลังไม่ตรงกับข้อมูลระบบ');
+                }
+                $root = realpath(storage_upload_path());
+                $file = realpath(storage_upload_path((string)$media['path']));
+                if ($root === false || $file === false || !str_starts_with($file, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+                    || !is_file($file) || !is_readable($file)) {
+                    throw new \InvalidArgumentException('ไฟล์ภาพจากคลังไม่พร้อมใช้งาน');
+                }
+                $actualMime = (new \finfo(FILEINFO_MIME_TYPE))->file($file);
+                if ($actualMime !== $media['mime_type']) throw new \InvalidArgumentException('ชนิดไฟล์ภาพจากคลังไม่ถูกต้อง');
+                $binary = file_get_contents($file);
+                if ($binary === false || strlen($binary) > 5 * 1024 * 1024) {
+                    throw new \InvalidArgumentException('ภาพจากคลังใหญ่เกิน 5 MB');
+                }
+                $total += strlen($binary);
+                if ($total > self::MAX_TOTAL_BYTES) {
+                    throw new \InvalidArgumentException('ภาพรวมเกิน 12 MB ต่อการบันทึก');
+                }
+                // Publish independent WebP copies inside this news gallery; never expose a private media URL.
+                $image = self::store($binary, $created);
+            }
             else {
                 if (!preg_match('#^data:image/(?:jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$#D', $src, $matches) || strlen($src) > 7 * 1024 * 1024) {
                     throw new \InvalidArgumentException('กรุณาอัปโหลดภาพ JPEG, PNG หรือ WebP ใหม่');

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { resolveMediaUrl } from '../../utils/media';
 
-export default function SafeImage({ src, fallback = '/assets/img/news_placeholder.jpg', alt = '', loading = 'lazy', ...props }) {
+export default function SafeImage({ src, fallback = '', alt = '', loading = 'lazy', ...props }) {
   const primary = resolveMediaUrl(src, fallback);
   const fallbackUrl = resolveMediaUrl(fallback, '');
   const [currentSrc, setCurrentSrc] = useState(primary);

@@ -57,17 +57,30 @@ class DocumentController extends Controller
 
     public function download(string $id): void
     {
-        $doc = Database::first("SELECT * FROM documents WHERE id = ? AND status = 'active' AND deleted_at IS NULL LIMIT 1", [(int) $id]);
-        if (!$doc) {
-            Session::flash('error', 'ไม่พบเอกสารที่ระบุหรือเอกสารถูกยกเลิกการเผยแพร่แล้ว');
+        // API downloads must return HTTP status codes, not redirect to /documents
+        // (the production SPA gateway does not expose that legacy PHP page).
+        $apiRequest = str_starts_with((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/api/public/documents/');
+        $notFound = function (string $message) use ($apiRequest): void {
+            if ($apiRequest) {
+                http_response_code(404);
+                header('Content-Type: text/plain; charset=utf-8');
+                header('Cache-Control: no-store');
+                echo $message;
+                return;
+            }
+            Session::flash('error', $message);
             $this->redirect(url('documents'));
+        };
+
+        $doc = Database::first("SELECT d.* FROM documents d JOIN document_categories c ON c.id=d.category_id WHERE d.id=? AND d.status='active' AND d.deleted_at IS NULL AND c.status='active' AND c.deleted_at IS NULL LIMIT 1", [(int) $id]);
+        if (!$doc) {
+            $notFound('ไม่พบเอกสารที่ระบุหรือเอกสารถูกยกเลิกการเผยแพร่แล้ว');
             return;
         }
 
         if (empty($doc['file_path'])) {
             Logger::error("Document ID #{$doc['id']} has no file_path associated.");
-            Session::flash('error', 'เอกสารนี้ยังไม่มีไฟล์แนบในระบบ กรุณาติดต่อเจ้าหน้าที่สหกรณ์');
-            $this->redirect(url('documents'));
+            $notFound('เอกสารนี้ยังไม่มีไฟล์แนบในระบบ กรุณาติดต่อเจ้าหน้าที่สหกรณ์');
             return;
         }
 
@@ -93,8 +106,7 @@ class DocumentController extends Controller
             exit;
         } else {
             Logger::error("Missing document file on disk: Document ID #{$doc['id']}, Path: {$filePath}");
-            Session::flash('error', 'ขออภัย ไม่พบไฟล์เอกสารในระบบจัดเก็บ กรุณาติดต่อเจ้าหน้าที่สหกรณ์เพื่อขอรับเอกสาร (รหัสเอกสาร #' . $doc['id'] . ')');
-            $this->redirect(url('documents'));
+            $notFound('ขออภัย ไม่พบไฟล์เอกสารในระบบจัดเก็บ กรุณาติดต่อเจ้าหน้าที่สหกรณ์เพื่อขอรับเอกสาร (รหัสเอกสาร #' . $doc['id'] . ')');
         }
     }
 }
