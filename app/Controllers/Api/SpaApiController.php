@@ -144,7 +144,7 @@ class SpaApiController extends Controller
         } catch (\Throwable $e) {}
 
         try {
-            $importantAnnouncements = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 3");
+            $importantAnnouncements = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color, attachment_path FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 3");
         } catch (\Throwable $e) {}
 
         try {
@@ -246,9 +246,16 @@ class SpaApiController extends Controller
     {
         $items = [];
         try {
-            $items = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 20");
+            $items = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color, attachment_path FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 20");
         } catch (\Throwable $e) {}
 
+        $items = array_map(static function (array $item): array {
+            $path = (string)($item['attachment_path'] ?? '');
+            $item['image_url'] = preg_match('/\\.(?:jpe?g|png|webp)$/i', $path)
+                ? '/api/public/announcements/' . (int)$item['id'] . '/image' : null;
+            unset($item['attachment_path']);
+            return $item;
+        }, $items);
         $this->json(['success' => true, 'data' => $items]);
     }
 
