@@ -216,7 +216,7 @@ export default function ContactPage() {
               ติดตามสถานะเรื่องร้องเรียน / คำร้อง
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '2rem', textAlign: 'center' }}>
-              กรอกรหัสติดตามเรื่อง (Ticket ID เช่น TKT-670301) ที่ได้รับเพื่อตรวจสอบความคืบหน้า
+              ระบบติดตามเรื่องร้องเรียนออนไลน์ยังไม่เปิดให้บริการ กรุณาติดต่อเจ้าหน้าที่สหกรณ์เพื่อตรวจสอบสถานะ
             </p>
 
             <p role="status">ระบบติดตามเรื่องร้องเรียนยังไม่เชื่อมฐานข้อมูลจริง กรุณาติดต่อเจ้าหน้าที่เพื่อตรวจสอบสถานะ</p>
@@ -237,7 +237,7 @@ export default function ContactPage() {
 
             {/* Tracking ID Format Hint */}
             <div style={{ marginBottom: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              <span>รูปแบบรหัสติดตาม: <strong>TKT-XXXXXX</strong> (ได้รับเมื่อส่งเรื่องร้องเรียนหรือข้อเสนอแนะสำเร็จ)</span>
+              
             </div>
 
             {trackingResult && (
