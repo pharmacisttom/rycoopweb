@@ -15,7 +15,7 @@ final class DynamicLayoutService
 {
     private const LIVE = 'dynamic_home_sections_v1';
     private const DRAFT = 'dynamic_home_sections_draft_v1';
-    private const TYPES = ['gallery', 'links', 'text'];
+    private const TYPES = ['gallery', 'links', 'text', 'slideshow'];
     private const LAYOUTS = ['grid', 'cards', 'carousel'];
     private const DEFAULT_APPEARANCE = [
         'background' => '#ffffff',
@@ -104,6 +104,8 @@ final class DynamicLayoutService
                 $link = $node['link'] ?? '';
                 $children = $node['children'] ?? [];
                 $albumIds = $node['album_ids'] ?? [];
+                $slides = $node['slides'] ?? [];
+                $slideInterval = $node['slide_interval'] ?? 6;
                 $appearance = self::validateAppearance($node['appearance'] ?? null);
                 if (!is_string($id) || !preg_match('/^[a-z0-9-]{8,64}$/D', $id) || isset($ids[$id])
                     || !is_string($title) || trim($title) === '' || mb_strlen($title) > 120
@@ -114,11 +116,44 @@ final class DynamicLayoutService
                     || !is_string($link) || strlen($link) > 255
                     || ($link !== '' && !preg_match('~^/(?:activities(?:/[0-9]+)?|news|documents|about|welfare|contact)/?$~D', $link))
                     || !is_array($children) || !is_array($albumIds) || !array_is_list($albumIds)
+                    || !is_array($slides) || !array_is_list($slides) || count($slides) > 12
+                    || !is_int($slideInterval) || $slideInterval < 4 || $slideInterval > 12
                     || count($albumIds) > 50 || count(array_unique($albumIds)) !== count($albumIds)) {
                     throw new InvalidArgumentException('Invalid section fields');
                 }
                 foreach ($albumIds as $albumId) {
                     if (!is_int($albumId) || $albumId < 1) throw new InvalidArgumentException('Invalid album selection');
+                }
+                // Restrict slides to approved same-origin media paths; no data URLs,
+                // remote tracking pixels, private paths or dangerous schemes.
+                $validatedSlides = [];
+                foreach ($slides as $slide) {
+                    if (!is_array($slide)) throw new InvalidArgumentException('Invalid slide');
+                    $image = $slide['image'] ?? null;
+                    $slideTitle = $slide['title'] ?? '';
+                    $caption = $slide['caption'] ?? '';
+                    $buttonText = $slide['button_text'] ?? '';
+                    $buttonLink = $slide['button_link'] ?? '';
+                    $fit = $slide['fit'] ?? 'cover';
+                    if (!is_string($image)
+                        || !preg_match('~^/(?:storage/uploads|uploads|assets)/[a-zA-Z0-9_./%-]+\\.(?:png|jpe?g|webp|gif)$~Di', $image)
+                        || str_contains($image, '..') || str_contains($image, '//')
+                        || !is_string($slideTitle) || mb_strlen($slideTitle) > 120
+                        || !is_string($caption) || mb_strlen($caption) > 500
+                        || !is_string($buttonText) || mb_strlen($buttonText) > 60
+                        || !is_string($buttonLink) || strlen($buttonLink) > 255
+                        || ($buttonLink !== '' && !preg_match('~^/(?:activities(?:/[0-9]+)?|news|documents|about|welfare|contact)/?$~D', $buttonLink))
+                        || !in_array($fit, ['cover','contain'], true)) {
+                        throw new InvalidArgumentException('Invalid slide content or image URL');
+                    }
+                    $validatedSlides[] = [
+                        'image' => $image, 'title' => trim($slideTitle),
+                        'caption' => trim($caption), 'button_text' => trim($buttonText),
+                        'button_link' => $buttonLink, 'fit' => $fit,
+                    ];
+                }
+                if ($type !== 'slideshow' && count($validatedSlides) > 0) {
+                    throw new InvalidArgumentException('Slides require slideshow section type');
                 }
                 $ids[$id] = true;
                 $output[] = [
@@ -130,6 +165,8 @@ final class DynamicLayoutService
                     'description' => trim($description),
                     'link' => $link,
                     'album_ids' => $albumIds,
+                    'slides' => $validatedSlides,
+                    'slide_interval' => $slideInterval,
                     'appearance' => $appearance,
                     'children' => $walk($children, $depth + 1),
                 ];
