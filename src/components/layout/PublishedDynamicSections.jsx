@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
+import DynamicSlideshow from './DynamicSlideshow';
 
 const DEFAULT_APPEARANCE = {background:'#ffffff',text:'#10294b',accent:'#175cd3'};
 const allowedColor = (value, fallback) => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
@@ -25,6 +26,7 @@ export default function PublishedDynamicSections() {
       '--section-accent':allowedColor(s.appearance?.accent,DEFAULT_APPEARANCE.accent)}}>
       {depth === 1 ? <h2 className="section-title" style={{color:"inherit"}}>{s.title}</h2> : <h3 style={{color:"inherit"}}>{s.title}</h3>}
       {s.description && <p className="section-subtitle" style={{color:"inherit"}}>{s.description}</p>}
+      {s.type === 'slideshow' && <DynamicSlideshow slides={s.slides || []} title={s.title} interval={s.slide_interval || 6} />}
       {s.type === 'gallery' && albums.length > 0 && <div style={{
         display:'grid',gridTemplateColumns:s.layout==='carousel'?'repeat(auto-fit,minmax(min(100%,250px),1fr))':'repeat(auto-fit,minmax(min(100%,240px),1fr))',
         gap:18,marginTop:22
