@@ -22,6 +22,43 @@ const FALLBACK_COOP = {
   slogan: reference.coopInfo.slogan,
 };
 
+function PublishedHeroSlideshow({ slides }) {
+  const items = (Array.isArray(slides) ? slides : []).filter(slide =>
+    slide && (slide.desktop_image || slide.image_url || slide.mobile_image)).slice(0, 6);
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (items.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const timer = window.setInterval(() => setIndex(value => (value + 1) % items.length), 5500);
+    return () => window.clearInterval(timer);
+  }, [items.length]);
+  useEffect(() => { setIndex(0); }, [slides]);
+  if (items.length === 0) return null;
+  const item = items[index] || items[0];
+  const url = item.desktop_image || item.image_url || item.mobile_image;
+  return <section aria-roledescription="carousel" aria-label="สไลด์ประชาสัมพันธ์ที่เผยแพร่แล้ว"
+    style={{position:'relative',background:'#09274f',color:'#fff',overflow:'hidden'}}>
+    <img key={item.id || index} src={url} alt={item.title || 'ประกาศประชาสัมพันธ์'}
+      style={{width:'100%',height:'clamp(260px,36vw,570px)',objectFit:'cover',display:'block'}}/>
+    <div style={{position:'absolute',inset:'auto 0 0',padding:'32px 6% 56px',
+      background:'linear-gradient(transparent,rgba(5,20,45,.92))'}}>
+      {item.title && <h2 style={{color:'#fff',fontSize:'clamp(1.2rem,3vw,2.5rem)'}}>{item.title}</h2>}
+      {item.subtitle && <p style={{color:'#e7eefb'}}>{item.subtitle}</p>}
+      {typeof item.button_url === 'string' && item.button_url.startsWith('/') && !item.button_url.startsWith('//')
+        && <Link to={item.button_url} className="btn btn-primary">{item.button_text || 'อ่านเพิ่มเติม'}</Link>}
+    </div>
+    {items.length > 1 && <div aria-label="ควบคุมสไลด์" style={{position:'absolute',bottom:12,left:0,right:0,
+      display:'flex',justifyContent:'center',gap:8}}>
+      <button type="button" onClick={() => setIndex((index + items.length - 1) % items.length)}
+        aria-label="สไลด์ก่อนหน้า">‹</button>
+      {items.map((slide,i) => <button type="button" key={slide.id || i} onClick={() => setIndex(i)}
+        aria-label={`แสดงสไลด์ที่ ${i+1}`} aria-current={i===index?'true':undefined}
+        style={{borderRadius:99,minWidth:24,background:i===index?'#f8cc4d':'#fff9'}}>●</button>)}
+      <button type="button" onClick={() => setIndex((index + 1) % items.length)}
+        aria-label="สไลด์ถัดไป">›</button>
+    </div>}
+  </section>;
+}
+
 export default function HomePage() {
   const { COOP_INFO, INTEREST_RATES, LOAN_PRODUCTS } = usePublicInformation();
   const coopInfo = COOP_INFO;
@@ -62,6 +99,7 @@ export default function HomePage() {
   const [newsList, setNewsList] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [welfareItems, setWelfareItems] = useState([]);
+  const [heroSlides, setHeroSlides] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +116,8 @@ export default function HomePage() {
           setLoanRates(d.loanRates || []);
           setNewsList((d.latestNews || []).map(normalizeNewsItem));
           setAnnouncements(d.importantAnnouncements || []);
-          setWelfareItems(d.heroSlides || []); // welfare comes from separate endpoint if needed
+          setHeroSlides(Array.isArray(d.heroSlides) ? d.heroSlides : []);
+          setWelfareItems([]); // Do not mistake Hero announcements for welfare data.
 
           // Build key stats from latestStats
           if (d.latestStats) {
@@ -173,6 +212,7 @@ export default function HomePage() {
 
   return (
     <div>
+      {showSection('hero') && <PublishedHeroSlideshow slides={heroSlides} />}
 
       {/* =========================================================================
           HERO SECTION (High Impact Modern Banner)

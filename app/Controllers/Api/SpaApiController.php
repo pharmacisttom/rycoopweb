@@ -23,6 +23,74 @@ class SpaApiController extends Controller
     // PUBLIC DATA ENDPOINTS (no auth required)
     // ──────────────────────────────────────────────
 
+    /** Stream only a currently published campaign's actual stored image. */
+    public function publicPopupImage(string $id): void
+    {
+        $this->streamPublishedCampaignImage('popups', $id);
+    }
+
+    /** Stream only a currently published hero slide's actual stored image. */
+    public function publicHeroImage(string $id): void
+    {
+        $this->streamPublishedCampaignImage('hero_slides', $id);
+    }
+
+    private function streamPublishedCampaignImage(string $table, string $id): void
+    {
+        if (!preg_match('/^[1-9][0-9]*$/D', $id)
+            || !in_array($table, ['popups', 'hero_slides'], true)) {
+            http_response_code(404); return;
+        }
+        $sql = $table === 'popups'
+            ? "SELECT * FROM popups WHERE id=? AND status='active' AND deleted_at IS NULL AND (start_at IS NULL OR start_at<=NOW())"
+            : "SELECT * FROM hero_slides WHERE id=? AND status='active' AND deleted_at IS NULL AND (start_at IS NULL OR start_at<=NOW()) AND (end_at IS NULL OR end_at>=NOW())";
+        try {
+            $row = Database::first($sql, [(int)$id]);
+            $stored = (string)($row['desktop_image'] ?? $row['image_url'] ?? '');
+            if (!$row || $stored === '') { http_response_code(404); return; }
+            $base = realpath(storage_upload_path());
+            $file = realpath(storage_upload_path($stored));
+            if (!$base || !$file || !str_starts_with($file, $base . DIRECTORY_SEPARATOR)
+                || !is_file($file) || !is_readable($file)) {
+                http_response_code(404); return;
+            }
+            $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file);
+            if (!in_array($mime, ['image/jpeg','image/png','image/webp','image/gif'], true)
+                || @getimagesize($file) === false) {
+                http_response_code(415); return;
+            }
+            header('Content-Type: ' . $mime);
+            header('X-Content-Type-Options: nosniff');
+            header('Cache-Control: public, max-age=300');
+            header('Content-Length: ' . filesize($file));
+            if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') readfile($file);
+        } catch (\Throwable $e) {
+            \App\Core\Logger::error('Published campaign image failed: ' . get_class($e));
+            http_response_code(404);
+        }
+    }
+
+    /** Public-only published campaign feed. No client-local campaign or demo defaults. */
+    public function publicPopups(): void
+    {
+        header('Cache-Control: no-cache');
+        try {
+            $rows = Database::query("SELECT id, title, content, desktop_image, mobile_image, button_text, button_url, delay_seconds, frequency, priority
+                FROM popups WHERE status = 'active' AND deleted_at IS NULL
+                AND (start_at IS NULL OR start_at <= NOW())
+                ORDER BY FIELD(priority, 'critical', 'high', 'normal', 'low'), id DESC LIMIT 3");
+            $items = array_map(static function (array $row): array {
+                $row['desktop_image'] = !empty($row['desktop_image']) ? '/api/public/popups/' . (int)$row['id'] . '/image' : null;
+                $row['mobile_image'] = resolve_media_url($row['mobile_image'] ?? null);
+                return $row;
+            }, $rows);
+            $this->json(['success' => true, 'data' => $items]);
+        } catch (\Throwable $e) {
+            \App\Core\Logger::error('Public popup feed unavailable: ' . get_class($e));
+            $this->json(['success' => false, 'message' => 'ยังไม่สามารถโหลดประกาศประชาสัมพันธ์ได้'], 503);
+        }
+    }
+
     /**
      * GET /api/public/home
      * Returns all data needed for the homepage.
@@ -43,7 +111,12 @@ class SpaApiController extends Controller
 
         try {
             $heroSlides = Database::query("SELECT * FROM hero_slides WHERE status = 'active' AND deleted_at IS NULL AND (start_at IS NULL OR start_at <= NOW()) AND (end_at IS NULL OR end_at >= NOW()) ORDER BY priority DESC, sort_order ASC");
-            $heroSlides = array_map(fn(array $slide): array => $this->withResolvedMediaUrls($slide, ['image_url', 'desktop_image', 'mobile_image']), $heroSlides);
+            $heroSlides = array_map(static function (array $slide): array {
+                $publicImage = !empty($slide['desktop_image']) || !empty($slide['image_url']);
+                if ($publicImage) $slide['desktop_image'] = '/api/public/hero-slides/' . (int)$slide['id'] . '/image';
+                $slide['image_url'] = $publicImage ? $slide['desktop_image'] : null;
+                return $slide;
+            }, $heroSlides);
         } catch (\Throwable $e) {}
 
         try {
@@ -71,7 +144,7 @@ class SpaApiController extends Controller
         } catch (\Throwable $e) {}
 
         try {
-            $importantAnnouncements = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 3");
+            $importantAnnouncements = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color, attachment_path FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 3");
         } catch (\Throwable $e) {}
 
         try {
@@ -79,7 +152,7 @@ class SpaApiController extends Controller
         } catch (\Throwable $e) {}
 
         try {
-            $catalog=\App\Services\PublicContentService::catalog();$rates=\App\Services\PublicContentService::apiRates($catalog);
+            $catalog=\App\Services\PublicContentService::publishedCatalog();$rates=\App\Services\PublicContentService::apiRates($catalog);
             $depositRates=$rates['deposit'];$loanRates=$rates['loan'];$featuredLoans=$calcLoanProducts=\App\Services\PublicContentService::apiProducts($catalog);
         }catch(\Throwable $e){$depositRates=[];$loanRates=[];$featuredLoans=[];$calcLoanProducts=[];}
 
@@ -107,7 +180,7 @@ class SpaApiController extends Controller
      */
     public function coopInfo(): void
     {
-        try {$profile=\App\Services\PublicContentService::catalog()['coopInfo'];}
+        try {$profile=\App\Services\PublicContentService::publishedCatalog()['coopInfo'];}
         catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);return;}
         $coopConfig=['full_name_th'=>$profile['nameTh'],'full_name_en'=>$profile['nameEn'],'short_name'=>$profile['shortName'],'phone'=>$profile['phone'],'fax'=>$profile['fax'],'email'=>$profile['email'],'address'=>$profile['address'],'office_hours'=>$profile['workHours']];
         $stats = null;
@@ -136,12 +209,12 @@ class SpaApiController extends Controller
      */
     public function interestRates(): void
     {
-        try {$catalog=\App\Services\PublicContentService::catalog();$this->json(['success'=>true,'data'=>\App\Services\PublicContentService::apiRates($catalog)]);}
+        try {$catalog=\App\Services\PublicContentService::publishedCatalog();$this->json(['success'=>true,'data'=>\App\Services\PublicContentService::apiRates($catalog)]);}
         catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);}
     }
     public function loanProducts(): void
     {
-        try {$catalog=\App\Services\PublicContentService::catalog();$this->json(['success'=>true,'data'=>\App\Services\PublicContentService::apiProducts($catalog)]);}
+        try {$catalog=\App\Services\PublicContentService::publishedCatalog();$this->json(['success'=>true,'data'=>\App\Services\PublicContentService::apiProducts($catalog)]);}
         catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);}
     }
 
@@ -173,9 +246,16 @@ class SpaApiController extends Controller
     {
         $items = [];
         try {
-            $items = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 20");
+            $items = Database::query("SELECT id, title, slug, content, priority, is_pinned, publication_date, badge_text, badge_color, attachment_path FROM important_announcements WHERE status = 'published' AND publication_date <= CURDATE() AND (expiry_date IS NULL OR expiry_date >= CURDATE()) ORDER BY is_pinned DESC, priority DESC, publication_date DESC LIMIT 20");
         } catch (\Throwable $e) {}
 
+        $items = array_map(static function (array $item): array {
+            $path = (string)($item['attachment_path'] ?? '');
+            $item['image_url'] = preg_match('/\\.(?:jpe?g|png|webp)$/i', $path)
+                ? '/api/public/announcements/' . (int)$item['id'] . '/image' : null;
+            unset($item['attachment_path']);
+            return $item;
+        }, $items);
         $this->json(['success' => true, 'data' => $items]);
     }
 
@@ -186,9 +266,13 @@ class SpaApiController extends Controller
     {
         $docs = [];
         try {
-            $docs = Database::query("SELECT id, title, category, file_path, file_size, download_count, created_at FROM documents WHERE status = 'published' ORDER BY created_at DESC");
+            $docs = Database::query("SELECT d.id, d.title, c.name AS category, d.file_path, d.file_size, d.file_type, d.download_count, d.created_at FROM documents d JOIN document_categories c ON c.id = d.category_id WHERE d.status = 'active' AND d.deleted_at IS NULL AND c.status = 'active' AND c.deleted_at IS NULL ORDER BY d.created_at DESC");
             $docs = array_map(fn(array $doc): array => $this->withResolvedMediaUrls($doc, ['thumbnail', 'thumbnail_url', 'image_url']), $docs);
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            error_log('Public documents API failed: ' . get_class($e));
+            $this->json(['success' => false, 'message' => 'ไม่สามารถโหลดรายการเอกสารได้'], 503);
+            return;
+        }
 
         $this->json(['success' => true, 'data' => $docs]);
     }
@@ -224,7 +308,7 @@ class SpaApiController extends Controller
      */
     public function boardMembers(): void
     {
-        try {$catalog=\App\Services\PublicContentService::catalog();$members=[];foreach(['boardMembers'=>'board','staffMembers'=>'staff'] as $key=>$group)foreach($catalog[$key] as $index=>$person)$members[]=[...$person,'image_url'=>$person['image']??null,'group_name'=>$group,'term_number'=>$person['term']??null,'sort_order'=>$index];$this->json(['success'=>true,'data'=>$members]);}
+        try {$catalog=\App\Services\PublicContentService::publishedCatalog();$members=[];foreach(['boardMembers'=>'board','staffMembers'=>'staff'] as $key=>$group)foreach($catalog[$key] as $index=>$person)$members[]=[...$person,'image_url'=>$person['image']??null,'group_name'=>$group,'term_number'=>$person['term']??null,'sort_order'=>$index];$this->json(['success'=>true,'data'=>$members]);}
         catch(\Throwable $e){$this->json(['success'=>false,'message'=>'โหลดข้อมูลเผยแพร่ไม่ได้'],503);}
     }
 

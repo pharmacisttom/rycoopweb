@@ -1,9 +1,18 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import reference from '../data/legacyReference.json';
 
-const PublicContentContext = createContext({ catalog: reference, status: 'reference', reload: async () => {} });
+// Fail closed when the public CMS is unavailable: never present bundled reference
+// people, financial products, rates or contact details as current live content.
+const emptyCatalog = {
+  ...reference,
+  coopInfo: Object.fromEntries(Object.keys(reference.coopInfo).map(key => [key, ''])),
+  boardMembers: [], boardGroups: [], staffMembers: [], advisors: [], auditors: [], loanProducts: [],
+  interestRates: {...reference.interestRates, deposits: [], loans: [], depositSource: null, loanSource: null},
+  sources: Object.fromEntries(Object.keys(reference.sources).map(key => [key, {url: '', checkedOn: ''}]))
+};
+const PublicContentContext = createContext({ catalog: emptyCatalog, status: 'unavailable', reload: async () => {} });
 export function PublicContentProvider({ children }) {
-  const [catalog, setCatalog] = useState(reference);
+  const [catalog, setCatalog] = useState(emptyCatalog);
   const [status, setStatus] = useState('loading');
   const reload = useCallback(async signal => {
     try {
@@ -11,7 +20,7 @@ export function PublicContentProvider({ children }) {
       const result = await response.json();
       if (!response.ok || !result.success || !result.data?.coopInfo || !Array.isArray(result.data?.boardMembers)) throw new Error('CONTENT_UNAVAILABLE');
       setCatalog(result.data); setStatus('published');
-    } catch (error) { if (error.name !== 'AbortError') setStatus('unavailable'); }
+    } catch (error) { if (error.name !== 'AbortError') { setCatalog(emptyCatalog); setStatus('unavailable'); } }
   }, []);
   useEffect(() => { const controller = new AbortController(); reload(controller.signal); return () => controller.abort(); }, [reload]);
   useEffect(() => {
