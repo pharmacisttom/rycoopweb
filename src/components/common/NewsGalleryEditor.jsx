@@ -64,7 +64,7 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
     </section></div>}
     {reading && <p role="status">กำลังอ่านไฟล์ภาพ…</p>}{error && <p role="alert">{error}</p>}
     <ol>{images.map((image, index) => <li key={index}>
-      <SafeImage src={image.thumbnail || image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" />
+      {/^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(image.src) ? <img src={image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" /> : <SafeImage src={image.thumbnail || image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" />}
       <strong>{index === 0 ? 'ภาพปก' : `ภาพที่ ${index + 1}`}</strong>
       <label>ข้อความทดแทนภาพ<input className="form-control" maxLength={255} value={image.alt} onChange={event => onChange(images.map((item, position) => position === index ? { ...item, alt: event.target.value } : item))} /></label>
       <label>คำบรรยาย<textarea className="form-control" maxLength={1000} value={image.caption} onChange={event => onChange(images.map((item, position) => position === index ? { ...item, caption: event.target.value } : item))} /></label>
