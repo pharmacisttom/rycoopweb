@@ -31,7 +31,7 @@ export default function AdminWorkspacePage() {
     {!links.length && user?.role !== 'super_admin' && <p role="status">ยังไม่มีสิทธิ์ในโมดูลเหล่านี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {error && <AdminErrorState message={error}/>}
     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-      {user?.role !== 'pr_officer' && <Link className="btn btn-primary" to="/admin/dashboard">ศูนย์ควบคุมผู้ดูแลระบบ 3.0</Link>}
+      {user?.role !== 'pr_officer' && <Link className="btn btn-primary" to="/admin/control-center">Executive Dashboard</Link>}
       {user?.role !== 'pr_officer' && <button className="btn btn-outline" onClick={() => setPasswordOpen(true)}>เปลี่ยนรหัสผ่านของฉัน</button>}
       <button className="btn btn-outline" onClick={async () => { try { await logout(); } catch { setError('ออกจากระบบไม่สำเร็จ กรุณาลองใหม่'); } }}>ออกจากระบบ</button>
       <Link className="btn btn-outline" to="/">กลับเว็บไซต์สหกรณ์</Link>

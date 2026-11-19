@@ -1,5 +1,5 @@
 import { usePublicInformation } from '../context/PublicContentContext';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Building, Landmark } from 'lucide-react';
 
 import SafeImage from '../components/common/SafeImage';
@@ -105,29 +105,52 @@ export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, mem
 
 export default function BoardPage() {
   const { COOP_INFO, BOARD_MEMBERS, legacyReference } = usePublicInformation();
+  const terms = useMemo(() => [...new Set(BOARD_MEMBERS.map(person => person.term).filter(Boolean))].sort((a,b) => b.localeCompare(a,'th', {numeric:true})), [BOARD_MEMBERS]);
+  const [selectedTerm, setSelectedTerm] = useState('');
+  const activeTerm = terms.includes(selectedTerm) ? selectedTerm : terms[0];
+  const selectedMembers = BOARD_MEMBERS.filter(person => (!activeTerm || person.term === activeTerm) && person.status !== 'former');
+  const formerMembers = BOARD_MEMBERS.filter(person => person.term === activeTerm && person.status === 'former');
+  const activeGroups = legacyReference.boardGroups.filter(group => {
+    if (group.term) return group.term === activeTerm;
+    // Older groups have no explicit term; inherit it from their original members.
+    const first = BOARD_MEMBERS.find(person => person.id === Number(group.members?.[0]?.[0]));
+    return first?.term === activeTerm;
+  });
   return (
     <PeopleDirectoryPage
       badge="คณะผู้บริหาร"
-      title={BOARD_MEMBERS[0]?.term ? `คณะกรรมการดำเนินงาน ${BOARD_MEMBERS[0].term}` : 'คณะกรรมการดำเนินงาน'}
+      title={activeTerm ? `คณะกรรมการดำเนินงาน ${activeTerm}` : 'คณะกรรมการดำเนินงาน'}
       subtitle={`ทำเนียบคณะกรรมการดำเนินการ ${COOP_INFO.nameTh}`}
-      heading={BOARD_MEMBERS[0]?.term ? `คณะกรรมการดำเนินงาน ${BOARD_MEMBERS[0].term}` : 'คณะกรรมการดำเนินงาน'}
+      heading={activeTerm ? `คณะกรรมการดำเนินงาน ${activeTerm}` : 'คณะกรรมการดำเนินงาน'}
       Icon={Landmark}
-      members={BOARD_MEMBERS}
+      members={selectedMembers}
       type="board"
     >
+      {terms.length > 1 && <label style={{display:'block',maxWidth:340,margin:'1rem auto 2rem'}}>
+        เลือกชุดคณะกรรมการ
+        <select aria-label="เลือกชุดคณะกรรมการ" value={activeTerm} onChange={event => setSelectedTerm(event.target.value)}>
+          {terms.map(term => <option key={term} value={term}>{term}</option>)}
+        </select>
+      </label>}
       <p style={{ margin: '1.5rem 0', color: 'var(--text-muted)' }}>
         อ้างอิงรายชื่อจาก{' '}
         <a href={legacyReference.sources.board.url} target="_blank" rel="noopener noreferrer">เอกสารอ้างอิงสหกรณ์</a>
         {' '}ตรวจเทียบ {legacyReference.sources.board.checkedOn}
       </p>
-      {legacyReference.boardGroups.map(group => (
+      {activeGroups.map(group => (
         <section key={group.title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
           <h2>{group.title}</h2>
-          <ul>{group.members.map(([id, position]) => (
-            <li key={id}>{BOARD_MEMBERS.find(member => member.id === id).name} — {position}</li>
+          <ul>{group.members.filter(([id]) => selectedMembers.some(member => member.id === Number(id))).map(([id, position]) => (
+            <li key={id}>{selectedMembers.find(member => member.id === Number(id))?.name} — {position}</li>
           ))}</ul>
         </section>
       ))}
+      {formerMembers.length > 0 && (
+        <section className="surface-card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
+          <h2>ทำเนียบกรรมการพ้นตำแหน่ง {activeTerm}</h2>
+          <ul>{formerMembers.map(person => <li key={person.id}>{person.name} — {person.position}</li>)}</ul>
+        </section>
+      )}
       {[["ที่ปรึกษาสหกรณ์", legacyReference.advisors], ["คณะผู้ตรวจสอบกิจการสหกรณ์", legacyReference.auditors]].map(([title, people]) => (
         <section key={title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
           <h2>{title}</h2>

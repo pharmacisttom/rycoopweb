@@ -91,6 +91,8 @@ $router->get('/api/public/coop-info', 'Api\\SpaApiController@coopInfo');
 $router->get('/api/public/interest-rates', 'Api\\SpaApiController@interestRates');
 $router->get('/api/public/loan-products', 'Api\\SpaApiController@loanProducts');
 $router->get('/api/public/news', 'Api\\SpaApiController@news');
+$router->get('/api/public/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@published');
+$router->get('/api/admin/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@admin');
 $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements');
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
 $router->get('/api/public/activities', 'Api\\ActivityGalleryController@publicAlbums');
@@ -565,6 +567,39 @@ $router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class,
     $r->get('/review', 'Admin\\LedController@review');
     $r->get('/batch', 'Admin\\LedController@batch');
     $r->get('/schema', 'Admin\\LedController@schema');
+});
+
+
+// Public navigation/footer visibility: published settings only, MFA for mutations.
+$router->get('/api/public/site-chrome', 'Admin\\SiteChromeVisibilityController@published');
+$router->group(['prefix'=>'api/admin/site-chrome','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\SiteChromeVisibilityController@show');
+    $r->post('/draft', 'Admin\\SiteChromeVisibilityController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\SiteChromeVisibilityController@publish', [CsrfMiddleware::class]);
+});
+
+// Homepage layout: public published state only; admin edits require auth, CSRF and fresh MFA.
+$router->get('/api/public/layout', 'Admin\\HomepageLayoutController@published');
+$router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\HomepageLayoutController@show');
+    $r->post('/draft', 'Admin\\HomepageLayoutController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\HomepageLayoutController@publish', [CsrfMiddleware::class]);
+});
+
+// New dynamic homepage CMS: isolated from legacy six visibility toggles.
+$router->get('/api/public/dynamic-layout', 'Admin\\DynamicLayoutController@published');
+$router->group(['prefix'=>'api/admin/dynamic-layout','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\DynamicLayoutController@show');
+    $r->post('/draft', 'Admin\\DynamicLayoutController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\DynamicLayoutController@publish', [CsrfMiddleware::class]);
+});
+
+// Navigation text CMS: public published values and MFA-gated admin drafts.
+$router->get('/api/public/navigation-copy', 'Admin\\SiteNavigationCopyController@published');
+$router->group(['prefix'=>'api/admin/navigation-copy','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\SiteNavigationCopyController@show');
+    $r->post('/draft', 'Admin\\SiteNavigationCopyController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\SiteNavigationCopyController@publish', [CsrfMiddleware::class]);
 });
 
 // Public CMS: controller checks the section's module and action on every call.
