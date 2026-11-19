@@ -38,8 +38,8 @@ class SpaApiController extends Controller
                 return $row;
             }, $rows);
             $this->json(['success' => true, 'data' => $items]);
-        } catch (\\Throwable $e) {
-            \\App\\Core\\Logger::error('Public popup feed unavailable: ' . get_class($e));
+        } catch (\Throwable $e) {
+            \App\Core\Logger::error('Public popup feed unavailable: ' . get_class($e));
             $this->json(['success' => false, 'message' => 'ยังไม่สามารถโหลดประกาศประชาสัมพันธ์ได้'], 503);
         }
     }
