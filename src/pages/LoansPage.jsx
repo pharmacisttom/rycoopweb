@@ -79,7 +79,7 @@ export default function LoansPage() {
           <h1 className="section-title">สินเชื่อและอัตราดอกเบี้ยเงินกู้</h1>
           <p className="section-subtitle">เลือกประเภทสินเชื่อให้เหมาะกับวัตถุประสงค์และแผนการชำระเงินของคุณ</p>
           <div className="section-line" />
-          <p className="section-subtitle">{INTEREST_RATES.loanSource.note}{' '}<a href={INTEREST_RATES.loanSource.url}>ดูข้อมูลอ้างอิง</a></p>
+          <p className="section-subtitle">{INTEREST_RATES.loanSource?.note}{' '}<a href={INTEREST_RATES.loanSource?.url || '#'}>ดูข้อมูลอ้างอิง</a></p>
         </div>
 
         <nav aria-label="ประเภทเงินกู้" style={{ display: 'flex', justifyContent: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>

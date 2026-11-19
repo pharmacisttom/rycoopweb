@@ -4,7 +4,7 @@ import { mediaLibraryApi } from '../../services/mediaLibraryApi';
 import './ActivitySlideshow.css';
 import './NewsGalleryMediaPicker.css';
 
-export default function NewsGalleryEditor({ images, onChange, disabled, onBusyChange }) {
+export default function NewsGalleryEditor({ images, newsId, onChange, disabled, onBusyChange }) {
   const [error, setError] = useState('');
   const [reading, setReading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -24,7 +24,7 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
   function chooseCatalog(image) {
     if (images.length >= 20) { setCatalogError('อัลบั้มมีได้ไม่เกิน 20 ภาพ'); return; }
     if (images.some(item => item.src === image.url)) { setCatalogError('ภาพนี้อยู่ในอัลบั้มแล้ว'); return; }
-    onChange([...images, { src: image.url, alt: image.alt_text || '', caption: image.caption || '' }]);
+    onChange([...images, { media_id: image.id, src: image.url, thumbnail: image.preview_url || image.url, alt: image.alt_text || '', caption: image.caption || '' }]);
     setPickerOpen(false);
   }
   async function add(event) {
@@ -47,6 +47,12 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
     } catch (exception) { setError(exception.message); }
     finally { setReading(false); onBusyChange?.(false); }
   }
+  function imagePreviewUrl(image) {
+    const source = image.thumbnail || image.src || '';
+    const match = typeof source === 'string' && source.match(/\/news\/gallery\/([a-f0-9]{32}-(?:src|thumbnail)\.webp)(?:$|[?#])/i);
+    if (newsId && match) return `/api/admin/news/${encodeURIComponent(newsId)}/gallery/${match[1]}`;
+    return source;
+  }
   function move(index, offset) {
     const next = [...images]; [next[index], next[index + offset]] = [next[index + offset], next[index]]; onChange(next);
   }
@@ -64,7 +70,7 @@ export default function NewsGalleryEditor({ images, onChange, disabled, onBusyCh
     </section></div>}
     {reading && <p role="status">กำลังอ่านไฟล์ภาพ…</p>}{error && <p role="alert">{error}</p>}
     <ol>{images.map((image, index) => <li key={index}>
-      <SafeImage src={image.thumbnail || image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" />
+      {/^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(image.src) ? <img src={image.src} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" /> : <SafeImage src={imagePreviewUrl(image)} alt={image.alt || `ภาพที่ ${index + 1}`} loading="lazy" />}
       <strong>{index === 0 ? 'ภาพปก' : `ภาพที่ ${index + 1}`}</strong>
       <label>ข้อความทดแทนภาพ<input className="form-control" maxLength={255} value={image.alt} onChange={event => onChange(images.map((item, position) => position === index ? { ...item, alt: event.target.value } : item))} /></label>
       <label>คำบรรยาย<textarea className="form-control" maxLength={1000} value={image.caption} onChange={event => onChange(images.map((item, position) => position === index ? { ...item, caption: event.target.value } : item))} /></label>

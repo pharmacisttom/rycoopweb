@@ -73,6 +73,36 @@ class PublicContentService
         $catalog['publication'] = $metadata;
         return $catalog;
     }
+    /** Public-only view: legacy seed values are never evidence of staff publication.
+     * Do not mutate the editorial baseline or any stored revision.
+     */
+    public static function publishedCatalog(): array
+    {
+        $catalog = self::catalog();
+        $approved = $catalog['publication'] ?? [];
+        foreach (self::SECTIONS as $section => $definition) {
+            if (isset($approved[$section])) continue;
+            $empty = $section === 'profile'
+                ? array_fill_keys(array_keys($catalog['coopInfo'] ?? []), '')
+                : [];
+            self::assign($catalog, $section, $empty);
+        }
+        // Sources and rate metadata bundled with the original reference are not
+        // publication records. Approved revision metadata is retained separately.
+        if (isset($catalog['sources']) && is_array($catalog['sources'])) {
+            $catalog['sources'] = array_map(
+                static fn($source): array => ['url' => '', 'checkedOn' => ''],
+                $catalog['sources']
+            );
+        }
+        if (!isset($approved['deposits']) && !isset($approved['loan_rates'])) {
+            $catalog['interestRates']['effectiveDate'] = '';
+        }
+        $catalog['interestRates']['depositSource'] = null;
+        $catalog['interestRates']['loanSource'] = null;
+        return $catalog;
+    }
+
     public static function apiRates(array $catalog): array {
         $result=['deposit'=>[],'loan'=>[]];
         foreach(['deposit'=>'deposits','loan'=>'loans'] as $type=>$key)foreach($catalog['interestRates'][$key] as $index=>$rate){
