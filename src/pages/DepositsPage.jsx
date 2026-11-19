@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 
 export default function DepositsPage() {
   const { INTEREST_RATES } = usePublicInformation();
+  const deposits = Array.isArray(INTEREST_RATES?.deposits) ? INTEREST_RATES.deposits.filter(item => item && typeof item === 'object') : [];
+  const source = INTEREST_RATES?.depositSource && typeof INTEREST_RATES.depositSource === 'object' ? INTEREST_RATES.depositSource : null;
   return (
     <div className="section">
       <div className="container">
@@ -54,11 +56,11 @@ export default function DepositsPage() {
         <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', marginBottom: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '1.3rem', color: 'var(--primary-800)' }}>ตารางประกาศอัตราดอกเบี้ยเงินฝาก</h3>
-            <span className="badge badge-gold">{INTEREST_RATES.depositSource?.published ? 'มีผลตั้งแต่' : 'ตรวจเทียบหน้าเว็บเดิม'} {INTEREST_RATES.depositSource?.checkedOn ?? 'รอเจ้าหน้าที่เผยแพร่'}</span>
+            <span className="badge badge-gold">{source?.published ? 'มีผลตั้งแต่' : 'ตรวจเทียบหน้าเว็บเดิม'} {source?.checkedOn ?? 'รอเจ้าหน้าที่เผยแพร่'}</span>
           </div>
           <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
-            {INTEREST_RATES.depositSource?.note ?? ''}{' '}
-            <a href={INTEREST_RATES.depositSource?.url || '#'} target="_blank" rel="noopener noreferrer">ดูแหล่งข้อมูล</a>
+            {source?.note ?? ''}{' '}
+            {typeof source?.url === 'string' && /^https?:\/\//i.test(source.url) && <a href={source.url} target="_blank" rel="noopener noreferrer">ดูแหล่งข้อมูล</a>}
           </p>
 
           <div style={{ overflowX: 'auto' }}>
@@ -72,7 +74,8 @@ export default function DepositsPage() {
                 </tr>
               </thead>
               <tbody>
-                {INTEREST_RATES.deposits.map((item, idx) => (
+                {deposits.length === 0 && <tr><td colSpan={4} style={{padding:'1.5rem',textAlign:'center',color:'var(--text-muted)'}}>ยังไม่มีประกาศอัตราดอกเบี้ยเงินฝากที่เผยแพร่ผ่านระบบหลังบ้าน กรุณาติดต่อสหกรณ์เพื่อยืนยันอัตราล่าสุด</td></tr>}
+                {deposits.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)', background: item.highlight ? 'rgba(37, 99, 235, 0.03)' : 'transparent' }}>
                     <td style={{ padding: '0.85rem', fontWeight: 600 }}>{item.type}</td>
                     <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800, color: 'var(--primary-600)', fontSize: '1.1rem', fontFamily: 'var(--font-display)' }}>
