@@ -80,7 +80,7 @@ function PeopleGrid({ members, type }) {
   );
 }
 
-export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, members, type, children }) {
+export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, members, type, toolbar, children }) {
   return (
     <div className="section">
       <div className="container">
@@ -91,6 +91,7 @@ export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, mem
           <div className="section-line" />
         </div>
 
+        {toolbar}
         <section aria-labelledby="directory-heading">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem', marginBottom: '1.5rem' }}>
             <Icon size={25} color={type === 'board' ? 'var(--primary-600)' : 'var(--accent-teal-dark)'} aria-hidden="true" />
@@ -129,13 +130,15 @@ export default function BoardPage() {
       Icon={Landmark}
       members={selectedMembers}
       type="board"
-    >
+      toolbar={<>
       {terms.length > 0 && <nav aria-label="เลือกชุดคณะกรรมการ" className="board-term-switcher">
         {terms.map(term=><button type="button" key={term} className={term===activeTerm?'board-term-active':''}
           aria-pressed={term===activeTerm} onClick={()=>setSelectedTerm(term)}>{term}</button>)}
       </nav>}
       {!terms.length && <p className="board-term-empty" role="status">ยังไม่มีรายชื่อคณะกรรมการที่เผยแพร่ผ่านระบบหลังบ้าน</p>}
       {!!activeTerm && selectedMembers.length === 0 && <p className="board-term-empty" role="status">ยังไม่มีรายชื่อกรรมการที่ดำรงตำแหน่งใน {activeTerm} ที่เผยแพร่</p>}
+      </>}
+    >
       {typeof publishedSources?.url==='string' && /^https:\/\//i.test(publishedSources.url) && <p style={{margin:'1.5rem 0',color:'var(--text-muted)'}}>แหล่งข้อมูลที่เผยแพร่: <a href={publishedSources.url} target="_blank" rel="noopener noreferrer">เอกสารอ้างอิงสหกรณ์</a>{publishedSources.checkedOn && <> · ตรวจเทียบ {publishedSources.checkedOn}</>}</p>}
       {activeGroups.map(group => (
         <section key={group.title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
