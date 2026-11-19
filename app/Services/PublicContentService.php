@@ -73,6 +73,36 @@ class PublicContentService
         $catalog['publication'] = $metadata;
         return $catalog;
     }
+    /** Public-only view: legacy seed values are never evidence of staff publication.
+     * Do not mutate the editorial baseline or any stored revision.
+     */
+    public static function publishedCatalog(): array
+    {
+        $catalog = self::catalog();
+        $approved = $catalog['publication'] ?? [];
+        foreach (self::SECTIONS as $section => $definition) {
+            if (isset($approved[$section])) continue;
+            $empty = $section === 'profile'
+                ? array_fill_keys(array_keys($catalog['coopInfo'] ?? []), '')
+                : [];
+            self::assign($catalog, $section, $empty);
+        }
+        // Sources and rate metadata bundled with the original reference are not
+        // publication records. Approved revision metadata is retained separately.
+        if (isset($catalog['sources']) && is_array($catalog['sources'])) {
+            $catalog['sources'] = array_map(
+                static fn($source): array => ['url' => '', 'checkedOn' => ''],
+                $catalog['sources']
+            );
+        }
+        if (!isset($approved['deposits']) && !isset($approved['loan_rates'])) {
+            $catalog['interestRates']['effectiveDate'] = '';
+        }
+        $catalog['interestRates']['depositSource'] = null;
+        $catalog['interestRates']['loanSource'] = null;
+        return $catalog;
+    }
+
     public static function apiRates(array $catalog): array {
         $result=['deposit'=>[],'loan'=>[]];
         foreach(['deposit'=>'deposits','loan'=>'loans'] as $type=>$key)foreach($catalog['interestRates'][$key] as $index=>$rate){
@@ -140,13 +170,20 @@ class PublicContentService
             }
             if ($section==='groups') {
                 $title=self::text($item['title']??null,150,true);$members=$item['members']??null;
+                $term=isset($item['term'])?self::text($item['term'],100,true):null;
+                if ($term !== null && !in_array($term,array_column(self::catalog()['boardMembers'],'term'),true)) throw new InvalidArgumentException('ไม่พบชุดกรรมการที่เลือก');
                 if (!is_array($members) || !array_is_list($members) || count($members)>50) throw new InvalidArgumentException('รายชื่อคณะย่อยไม่ถูกต้อง');
                 $boardIds=array_column(self::catalog()['boardMembers'],'id');$seen=[];
                 foreach ($members as $member) { if (!is_array($member) || count($member)!==2 || !in_array((int)$member[0],array_map('intval',$boardIds),true) || isset($seen[(int)$member[0]])) throw new InvalidArgumentException('กรรมการในคณะย่อยไม่ถูกต้องหรือซ้ำ');self::text($member[1],150,true);$seen[(int)$member[0]]=true; }
-                $item=['title'=>$title,'members'=>$members];continue;
+                $item=['title'=>$title,'members'=>$members];if ($term !== null) $item['term']=$term;
+                foreach ($members as [$memberId]) {
+                    $person = current(array_filter(self::catalog()['boardMembers'], static fn($p) => (int)$p['id']===(int)$memberId));
+                    if ($term !== null && ($person['term']??null)!==$term) throw new InvalidArgumentException('กรรมการไม่อยู่ในชุดที่เลือก');
+                }
+                continue;
             }
             $allowed=match($section){
-                'boards'=>['id','name','position','image','term','workplace'],
+                'boards'=>['id','name','position','image','term','workplace','status'],
                 'staff'=>['id','name','position','image','department'],
                 'deposits'=>['type','rate','minDeposit','payFreq','highlight'],
                 'loan_rates'=>['type','rate','maxTerm','condition','productId'],
@@ -158,6 +195,7 @@ class PublicContentService
                 elseif ($key==='features') { if (!is_array($field) || !array_is_list($field) || count($field)>20) throw new InvalidArgumentException('รายละเอียดไม่ถูกต้อง');foreach($field as $line)self::text($line,1000,true); }
                 elseif ($section==='products' && in_array($key,['maxLimit','maxTerm'],true)) $item[$key]=self::integer($field,$key==='maxTerm'?600:999999999);
                 elseif ($key==='id' && $section!=='products') $item[$key]=self::integer($field,999999);
+                elseif ($key==='status' && $section==='boards') { if (!in_array($field,['active','former'],true)) throw new InvalidArgumentException('สถานะกรรมการไม่ถูกต้อง'); }
                 elseif ($key==='highlight') $item[$key]=(bool)$field;
                 elseif (in_array($key,['rate','rateValue'],true)) { $number=rtrim((string)$field,'%');if (!preg_match('/^\d{1,3}(?:\.\d{1,3})?$/D',$number) || (float)$number>100) throw new InvalidArgumentException('ดอกเบี้ยต้องอยู่ระหว่าง 0–100% และทศนิยมไม่เกิน 3 ตำแหน่ง'); }
                 else $item[$key]=self::text($field,1000);
@@ -181,7 +219,10 @@ class PublicContentService
         }
         if ($section==='boards') {
             $ids=array_column($value,'id');
-            foreach(self::catalog()['boardGroups'] as $group)foreach($group['members'] as [$id])if(!in_array((int)$id,array_map('intval',$ids),true))throw new InvalidArgumentException('กรุณานำกรรมการออกจากคณะย่อยและเผยแพร่ก่อนนำออกจากทำเนียบ');
+            foreach(self::catalog()['boardGroups'] as $group)foreach($group['members'] as [$id]){
+                $match = current(array_filter($value, static fn($person) => (int)$person['id']===(int)$id));
+                if(!$match || ($match['status']??'active')==='former') throw new InvalidArgumentException('กรุณาย้ายสมาชิกคณะอนุกรรมการไปยังผู้รับตำแหน่งและเผยแพร่ก่อนเปลี่ยนสถานะกรรมการเดิม');
+            }
         }
         return $value;
     }

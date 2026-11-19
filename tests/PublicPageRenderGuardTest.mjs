@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=p=>readFileSync(new URL('../'+p, import.meta.url),'utf8');
+const context=read('src/context/PublicContentContext.jsx');
+const deposits=read('src/pages/DepositsPage.jsx');
+const loans=read('src/pages/LoansPage.jsx');
+const calculator=read('src/components/calculators/LoanCalculator.jsx');
+assert.match(context, /Array\.isArray\(rawRates\.deposits\)/);
+assert.match(context, /Array\.isArray\(catalog\?\.loanProducts\)/);
+assert.match(context, /depositSource: rawRates\.depositSource/);
+assert.match(deposits, /deposits\.length === 0/);
+assert.match(deposits, /deposits\.map\(/);
+assert.doesNotMatch(deposits, /INTEREST_RATES\.deposits\.map\(/);
+assert.match(loans, /Array\.isArray\(product\.features\)/);
+assert.match(loans, /products\.length === 0/);
+assert.match(calculator, /ManualLoanCalculator/);
+console.log('PUBLIC_RENDER_GUARDS=PASS');
