@@ -2022,8 +2022,37 @@ const modalHeaderStyle = {
 };
 
 // Legacy prototype retained for reference; routes use the database-backed workspace below.
-export default function AdminDashboardPage(){
- const{can}=useAuth();
- const links=[['news.view','/admin/content?tab=news','ข่าว / อัลบั้ม / สไลด์โชว์'],['announcements.view','/admin/workspace','ประกาศสำคัญ'],['faqs.view','/admin/content?tab=faqs','คำถามที่พบบ่อย'],['documents.view','/admin/documents','ศูนย์เอกสาร'],['coop_info.view','/admin/public-content','ข้อมูลสหกรณ์'],['people.view','/admin/public-content','กรรมการและเจ้าหน้าที่'],['rates.view','/admin/public-content','อัตราดอกเบี้ย'],['products.view','/admin/public-content','ผลิตภัณฑ์'],['settings.view','/admin/settings/content','ข้อมูลเว็บไซต์']];
- return <section className="admin-module"><AdminPageHeader title="ระบบจัดการเนื้อหาส่วนกลาง" description="ใช้ข้อมูลจริงจาก API และฐานข้อมูล ไม่มีการบันทึกเฉพาะเบราว์เซอร์"/><div className="grid-3">{links.filter(([permission])=>can(permission)).map(([permission,to,label])=><Link key={permission} className="surface-card" style={{padding:24}} to={to}>{label}</Link>)}</div><p>Hero และ Popup แบบเดิมเป็นต้นแบบในเบราว์เซอร์ จึงยังไม่เปิดปุ่มบันทึกส่วนกลางจนกว่าจะเชื่อม API และผ่าน UAT</p></section>;
+// The canonical CMS hub: every card navigates to a real protected React route.
+// Modules not yet wired for server-side CRUD remain clearly marked in their own screens.
+export default function AdminDashboardPage() {
+  const { can, user } = useAuth();
+  const modules = [
+    { permission: 'news.view', path: '/admin/content?tab=news', label: 'ข่าวประชาสัมพันธ์และอัลบั้มข่าว' },
+    { permission: 'announcements.view', path: '/admin/workspace', label: 'ประกาศสำคัญ' },
+    { permission: 'faqs.view', path: '/admin/content?tab=faqs', label: 'คำถามที่พบบ่อย' },
+    { permission: 'documents.view', path: '/admin/documents', label: 'ศูนย์เอกสารดาวน์โหลด' },
+    { permission: 'coop_info.view', path: '/admin/public-content?section=profile', label: 'ข้อมูลสหกรณ์' },
+    { permission: 'people.view', path: '/admin/public-content?section=boards', label: 'คณะกรรมการชุดที่ 38 / 39' },
+    { permission: 'rates.view', path: '/admin/public-content?section=deposits', label: 'อัตราดอกเบี้ย' },
+    { permission: 'products.view', path: '/admin/public-content?section=products', label: 'ผลิตภัณฑ์สหกรณ์' },
+    { permission: 'news.view', path: '/admin/media', label: 'คลังรูปภาพ (Media Library)' },
+    { permission: 'news.view', path: '/admin/activities', label: 'คลังภาพกิจกรรม' },
+    { permission: 'settings.view', path: '/admin/settings/content', label: 'ตั้งค่าเนื้อหาเว็บไซต์' },
+  ];
+  if (user?.role === 'super_admin') {
+    modules.push({ permission: null, path: '/admin/layout', label: 'Hero, สี และ Layout หน้าแรก' });
+    modules.push({ permission: null, path: '/admin/navigation-copy', label: 'จัดการข้อความเมนูเว็บไซต์' });
+  }
+  const visible = modules.filter(item => !item.permission || can(item.permission));
+  return <section className="admin-module">
+    <AdminPageHeader title="ศูนย์จัดการเว็บไซต์สหกรณ์ (CMS)"
+      description="เข้าถึงโมดูลจัดการข้อมูลจริงจากฐานข้อมูล โดยเจ้าหน้าที่เป็นผู้บันทึกและอนุมัติการเผยแพร่" />
+    <div className="grid-3">
+      {visible.map(item => <Link key={item.path} className="surface-card"
+        style={{padding:24,display:'block',minHeight:82}} to={item.path}>{item.label}</Link>)}
+    </div>
+    {!visible.length && <p role="status">ยังไม่มีสิทธิ์ใช้งานโมดูล CMS กรุณาติดต่อผู้ดูแลระบบ</p>}
+    <p role="status" style={{marginTop:18}}>ประกาศ Popup และ Hero ที่ยังไม่ได้เชื่อมระบบ CRUD กลางครบถ้วนจะไม่แสดงข้อมูลจำลองแทนรายการจริง</p>
+    <p><Link to="/admin/control-center" className="btn btn-outline">เปิด Executive Dashboard และสุขภาพระบบ</Link></p>
+  </section>;
 }
