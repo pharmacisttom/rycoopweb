@@ -16,6 +16,9 @@ $checks = [
  'draft API unchanged' => '/api/admin/public-content/sections/${section}/drafts',
  'publish API unchanged' => '/api/admin/public-content/revisions/${revision.id}/publish',
  'board term audit' => 'auditBoardTerms(value)',
+ 'all validation issues' => 'collectBoardIssues(value',
+ 'validation report' => 'board-validation-report',
+ 'duplicate IDs reported' => 'รหัสซ้ำกับรายการที่',
  'board draft normalized to allowlist' => 'normalizeBoardDraft(value)',
  'board fields restricted before send' => 'BOARD_SERVER_FIELD_SET.has(key)',
 ];
