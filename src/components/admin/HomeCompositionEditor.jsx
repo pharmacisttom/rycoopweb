@@ -94,6 +94,15 @@ export default function HomeCompositionEditor(){
             <span className="hc-handle" aria-hidden="true">☰</span>
             <strong>{index+1}. {NAMES[id]}</strong>
             <label><input type="checkbox" checked={model.visible[id]} onChange={e=>update(m=>{m.visible[id]=e.target.checked;return m;})}/> แสดง</label>
+            <label>พื้นหลัง <select aria-label={'พื้นหลัง '+NAMES[id]} value={model.layers?.[id]?.surface||'original'}
+              onChange={e=>update(m=>{m.layers=m.layers||{};m.layers[id]={...(m.layers[id]||{spacing:'comfortable'}),surface:e.target.value};return m;})}>
+              <option value="original">ตามต้นฉบับ</option><option value="light">สว่าง</option>
+              <option value="navy">น้ำเงินกรมท่า</option><option value="ocean">ฟ้าทะเล</option>
+            </select></label>
+            <label>ระยะห่าง <select aria-label={'ระยะห่าง '+NAMES[id]} value={model.layers?.[id]?.spacing||'comfortable'}
+              onChange={e=>update(m=>{m.layers=m.layers||{};m.layers[id]={...(m.layers[id]||{surface:'original'}),spacing:e.target.value};return m;})}>
+              <option value="compact">กระชับ</option><option value="comfortable">มาตรฐาน</option><option value="spacious">โปร่ง</option>
+            </select></label>
             <div className="hc-actions"><button type="button" disabled={busy||index===0} onClick={()=>move(id,-1)} aria-label={'เลื่อน '+NAMES[id]+' ขึ้น'}>↑</button>
               <button type="button" disabled={busy||index===model.order.length-1} onClick={()=>move(id,1)} aria-label={'เลื่อน '+NAMES[id]+' ลง'}>↓</button></div>
           </li>)}</ol>
