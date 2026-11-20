@@ -18,3 +18,8 @@
  .home-highlight-controls{width:max-content;max-width:100%;flex-wrap:wrap}
 }
 @media(prefers-reduced-motion:reduce){.home-highlight-controls>button{transition:none}}
+
+/* Responsive picture fills the entire slide; mobile art direction uses a separate source. */
+.home-highlight-picture{position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none}
+.home-highlight-picture .home-highlight-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+@media(max-width:767px){.home-highlight-picture .home-highlight-photo{object-position:center center}}
