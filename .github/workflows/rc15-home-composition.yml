@@ -45,7 +45,7 @@ jobs:
       - name: Build React frontend
         run: npm run build
       - name: Install Chromium for browser regression
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Browser smoke — no null crash and correct published ordering
         run: |
           set -Eeuo pipefail
