@@ -10,11 +10,14 @@ $good['slides']=[];
 for($i=1;$i<=6;$i++)$good['slides'][]=[
   'id'=>'item-'.$i, 'title'=>'หัวข้อ '.$i,'body'=>'รายละเอียด '.$i,'link'=>'/about'
 ];
-$good['background']=['image_url'=>'/storage/uploads/highlights/cover.webp','overlay_opacity'=>65,'position'=>'center'];
+$good['background']=['image_url'=>'/storage/uploads/highlights/cover.webp','mobile_image_url'=>'/storage/uploads/highlights/cover-mobile.webp','overlay_opacity'=>65,'position'=>'center'];
 $good['slides'][0]['image_url']='/storage/uploads/highlights/item-1.jpg';
+$good['slides'][0]['mobile_image_url']='/storage/uploads/highlights/item-1-mobile.webp';
 $validated=Composition::validate($good);
 if(count($validated['slides'])!==6)throw new RuntimeException('Valid carousel rejected');
 $cases=[
+  'external mobile background'=>static function(array &$x){$x['background']['mobile_image_url']='https://evil.example/track.webp';},
+  'traversal mobile image'=>static function(array &$x){$x['slides'][0]['mobile_image_url']='/uploads/../private.jpg';},
   'external background'=>static function(array &$x){$x['background']['image_url']='https://evil.example/track.jpg';},
   'javascript background'=>static function(array &$x){$x['background']['image_url']='javascript:alert(1)';},
   'traversal background'=>static function(array &$x){$x['background']['image_url']='/uploads/../secret.jpg';},
@@ -40,8 +43,8 @@ foreach($cases as $name=>$change){
 // Older persisted drafts without appearance remain loadable.
 $legacy=$good;
 unset($legacy['layers'], $legacy['background']);
-foreach($legacy['slides'] as &$slide)unset($slide['image_url']);
+foreach($legacy['slides'] as &$slide)unset($slide['image_url'],$slide['mobile_image_url']);
 unset($slide);
 $legacyValidated=Composition::validate($legacy);
-if(count($legacyValidated['layers'])!==8 || $legacyValidated['background']['overlay_opacity']!==60 || $legacyValidated['slides'][0]['image_url']!=='')throw new RuntimeException('Legacy compatibility failed');
+if(count($legacyValidated['layers'])!==8 || $legacyValidated['background']['overlay_opacity']!==60 || $legacyValidated['slides'][0]['image_url']!=='' || $legacyValidated['slides'][0]['mobile_image_url']!=='' || $legacyValidated['background']['mobile_image_url']!=='')throw new RuntimeException('Legacy compatibility failed');
 echo "RC15_HOME_COMPOSITION_VALIDATION=PASS\n";
