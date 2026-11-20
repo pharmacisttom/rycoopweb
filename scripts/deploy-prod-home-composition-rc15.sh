@@ -179,8 +179,20 @@ test "$ROOT_LOCATION" = "https://www.rayongcoop.org/app/"
 for P in /app/ /app/admin/layout /app/admin/security /api/public/documents "$ASSET"; do
  CODE="$(http "$P")";echo "$P HTTP=$CODE";test "$CODE" = 200
 done
-test "$(http /api/public/home-composition)" = 200
-test "$(http /api/admin/home-composition)" = "$AUTH_BEFORE"
+PUBLIC_CODE="$(http /api/public/home-composition)"
+ADMIN_CODE="$(http /api/admin/home-composition)"
+echo "RC15_PUBLIC_COMPOSITION_HTTP=$PUBLIC_CODE"
+echo "RC15_ADMIN_COMPOSITION_HTTP=$ADMIN_CODE"
+echo "RC15_EXPECTED_ADMIN_GUARD=$AUTH_BEFORE"
+if test "$PUBLIC_CODE" != 200; then
+ echo "RC15_PUBLIC_COMPOSITION_GATE=FAILED"
+ echo "Inspect PHP-FPM / Nginx logs for the request; do not expose credentials."
+ exit 1
+fi
+if test "$ADMIN_CODE" != "$AUTH_BEFORE"; then
+ echo "RC15_ADMIN_GUARD_GATE=FAILED"
+ exit 1
+fi
 curl --noproxy '*' -4 -fsS --max-time 20 \
  --resolve www.rayongcoop.org:443:127.0.0.1 \
  https://www.rayongcoop.org/api/public/home-composition |
