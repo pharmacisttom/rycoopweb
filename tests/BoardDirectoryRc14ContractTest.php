@@ -16,6 +16,8 @@ $checks = [
  'draft API unchanged' => '/api/admin/public-content/sections/${section}/drafts',
  'publish API unchanged' => '/api/admin/public-content/revisions/${revision.id}/publish',
  'board term audit' => 'auditBoardTerms(value)',
+ 'board draft normalized to allowlist' => 'normalizeBoardDraft(value)',
+ 'board fields restricted before send' => 'BOARD_SERVER_FIELD_SET.has(key)',
 ];
 foreach ($checks as $label => $needle) {
  if (strpos($page, $needle) === false) { fwrite(STDERR, "RC14_BOARD_UI=FAIL {$label}\n"); exit(1); }
