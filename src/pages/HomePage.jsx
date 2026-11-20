@@ -693,6 +693,25 @@ export default function HomePage() {
     ),
   };
   const sectionOrder = composition?.order || ["hero","highlights","rates_news","quick_services","statistics","products","calculator","welfare"];
+  // Apply allowlisted appearance presets to the actual published DOM section.
+  // Existing layouts remain unchanged when no RC15 composition is published.
+  const renderSection = key => {
+    const element=sectionsById[key];
+    const layer=composition?.layers?.[key];
+    if(!element||!layer)return element;
+    if(key==='highlights')return React.cloneElement(element,{appearance:layer});
+    const darkSection=key==='hero'||key==='rates_news';
+    const backgroundOptions=darkSection
+      ?{light:'linear-gradient(130deg,#2a4e83,#5174aa)',navy:'linear-gradient(120deg,#101e40,#1c3766)',ocean:'linear-gradient(120deg,#0a4b61,#167a95)'}
+      :{light:'#f7faff',navy:'#e5ecfa',ocean:'#e3f5f4'};
+    const background=backgroundOptions[layer.surface];
+    const spacing=layer.spacing==='compact'?'1.5rem':layer.spacing==='spacious'?'5rem':null;
+    return React.cloneElement(element,{
+      style:{...element.props.style,
+        ...(background?{background,backgroundImage:'none'}:{}),
+        ...(spacing?{paddingBlock:spacing}:{})}
+    });
+  };
 
   return (
     <div>
@@ -700,7 +719,7 @@ export default function HomePage() {
       {/* =========================================================================
           HERO SECTION (High Impact Modern Banner)
           ========================================================================= */}
-      {sectionOrder.filter(key=>showSection(key)).map(key=><React.Fragment key={key}>{sectionsById[key]}</React.Fragment>)}
+      {sectionOrder.filter(key=>showSection(key)).map(key=><React.Fragment key={key}>{renderSection(key)}</React.Fragment>)}
 
 
 
