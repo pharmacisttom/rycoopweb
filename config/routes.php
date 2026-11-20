@@ -88,6 +88,7 @@ $router->group(['prefix'=>'api/admin/popup-campaigns','middleware'=>[AuthMiddlew
     $r->post('', 'Api\\PopupCmsController@store', [CsrfMiddleware::class]);
     $r->post('/{id}/update', 'Api\\PopupCmsController@update', [CsrfMiddleware::class]);
     $r->post('/{id}/disable', 'Api\\PopupCmsController@disable', [CsrfMiddleware::class]);
+    $r->post('/{id}/delete', 'Api\\PopupCmsController@destroy', [CsrfMiddleware::class]);
 });
 
 /*
