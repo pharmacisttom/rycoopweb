@@ -9,7 +9,7 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/api/public/content', route => route.fulfill({
+  await context.route('**/api/public/content', route => route.fulfill({
     status:200,contentType:'application/json',
     body:JSON.stringify({success:true,data:{
       coopInfo:{nameTh:'ทดสอบสหกรณ์',slogan:'ข้อมูลทดสอบ'},
@@ -18,7 +18,7 @@ try {
       publication:{}
     }})
   }));
-  await page.route('**/api/public/home-composition', route => route.fulfill({
+  await context.route('**/api/public/home-composition', route => route.fulfill({
     status:200,contentType:'application/json',
     body:JSON.stringify({success:true,data:{
       order:['hero','highlights','rates_news','quick_services','statistics','products','calculator','welfare'],
@@ -37,7 +37,7 @@ try {
   output.push({name:'Homepage null interest source',pass,errors:errors.slice(0,4),status:response?.status(),hasRate,hasNews});
   if(!pass)failures++;
   // Test public reordering and highlight rendering against an API-bound response.
-  await page.route('**/api/public/home-composition',route=>route.fulfill({
+  await context.route('**/api/public/home-composition',route=>route.fulfill({
     status:200,contentType:'application/json',
     body:JSON.stringify({success:true,data:{
       order:['highlights','hero','rates_news','quick_services','statistics','products','calculator','welfare'],
@@ -55,7 +55,7 @@ try {
   const highlight=await second.locator('.home-highlight-slider').count();
   const documentOrder=await second.evaluate(()=>{
     const slider=document.querySelector('.home-highlight-slider');
-    const hero=document.querySelector('.hero-section');
+    const hero=document.querySelector('.home-hero-title');
     return slider&&hero?slider.compareDocumentPosition(hero)&Node.DOCUMENT_POSITION_FOLLOWING:0;
   });
   const pass2=highlight===1&&documentOrder!==0&&!secondErrors.length;
