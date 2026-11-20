@@ -28,7 +28,9 @@ final class PopupCmsController extends Controller
             );
             $row = $rows[0] ?? null;
             if ($row) {
-                $row['image_url'] = !empty($row['desktop_image']) ? '/api/public/popup-campaign/image' : null;
+                $imagePath = resolve_media_url($row['desktop_image'] ?? null);
+                $row['image_url'] = $imagePath && preg_match('#^/storage/uploads/[a-z0-9_-]+/[a-zA-Z0-9_-]+\\.webp$#D', $imagePath)
+                    ? '/api/public/popup-campaign/image' : null;
                 unset($row['desktop_image']);
                 $row['button_url'] = self::safePath($row['button_url'] ?? '');
             }
@@ -50,7 +52,7 @@ final class PopupCmsController extends Controller
                  ORDER BY FIELD(priority,'critical','high','normal','low'), created_at DESC LIMIT 1"
             );
             $url = resolve_media_url($rows[0]['desktop_image'] ?? null);
-            if (!$url || !preg_match('#^/storage/uploads/(popup/[a-zA-Z0-9_-]+\\.webp)$#D', $url, $matches)) {
+            if (!$url || !preg_match('#^/storage/uploads/([a-z0-9_-]+/[a-zA-Z0-9_-]+\\.webp)$#D', $url, $matches)) {
                 $this->json(['success'=>false,'message'=>'ไม่พบภาพที่เผยแพร่'],404);
                 return;
             }
