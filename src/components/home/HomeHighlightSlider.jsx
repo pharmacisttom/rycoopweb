@@ -23,9 +23,14 @@ export default function HomeHighlightSlider({composition,appearance}){
   if(!slides.length)return null;
   const slide=slides[index];
   const background=composition?.background||{};
-  const imageUrl=slide?.image_url || background.image_url || '';
-  const isAllowedImage=typeof imageUrl==='string' && ['/storage/uploads/','/uploads/','/assets/'].some(prefix=>imageUrl.startsWith(prefix)) && /^[a-zA-Z0-9_./-]+$/.test(imageUrl) && ['.jpg','.jpeg','.png','.webp'].some(ext=>imageUrl.toLowerCase().endsWith(ext)) && !imageUrl.includes('..') && !imageUrl.includes('//');
-  const showImage=isAllowedImage && !failedImages[imageUrl];
+  const isAllowedImage=value=>typeof value==='string' && ['/storage/uploads/','/uploads/','/assets/'].some(prefix=>value.startsWith(prefix)) && /^[a-zA-Z0-9_./-]+$/.test(value) && ['.jpg','.jpeg','.png','.webp'].some(ext=>value.toLowerCase().endsWith(ext)) && !value.includes('..') && !value.includes('//');
+  const desktopCandidate=slide?.image_url || background.image_url || '';
+  const mobileCandidate=slide?.mobile_image_url || background.mobile_image_url || '';
+  const desktopUrl=isAllowedImage(desktopCandidate)?desktopCandidate:'';
+  const mobileUrl=isAllowedImage(mobileCandidate)?mobileCandidate:'';
+  const showDesktop=Boolean(desktopUrl && !failedImages[desktopUrl]);
+  const showMobile=Boolean(mobileUrl && !failedImages[mobileUrl]);
+  const showImage=showDesktop || showMobile;
   const overlayOpacity=Number.isInteger(background.overlay_opacity)?Math.max(35,Math.min(85,background.overlay_opacity))/100:0.6;
   const positions={center:'center center',top:'center top',bottom:'center bottom',left:'left center',right:'right center'};
   const surfaces={
@@ -41,9 +46,16 @@ export default function HomeHighlightSlider({composition,appearance}){
     onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)}
     onFocusCapture={()=>setPaused(true)}
     onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget))setPaused(false);}}>
-    {showImage && <img className="home-highlight-photo" src={imageUrl} alt="" aria-hidden="true" decoding="async"
-      style={{objectPosition:positions[background.position]||positions.center}}
-      onError={()=>setFailedImages(previous=>({...previous,[imageUrl]:true}))}/>} 
+    {showImage && <picture className="home-highlight-picture" aria-hidden="true">
+      {showMobile && <source media="(max-width: 767px)" srcSet={mobileUrl}/>}
+      <img className="home-highlight-photo" src={showDesktop?desktopUrl:mobileUrl} alt="" decoding="async"
+        style={{objectPosition:positions[background.position]||positions.center}}
+        onError={event=>{
+          const current=event.currentTarget.currentSrc || event.currentTarget.src;
+          const path=new URL(current,window.location.href).pathname;
+          setFailedImages(previous=>({...previous,[path]:true}));
+        }}/>
+    </picture>}
     {showImage && <div className="home-highlight-image-overlay" aria-hidden="true"
       style={{background:`linear-gradient(90deg,rgba(8,22,48,${Math.min(0.95,overlayOpacity+0.12)}) 0%,rgba(8,22,48,${overlayOpacity}) 70%,rgba(8,22,48,${Math.max(0.35,overlayOpacity-0.08)}) 100%)`}}/>}
     <div className="container home-highlight-inner">
