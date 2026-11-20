@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {memberAdminApi} from '../../services/memberAdminApi';
+import {mediaLibraryApi} from '../../services/mediaLibraryApi';
 import './HomeCompositionEditor.css';
 
 const NAMES = {
@@ -17,6 +18,26 @@ const makeSlide = () => ({id:'slide-'+crypto.randomUUID().replaceAll('-','').sli
 const normalBackground = value => ({image_url:value?.image_url||'', mobile_image_url:value?.mobile_image_url||'', overlay_opacity:value?.overlay_opacity??60, position:value?.position||'center'});
 const allowedImage = path => !path || (['/storage/uploads/','/uploads/','/assets/'].some(prefix=>path.startsWith(prefix)) && /^[a-zA-Z0-9_./-]+$/.test(path) && ['.jpg','.jpeg','.png','.webp'].some(ext=>path.toLowerCase().endsWith(ext)) && !path.includes('..') && !path.includes('//'));
 const prepare = value => ({...copy(value),background:normalBackground(value.background),slides:value.slides.map(item=>({...item,image_url:item.image_url||'',mobile_image_url:item.mobile_image_url||''}))});
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+function UploadImageField({label,description,value,onUpload,onClear,disabled,uploading}){
+  return <div className="hc-upload-field">
+    <div className="hc-upload-heading"><strong>{label}</strong><small>{description}</small></div>
+    <label className={'hc-upload-button'+(disabled?' is-disabled':'')}>
+      <input type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled}
+        onChange={async event=>{
+          const file=event.target.files?.[0];
+          event.target.value='';
+          if(file)await onUpload(file);
+        }} aria-label={'เลือกไฟล์'+label}/>
+      {uploading?'กำลังอัปโหลด…':'เลือกไฟล์ภาพจากเครื่อง'}
+    </label>
+    {value&&allowedImage(value)&&<div className="hc-upload-existing">
+      <img src={value} alt={'ตัวอย่าง'+label} loading="lazy"/>
+      <button type="button" disabled={disabled} onClick={onClear}>นำรูปออก</button>
+    </div>}
+    {!value&&<small className="hc-upload-empty">ยังไม่ได้เลือกรูปภาพ — ใช้พื้นหลังหลักหรือสีเดิม</small>}
+  </div>;
+}
 function Preview({composition}) {
   return <div className="hc-preview" aria-label="ตัวอย่างการจัดลำดับหน้าแรก">
     {composition.order.filter(id=>composition.visible[id]).map(id=><section key={id} className={'hc-preview-section hc-preview-'+id}>
@@ -32,6 +53,7 @@ export default function HomeCompositionEditor(){
   const [notice,setNotice]=useState('');
   const [totp,setTotp]=useState('');
   const [busy,setBusy]=useState(false);
+  const [uploading,setUploading]=useState('');
   const [showPreview,setShowPreview]=useState(true);
   const [dragged,setDragged]=useState(null);
   const [loading,setLoading]=useState(true);
@@ -53,6 +75,39 @@ export default function HomeCompositionEditor(){
     return()=>window.removeEventListener('beforeunload',onBeforeUnload);
   },[dirty]);
   const update=fn=>setModel(prev=>fn(copy(prev)));
+  const uploadImage=async (file,slot,key,slideId=null)=>{
+    if(busy||uploading)return;
+    if(file.size<1||file.size>MAX_UPLOAD_BYTES||!['image/jpeg','image/png','image/webp'].includes(file.type)){
+      setError('รองรับภาพ JPG, PNG และ WebP ขนาดไม่เกิน 10 MB');return;
+    }
+    const uploadKey=slot+':'+key+':'+(slideId||'section');
+    setUploading(uploadKey);setError('');setNotice('');
+    try{
+      const result=await mediaLibraryApi.upload(file,{folder:'highlights',altText:slideId?'ภาพพื้นหลัง Highlight':'ภาพพื้นหลังหลัก Highlight'});
+      const url=result?.data?.url||'';
+      if(!allowedImage(url)||!url){
+        throw new Error('ไฟล์อัปโหลดแล้ว แต่ระบบไม่ส่งที่อยู่ภาพสาธารณะที่ใช้ได้ กรุณาตรวจ Media Library');
+      }
+      // Media Library admin preview endpoints cannot be used on the public homepage.
+      // Verify the actual shared image URL before referencing it in a draft.
+      const check=await fetch(url,{method:'GET',credentials:'same-origin',cache:'no-store'});
+      if(!check.ok || !(check.headers.get('content-type')||'').startsWith('image/')){
+        throw new Error('อัปโหลดสำเร็จ แต่เปิดรูปจากหน้าเว็บไซต์สาธารณะไม่ได้ โปรดตรวจการตั้งค่า /storage/uploads/ (HTTP '+check.status+')');
+      }
+      update(m=>{
+        if(slot==='section'){
+          m.background=normalBackground(m.background);
+          m.background[key]=url;
+        }else{
+          const item=m.slides.find(row=>row.id===slideId);
+          if(item)item[key]=url;
+        }
+        return m;
+      });
+      setNotice('อัปโหลดภาพสำเร็จแล้ว กรุณาบันทึกร่างและอนุมัติเผยแพร่ด้วย MFA เพื่อให้หน้าแรกเปลี่ยน');
+    }catch(e){setError(e.message||'อัปโหลดภาพไม่สำเร็จ');}
+    finally{setUploading('');}
+  };
   const move=(key,direction)=>update(current=>{
     const index=current.order.indexOf(key),next=index+direction;
     if(next>=0&&next<current.order.length)[current.order[index],current.order[next]]=[current.order[next],current.order[index]];
@@ -121,15 +176,16 @@ export default function HomeCompositionEditor(){
           <section className="hc-background-settings" aria-label="ภาพพื้นหลัง Highlight Slider">
             <h3>ภาพพื้นหลัง Highlight Slider</h3>
             <p>ขนาดภาพแนะนำ 1920 × 640 พิกเซล (สัดส่วน 3:1), WebP ประมาณ 150–400 KB เว้นพื้นที่ด้านซ้ายไว้สำหรับข้อความ และหลีกเลี่ยงการใส่ตัวหนังสือลงในรูป ภาพจะถูกครอบตัดอัตโนมัติบนมือถือ เลือกรูปจาก Media Library แล้วนำที่อยู่ภายในเว็บไซต์มาใส่ รองรับ JPG, PNG และ WEBP เท่านั้น</p>
-            <label>ที่อยู่ภาพพื้นหลังหลัก
-              <input type="text" placeholder="/storage/uploads/..." value={model.background?.image_url||''}
-                onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.image_url=e.target.value.trim();return m;})}/>
-            </label>
-            <label>ภาพพื้นหลังมือถือ (1080 × 1350 px, สัดส่วน 4:5)
-              <input type="text" placeholder="/storage/uploads/... (เว้นว่างใช้ภาพ Desktop)"
-                value={model.background?.mobile_image_url||''}
-                onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.mobile_image_url=e.target.value.trim();return m;})}/>
-            </label>
+            <div className="hc-upload-pair">
+              <UploadImageField label="ภาพพื้นหลังหลัก Desktop" description="แนะนำ 1920 × 640 px (3:1)" value={model.background?.image_url||''}
+                disabled={busy||!!uploading} uploading={uploading==='section:image_url:section'}
+                onUpload={file=>uploadImage(file,'section','image_url')}
+                onClear={()=>update(m=>{m.background=normalBackground(m.background);m.background.image_url='';return m;})}/>
+              <UploadImageField label="ภาพพื้นหลังหลัก Mobile" description="แนะนำ 1080 × 1350 px (4:5)" value={model.background?.mobile_image_url||''}
+                disabled={busy||!!uploading} uploading={uploading==='section:mobile_image_url:section'}
+                onUpload={file=>uploadImage(file,'section','mobile_image_url')}
+                onClear={()=>update(m=>{m.background=normalBackground(m.background);m.background.mobile_image_url='';return m;})}/>
+            </div>
             <p className="hc-image-guidance">Desktop: 1920 × 640 px (3:1) · Mobile: 1080 × 1350 px (4:5) · แนะนำ WebP และเก็บวัตถุสำคัญไว้กลางภาพ</p>
             <div className="hc-art-direction-preview" aria-label="ตัวอย่างพื้นหลัง Desktop และ Mobile">
               {['desktop','mobile'].map(view=>{
@@ -170,24 +226,16 @@ export default function HomeCompositionEditor(){
             <label>หัวข้อ <input maxLength="100" value={slide.title} onChange={e=>update(m=>{m.slides[index].title=e.target.value;return m;})}/></label>
             <label>รายละเอียด <textarea maxLength="320" rows={3} value={slide.body}
               onChange={e=>update(m=>{m.slides[index].body=e.target.value;return m;})}/></label>
-            <label>ภาพพื้นหลังเฉพาะข้อความ (ไม่บังคับ)
-              <input type="text" placeholder="เว้นว่างเพื่อใช้ภาพหลัก เช่น /storage/uploads/..."
-                value={slide.image_url||''}
-                onChange={e=>update(m=>{m.slides[index].image_url=e.target.value.trim();return m;})}/>
-            </label>
-            <label>ภาพเฉพาะสไลด์สำหรับมือถือ (1080 × 1350 px)
-              <input type="text" placeholder="เว้นว่างเพื่อใช้ภาพมือถือหลัก หรือภาพ Desktop"
-                value={slide.mobile_image_url||''}
-                onChange={e=>update(m=>{m.slides[index].mobile_image_url=e.target.value.trim();return m;})}/>
-            </label>
-            {!!slide.mobile_image_url && allowedImage(slide.mobile_image_url) && <div className="hc-mini-image hc-mini-mobile" style={{backgroundImage:`linear-gradient(#08163077,#08163077),url("${slide.mobile_image_url}")`}}>
-              <span>ตัวอย่างภาพมือถือของสไลด์นี้</span>
-              <button type="button" onClick={()=>update(m=>{m.slides[index].mobile_image_url='';return m;})}>ลบรูปมือถือ</button>
-            </div>}
-            {!!slide.image_url && allowedImage(slide.image_url) && <div className="hc-mini-image" style={{backgroundImage:`linear-gradient(#08163077,#08163077),url("${slide.image_url}")`}}>
-              <span>ตัวอย่างรูปของสไลด์นี้</span>
-              <button type="button" onClick={()=>update(m=>{m.slides[index].image_url='';return m;})}>ลบรูป</button>
-            </div>}
+            <div className="hc-upload-pair">
+              <UploadImageField label="ภาพสไลด์ Desktop" description="เว้นว่างเพื่อใช้ภาพหลัก" value={slide.image_url||''}
+                disabled={busy||!!uploading} uploading={uploading==='slide:image_url:'+slide.id}
+                onUpload={file=>uploadImage(file,'slide','image_url',slide.id)}
+                onClear={()=>update(m=>{m.slides[index].image_url='';return m;})}/>
+              <UploadImageField label="ภาพสไลด์ Mobile" description="เว้นว่างเพื่อใช้ภาพหลัก" value={slide.mobile_image_url||''}
+                disabled={busy||!!uploading} uploading={uploading==='slide:mobile_image_url:'+slide.id}
+                onUpload={file=>uploadImage(file,'slide','mobile_image_url',slide.id)}
+                onClear={()=>update(m=>{m.slides[index].mobile_image_url='';return m;})}/>
+            </div>
             <label>ลิงก์ภายใน (ไม่บังคับ) <input placeholder="/about" value={slide.link}
               onChange={e=>update(m=>{m.slides[index].link=e.target.value;return m;})}/></label>
             <div className="hc-actions"><button type="button" disabled={index===0} onClick={()=>moveSlide(index,-1)}>↑</button>
@@ -202,8 +250,8 @@ export default function HomeCompositionEditor(){
         <p role="status">{dirty?'มีการแก้ไขที่ยังไม่บันทึก':server?.draft?'มีร่างรอเผยแพร่':'ใช้ Layout ที่เผยแพร่แล้ว'}</p>
         <label>รหัส MFA 6 หลัก <input type="password" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
           value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,'').slice(0,6))}/></label>
-        <button type="button" disabled={!dirty||!mfa||busy} onClick={()=>submit('draft')}>1. บันทึกร่าง</button>
-        <button type="button" disabled={!server?.draft||dirty||!mfa||busy} onClick={()=>submit('publish')}>2. อนุมัติเผยแพร่</button>
+        <button type="button" disabled={!dirty||!mfa||busy||!!uploading} onClick={()=>submit('draft')}>1. บันทึกร่าง</button>
+        <button type="button" disabled={!server?.draft||dirty||!mfa||busy||!!uploading} onClick={()=>submit('publish')}>2. อนุมัติเผยแพร่</button>
         <button type="button" disabled={busy} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขที่ยังไม่บันทึก?'))load();}}>โหลดล่าสุด / ยกเลิก</button>
       </div>
     </>}
