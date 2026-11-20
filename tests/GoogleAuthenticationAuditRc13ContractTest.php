@@ -8,7 +8,8 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $google = file_get_contents($root . '/app/Controllers/Admin/GoogleAuthController.php');
 $service = file_get_contents($root . '/app/Services/AdminControlCenterService.php');
-if ($google === false || $service === false) {
+$audit = file_get_contents($root . '/app/Services/AuditService.php');
+if ($google === false || $service === false || $audit === false) {
     fwrite(STDERR, "RC13A_CONTRACT=FAIL missing source\n");
     exit(1);
 }
@@ -22,10 +23,12 @@ $methodStart = strpos($google, 'private function handleUserSessionAndMfa(');
 $methodEnd = strpos($google, 'private function handlePrimarySuperAdminBootstrap(', $methodStart === false ? 0 : $methodStart);
 $assert($methodStart !== false && $methodEnd !== false, 'google_session_method');
 $method = substr($google, $methodStart, $methodEnd - $methodStart);
-$assert(substr_count($method, "'google_auth', 'identity_verified'") === 1, 'single_google_audit_event');
-$assert(strpos($method, "'stage' => 'pre_mfa'") !== false, 'pre_mfa_stage');
-$assert(strpos($method, "'provider' => 'google'") !== false, 'provider');
-$assert(strpos($method, "AuditService::log('google_auth', 'identity_verified'") < strpos($method, 'Auth::login('), 'audit_before_session');
+$assert(substr_count($method, 'AuditService::logVerifiedGoogleIdentity($userId)') === 1, 'single_google_audit_event');
+$assert(strpos($method, 'AuditService::logVerifiedGoogleIdentity($userId)') < strpos($method, 'Auth::login('), 'audit_before_session');
+$assert(strpos($audit, 'public static function logVerifiedGoogleIdentity(int $verifiedUserId)') !== false, 'explicit_verified_actor_writer');
+$assert(strpos($audit, "VALUES (?, 'google_auth', 'identity_verified'") !== false, 'identity_audit_sql');
+$assert(strpos($audit, "'stage' => 'pre_mfa'") !== false, 'pre_mfa_stage');
+$assert(strpos($audit, "'provider' => 'google'") !== false, 'provider');
 $assert(strpos($method, 'Auth::login($identity, false, false)') !== false, 'existing_mfa_verification_gate');
 $assert(strpos($method, 'Auth::login($identity, false, true)') !== false, 'existing_mfa_enrollment_gate');
 $assert(strpos($method, 'Auth::login($identity, true, false)') !== false, 'existing_non_mfa_branch_unchanged');
