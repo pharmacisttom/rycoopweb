@@ -14,7 +14,8 @@ admin_page = Path("src/pages/AdminHomepageLayoutPage.jsx").read_text()
 for route in ("/api/public/layout", "api/admin/layout", "/draft", "/publish"):
     assert route in routes, route
 for key in ("hero", "quick_services", "statistics", "products", "calculator", "welfare"):
-    assert f"showSection('{key}')" in homepage, key
+    # RC15 renders the legacy blocks by semantic ID in a published DOM order.
+    assert f"showSection('{key}')" in homepage or (f"{key}: (" in homepage and "sectionOrder.filter(key=>showSection(key))" in homepage), key
     assert f"'{key}' =>" in layout, key
 assert "site_settings" in layout and "VERSION_CONFLICT" in controller
 assert "requireFreshStepUpMfa" in controller and "role_slug" in controller
