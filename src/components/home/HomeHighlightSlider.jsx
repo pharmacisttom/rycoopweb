@@ -7,6 +7,7 @@ export default function HomeHighlightSlider({composition,appearance}){
   const [index,setIndex]=useState(0);
   const [paused,setPaused]=useState(false);
   const [reduced,setReduced]=useState(false);
+  const [failedImages,setFailedImages]=useState({});
   useEffect(()=>{
     const mq=window.matchMedia('(prefers-reduced-motion: reduce)');
     const update=()=>setReduced(mq.matches);
@@ -21,6 +22,12 @@ export default function HomeHighlightSlider({composition,appearance}){
   },[paused,reduced,slides.length,composition?.autoplay_seconds]);
   if(!slides.length)return null;
   const slide=slides[index];
+  const background=composition?.background||{};
+  const imageUrl=slide?.image_url || background.image_url || '';
+  const isAllowedImage=typeof imageUrl==='string' && /^\\/(?:storage\\/uploads|uploads|assets)\\/[a-zA-Z0-9_./-]+\\.(?:webp|png|jpe?g)$/.test(imageUrl) && !imageUrl.includes('..') && !imageUrl.includes('//');
+  const showImage=isAllowedImage && !failedImages[imageUrl];
+  const overlayOpacity=Number.isInteger(background.overlay_opacity)?Math.max(35,Math.min(85,background.overlay_opacity))/100:0.6;
+  const positions={center:'center center',top:'center top',bottom:'center bottom',left:'left center',right:'right center'};
   const surfaces={
     light:'linear-gradient(115deg,#365f9b,#6286c4)',
     navy:'linear-gradient(115deg,#0e2145,#23365c)',
@@ -34,6 +41,11 @@ export default function HomeHighlightSlider({composition,appearance}){
     onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)}
     onFocusCapture={()=>setPaused(true)}
     onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget))setPaused(false);}}>
+    {showImage && <img className="home-highlight-photo" src={imageUrl} alt="" aria-hidden="true" decoding="async"
+      style={{objectPosition:positions[background.position]||positions.center}}
+      onError={()=>setFailedImages(previous=>({...previous,[imageUrl]:true}))}/>} 
+    {showImage && <div className="home-highlight-image-overlay" aria-hidden="true"
+      style={{background:`linear-gradient(90deg,rgba(8,22,48,${Math.min(0.95,overlayOpacity+0.12)}) 0%,rgba(8,22,48,${overlayOpacity}) 70%,rgba(8,22,48,${Math.max(0.35,overlayOpacity-0.08)}) 100%)`}}/>}
     <div className="container home-highlight-inner">
       <div className="home-highlight-copy" aria-live="off">
         <span className="home-highlight-kicker">ผลงานและจุดเด่นของสหกรณ์ · {index+1}/{slides.length}</span>
