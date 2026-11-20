@@ -80,6 +80,19 @@ final class PopupCmsController extends Controller
             );
             foreach ($rows as &$row) {
                 $row['desktop_image'] = resolve_media_url($row['desktop_image'] ?? null);
+                $row['preview_url'] = null;
+                if ($row['desktop_image'] && preg_match(
+                    '#^/storage/uploads/([a-z0-9_-]+/[a-zA-Z0-9_-]+\\.webp)$#D',
+                    $row['desktop_image'],
+                    $match
+                )) {
+                    // Private CMS preview: reuse the existing authenticated Media API.
+                    $media = Database::first(
+                        'SELECT id FROM media WHERE path=? AND mime_type=? AND deleted_at IS NULL LIMIT 1',
+                        [$match[1], 'image/webp']
+                    );
+                    if ($media) $row['preview_url'] = '/api/admin/media/'.(int)$media['id'].'/image';
+                }
             }
             unset($row);
             $this->json(['success' => true, 'data' => $rows]);
