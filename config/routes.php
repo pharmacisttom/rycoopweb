@@ -241,6 +241,10 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/news/{id}/publish','Admin\\NewsWorkflowController@publish',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
     $r->post('/news/{id}/delete','Api\\SpaApiController@deleteAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','delete'),CsrfMiddleware::class]);
     $r->get('/faqs','Api\\SpaApiController@adminFaqs',[new PermissionMiddleware('faqs','view')]);
+    // Document category CMS (same session/MFA, documents permission and CSRF as documents).
+    $r->get('/document-categories','Admin\\DocumentCategoryController@index',[new PermissionMiddleware('documents','view')]);
+    $r->post('/document-categories','Admin\\DocumentCategoryController@store',[new PermissionMiddleware('documents','create'),CsrfMiddleware::class]);
+    $r->post('/document-categories/{id}/update','Admin\\DocumentCategoryController@update',[new PermissionMiddleware('documents','edit'),CsrfMiddleware::class]);
     $r->get('/documents','Admin\\DocumentController@index',[new PermissionMiddleware('documents','view')]);
     $r->post('/documents','Admin\\DocumentController@store',[new PermissionMiddleware('documents','create'),CsrfMiddleware::class]);
     $r->post('/documents/{id}/update','Admin\\DocumentController@update',[new PermissionMiddleware('documents','edit'),CsrfMiddleware::class]);
