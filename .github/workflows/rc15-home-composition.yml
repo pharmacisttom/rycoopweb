@@ -44,3 +44,16 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build React frontend
         run: npm run build
+      - name: Install Chromium for browser regression
+        run: npx playwright install --with-deps chromium
+      - name: Browser smoke — no null crash and correct published ordering
+        run: |
+          set -Eeuo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/rycoop-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:4173/app/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          RC15_BROWSER_BASE=http://127.0.0.1:4173 node tests/HomeCompositionRc15BrowserTest.mjs
