@@ -1291,6 +1291,34 @@ export default function AdminControlCenterPage({ section: propSection }) {
             </article>
           </div>
 
+          <section className="acc-card" aria-labelledby="security-log-sources-heading">
+            <div className="acc-card-header">
+              <div>
+                <h2 id="security-log-sources-heading" className="acc-card-title">สถานะข้อมูล Log และ Cookie Consent จากฐานข้อมูล</h2>
+                <p className="acc-card-subtitle">นับแยกตามแหล่งข้อมูล ไม่รวมยอดซ้ำ · ไม่มีเหตุการณ์ใหม่ไม่จำเป็นต้องแปลว่าระบบขัดข้อง โดยเฉพาะ Member Portal ที่ปิดบริการ</p>
+              </div>
+            </div>
+            <div className="acc-table-wrap">
+              <table className="acc-table">
+                <thead><tr><th scope="col">แหล่งข้อมูล</th><th scope="col">สถานะ Query</th><th scope="col">สะสม</th><th scope="col">24 ชั่วโมง</th><th scope="col">ล่าสุด (เวลาฐานข้อมูล)</th></tr></thead>
+                <tbody>
+                  {(securityData.log_sources || []).map(source => (
+                    <tr key={source.source}>
+                      <td><strong>{source.source}</strong></td>
+                      <td><span className={`acc-badge-pill ${source.status === 'available' ? 'success' : 'danger'}`}>
+                        {source.status === 'available' ? 'อ่านข้อมูลได้' : 'Query ผิดพลาด'}
+                      </span></td>
+                      <td>{source.total == null ? '—' : formatNumber(source.total)}</td>
+                      <td>{source.events_24h == null ? '—' : formatNumber(source.events_24h)}</td>
+                      <td>{source.latest_event || 'ยังไม่มีเหตุการณ์'}</td>
+                    </tr>
+                  ))}
+                  {!securityData.log_sources?.length && <tr><td colSpan={5}>ไม่สามารถแสดงสถานะแหล่ง Log ได้ กรุณาตรวจ API เวอร์ชันที่ใช้งาน</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
           <div className="acc-grid-2">
             <section className="acc-card">
               <div className="acc-card-header">
