@@ -95,6 +95,8 @@ cmp -s "$OLD/app/Core/Session.php" "$NEW/app/Core/Session.php"
 echo "STAGE_TEST=PASS"
 
 echo "===== 3. ACTIVATE ====="
+# Arm rollback before the first Nginx file is changed.
+SWITCHED=1
 python3 - "$MAIN" "$LOOP" "$OLD/public" "$NEW/public" <<'PY'
 from pathlib import Path
 import sys
@@ -108,7 +110,6 @@ for filename in (main,loop):
 for p,content in prepared: p.write_text(content)
 print("RELEASE_ROOT_SWITCHED=PASS")
 PY
-SWITCHED=1
 nginx -t
 systemctl reload nginx
 sleep 3
