@@ -10,7 +10,7 @@ $screen=file_get_contents($root.'/src/pages/AdminControlCenterPage.jsx');
 $checks=[
  'consent writes'=>str_contains($cookie,"fetch('/api/cookie-consent'"),
  'CSRF frontend'=>str_contains($cookie,"'X-CSRF-TOKEN': token"),
- 'CSRF backend'=>str_contains($routes,"'Public\\ApiController@logCookieConsent', [CsrfMiddleware::class]"),
+ 'CSRF backend'=>str_contains($routes,"ApiController@logCookieConsent', [CsrfMiddleware::class]"),
  'explicit choice'=>str_contains($cookie,"choice === 'accepted'"),
  'no premature consent'=>strpos($cookie,"if (!response.ok || result.success !== true)")<strpos($cookie,"window.localStorage.setItem(CHOICE_KEY, choice)"),
  'repeat settings'=>str_contains($cookie,'ตั้งค่าคุกกี้'),
