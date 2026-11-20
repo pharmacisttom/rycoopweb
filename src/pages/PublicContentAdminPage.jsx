@@ -56,6 +56,8 @@ export default function PublicContentAdminPage() {
   const [dirty,setDirty]=useState(false),[preview,setPreview]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [carrySelection,setCarrySelection]=useState([]);
+  const [boardRemoveSelection,setBoardRemoveSelection]=useState([]);
+  const [boardModalOpen,setBoardModalOpen]=useState(false);
   const [boardTermFilter,setBoardTermFilter]=useState('ชุดที่ 39');
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
@@ -69,11 +71,17 @@ export default function PublicContentAdminPage() {
     if (!sections.length || !requestedSection || requestedSection === section || dirty) return;
     if (sections.some(item => item.key === requestedSection)) setSection(requestedSection);
   }, [requestedSection, sections, section, dirty]);
-  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);
+  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);setBoardRemoveSelection([]);setBoardModalOpen(false);
     memberAdminApi(`/api/admin/public-content/sections/${section}`,{signal:controller.signal}).then(result=>{setData(result);setValue(result.value);}).catch(e=>{if(e.name!=='AbortError')setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[section,refresh]);
   useEffect(()=>{const warn=e=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
+  useEffect(()=>{
+    if(!boardModalOpen)return undefined;
+    const handleEscape=e=>{if(e.key==='Escape'&&!busy&&!mediaBusy)setBoardModalOpen(false);};
+    window.addEventListener('keydown',handleEscape);
+    return()=>window.removeEventListener('keydown',handleEscape);
+  },[boardModalOpen,busy,mediaBusy]);
   const boardAudit=section==='boards'?auditBoardTerms(value):[];
   const rows=safeRows(value,section);
   const original=rows?.[selected];
@@ -83,6 +91,16 @@ export default function PublicContentAdminPage() {
     return current.map((item,index)=>index!==selected?item:tupleSection(section)?[key==='name'?newValue:item[0],key==='position'?newValue:item[1]]:{...item,[key]:newValue});
   });setDirty(true);}
   function add(){if(!Array.isArray(value) || section==='profile')return;let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:section==='boards'?'กรรมการ':'',image:'',...(section==='boards'?{term:BOARD_TERMS.find(term=>term===value[selected]?.term)||'ชุดที่ 39',status:'active'}:{})};else if(section==='groups')entry={title:'',members:[],term:(catalog.boardMembers||[]).some(person=>person?.term==='ชุดที่ 39') ? 'ชุดที่ 39' : (catalog.boardMembers?.[0]?.term || 'ชุดที่ 39')};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
+  function removeBoardSelection(){
+    if(section!=='boards'||!definition?.canEdit||busy||mediaBusy||boardRemoveSelection.length===0)return;
+    const targets=new Set(boardRemoveSelection);
+    const count38=value.filter((p,i)=>targets.has(i)&&p?.term==='ชุดที่ 38').length;
+    const warning=count38?'\nคำเตือน: เลือกกรรมการชุดที่ 38 จำนวน '+count38+' รายการ โปรดตรวจประวัติให้ครบ':'';
+    if(!window.confirm('นำกรรมการ '+targets.size+' รายการออกจากร่าง?'+warning+'\nข้อมูลที่เผยแพร่อยู่จะยังไม่เปลี่ยนจนกว่าจะอนุมัติร่าง'))return;
+    setValue(current=>current.filter((_,i)=>!targets.has(i)));
+    setBoardRemoveSelection([]);setSelected(0);setBoardModalOpen(false);setDirty(true);
+    setMessage('นำ '+targets.size+' รายการออกจากร่างแล้ว กรุณาบันทึกร่างและตรวจประวัติก่อนเผยแพร่');
+  }
   function copyBoardToTerm(){
     if(section!=='boards'||!row)return;
     const target=window.prompt('ระบุชุดกรรมการใหม่ เช่น ชุดที่ 39', 'ชุดที่ 39');
@@ -125,7 +143,7 @@ export default function PublicContentAdminPage() {
   }
   async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');try{
     const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
-    setDirty(false);setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);setRefresh(n=>n+1);
+    setDirty(false);setBoardModalOpen(false);setBoardRemoveSelection([]);setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);setRefresh(n=>n+1);
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   async function publish(revision){if(!window.confirm(`เผยแพร่ร่าง #${revision.id} มีผล ${revision.effective_on}?`))return;setBusy(true);setError('');try{
     await memberAdminApi(`/api/admin/public-content/revisions/${revision.id}/publish`,{data:{}});await reload();setMessage('อนุมัติแล้ว ข้อมูลจะแสดงตามวันที่มีผล');setRefresh(n=>n+1);
@@ -136,27 +154,35 @@ export default function PublicContentAdminPage() {
     <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
-      {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
-      {section==='boards'&&Array.isArray(value)&&<section className="surface-card public-content-board-directory" aria-label="เลือกกรรมการเพื่อแก้ไขข้อมูลและรูปภาพ">
-        <header className="public-content-board-tools-heading">
-          <h3>ทำเนียบกรรมการแยกตามชุด · จัดการรูปทุกท่าน</h3>
-          <p>เลือกกรรมการเพื่อแก้ชื่อ ตำแหน่ง รูปภาพและสถานะ โดยการเปลี่ยนแปลงจะบันทึกเป็นร่างและต้องอนุมัติเผยแพร่</p>
-        </header>
+      {section!=='profile'&&section!=='boards'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
+      {section==='boards'&&Array.isArray(value)&&<section className="surface-card public-content-board-directory">
+        <header className="public-content-board-tools-heading"><h3>จัดการรายชื่อกรรมการแบบตาราง</h3><p>แสดงลำดับเดิม เลือก Checkbox เพื่อนำออกจากร่าง หรือกดภาพ/ชื่อเพื่อเปิดหน้าต่างแก้ไขและประวัติ</p></header>
         <div className="public-content-board-term-tabs">
-          {['ชุดที่ 39','ชุดที่ 38','ทั้งหมด'].map(term=><button key={term} type="button"
-            className={boardTermFilter===term?'is-active':''}
-            aria-pressed={boardTermFilter===term} onClick={()=>boardTermFilter!==term&&setBoardTermFilter(term)}>{term}</button>)}
+          {['ชุดที่ 39','ชุดที่ 38','ทั้งหมด'].map(term=><button key={term} type="button" className={boardTermFilter===term?'is-active':''} aria-pressed={boardTermFilter===term}
+            onClick={()=>{setBoardTermFilter(term);setBoardRemoveSelection([]);}}>{term}</button>)}
         </div>
-        <div className="public-content-board-people-grid">
-          {value.map((person,index)=>({...person,index})).filter(person=>boardTermFilter==='ทั้งหมด'||person.term===boardTermFilter).map(person=>
-            <button type="button" key={person.id||person.index} className={'public-content-board-person-tile'+(selected===person.index?' is-selected':'')}
-              aria-pressed={selected===person.index} onClick={()=>setSelected(person.index)}>
-              {person.image?<img src={person.image} alt="" loading="lazy"/>:<span className="public-content-board-person-noimg">ยังไม่มีรูป</span>}
-              <strong>{person.name||'รอกรอกชื่อ'}</strong>
-              <small>{person.position||'ยังไม่ระบุตำแหน่ง'}</small>
-              <span>{person.status==='former'?'พ้นตำแหน่ง':person.term}</span>
-            </button>)}
+        <div className="public-content-toolbar">
+          <span>แสดง {value.filter(p=>boardTermFilter==='ทั้งหมด'||p?.term===boardTermFilter).length} รายการ · เลือก {boardRemoveSelection.length}</span>
+          {definition?.canEdit&&<>
+            <button type="button" disabled={busy||mediaBusy} onClick={()=>{add();setBoardModalOpen(true);}}>เพิ่มกรรมการในร่าง</button>
+            <button type="button" className="btn btn-outline" disabled={busy||mediaBusy||!boardRemoveSelection.length} onClick={removeBoardSelection}>นำรายการที่เลือกออกจากร่าง ({boardRemoveSelection.length})</button>
+          </>}
         </div>
+        <div className="board-table-scroll"><table className="board-admin-table"><thead><tr>
+          <th scope="col"><input aria-label="เลือกทั้งหมดที่แสดง" type="checkbox" disabled={busy||mediaBusy||!definition?.canEdit}
+            checked={value.some(p=>boardTermFilter==='ทั้งหมด'||p?.term===boardTermFilter)&&value.every((p,i)=>(boardTermFilter!=='ทั้งหมด'&&p?.term!==boardTermFilter)||boardRemoveSelection.includes(i))}
+            onChange={e=>{const visible=value.map((_,i)=>i).filter(i=>boardTermFilter==='ทั้งหมด'||value[i]?.term===boardTermFilter);setBoardRemoveSelection(e.target.checked?visible:[]);}} /></th>
+          <th scope="col">ลำดับ</th><th scope="col">รูป / ชื่อ</th><th scope="col">ตำแหน่ง</th><th scope="col">ชุด</th><th scope="col">สถานะ</th><th scope="col">แก้ไข</th>
+        </tr></thead><tbody>
+          {value.map((p,index)=>({...p,index})).filter(p=>boardTermFilter==='ทั้งหมด'||p.term===boardTermFilter).map(p=><tr key={p.index} className={boardRemoveSelection.includes(p.index)?'is-marked':''}>
+            <td><input type="checkbox" disabled={busy||mediaBusy||!definition?.canEdit} aria-label={'เลือก '+(p.name||'รายการที่ '+(p.index+1))} checked={boardRemoveSelection.includes(p.index)}
+              onChange={e=>setBoardRemoveSelection(current=>e.target.checked?[...current,p.index]:current.filter(x=>x!==p.index))}/></td>
+            <td>{p.index+1}</td><td><button type="button" className="board-admin-person" onClick={()=>{setSelected(p.index);setBoardModalOpen(true);}}>
+              {p.image?<img src={p.image} alt="" loading="lazy"/>:<span>ไม่มีรูป</span>}<strong>{p.name||'รอกรอกชื่อ'}</strong></button></td>
+            <td>{p.position||'—'}</td><td>{p.term||'—'}</td><td>{p.status==='former'?'พ้นตำแหน่ง':'ดำรงตำแหน่ง'}</td>
+            <td><button type="button" onClick={()=>{setSelected(p.index);setBoardModalOpen(true);}}>แก้ไข / ประวัติ</button></td>
+          </tr>)}
+        </tbody></table></div>
       </section>}
       {section==='boards'&&<section className="public-content-board-audit surface-card" aria-labelledby="board-audit-heading">
         <h3 id="board-audit-heading">ตรวจสอบคณะกรรมการชุดที่ 38 และ 39</h3>
@@ -191,7 +217,10 @@ export default function PublicContentAdminPage() {
           onClick={carryBoardsTo39}>คัดลอก {carrySelection.length} ท่านไปเป็นร่างชุดที่ 39</button>
         <p className="public-content-board-audit-note">ต้องตรวจรายชื่อและตำแหน่งจริงจากเอกสารแต่งตั้งก่อน Publish ห้ามถือว่าการคัดลอกเป็นคำสั่งแต่งตั้งอัตโนมัติ</p>
       </section>}
-      {section==='boards'&&row&&definition?.canEdit&&<section className="surface-card public-content-board-tools" aria-labelledby="board-tools-heading">
+      {section==='boards'&&boardModalOpen&&row&&<div className="board-admin-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!dirty&&!busy)setBoardModalOpen(false);}}>
+        <div className="board-admin-modal" role="dialog" aria-modal="true" aria-labelledby="board-modal-title">
+          <header className="board-admin-modal-header"><h2 id="board-modal-title">แก้ไขกรรมการ · {row.name||'รายการใหม่'}</h2><button type="button" disabled={busy||mediaBusy} onClick={()=>setBoardModalOpen(false)} aria-label="ปิดหน้าต่าง">✕</button></header>
+      {definition?.canEdit&&<section className="surface-card public-content-board-tools" aria-labelledby="board-tools-heading">
         <header className="public-content-board-tools-heading">
           <h3 id="board-tools-heading">จัดการชุดกรรมการและรูปภาพ</h3>
           <p>สามารถคัดลอกกรรมการไปชุดใหม่โดยไม่เปลี่ยนชุดเดิม และเพิ่มกรรมการใหม่จากปุ่มเพิ่มรายการ</p>
@@ -216,7 +245,7 @@ export default function PublicContentAdminPage() {
           </div>
         </div>
       </section>}
-      <form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
+      {section!=='boards'||boardModalOpen?<form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
         {row&&(fields[section]||[]).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-position'?<select value={row[key]||''} onChange={e=>change(key,e.target.value)}>
             {row[key]&&!BOARD_POSITION_OPTIONS.includes(row[key])&&<option value={row[key]}>ข้อมูลเดิม: {row[key]} (ควรตรวจสอบ)</option>}
             {BOARD_POSITION_OPTIONS.map(position=><option key={position} value={position}>{position}</option>)}
@@ -228,7 +257,22 @@ export default function PublicContentAdminPage() {
         {section==='groups'&&row&&Array.isArray(row.members)&&<div><label>ชุดกรรมการ<input value={row.term||''} onChange={e=>change('term',e.target.value)} placeholder="ชุดที่ 39" /></label><h3>สมาชิกคณะย่อย</h3>{row.members.map(([id,position],index)=><div key={index} className="public-content-toolbar"><select aria-label="กรรมการ" value={id} onChange={e=>change('members',row.members.map((m,i)=>i===index?[Number(e.target.value),m[1]]:m))}>{catalog.boardMembers.filter(person=>!row.term||person.term===row.term).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><input aria-label="ตำแหน่งในคณะย่อย" value={position} onChange={e=>change('members',row.members.map((m,i)=>i===index?[m[0],e.target.value]:m))}/><button type="button" onClick={()=>change('members',row.members.filter((_,i)=>i!==index))}>นำออก</button></div>)}<button type="button" onClick={()=>change('members',[...row.members,[catalog.boardMembers.find(person=>!row.term||person.term===row.term)?.id,'กรรมการ']])}>เพิ่มกรรมการในคณะ</button></div>}
         <label>วันที่มีผล (ค.ศ.) <input type="date" required value={effective} onChange={e=>setEffective(e.target.value)}/></label><label>เอกสารหรือหน้าอ้างอิง (HTTPS) <input type="url" required value={source} onChange={e=>setSource(e.target.value)}/></label><label>เหตุผลการแก้ไข <textarea required maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
         <label>วันสิ้นสุด (ไม่บังคับ)<input type="date" min={effective} value={expires} onChange={e=>{setExpires(e.target.value);setDirty(true);}} /></label><button type="submit" className="btn btn-primary">บันทึกร่างเพื่อรอเผยแพร่</button>
-      </fieldset></form>
+      </fieldset></form>:null}
+      {section==='boards'&&boardModalOpen&&<section className="board-admin-modal-history"><h3>ร่างและประวัติการเผยแพร่</h3>
+        {(Array.isArray(data.history)?data.history:[]).filter(revision=>{
+          const before=safeRevisionValue(revision.previous_payload,'boards');
+          const after=safeRevisionValue(revision.payload,'boards');
+          return [...before,...after].some(p=>String(p?.id)===String(row?.id));
+        }).map(revision=><article key={revision.id}>
+          <strong>#{revision.id} · {revision.state==='published'?'เผยแพร่แล้ว':revision.state==='draft'?'ร่าง':revision.state}</strong>
+          <p>{revision.effective_on} · {revision.note||'ไม่มีหมายเหตุ'}</p>
+          <details><summary>ดูข้อมูลก่อน–หลัง</summary>
+            <p>ก่อน: {safeRevisionValue(revision.previous_payload,'boards').filter(p=>String(p?.id)===String(row.id)).map(p=>[p.name,p.position,p.term].join(' / ')).join(', ')||'ไม่มี'}</p>
+            <p>หลัง: {safeRevisionValue(revision.payload,'boards').filter(p=>String(p?.id)===String(row.id)).map(p=>[p.name,p.position,p.term].join(' / ')).join(', ')||'ไม่มี'}</p>
+          </details>
+        </article>)}
+      </section>}
+      </div></div>}
       <button className="btn btn-outline" onClick={()=>setPreview(p=>!p)}>ดูตัวอย่างร่าง</button>{preview&&<Preview value={value} section={section} boardNames={boardNames}/>}
       <section><h2>ร่างและประวัติการเผยแพร่</h2>{!(Array.isArray(data.history) && data.history.length)&&<p>ยังไม่มีประวัติในระบบใหม่นี้</p>}{(Array.isArray(data.history) ? data.history : []).map(revision=><article className="surface-card public-content-revision" key={revision.id}><h3>#{revision.id} · {revision.state==='draft'?'รอเผยแพร่':revision.state==='published'?'อนุมัติแล้ว':'ไม่อนุมัติ'}</h3><p>{revision.note}</p><p>มีผล {revision.effective_on} · ผู้แก้ไข #{revision.created_by}{revision.published_by&&` · ผู้เผยแพร่ #${revision.published_by}`}</p><a href={revision.source_url} target="_blank" rel="noopener noreferrer">แหล่งอ้างอิง</a><details><summary>ตรวจข้อมูลก่อน–หลัง</summary><h4>ก่อนแก้ไข</h4><Preview value={safeRevisionValue(revision.previous_payload,section)} section={section} boardNames={boardNames}/><h4>หลังแก้ไข</h4><Preview value={safeRevisionValue(revision.payload,section)} section={section} boardNames={boardNames}/></details>
         <div className="public-content-toolbar">{revision.state==='draft'&&definition?.canPublish&&<button disabled={busy||dirty} className="btn btn-primary" onClick={()=>publish(revision)}>อนุมัติและเผยแพร่</button>}{definition?.canEdit&&<button disabled={busy} onClick={()=>{if(!dirty||window.confirm('แทนร่างปัจจุบันด้วยเวอร์ชันนี้?')){setValue(safeRevisionValue(revision.payload,section));setSelected(0);setNote(`นำข้อมูลเวอร์ชัน #${revision.id} มาจัดทำร่างใหม่`);setSource(revision.source_url);setEffective(today());setDirty(true);}}}>ใช้เวอร์ชันนี้สร้างร่างใหม่</button>}</div></article>)}</section>
