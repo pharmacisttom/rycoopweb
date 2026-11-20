@@ -38,7 +38,7 @@ try {
   const hasRate=heading.includes('อัตราดอกเบี้ยเด่นวันนี้');
   const hasNews=heading.includes('ข่าวสาร');
   const pass=!errors.length&&!hasReactCrash&&hasRate&&hasNews&&response?.ok();
-  output.push({name:'Homepage null interest source',pass,errors:errors.slice(0,4),status:response?.status(),hasRate,hasNews,body:heading.slice(0,400),network:network.slice(0,8),browserConsole:browserConsole.slice(0,5)});
+  output.push({name:'Homepage null interest source',pass,errors:errors.slice(0,4),status:response?.status(),hasRate,hasNews,body:heading.slice(0,400),network:network.slice(0,8),browserConsole:browserConsole.slice(-30)});
   if(!pass)failures++;
   // Test public reordering and highlight rendering against an API-bound response.
   await context.route('**/api/public/home-composition',route=>route.fulfill({
