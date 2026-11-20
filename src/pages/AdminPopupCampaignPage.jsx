@@ -8,6 +8,7 @@ import './AdminPopupCampaignPage.css';
 const empty = {title:'',content:'',button_text:'',button_url:'',desktop_image:'',priority:'normal',status:'inactive'};
 const priorities = ['critical','high','normal','low'];
 const asForm = row => Object.fromEntries(Object.keys(empty).map(key=>[key,row?.[key] ?? empty[key]]));
+const explainError = error => (error?.message || 'เกิดข้อผิดพลาด') + (error?.reference ? ' (รหัสตรวจสอบ: '+error.reference+')' : '') ;
 
 export default function AdminPopupCampaignPage() {
   const {confirmDialog} = useToast();
@@ -25,7 +26,7 @@ export default function AdminPopupCampaignPage() {
     try {
       const result=await memberAdminApi('/api/admin/popup-campaigns');
       setRows(Array.isArray(result.data)?result.data:[]);
-    } catch(e) {setError(e.message||'ไม่สามารถโหลดรายการ Popup ได้');}
+    } catch(e) {setError(explainError(e));}
     finally {setLoading(false);}
   },[]);
 
@@ -47,7 +48,7 @@ export default function AdminPopupCampaignPage() {
       change('desktop_image',url);
       const mediaId = result.data?.id || result.data?.data?.id;
       setUploadedPreview(mediaId ? '/api/admin/media/'+encodeURIComponent(mediaId)+'/image' : '');
-    } catch(e){setError(e.message||'อัปโหลดรูปภาพไม่สำเร็จ');}
+    } catch(e){setError(explainError(e));}
     finally{setBusy(false);}
   };
 
@@ -61,7 +62,7 @@ export default function AdminPopupCampaignPage() {
       setMessage(response.message||'บันทึกสำเร็จ');
       setForm(null);setEditingId(null);
       await load();
-    } catch(e) {setError(e.message||'บันทึกไม่สำเร็จ');}
+    } catch(e) {setError(explainError(e));}
     finally {setBusy(false);}
   };
 
@@ -73,7 +74,7 @@ export default function AdminPopupCampaignPage() {
       const result=await memberAdminApi('/api/admin/popup-campaigns/'+row.id+'/disable',{data:{}});
       setMessage(result.message||'ปิดใช้งานแล้ว');
       await load();
-    } catch(e){setError(e.message||'ปิดใช้งานไม่สำเร็จ');}
+    } catch(e){setError(explainError(e));}
     finally {setBusy(false);}
   };
 
@@ -85,7 +86,7 @@ export default function AdminPopupCampaignPage() {
       const result=await memberAdminApi('/api/admin/popup-campaigns/'+row.id+'/delete',{data:{}});
       setMessage(result.message||'ลบรายการแล้ว');
       await load();
-    } catch(e){setError(e.message||'ลบรายการไม่สำเร็จ');}
+    } catch(e){setError(explainError(e));}
     finally {setBusy(false);}
   };
 
