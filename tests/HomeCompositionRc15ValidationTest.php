@@ -10,9 +10,17 @@ $good['slides']=[];
 for($i=1;$i<=6;$i++)$good['slides'][]=[
   'id'=>'item-'.$i, 'title'=>'หัวข้อ '.$i,'body'=>'รายละเอียด '.$i,'link'=>'/about'
 ];
+$good['background']=['image_url'=>'/storage/uploads/highlights/cover.webp','overlay_opacity'=>65,'position'=>'center'];
+$good['slides'][0]['image_url']='/storage/uploads/highlights/item-1.jpg';
 $validated=Composition::validate($good);
 if(count($validated['slides'])!==6)throw new RuntimeException('Valid carousel rejected');
 $cases=[
+  'external background'=>static function(array &$x){$x['background']['image_url']='https://evil.example/track.jpg';},
+  'javascript background'=>static function(array &$x){$x['background']['image_url']='javascript:alert(1)';},
+  'traversal background'=>static function(array &$x){$x['background']['image_url']='/uploads/../secret.jpg';},
+  'svg background'=>static function(array &$x){$x['background']['image_url']='/uploads/logo.svg';},
+  'invalid overlay'=>static function(array &$x){$x['background']['overlay_opacity']=2;},
+  'external slide image'=>static function(array &$x){$x['slides'][0]['image_url']='https://evil.example/track.webp';},
   'duplicate ids'=>static function(array &$x){$x['slides'][1]['id']=$x['slides'][0]['id'];},
   'external link'=>static function(array &$x){$x['slides'][0]['link']='https://example.com';},
   'javascript link'=>static function(array &$x){$x['slides'][0]['link']='javascript:alert(1)';},
@@ -31,6 +39,9 @@ foreach($cases as $name=>$change){
 }
 // Older persisted drafts without appearance remain loadable.
 $legacy=$good;
-unset($legacy['layers']);
-if(count(Composition::validate($legacy)['layers'])!==8)throw new RuntimeException('Legacy compatibility failed');
+unset($legacy['layers'], $legacy['background']);
+foreach($legacy['slides'] as &$slide)unset($slide['image_url']);
+unset($slide);
+$legacyValidated=Composition::validate($legacy);
+if(count($legacyValidated['layers'])!==8 || $legacyValidated['background']['overlay_opacity']!==60 || $legacyValidated['slides'][0]['image_url']!=='')throw new RuntimeException('Legacy compatibility failed');
 echo "RC15_HOME_COMPOSITION_VALIDATION=PASS\n";
