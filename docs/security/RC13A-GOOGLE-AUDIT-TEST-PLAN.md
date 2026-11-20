@@ -4,7 +4,7 @@ Baseline: `88ef10722c6b414b1720ecd7cd8e8dceafb12c60`
 
 ## Scope
 - Emit `google_auth/identity_verified` **once per** `handleUserSessionAndMfa` invocation after Google OIDC has been verified and linked staff identity authorized.
-- Emit audit via existing `AuditService` (best effort); stage is `pre_mfa`, **not** completed staff login.
+- Emit audit via `AuditService::logVerifiedGoogleIdentity($userId)` (best effort) using the verified staff ID explicitly because `Auth::id()` before login can be null/stale; stage is `pre_mfa`, **not** completed staff login.
 - Expose distinct rolling 7-day counts in the Security Overview API: `google_identity_success_7d`, `local_credential_success_7d`, `mfa_verified_events_7d`.
 - No changes to Auth::login, MFA verification, session regeneration, route permissions, DB schema, member portal, consent, or production deployment.
 - No logging of OAuth tokens, Google sub, email, passwords, TOTP or recovery codes in the new event payload.
@@ -19,6 +19,7 @@ Baseline: `88ef10722c6b414b1720ecd7cd8e8dceafb12c60`
 
 ## Read-only validation
 ```bash
+php -l app/Services/AuditService.php
 php -l app/Controllers/Admin/GoogleAuthController.php
 php -l app/Services/AdminControlCenterService.php
 php -l tests/GoogleAuthenticationAuditRc13ContractTest.php
