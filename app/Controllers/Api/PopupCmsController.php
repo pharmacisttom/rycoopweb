@@ -28,12 +28,45 @@ final class PopupCmsController extends Controller
             );
             $row = $rows[0] ?? null;
             if ($row) {
-                $row['desktop_image'] = resolve_media_url($row['desktop_image'] ?? null);
+                $row['image_url'] = !empty($row['desktop_image']) ? '/api/public/popup-campaign/image' : null;
+                unset($row['desktop_image']);
                 $row['button_url'] = self::safePath($row['button_url'] ?? '');
             }
             $this->json(['success' => true, 'data' => $row]);
         } catch (Throwable $e) {
             $this->json(['success' => false, 'message' => 'ไม่สามารถโหลดประกาศได้'], 503);
+        }
+    }
+
+    public function image(): void
+    {
+        // Resolve only the currently published campaign. Never accept a client
+        // supplied filesystem path, media ID, or arbitrary storage key.
+        try {
+            $rows = Database::query(
+                "SELECT desktop_image FROM popups
+                 WHERE deleted_at IS NULL AND status='active'
+                 AND (start_at IS NULL OR start_at <= NOW())
+                 ORDER BY FIELD(priority,'critical','high','normal','low'), created_at DESC LIMIT 1"
+            );
+            $url = resolve_media_url($rows[0]['desktop_image'] ?? null);
+            if (!$url || !preg_match('#^/storage/uploads/(popup/[a-zA-Z0-9_-]+\\.webp)$#D', $url, $matches)) {
+                $this->json(['success'=>false,'message'=>'ไม่พบภาพที่เผยแพร่'],404);
+                return;
+            }
+            $path = storage_upload_path($matches[1]);
+            if (!is_file($path) || filesize($path) < 1 || filesize($path) > 10*1024*1024) {
+                $this->json(['success'=>false,'message'=>'ไม่พบไฟล์ภาพ'],404);
+                return;
+            }
+            header('Content-Type: image/webp');
+            header('Content-Length: '.filesize($path));
+            header('Cache-Control: public, max-age=60');
+            header('X-Content-Type-Options: nosniff');
+            readfile($path);
+            exit;
+        } catch (Throwable $e) {
+            $this->json(['success'=>false,'message'=>'ไม่สามารถโหลดภาพได้'],503);
         }
     }
 
