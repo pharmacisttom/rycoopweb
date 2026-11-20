@@ -848,6 +848,7 @@ class AdminControlCenterService
         $totalScore = array_sum(array_column($scoreRules, 'earned'));
 
         $recentEvents = [];
+        $recentEventsReadError = false;
         try {
             $rows = Database::query(
                 "SELECT l.id, l.user_id, l.email, l.status, l.failure_reason, l.ip_address, l.created_at,
@@ -871,6 +872,7 @@ class AdminControlCenterService
             }
         } catch (\Throwable $e) {
             $recentEvents = [];
+            $recentEventsReadError = true;
         }
 
         // Distinct sources, never add counts together: they describe overlapping
@@ -936,6 +938,7 @@ class AdminControlCenterService
                 'qr_generator' => 'Local SVG (BaconQrCode 3.1.1 — Zero External Leakage)',
             ],
             'log_sources' => $logSources,
+            'recent_events_read_error' => $recentEventsReadError,
             'recent_events' => $recentEvents,
         ];
     }
