@@ -1,0 +1,136 @@
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {memberAdminApi} from '../../services/memberAdminApi';
+import './HomeCompositionEditor.css';
+
+const NAMES = {
+  hero: 'Hero / ป้ายต้อนรับ',
+  highlights: 'Highlight Slider (5–6 ข้อความ)',
+  rates_news: 'อัตราดอกเบี้ยและข่าวสาร',
+  quick_services: 'บริการด่วน',
+  statistics: 'ข้อมูลสถิติ',
+  products: 'ผลิตภัณฑ์สินเชื่อ',
+  calculator: 'เครื่องคำนวณ',
+  welfare: 'สวัสดิการ'
+};
+const copy = value => JSON.parse(JSON.stringify(value));
+const makeSlide = () => ({id:'slide-'+crypto.randomUUID().replaceAll('-','').slice(0,16),title:'',body:'',link:''});
+function Preview({composition}) {
+  return <div className="hc-preview" aria-label="ตัวอย่างการจัดลำดับหน้าแรก">
+    {composition.order.filter(id=>composition.visible[id]).map(id=><section key={id} className={'hc-preview-section hc-preview-'+id}>
+      <strong>{NAMES[id]}</strong>
+      {id==='highlights'&&<div>{composition.slides.map((slide,i)=><p key={slide.id}>{i+1}. {slide.title||'ยังไม่ได้กรอกหัวข้อ'}</p>)}</div>}
+    </section>)}
+  </div>;
+}
+export default function HomeCompositionEditor(){
+  const [server,setServer]=useState(null);
+  const [model,setModel]=useState(null);
+  const [error,setError]=useState('');
+  const [notice,setNotice]=useState('');
+  const [totp,setTotp]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [showPreview,setShowPreview]=useState(true);
+  const [dragged,setDragged]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const dirty=useMemo(()=>!!server&&!!model&&JSON.stringify(model)!==JSON.stringify(server.draft??server.published),[server,model]);
+  const mfa=/^\d{6}$/.test(totp);
+  const load=useCallback(async()=>{
+    setLoading(true);setError('');
+    try{
+      const response=await memberAdminApi('/api/admin/home-composition');
+      if(!response.data?.published?.order)throw new Error('ข้อมูล Layout ไม่ครบถ้วน');
+      setServer(response.data);setModel(copy(response.data.draft??response.data.published));setTotp('');
+    }catch(e){setError(e.message||'ไม่สามารถโหลดผังหน้าแรก');}
+    finally{setLoading(false);}
+  },[]);
+  useEffect(()=>{load();},[load]);
+  useEffect(()=>{
+    const onBeforeUnload=e=>{if(dirty){e.preventDefault();e.returnValue='';}};
+    window.addEventListener('beforeunload',onBeforeUnload);
+    return()=>window.removeEventListener('beforeunload',onBeforeUnload);
+  },[dirty]);
+  const update=fn=>setModel(prev=>fn(copy(prev)));
+  const move=(key,direction)=>update(current=>{
+    const index=current.order.indexOf(key),next=index+direction;
+    if(next>=0&&next<current.order.length)[current.order[index],current.order[next]]=[current.order[next],current.order[index]];
+    return current;
+  });
+  const moveSlide=(index,direction)=>update(current=>{
+    const next=index+direction;
+    if(next>=0&&next<current.slides.length)[current.slides[index],current.slides[next]]=[current.slides[next],current.slides[index]];
+    return current;
+  });
+  const submit=async action=>{
+    if(!mfa||busy||!server||!model||(action==='draft'?!dirty:dirty||!server.draft))return;
+    if(action==='publish'&&!window.confirm('ยืนยันเผยแพร่ผังหน้าแรกและ Highlight Slider ไปยังเว็บไซต์จริง?'))return;
+    setBusy(true);setError('');setNotice('');
+    try{
+      const body={version:server.version,totp_code:totp};
+      if(action==='draft')body.composition=model;
+      const result=await memberAdminApi('/api/admin/home-composition/'+action,{data:body});
+      setServer(result.data);setModel(copy(result.data.draft??result.data.published));setTotp('');
+      setNotice(action==='draft'?'บันทึกร่างแล้ว หน้าเว็บไซต์ยังไม่เปลี่ยน':'เผยแพร่เรียบร้อย');
+    }catch(e){setTotp('');setError(e.message||'บันทึกไม่สำเร็จ');}
+    finally{setBusy(false);}
+  };
+  return <section className="surface-card hc-editor">
+    <header><h2>RC15 — Homepage Visual Layout & Layer Manager</h2>
+      <p>จัดลำดับส่วนหน้าแรกผ่าน Drag & Drop หรือปุ่มขึ้น–ลง ควบคุมการแสดงผล เพิ่มข้อความ Highlight และดูตัวอย่างก่อนบันทึกร่าง</p></header>
+    {error&&<p role="alert" className="hc-error">{error}</p>}
+    {notice&&<p role="status">{notice}</p>}
+    {loading&&<p>กำลังโหลดข้อมูล Layout...</p>}
+    {model&&<>
+      <div className="hc-columns">
+        <div>
+          <h3>ลำดับและ Layer ของส่วนหน้าเว็บ</h3>
+          <ol className="hc-sortlist">{model.order.map((id,index)=><li key={id} draggable={!busy}
+            onDragStart={e=>{setDragged(id);e.dataTransfer.effectAllowed='move';}}
+            onDragOver={e=>e.preventDefault()}
+            onDrop={e=>{e.preventDefault();if(dragged&&dragged!==id)update(m=>{
+              const from=m.order.indexOf(dragged),to=m.order.indexOf(id);
+              m.order.splice(from,1);m.order.splice(to,0,dragged);return m;
+            });setDragged(null);}}
+            onDragEnd={()=>setDragged(null)}>
+            <span className="hc-handle" aria-hidden="true">☰</span>
+            <strong>{index+1}. {NAMES[id]}</strong>
+            <label><input type="checkbox" checked={model.visible[id]} onChange={e=>update(m=>{m.visible[id]=e.target.checked;return m;})}/> แสดง</label>
+            <div className="hc-actions"><button type="button" disabled={busy||index===0} onClick={()=>move(id,-1)} aria-label={'เลื่อน '+NAMES[id]+' ขึ้น'}>↑</button>
+              <button type="button" disabled={busy||index===model.order.length-1} onClick={()=>move(id,1)} aria-label={'เลื่อน '+NAMES[id]+' ลง'}>↓</button></div>
+          </li>)}</ol>
+          <h3>การตกแต่งและ Animation</h3>
+          <label>ธีมสีหลัก <select value={model.theme} onChange={e=>update(m=>{m.theme=e.target.value;return m;})}>
+            <option value="royal-blue">น้ำเงินสหกรณ์</option><option value="ocean">ฟ้าทะเล</option><option value="midnight">กรมท่าทางการ</option>
+          </select></label>
+          <label>ระยะเวลาเลื่อนสไลด์ (วินาที) <input type="number" min="4" max="15" value={model.autoplay_seconds}
+            onChange={e=>update(m=>{m.autoplay_seconds=Number(e.target.value);return m;})}/></label>
+        </div>
+        <div>
+          <div className="hc-heading-row"><h3>Highlight Slider ({model.slides.length}/6)</h3>
+            <button type="button" disabled={busy||model.slides.length>=6} onClick={()=>update(m=>{m.slides.push(makeSlide());return m;})}>+ เพิ่มข้อความ</button></div>
+          <p>ต้องกรอกอย่างน้อย 5 รายการก่อนเผยแพร่ ห้ามใช้ข้อมูลที่ยังไม่ได้ตรวจสอบเป็นข้อเท็จจริง</p>
+          <div className="hc-slide-list">{model.slides.map((slide,index)=><fieldset key={slide.id}>
+            <legend>ข้อความที่ {index+1}</legend>
+            <label>หัวข้อ <input maxLength="100" value={slide.title} onChange={e=>update(m=>{m.slides[index].title=e.target.value;return m;})}/></label>
+            <label>รายละเอียด <textarea maxLength="320" rows={3} value={slide.body}
+              onChange={e=>update(m=>{m.slides[index].body=e.target.value;return m;})}/></label>
+            <label>ลิงก์ภายใน (ไม่บังคับ) <input placeholder="/about" value={slide.link}
+              onChange={e=>update(m=>{m.slides[index].link=e.target.value;return m;})}/></label>
+            <div className="hc-actions"><button type="button" disabled={index===0} onClick={()=>moveSlide(index,-1)}>↑</button>
+              <button type="button" disabled={index===model.slides.length-1} onClick={()=>moveSlide(index,1)}>↓</button>
+              <button type="button" onClick={()=>update(m=>{m.slides.splice(index,1);return m;})}>นำออกจากร่าง</button></div>
+          </fieldset>)}</div>
+        </div>
+      </div>
+      <button type="button" onClick={()=>setShowPreview(x=>!x)}>{showPreview?'ซ่อนตัวอย่าง':'แสดงตัวอย่าง'}</button>
+      {showPreview&&<Preview composition={model}/>}
+      <div className="hc-submit">
+        <p role="status">{dirty?'มีการแก้ไขที่ยังไม่บันทึก':server?.draft?'มีร่างรอเผยแพร่':'ใช้ Layout ที่เผยแพร่แล้ว'}</p>
+        <label>รหัส MFA 6 หลัก <input type="password" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+          value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,'').slice(0,6))}/></label>
+        <button type="button" disabled={!dirty||!mfa||busy} onClick={()=>submit('draft')}>1. บันทึกร่าง</button>
+        <button type="button" disabled={!server?.draft||dirty||!mfa||busy} onClick={()=>submit('publish')}>2. อนุมัติเผยแพร่</button>
+        <button type="button" disabled={busy} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขที่ยังไม่บันทึก?'))load();}}>โหลดล่าสุด / ยกเลิก</button>
+      </div>
+    </>}
+  </section>;
+}
