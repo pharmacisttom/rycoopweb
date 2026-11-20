@@ -1128,6 +1128,7 @@ class AdminControlCenterService
         $whereSql = implode(' AND ', $where);
         $total = 0;
         $records = [];
+        $recordsReadError = false;
 
         try {
             $total = (int) Database::value(
@@ -1185,6 +1186,7 @@ class AdminControlCenterService
             }
         } catch (\Throwable $e) {
             $records = [];
+            $recordsReadError = true;
         }
 
         // Distinct modules for filter dropdown
@@ -1210,6 +1212,7 @@ class AdminControlCenterService
                 'total_pages' => max(1, (int) ceil($total / $perPage)),
             ],
             'available_modules' => $availableModules,
+            'records_read_error' => $recordsReadError,
             'records' => $records,
             'items' => $records,
         ];
