@@ -81,6 +81,7 @@ $router->get('/csrf-token', function ($request, $response) {
 $router->post('/api/cookie-consent', 'Public\\ApiController@logCookieConsent');
 $router->post('/api/popups/event', 'Public\\ApiController@logPopupEvent');
 $router->get('/api/public/popup-campaign', 'Api\\PopupCmsController@published');
+$router->get('/api/public/popup-campaign/image', 'Api\\PopupCmsController@image');
 
 // Popup CMS: privileged writes use existing session identity and CSRF.
 $router->group(['prefix'=>'api/admin/popup-campaigns','middleware'=>[AuthMiddleware::class,new RoleMiddleware(['super_admin'])]], function (\App\Core\Router $r) {
