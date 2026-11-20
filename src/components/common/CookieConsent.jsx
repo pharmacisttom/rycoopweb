@@ -18,6 +18,7 @@ export default function CookieConsent() {
   const saveChoice = (choice) => {
     try {
       window.localStorage.setItem(COOKIE_CONSENT_KEY, choice);
+      window.dispatchEvent(new CustomEvent('rycoop:cookie-consent-updated', { detail: { choice } }));
     } finally {
       setIsVisible(false);
     }
