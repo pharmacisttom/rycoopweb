@@ -52,9 +52,9 @@ final class DocumentCategoryController extends Controller
                 throw new \App\Exceptions\SecurityGateException('ไม่มีสิทธิ์สร้างหมวดเอกสาร',403,'FORBIDDEN');
             }
             [$name,$order]=self::payload($this->request->all());
-            $id=Database::transaction(static function() use($name,$order): string|false {
+            $id=Database::transaction(static function() use($name,$order): int {
                 $slug='doc-category-'.bin2hex(random_bytes(8));
-                $id=Database::insert(
+                $id=(int)Database::insert(
                     "INSERT INTO document_categories (name,slug,sort_order,status,created_at,updated_at)
                      VALUES (?,?,?,'active',NOW(),NOW())",
                     [$name,$slug,$order]
