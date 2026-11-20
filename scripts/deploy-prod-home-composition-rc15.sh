@@ -80,6 +80,10 @@ for F in src/pages/AdminHomepageLayoutPage.jsx; do
  fi
  echo "REVIEWED_LIVE_SOURCE=PASS:$F"
 done
+# Null-safe TopBar change is permitted only against the known RC14 component.
+test "$(git -C "$REPO" hash-object "$OLD/src/components/layout/TopBar.jsx")" = d57fd3291df35d119b1a5d8d4357e23cb98f2a08 || {
+ echo "TOPBAR_LIVE_SOURCE_CONFLICT"; exit 1;
+}
 grep -qF '// New dynamic homepage CMS: isolated from legacy six visibility toggles.' "$OLD/config/routes.php"
 if grep -qF '/api/public/home-composition' "$OLD/config/routes.php"; then echo RC15_ALREADY_CONFIGURED; exit 1; fi
 mysql --batch --skip-column-names rayongcoop_db -e "
@@ -107,6 +111,7 @@ for F in \
  src/components/admin/HomeCompositionEditor.css \
  src/components/home/HomeHighlightSlider.jsx \
  src/components/home/HomeHighlightSlider.css \
+ src/components/layout/TopBar.jsx \
  src/pages/HomePage.jsx \
  src/pages/AdminHomepageLayoutPage.jsx; do
  mkdir -p "$(dirname "$NEW/$F")"
