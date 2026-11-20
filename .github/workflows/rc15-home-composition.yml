@@ -1,0 +1,46 @@
+name: RC15 Homepage Composition QA
+on:
+  pull_request:
+    paths:
+      - 'src/pages/HomePage.jsx'
+      - 'src/components/home/HomeHighlightSlider.*'
+      - 'src/components/admin/HomeCompositionEditor.*'
+      - 'src/pages/AdminHomepageLayoutPage.jsx'
+      - 'app/Services/HomeCompositionService.php'
+      - 'app/Controllers/Admin/HomeCompositionController.php'
+      - 'config/routes.php'
+      - 'tests/HomeCompositionRc15*.php'
+      - '.github/workflows/rc15-home-composition.yml'
+  workflow_dispatch:
+jobs:
+  rc15-source-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+          coverage: none
+      - name: PHP syntax checks
+        run: |
+          php -l config/routes.php
+          php -l app/Services/HomeCompositionService.php
+          php -l app/Controllers/Admin/HomeCompositionController.php
+          php -l tests/HomeCompositionRc15ContractTest.php
+          php -l tests/HomeCompositionRc15ValidationTest.php
+      - name: Validate homepage composition without database
+        run: |
+          php tests/HomeCompositionRc15ContractTest.php
+          php tests/HomeCompositionRc15ValidationTest.php
+          python3 tests/HomepageLayoutBoardContractTest.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies and generate scoped CSS
+        run: npm ci --no-audit --no-fund
+      - name: Build React frontend
+        run: npm run build
