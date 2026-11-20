@@ -25,6 +25,8 @@ jobs:
           php-version: '8.3'
           extensions: mbstring
           coverage: none
+      - name: RC15 production deploy script shell syntax
+        run: bash -n scripts/deploy-prod-home-composition-rc15.sh
       - name: PHP syntax checks
         run: |
           php -l config/routes.php
