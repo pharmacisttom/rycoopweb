@@ -13,7 +13,10 @@ const NAMES = {
   welfare: 'สวัสดิการ'
 };
 const copy = value => JSON.parse(JSON.stringify(value));
-const makeSlide = () => ({id:'slide-'+crypto.randomUUID().replaceAll('-','').slice(0,16),title:'',body:'',link:''});
+const makeSlide = () => ({id:'slide-'+crypto.randomUUID().replaceAll('-','').slice(0,16),title:'',body:'',link:'',image_url:''});
+const normalBackground = value => ({image_url:value?.image_url||'', overlay_opacity:value?.overlay_opacity??60, position:value?.position||'center'});
+const allowedImage = path => !path || (/^\\/(?:storage\\/uploads|uploads|assets)\\/[a-zA-Z0-9_./-]+\\.(?:webp|png|jpe?g)$/.test(path) && !path.includes('..') && !path.includes('//'));
+const prepare = value => ({...copy(value),background:normalBackground(value.background),slides:value.slides.map(item=>({...item,image_url:item.image_url||''}))});
 function Preview({composition}) {
   return <div className="hc-preview" aria-label="ตัวอย่างการจัดลำดับหน้าแรก">
     {composition.order.filter(id=>composition.visible[id]).map(id=><section key={id} className={'hc-preview-section hc-preview-'+id}>
@@ -32,14 +35,14 @@ export default function HomeCompositionEditor(){
   const [showPreview,setShowPreview]=useState(true);
   const [dragged,setDragged]=useState(null);
   const [loading,setLoading]=useState(true);
-  const dirty=useMemo(()=>!!server&&!!model&&JSON.stringify(model)!==JSON.stringify(server.draft??server.published),[server,model]);
+  const dirty=useMemo(()=>!!server&&!!model&&JSON.stringify(model)!==JSON.stringify(prepare(server.draft??server.published)),[server,model]);
   const mfa=/^\d{6}$/.test(totp);
   const load=useCallback(async()=>{
     setLoading(true);setError('');
     try{
       const response=await memberAdminApi('/api/admin/home-composition');
       if(!response.data?.published?.order)throw new Error('ข้อมูล Layout ไม่ครบถ้วน');
-      setServer(response.data);setModel(copy(response.data.draft??response.data.published));setTotp('');
+      setServer(response.data);setModel(prepare(response.data.draft??response.data.published));setTotp('');
     }catch(e){setError(e.message||'ไม่สามารถโหลดผังหน้าแรก');}
     finally{setLoading(false);}
   },[]);
@@ -62,13 +65,14 @@ export default function HomeCompositionEditor(){
   });
   const submit=async action=>{
     if(!mfa||busy||!server||!model||(action==='draft'?!dirty:dirty||!server.draft))return;
+    if(!allowedImage(model.background?.image_url)||model.slides.some(item=>!allowedImage(item.image_url))){setError('กรุณาใช้ที่อยู่รูป JPG, PNG หรือ WEBP ภายในเว็บไซต์ เช่น /storage/uploads/...');return;}
     if(action==='publish'&&!window.confirm('ยืนยันเผยแพร่ผังหน้าแรกและ Highlight Slider ไปยังเว็บไซต์จริง?'))return;
     setBusy(true);setError('');setNotice('');
     try{
       const body={version:server.version,totp_code:totp};
       if(action==='draft')body.composition=model;
       const result=await memberAdminApi('/api/admin/home-composition/'+action,{data:body});
-      setServer(result.data);setModel(copy(result.data.draft??result.data.published));setTotp('');
+      setServer(result.data);setModel(prepare(result.data.draft??result.data.published));setTotp('');
       setNotice(action==='draft'?'บันทึกร่างแล้ว หน้าเว็บไซต์ยังไม่เปลี่ยน':'เผยแพร่เรียบร้อย');
     }catch(e){setTotp('');setError(e.message||'บันทึกไม่สำเร็จ');}
     finally{setBusy(false);}
@@ -114,6 +118,31 @@ export default function HomeCompositionEditor(){
             onChange={e=>update(m=>{m.autoplay_seconds=Number(e.target.value);return m;})}/></label>
         </div>
         <div>
+          <section className="hc-background-settings" aria-label="ภาพพื้นหลัง Highlight Slider">
+            <h3>ภาพพื้นหลัง Highlight Slider</h3>
+            <p>เลือกรูปที่อัปโหลดไว้ใน Media Library แล้วคัดลอกที่อยู่ไฟล์ภายในเว็บไซต์มาใส่ รองรับ JPG, PNG และ WEBP ไม่รับ URL ภายนอก เพื่อป้องกันการติดตามผู้เข้าชม</p>
+            <label>ที่อยู่ภาพพื้นหลังหลัก
+              <input type="text" placeholder="/storage/uploads/..." value={model.background?.image_url||''}
+                onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.image_url=e.target.value.trim();return m;})}/>
+            </label>
+            <div className="hc-background-row">
+              <label>ความเข้ม Overlay ({model.background?.overlay_opacity??60}%)
+                <input type="range" min="35" max="85" step="5" value={model.background?.overlay_opacity??60}
+                  onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.overlay_opacity=Number(e.target.value);return m;})}/>
+              </label>
+              <label>จุดโฟกัสภาพ
+                <select value={model.background?.position||'center'}
+                  onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.position=e.target.value;return m;})}>
+                  <option value="center">กึ่งกลาง</option><option value="top">ด้านบน</option>
+                  <option value="bottom">ด้านล่าง</option><option value="left">ด้านซ้าย</option><option value="right">ด้านขวา</option>
+                </select>
+              </label>
+            </div>
+            {!!model.background?.image_url && allowedImage(model.background.image_url) && <div className="hc-background-preview" style={{backgroundImage:`linear-gradient(rgba(8,22,48,${model.background.overlay_opacity/100}),rgba(8,22,48,${model.background.overlay_opacity/100})),url("${model.background.image_url}")`,backgroundPosition:model.background.position||'center'}}>
+              <strong>ตัวอย่างภาพพื้นหลังหลัก</strong>
+              <button type="button" onClick={()=>update(m=>{m.background.image_url='';return m;})}>นำรูปพื้นหลังออก</button>
+            </div>}
+          </section>
           <div className="hc-heading-row"><h3>Highlight Slider ({model.slides.length}/6)</h3>
             <button type="button" disabled={busy||model.slides.length>=6} onClick={()=>update(m=>{m.slides.push(makeSlide());return m;})}>+ เพิ่มข้อความ</button></div>
           <p>ต้องกรอกอย่างน้อย 5 รายการก่อนเผยแพร่ ห้ามใช้ข้อมูลที่ยังไม่ได้ตรวจสอบเป็นข้อเท็จจริง</p>
@@ -122,6 +151,15 @@ export default function HomeCompositionEditor(){
             <label>หัวข้อ <input maxLength="100" value={slide.title} onChange={e=>update(m=>{m.slides[index].title=e.target.value;return m;})}/></label>
             <label>รายละเอียด <textarea maxLength="320" rows={3} value={slide.body}
               onChange={e=>update(m=>{m.slides[index].body=e.target.value;return m;})}/></label>
+            <label>ภาพพื้นหลังเฉพาะข้อความ (ไม่บังคับ)
+              <input type="text" placeholder="เว้นว่างเพื่อใช้ภาพหลัก เช่น /storage/uploads/..."
+                value={slide.image_url||''}
+                onChange={e=>update(m=>{m.slides[index].image_url=e.target.value.trim();return m;})}/>
+            </label>
+            {!!slide.image_url && allowedImage(slide.image_url) && <div className="hc-mini-image" style={{backgroundImage:`linear-gradient(#08163077,#08163077),url("${slide.image_url}")`}}>
+              <span>ตัวอย่างรูปของสไลด์นี้</span>
+              <button type="button" onClick={()=>update(m=>{m.slides[index].image_url='';return m;})}>ลบรูป</button>
+            </div>}
             <label>ลิงก์ภายใน (ไม่บังคับ) <input placeholder="/about" value={slide.link}
               onChange={e=>update(m=>{m.slides[index].link=e.target.value;return m;})}/></label>
             <div className="hc-actions"><button type="button" disabled={index===0} onClick={()=>moveSlide(index,-1)}>↑</button>
