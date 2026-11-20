@@ -22,3 +22,34 @@
 .public-content-board-directory button:focus-visible,.public-content-board-tools button:focus-visible{outline:3px solid #f59e0b;outline-offset:3px}
 @media(max-width:600px){.public-content-board-people-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.public-content-board-person-tile{padding:12px 7px}.board-carry-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.public-content-board-person-tile{transition:none}.public-content-board-person-tile:hover{transform:none}}
+
+/* RC14 — Board management table and per-person edit modal */
+.board-table-scroll{width:100%;overflow-x:auto;border:1px solid #dbe4f0;border-radius:12px}
+.board-admin-table{width:100%;min-width:740px;border-collapse:collapse;text-align:left}
+.board-admin-table th{background:#eff5fc;color:#183652;font-weight:700;white-space:nowrap}
+.board-admin-table th,.board-admin-table td{padding:12px 14px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
+.board-admin-table tr:last-child td{border-bottom:0}
+.board-admin-table tbody tr:hover{background:#f8fbff}
+.board-admin-table tr.is-marked{background:#fff4ef}
+.board-admin-table input[type=checkbox]{width:19px;height:19px;cursor:pointer}
+.board-admin-person{display:flex;align-items:center;gap:12px;min-width:180px;max-width:290px;padding:0;background:none;border:0;cursor:pointer;text-align:left;color:#173b6b}
+.board-admin-person img,.board-admin-person>span{width:56px;height:56px;flex:0 0 56px;object-fit:cover;border-radius:11px;background:#e8eff8}
+.board-admin-person>span{display:grid;place-items:center;font-size:.72rem;color:#536c8b}
+.board-admin-person strong{overflow-wrap:anywhere}
+.board-admin-modal-backdrop{position:fixed;inset:0;background:rgba(8,23,42,.65);z-index:1100;display:flex;justify-content:center;align-items:center;padding:18px}
+.board-admin-modal{background:white;color:#183149;border-radius:16px;box-shadow:0 22px 70px rgba(0,0,0,.25);width:min(900px,100%);max-height:94vh;overflow-y:auto;padding:22px}
+.board-admin-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;position:sticky;top:-22px;background:white;z-index:1;padding:12px 0;border-bottom:1px solid #e2e8f0}
+.board-admin-modal-header h2{font-size:1.25rem;margin:0}
+.board-admin-modal-header button{min-width:44px;min-height:44px;border:1px solid #ccd8e8;border-radius:9px;background:white;cursor:pointer}
+.board-admin-modal .public-content-board-tools{margin:12px 0}
+.board-admin-modal .public-content-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.board-admin-modal .public-content-fields legend{grid-column:1/-1}
+.board-admin-modal .public-content-fields label{min-width:0}
+.board-admin-modal .public-content-fields label:has(textarea),.board-admin-modal .public-content-fields button[type=submit]{grid-column:1/-1}
+.board-admin-modal-history{border-top:1px solid #dae3ef;margin-top:22px;padding-top:18px}
+.board-admin-modal-history article{border:1px solid #dee6f0;border-radius:10px;padding:12px;margin:10px 0}
+.board-admin-draft-save{margin:20px 0;padding:20px;border:1px solid #dce5ef;background:#f9fbff;border-radius:14px}
+.board-admin-draft-save fieldset{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.board-admin-draft-save label:has(textarea),.board-admin-draft-save button[type=submit]{grid-column:1/-1}
+.board-admin-table button:focus-visible,.board-admin-modal button:focus-visible{outline:3px solid #e59d23;outline-offset:2px}
+@media(max-width:700px){.board-admin-modal{padding:14px}.board-admin-modal .public-content-fields,.board-admin-draft-save fieldset{grid-template-columns:1fr}.board-admin-draft-save label:has(textarea),.board-admin-draft-save button[type=submit]{grid-column:auto}}
