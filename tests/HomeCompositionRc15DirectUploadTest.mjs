@@ -8,7 +8,7 @@ const release=readFileSync('scripts/deploy-prod-home-direct-upload-rc15.sh','utf
 
 const requires=[
   ['file input restricted to raster images',editor,'accept="image/jpeg,image/png,image/webp"'],
-  ['upload per slot',editor,'uploadImage(file,slot,key,slideId=null)'],
+  ['upload per slot',editor,'uploadImage=async (file,slot,key,slideId=null)'],
   ['existing CSRF-protected media client',editor,"mediaLibraryApi.upload(file,{folder:'highlights'"],
   ['only accepted public media URL',editor,"if(!allowedImage(url)||!url)"],
   ['test public file is reachable',editor,"(check.headers.get('content-type')||'').startsWith('image/')"],
