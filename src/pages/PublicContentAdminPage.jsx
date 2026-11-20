@@ -58,6 +58,7 @@ export default function PublicContentAdminPage() {
   const [carrySelection,setCarrySelection]=useState([]);
   const [boardRemoveSelection,setBoardRemoveSelection]=useState([]);
   const [boardModalOpen,setBoardModalOpen]=useState(false);
+  const [boardSearch,setBoardSearch]=useState('');
   const [boardTermFilter,setBoardTermFilter]=useState('ชุดที่ 39');
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
@@ -71,7 +72,7 @@ export default function PublicContentAdminPage() {
     if (!sections.length || !requestedSection || requestedSection === section || dirty) return;
     if (sections.some(item => item.key === requestedSection)) setSection(requestedSection);
   }, [requestedSection, sections, section, dirty]);
-  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);setBoardRemoveSelection([]);setBoardModalOpen(false);
+  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);setBoardRemoveSelection([]);setBoardModalOpen(false);setBoardSearch('');
     memberAdminApi(`/api/admin/public-content/sections/${section}`,{signal:controller.signal}).then(result=>{setData(result);setValue(result.value);}).catch(e=>{if(e.name!=='AbortError')setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[section,refresh]);
@@ -82,6 +83,18 @@ export default function PublicContentAdminPage() {
     window.addEventListener('keydown',handleEscape);
     return()=>window.removeEventListener('keydown',handleEscape);
   },[boardModalOpen,busy,mediaBusy]);
+  const groupBoardIds=new Set((Array.isArray(catalog?.boardGroups)?catalog.boardGroups:[])
+    .flatMap(group=>Array.isArray(group?.members)?group.members:[])
+    .map(member=>String(Array.isArray(member)?member[0]:'')).filter(Boolean));
+  const isBoardProtected=person=>person?.term==='ชุดที่ 38'||groupBoardIds.has(String(person?.id));
+  const visibleBoardIndices=section==='boards'&&Array.isArray(value)
+    ?value.map((_,index)=>index).filter(index=>{
+      const person=value[index];
+      const matchTerm=boardTermFilter==='ทั้งหมด'||person?.term===boardTermFilter;
+      const query=boardSearch.trim().toLocaleLowerCase('th');
+      return matchTerm&&(!query||[person?.name,person?.position,person?.workplace,String(person?.id??'')].some(part=>String(part??'').toLocaleLowerCase('th').includes(query)));
+    }):[];
+  const selectableBoardIndices=visibleBoardIndices.filter(index=>!isBoardProtected(value[index]));
   const boardAudit=section==='boards'?auditBoardTerms(value):[];
   const rows=safeRows(value,section);
   const original=rows?.[selected];
@@ -94,12 +107,25 @@ export default function PublicContentAdminPage() {
   function removeBoardSelection(){
     if(section!=='boards'||!definition?.canEdit||busy||mediaBusy||boardRemoveSelection.length===0)return;
     const targets=new Set(boardRemoveSelection);
-    const count38=value.filter((p,i)=>targets.has(i)&&p?.term==='ชุดที่ 38').length;
-    const warning=count38?'\nคำเตือน: เลือกกรรมการชุดที่ 38 จำนวน '+count38+' รายการ โปรดตรวจประวัติให้ครบ':'';
-    if(!window.confirm('นำกรรมการ '+targets.size+' รายการออกจากร่าง?'+warning+'\nข้อมูลที่เผยแพร่อยู่จะยังไม่เปลี่ยนจนกว่าจะอนุมัติร่าง'))return;
+    if(value.some((p,i)=>targets.has(i)&&isBoardProtected(p))){
+      setError('ไม่สามารถนำกรรมการชุดที่ 38 หรือผู้ที่ยังอยู่ในคณะอนุกรรมการออกได้ กรุณาย้ายสมาชิกคณะย่อยก่อน');
+      return;
+    }
+    if(!window.confirm('นำกรรมการ '+targets.size+' รายการออกจากร่าง?\nข้อมูลที่เผยแพร่อยู่จะยังไม่เปลี่ยนจนกว่าจะอนุมัติร่าง'))return;
     setValue(current=>current.filter((_,i)=>!targets.has(i)));
     setBoardRemoveSelection([]);setSelected(0);setBoardModalOpen(false);setDirty(true);
     setMessage('นำ '+targets.size+' รายการออกจากร่างแล้ว กรุณาบันทึกร่างและตรวจประวัติก่อนเผยแพร่');
+  }
+  function moveBoard(index,offset){
+    if(!definition?.canEdit||busy||mediaBusy)return;
+    const target=index+offset;
+    if(target<0||target>=value.length||value[index]?.term!==value[target]?.term)return;
+    setValue(current=>{
+      const updated=[...current];
+      [updated[index],updated[target]]=[updated[target],updated[index]];
+      return updated;
+    });
+    setBoardRemoveSelection([]);setSelected(target);setDirty(true);
   }
   function copyBoardToTerm(){
     if(section!=='boards'||!row)return;
@@ -150,7 +176,7 @@ export default function PublicContentAdminPage() {
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   return <section className="admin-module public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่"/>
     {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
-    <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?')){setSection(e.target.value);setSearchParams(params=>{const next=new URLSearchParams(params);next.set('section',e.target.value);return next;});}}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+    <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?')){setBoardModalOpen(false);setBoardRemoveSelection([]);setSection(e.target.value);setSearchParams(params=>{const next=new URLSearchParams(params);next.set('section',e.target.value);return next;});}}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
     <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
@@ -162,7 +188,9 @@ export default function PublicContentAdminPage() {
             onClick={()=>{setBoardTermFilter(term);setBoardRemoveSelection([]);}}>{term}</button>)}
         </div>
         <div className="public-content-toolbar">
-          <span>แสดง {value.filter(p=>boardTermFilter==='ทั้งหมด'||p?.term===boardTermFilter).length} รายการ · เลือก {boardRemoveSelection.length}</span>
+          <label>ค้นหากรรมการ <input type="search" placeholder="ชื่อ ตำแหน่ง หน่วยงาน หรือรหัส" value={boardSearch}
+            onChange={e=>{setBoardSearch(e.target.value);setBoardRemoveSelection([]);}} /></label>
+          <span role="status">แสดง {visibleBoardIndices.length} จาก {value.length} รายการ · เลือก {boardRemoveSelection.length}</span>
           {definition?.canEdit&&<>
             <button type="button" disabled={busy||mediaBusy} onClick={()=>{add();setBoardModalOpen(true);}}>เพิ่มกรรมการในร่าง</button>
             <button type="button" className="btn btn-outline" disabled={busy||mediaBusy||!boardRemoveSelection.length} onClick={removeBoardSelection}>นำรายการที่เลือกออกจากร่าง ({boardRemoveSelection.length})</button>
@@ -170,19 +198,25 @@ export default function PublicContentAdminPage() {
         </div>
         <div className="board-table-scroll"><table className="board-admin-table"><thead><tr>
           <th scope="col"><input aria-label="เลือกทั้งหมดที่แสดง" type="checkbox" disabled={busy||mediaBusy||!definition?.canEdit}
-            checked={value.some(p=>boardTermFilter==='ทั้งหมด'||p?.term===boardTermFilter)&&value.every((p,i)=>(boardTermFilter!=='ทั้งหมด'&&p?.term!==boardTermFilter)||boardRemoveSelection.includes(i))}
-            onChange={e=>{const visible=value.map((_,i)=>i).filter(i=>boardTermFilter==='ทั้งหมด'||value[i]?.term===boardTermFilter);setBoardRemoveSelection(e.target.checked?visible:[]);}} /></th>
+            checked={selectableBoardIndices.length>0&&selectableBoardIndices.every(i=>boardRemoveSelection.includes(i))}
+            onChange={e=>setBoardRemoveSelection(e.target.checked?selectableBoardIndices:[])} /></th>
           <th scope="col">ลำดับ</th><th scope="col">รูป / ชื่อ</th><th scope="col">ตำแหน่ง</th><th scope="col">ชุด</th><th scope="col">สถานะ</th><th scope="col">แก้ไข</th>
         </tr></thead><tbody>
-          {value.map((p,index)=>({...p,index})).filter(p=>boardTermFilter==='ทั้งหมด'||p.term===boardTermFilter).map(p=><tr key={p.index} className={boardRemoveSelection.includes(p.index)?'is-marked':''}>
-            <td><input type="checkbox" disabled={busy||mediaBusy||!definition?.canEdit} aria-label={'เลือก '+(p.name||'รายการที่ '+(p.index+1))} checked={boardRemoveSelection.includes(p.index)}
+          {visibleBoardIndices.map(index=>({...value[index],index})).map(p=><tr key={p.index} className={boardRemoveSelection.includes(p.index)?'is-marked':''}>
+            <td><input type="checkbox" disabled={busy||mediaBusy||!definition?.canEdit||isBoardProtected(p)} title={isBoardProtected(p)?'เก็บประวัติชุดที่ 38 หรือมีการใช้งานในคณะอนุกรรมการ':'เลือกนำออกจากร่าง'} aria-label={'เลือก '+(p.name||'รายการที่ '+(p.index+1))} checked={boardRemoveSelection.includes(p.index)}
               onChange={e=>setBoardRemoveSelection(current=>e.target.checked?[...current,p.index]:current.filter(x=>x!==p.index))}/></td>
             <td>{p.index+1}</td><td><button type="button" className="board-admin-person" onClick={()=>{setSelected(p.index);setBoardModalOpen(true);}}>
               {p.image?<img src={p.image} alt="" loading="lazy"/>:<span>ไม่มีรูป</span>}<strong>{p.name||'รอกรอกชื่อ'}</strong></button></td>
             <td>{p.position||'—'}</td><td>{p.term||'—'}</td><td>{p.status==='former'?'พ้นตำแหน่ง':'ดำรงตำแหน่ง'}</td>
-            <td><button type="button" onClick={()=>{setSelected(p.index);setBoardModalOpen(true);}}>แก้ไข / ประวัติ</button></td>
+            <td><div className="board-admin-actions"><button type="button" onClick={()=>{setSelected(p.index);setBoardModalOpen(true);}}>แก้ไข / ประวัติ</button>
+              {definition?.canEdit&&<>
+                <button type="button" aria-label={'เลื่อน '+p.name+' ขึ้น'} disabled={busy||mediaBusy||p.index===0||value[p.index-1]?.term!==p.term} onClick={()=>moveBoard(p.index,-1)}>↑</button>
+                <button type="button" aria-label={'เลื่อน '+p.name+' ลง'} disabled={busy||mediaBusy||p.index===value.length-1||value[p.index+1]?.term!==p.term} onClick={()=>moveBoard(p.index,1)}>↓</button>
+              </>}</div></td>
           </tr>)}
+          {visibleBoardIndices.length===0&&<tr><td colSpan={7}>ไม่พบกรรมการตามเงื่อนไขที่ค้นหา</td></tr>}
         </tbody></table></div>
+        <p className="public-content-board-audit-note">รายการชุดที่ 38 และกรรมการที่ยังถูกอ้างอิงในคณะอนุกรรมการจะไม่สามารถเลือกลบได้ เพื่อป้องกันข้อมูลประวัติและความสัมพันธ์เสียหาย</p>
       </section>}
       {section==='boards'&&<section className="public-content-board-audit surface-card" aria-labelledby="board-audit-heading">
         <h3 id="board-audit-heading">ตรวจสอบคณะกรรมการชุดที่ 38 และ 39</h3>
