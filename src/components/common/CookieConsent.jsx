@@ -72,6 +72,7 @@ export default function CookieConsent() {
 
   if (!isVisible) {
     return <button type="button" className="cookie-consent__reopen"
+      style={{position:'fixed',bottom:12,left:12,zIndex:1000,padding:'7px 12px',borderRadius:24,border:'1px solid #b9c8d8',background:'#fff',color:'#143960',boxShadow:'0 3px 12px #0002',cursor:'pointer',fontSize:12}}
       onClick={() => { setError(''); setIsVisible(true); }}
       aria-label="เปลี่ยนการตั้งค่าคุกกี้">ตั้งค่าคุกกี้</button>;
   }
