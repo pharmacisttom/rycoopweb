@@ -13,6 +13,7 @@ import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
 import PublishedDynamicSections from '../components/layout/PublishedDynamicSections';
+import HomeHighlightSlider from '../components/home/HomeHighlightSlider';
 
 import { usePublicInformation } from '../context/PublicContentContext';
 
@@ -25,6 +26,7 @@ export default function HomePage() {
   const { setShowAuthModal, isLoggedIn } = useAuth();
   // Published-only visibility. No draft config is consumed by the public UI.
   const [layout, setLayout] = useState(null);
+  const [composition,setComposition]=useState(null);
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/public/layout', { signal: controller.signal, credentials: 'same-origin', cache: 'no-cache' })
@@ -37,7 +39,19 @@ export default function HomePage() {
       .catch(() => {});
     return () => controller.abort();
   }, []);
-  const showSection = key => layout?.[key] !== false;
+  useEffect(()=>{
+    const controller=new AbortController();
+    fetch('/api/public/home-composition',{signal:controller.signal,credentials:'same-origin',cache:'no-cache'})
+      .then(response=>response.ok?response.json():null)
+      .then(result=>{
+        const candidate=result?.data;
+        if(candidate&&Array.isArray(candidate.order)&&Array.isArray(candidate.slides)&&candidate.visible){
+          setComposition(candidate);
+        }
+      }).catch(()=>{});
+    return()=>controller.abort();
+  },[]);
+  const showSection = key => layout?.[key] !== false && composition?.visible?.[key] !== false;
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
   const [activeNewsSlide, setActiveNewsSlide] = useState(0);
@@ -280,6 +294,29 @@ export default function HomePage() {
 
             </div>
 
+            <figure className="hero-portrait">
+              <div className="hero-portrait-frame">
+                <img
+                  src={heroPortrait}
+                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
+                  width="294"
+                  height="394"
+                  fetchPriority="high"
+                />
+              </div>
+              <figcaption className="hero-portrait-caption">
+                <strong>นางสาวอุษา อิศรางกูร ณ อยุธยา</strong>
+                <span>ประธานกรรมการสหกรณ์</span>
+              </figcaption>
+            </figure>
+
+          </div>
+        </div>
+      </section>}
+
+      {showSection('highlights')&&<HomeHighlightSlider composition={composition}/>}
+      {showSection('rates_news')&&<div className="home-rates-news-lowered">
+        <div className="container">
             <div className="hero-dashboard-row">
             {/* Right Hero Card: Quick Rates & Services Widget */}
             <div className="glass-card hero-rate-card" style={{
@@ -442,25 +479,9 @@ export default function HomePage() {
             </section>
             </div>
 
-            <figure className="hero-portrait">
-              <div className="hero-portrait-frame">
-                <img
-                  src={heroPortrait}
-                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
-                  width="294"
-                  height="394"
-                  fetchPriority="high"
-                />
-              </div>
-              <figcaption className="hero-portrait-caption">
-                <strong>นางสาวอุษา อิศรางกูร ณ อยุธยา</strong>
-                <span>ประธานกรรมการสหกรณ์</span>
-              </figcaption>
-            </figure>
 
-          </div>
         </div>
-      </section>}
+      </div>}
 
       {/* =========================================================================
           QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
