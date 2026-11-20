@@ -791,6 +791,17 @@ class AdminControlCenterService
             "SELECT COUNT(*) FROM login_logs WHERE status = '2fa_failed' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
         ) ?? 0;
 
+        // Authentication stages are deliberately separate; do not sum them as completed logins.
+        $googleIdentitySuccess7d = self::safeCount(
+            "SELECT COUNT(*) FROM login_logs WHERE auth_provider = 'google' AND status = 'success' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        );
+        $localCredentialSuccess7d = self::safeCount(
+            "SELECT COUNT(*) FROM login_logs WHERE auth_provider = 'local' AND status = 'success' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        );
+        $mfaVerifiedEvents7d = self::safeCount(
+            "SELECT COUNT(*) FROM audit_logs WHERE module = 'auth' AND action = '2fa_verified' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        );
+
         $sessionRevocations30d = self::safeCount(
             "SELECT COUNT(*) FROM audit_logs WHERE action IN ('revoke_sessions', 'suspend_account', 'reset_google_link') AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
         ) ?? 0;
@@ -926,6 +937,10 @@ class AdminControlCenterService
                 'failed_logins_7d' => $failedLogins7d,
                 'lockouts_7d' => $lockouts7d,
                 'mfa_failures_7d' => $mfaFailures7d,
+                'google_identity_success_7d' => $googleIdentitySuccess7d,
+                'local_credential_success_7d' => $localCredentialSuccess7d,
+                'mfa_verified_events_7d' => $mfaVerifiedEvents7d,
+                'authentication_stage_note' => 'Google and local credential success are pre-MFA; MFA events are not deduplicated completed sessions.',
                 'session_revocations_30d' => $sessionRevocations30d,
                 'privileged_role_changes_30d' => $privilegedRoleChanges30d,
             ],
