@@ -8,7 +8,7 @@ test "${RC15_DIRECT_UPLOAD_DEPLOY:-}" = YES
 REPO=/var/tmp/rycoop-board-welfare-rc06
 SHA="${RC15_DIRECT_UPLOAD_SHA:?missing SHA}"
 BASE=/var/www/rycoopweb/production-releases
-OLD="$BASE/prod-home-rc15-images-20261120T144509Z"
+OLD="$BASE/prod-home-rc15-upload-20261120T150132Z"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NEW="$BASE/prod-home-rc15-upload-$STAMP"
 MAIN=/etc/nginx/sites-available/rycoopweb-main-ssl
@@ -43,8 +43,8 @@ test ! -e "$NEW"
 for CONFIG in "$MAIN" "$LOOP"; do
  test "$(grep -Fc "$OLD/public" "$CONFIG")" -eq 1
 done
-test "$(git -C "$REPO" hash-object "$OLD/src/components/admin/HomeCompositionEditor.jsx")" = 7065d532a895c3054d851bee94df5016996ce582
-test "$(git -C "$REPO" hash-object "$OLD/src/components/admin/HomeCompositionEditor.css")" = 76dae1f8d0265bfdf57aa6bc3bacadea707bec7e
+test "$(git -C "$REPO" hash-object "$OLD/src/components/admin/HomeCompositionEditor.jsx")" = f8056702c26f6d52186ccfda18b9ec1aa7d1d1e6
+test "$(git -C "$REPO" hash-object "$OLD/src/components/admin/HomeCompositionEditor.css")" = dc301369930a4f7f0d733ad8ad6009255a42cbb1
 test -f "$OLD/src/services/mediaLibraryApi.js"
 test -f "$OLD/app/Controllers/Api/MediaLibraryController.php"
 test "$(http /app/)" = 200
