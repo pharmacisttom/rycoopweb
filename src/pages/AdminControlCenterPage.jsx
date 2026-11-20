@@ -1360,7 +1360,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
                   <p className="acc-card-subtitle">แสดงรายการจากตาราง login_logs พร้อมปกปิด IP บางส่วนตามนโยบาย PDPA</p>
                 </div>
               </div>
-              {(securityData.recent_events || []).length === 0 ? (
+              {securityData.recent_events_read_error ? (
+                <div role="alert" className="acc-empty-state">อ่านข้อมูล login_logs ไม่สำเร็จ โปรดตรวจ Backend และฐานข้อมูล ไม่ใช่จำนวนเหตุการณ์เป็นศูนย์</div>
+              ) : (securityData.recent_events || []).length === 0 ? (
                 <div className="acc-empty-state">ยังไม่มีบันทึกเหตุการณ์ในตาราง login_logs</div>
               ) : (
                 <div className="acc-table-wrap">
