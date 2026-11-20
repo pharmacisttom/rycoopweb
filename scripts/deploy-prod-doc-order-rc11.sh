@@ -37,6 +37,7 @@ for file in \
   "$SRC/app/Services/AdminCrudService.php" \
   "$SRC/app/Controllers/Api/SpaApiController.php" \
   "$SRC/src/pages/AdminStoredContentPage.jsx" \
+  "$SRC/src/pages/DocumentsPage.jsx" \
   "$SRC/tests/DocumentOrderContractTest.php" \
   "$SRC/tests/DocumentCategoriesContractTest.php" \
   "$SRC/app/Controllers/Admin/DocumentCategoryController.php" \
@@ -86,6 +87,7 @@ cp -a "$OLD" "$NEW"
 cp -a "$SRC/app/Services/AdminCrudService.php" "$NEW/app/Services/AdminCrudService.php"
 cp -a "$SRC/app/Controllers/Api/SpaApiController.php" "$NEW/app/Controllers/Api/SpaApiController.php"
 cp -a "$SRC/src/pages/AdminStoredContentPage.jsx" "$NEW/src/pages/AdminStoredContentPage.jsx"
+cp -a "$SRC/src/pages/DocumentsPage.jsx" "$NEW/src/pages/DocumentsPage.jsx"
 cp -a "$SRC/tests/DocumentOrderContractTest.php" "$NEW/tests/DocumentOrderContractTest.php"
 cp -a "$SRC/tests/DocumentCategoriesContractTest.php" "$NEW/tests/DocumentCategoriesContractTest.php"
 cp -a "$SRC/app/Controllers/Admin/DocumentCategoryController.php" "$NEW/app/Controllers/Admin/DocumentCategoryController.php"
