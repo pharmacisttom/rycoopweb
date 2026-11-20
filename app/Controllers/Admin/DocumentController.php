@@ -6,7 +6,7 @@ use App\Core\Database;
 final class DocumentController extends \App\Core\Controller {
     public function index():void {
         if(!$this->request->isAjax()){$this->redirect(url('admin/workspace'));return;}
-        Crud::respond($this->response,fn()=>['data'=>Crud::listing('documents'),'categories'=>Database::query("SELECT id,name FROM document_categories WHERE status='active' ORDER BY sort_order,id")]);
+        Crud::respond($this->response,fn()=>['data'=>Crud::listing('documents'),'categories'=>Database::query("SELECT id,name,sort_order FROM document_categories WHERE status='active' AND deleted_at IS NULL ORDER BY sort_order,id")]);
     }
     public function store():void {$this->save();}
     public function update(string $id):void {$this->save((int)$id);}
