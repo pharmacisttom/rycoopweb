@@ -7,10 +7,12 @@ test "$(id -u)" -eq 0
 test "$RC15_DEPLOY" = YES
 REPO=/var/tmp/rycoop-board-welfare-rc06
 SHA="$RC15_SHA"
-# Whitelisted LIVE git blob hashes confirmed by the 2026-11-20 RC14 diagnostics.
-# These are content fingerprints, not SHA256 checksums.
+# The tested RC14 baseline contains a nullable deposit-source URL bug.
+# Production hotfix changes that *single expression* to optional chaining.
+# Reconstruct the allowed hotfix from its verified RC14 parent; never bypass source guard.
+RC14_PARENT=/var/www/rycoopweb/production-releases/prod-board-rc14-validation-20261120T105523Z
+RC14_HOTFIX=/var/www/rycoopweb/production-releases/prod-home-nullfix-20261120T130611Z
 declare -A APPROVED_LIVE=(
-  [src/pages/HomePage.jsx]=0f12bc8c4a4483d7f55aa44b1cf2467e4f46de40
   [src/pages/AdminHomepageLayoutPage.jsx]=1c70e9e258695448f542c9e3f180a0a1e8c3b074
 )
 BASE=/var/www/rycoopweb/production-releases
@@ -51,18 +53,30 @@ test ! -e "$NEW"
 test "$(grep -Fc "$A" "$MAIN")" -eq 1
 test "$(grep -Fc "$A" "$LOOP")" -eq 1
 grep -Eq '^DB_DATABASE=["'"'"']?rayongcoop_db["'"'"']?[[:space:]]*$' "$OLD/.env"
-# A one-time, reviewed resolution of the two legacy deviations:
-# HomePage drops stale/offline legacyReference promotional text in favor of
-# actual API-backed content; AdminHomepageLayoutPage drops "TEST" labels.
-# Any future drift from these exact reviewed LIVE files must stop deployment.
-for F in src/pages/HomePage.jsx src/pages/AdminHomepageLayoutPage.jsx; do
+# Strictly guard the production-hotfix release and its one-line fix.
+if test "$OLD" != "$RC14_HOTFIX"; then
+  echo "UNEXPECTED_LIVE_RELEASE=$OLD"; exit 1
+fi
+test -f "$RC14_PARENT/src/pages/HomePage.jsx"
+test -f "$RC14_HOTFIX/src/pages/HomePage.jsx"
+test "$(git -C "$REPO" hash-object "$RC14_PARENT/src/pages/HomePage.jsx")" = 0f12bc8c4a4483d7f55aa44b1cf2467e4f46de40
+export RC14_PARENT RC14_HOTFIX
+python3 - <<'PY'
+import os
+from pathlib import Path
+old=(Path(os.environ['RC14_PARENT'])/'src/pages/HomePage.jsx').read_text()
+new=(Path(os.environ['RC14_HOTFIX'])/'src/pages/HomePage.jsx').read_text()
+needle='href={INTEREST_RATES.depositSource.url}'
+assert old.count(needle)==1, 'UNRECOGNIZED_PARENT_SOURCE'
+expected=old.replace(needle,'href={INTEREST_RATES?.depositSource?.url}')
+assert new==expected, 'UNREVIEWED_HOTFIX_DIFF'
+print('HOTFIX_NULL_GUARD=PASS')
+PY
+for F in src/pages/AdminHomepageLayoutPage.jsx; do
  EXPECTED="${APPROVED_LIVE[$F]}"
  ACTUAL="$(git -C "$REPO" hash-object "$OLD/$F")"
  if test "$EXPECTED" != "$ACTUAL"; then
-   echo "UNREVIEWED_LIVE_SOURCE=$F"
-   echo "EXPECTED_BLOB=$EXPECTED"
-   echo "ACTUAL_BLOB=$ACTUAL"
-   exit 1
+   echo "UNREVIEWED_LIVE_SOURCE=$F"; exit 1
  fi
  echo "REVIEWED_LIVE_SOURCE=PASS:$F"
 done
