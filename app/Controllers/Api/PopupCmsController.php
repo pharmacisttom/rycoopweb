@@ -6,6 +6,7 @@ namespace App\Controllers\Api;
 use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Auth;
+use App\Core\Logger;
 use App\Services\AuditService;
 use Throwable;
 
@@ -15,6 +16,14 @@ use Throwable;
  */
 final class PopupCmsController extends Controller
 {
+    private function fail(string $action, Throwable $e, string $publicMessage): void
+    {
+        // Server-side diagnostic only: never reveal SQL, stack traces or secrets to clients.
+        $ref = bin2hex(random_bytes(6));
+        Logger::error('[POPUP_CMS]['.$action.']['.$ref.'] '.get_class($e).': '.$e->getMessage());
+        $this->json(['success'=>false,'message'=>$publicMessage,'reference'=>$ref],503);
+    }
+
     private const SELECT_FIELDS = 'id,title,content,button_text,button_url,desktop_image,priority,status,start_at,created_at';
 
     public function published(): void
@@ -36,7 +45,7 @@ final class PopupCmsController extends Controller
             }
             $this->json(['success' => true, 'data' => $row]);
         } catch (Throwable $e) {
-            $this->json(['success' => false, 'message' => 'ไม่สามารถโหลดประกาศได้'], 503);
+            $this->fail('published',$e,'ไม่สามารถโหลดประกาศได้');
         }
     }
 
@@ -68,7 +77,7 @@ final class PopupCmsController extends Controller
             readfile($path);
             exit;
         } catch (Throwable $e) {
-            $this->json(['success'=>false,'message'=>'ไม่สามารถโหลดภาพได้'],503);
+            $this->fail('image',$e,'ไม่สามารถโหลดภาพได้');
         }
     }
 
@@ -97,7 +106,7 @@ final class PopupCmsController extends Controller
             unset($row);
             $this->json(['success' => true, 'data' => $rows]);
         } catch (Throwable $e) {
-            $this->json(['success' => false, 'message' => 'โหลดรายการ Popup ไม่สำเร็จ'], 503);
+            $this->fail('index',$e,'โหลดรายการ Popup ไม่สำเร็จ');
         }
     }
 
@@ -156,7 +165,7 @@ final class PopupCmsController extends Controller
         } catch (\InvalidArgumentException $e) {
             $this->json(['success'=>false,'message'=>$e->getMessage()],422);
         } catch (Throwable $e) {
-            $this->json(['success'=>false,'message'=>'ไม่สามารถบันทึก Popup ได้'],503);
+            $this->fail('store',$e,'ไม่สามารถบันทึก Popup ได้');
         }
     }
 
@@ -178,7 +187,7 @@ final class PopupCmsController extends Controller
         } catch (\InvalidArgumentException $e) {
             $this->json(['success'=>false,'message'=>$e->getMessage()],422);
         } catch (Throwable $e) {
-            $this->json(['success'=>false,'message'=>'ไม่สามารถแก้ไข Popup ได้'],503);
+            $this->fail('update',$e,'ไม่สามารถแก้ไข Popup ได้');
         }
     }
 
@@ -196,7 +205,7 @@ final class PopupCmsController extends Controller
         } catch (\InvalidArgumentException $e) {
             $this->json(['success'=>false,'message'=>$e->getMessage()],422);
         } catch (Throwable $e) {
-            $this->json(['success'=>false,'message'=>'ไม่สามารถปิด Popup ได้'],503);
+            $this->fail('disable',$e,'ไม่สามารถปิด Popup ได้');
         }
     }
     public function destroy(string $id): void
@@ -213,7 +222,7 @@ final class PopupCmsController extends Controller
         } catch (\InvalidArgumentException $e) {
             $this->json(['success'=>false,'message'=>$e->getMessage()],422);
         } catch (Throwable $e) {
-            $this->json(['success'=>false,'message'=>'ไม่สามารถลบ Popup ได้'],503);
+            $this->fail('delete',$e,'ไม่สามารถลบ Popup ได้');
         }
     }
 
