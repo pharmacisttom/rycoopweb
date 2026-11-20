@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/pages/HomePage.jsx'
       - 'scripts/deploy-prod-home-images-rc15.sh'
+      - 'scripts/deploy-prod-home-direct-upload-rc15.sh'
       - 'src/components/home/HomeHighlightSlider.*'
       - 'src/components/admin/HomeCompositionEditor.*'
       - 'src/components/layout/TopBar.jsx'
@@ -30,6 +31,7 @@ jobs:
         run: |
           bash -n scripts/deploy-prod-home-composition-rc15.sh
           bash -n scripts/deploy-prod-home-images-rc15.sh
+          bash -n scripts/deploy-prod-home-direct-upload-rc15.sh
       - name: PHP syntax checks
         run: |
           php -l config/routes.php
