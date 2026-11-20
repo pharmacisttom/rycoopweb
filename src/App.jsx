@@ -33,6 +33,7 @@ const AdminMembersPage = lazy(() => import('./pages/AdminMembersPage'));
 const AdminMembersHealthPage = lazy(() => import('./pages/AdminMembersHealthPage'));
 const AdminMemberDetailPage = lazy(() => import('./pages/AdminMemberDetailPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+const AdminPopupCampaignPage = lazy(() => import('./pages/AdminPopupCampaignPage'));
 const AdminControlCenterPage = lazy(() => import('./pages/AdminControlCenterPage'));
 const AdminMediaLibraryPage = lazy(() => import('./pages/AdminMediaLibraryPage'));
 const AdminAccessPage = lazy(() => import('./pages/AdminAccessPage'));
@@ -174,7 +175,7 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|media|layout|login|2fa)(?:\/|$)/.test(pathname);
+  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|media|layout|popups|login|2fa)(?:\/|$)/.test(pathname);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -237,6 +238,7 @@ export default function App() {
             <Route path="/admin/control-center" element={<StaffProtectedRoute><AdminControlCenterPage section="dashboard" /></StaffProtectedRoute>} />
             <Route path="/admin/analytics/visitors" element={<StaffProtectedRoute><AdminControlCenterPage section="visitor-analytics" /></StaffProtectedRoute>} />
             <Route path="/admin/cms" element={<StaffProtectedRoute roles={['super_admin', ...staffRoles]}><AdminDashboardPage /></StaffProtectedRoute>} />
+            <Route path="/admin/popups" element={<StaffProtectedRoute roles={['super_admin']}><AdminPopupCampaignPage /></StaffProtectedRoute>} />
             <Route path="/admin/operations" element={<StaffProtectedRoute><AdminControlCenterPage section="operations" /></StaffProtectedRoute>} />
             <Route path="/admin/users" element={<StaffProtectedRoute><AdminControlCenterPage section="users" /></StaffProtectedRoute>} />
             <Route path="/admin/roles" element={<StaffProtectedRoute><AdminControlCenterPage section="roles" /></StaffProtectedRoute>} />
