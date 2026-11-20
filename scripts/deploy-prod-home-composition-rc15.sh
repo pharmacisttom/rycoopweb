@@ -92,6 +92,7 @@ systemctl is-active --quiet rycoop-prod-fpm
 for P in /app/ /app/admin/layout /api/public/documents; do test "$(http "$P")" = 200; done
 AUTH_BEFORE="$(http /api/admin/layout)"
 case "$AUTH_BEFORE" in 302|401|403) ;; *) echo "AUTH_GUARD_UNEXPECTED=$AUTH_BEFORE";exit 1;; esac
+echo "EXISTING_ADMIN_AUTH_HTTP=$AUTH_BEFORE"
 echo "ACTIVE_PRODUCTION=$OLD"
 
 echo '===== 2. BACKUP AND SELECTIVE PATCH ====='
@@ -203,10 +204,13 @@ if test "$PUBLIC_CODE" != 200; then
  echo "Inspect PHP-FPM / Nginx logs for the request; do not expose credentials."
  exit 1
 fi
-if test "$ADMIN_CODE" != "$AUTH_BEFORE"; then
- echo "RC15_ADMIN_GUARD_GATE=FAILED"
- exit 1
-fi
+# The legacy /api/admin/layout and the new endpoint may use different
+# unauthorized response styles (401 JSON versus 302 redirect); both must DENY.
+# Do not require their HTTP status codes to be identical.
+case "$ADMIN_CODE" in
+  302|401|403) echo "RC15_ADMIN_AUTH_GUARD=PASS" ;;
+  *) echo "RC15_ADMIN_GUARD_GATE=FAILED"; exit 1 ;;
+esac
 curl --noproxy '*' -4 -fsS --max-time 20 \
  --resolve www.rayongcoop.org:443:127.0.0.1 \
  https://www.rayongcoop.org/api/public/home-composition |
