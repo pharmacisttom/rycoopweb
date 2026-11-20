@@ -15,7 +15,7 @@ const NAMES = {
 const copy = value => JSON.parse(JSON.stringify(value));
 const makeSlide = () => ({id:'slide-'+crypto.randomUUID().replaceAll('-','').slice(0,16),title:'',body:'',link:'',image_url:''});
 const normalBackground = value => ({image_url:value?.image_url||'', overlay_opacity:value?.overlay_opacity??60, position:value?.position||'center'});
-const allowedImage = path => !path || (/^\\/(?:storage\\/uploads|uploads|assets)\\/[a-zA-Z0-9_./-]+\\.(?:webp|png|jpe?g)$/.test(path) && !path.includes('..') && !path.includes('//'));
+const allowedImage = path => !path || (['/storage/uploads/','/uploads/','/assets/'].some(prefix=>path.startsWith(prefix)) && /^[a-zA-Z0-9_./-]+$/.test(path) && ['.jpg','.jpeg','.png','.webp'].some(ext=>path.toLowerCase().endsWith(ext)) && !path.includes('..') && !path.includes('//'));
 const prepare = value => ({...copy(value),background:normalBackground(value.background),slides:value.slides.map(item=>({...item,image_url:item.image_url||''}))});
 function Preview({composition}) {
   return <div className="hc-preview" aria-label="ตัวอย่างการจัดลำดับหน้าแรก">
