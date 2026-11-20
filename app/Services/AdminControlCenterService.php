@@ -873,6 +873,41 @@ class AdminControlCenterService
             $recentEvents = [];
         }
 
+        // Distinct sources, never add counts together: they describe overlapping
+        // types of activity. Missing activity is not proof of a broken writer.
+        $logSources = [];
+        $sourceColumns = [
+            'security_audit_logs' => 'timestamp_utc',
+            'audit_logs' => 'created_at',
+            'login_logs' => 'created_at',
+            'cookie_consents' => 'consented_at',
+            'popup_events' => 'created_at',
+        ];
+        foreach ($sourceColumns as $table => $timeColumn) {
+            try {
+                $row = Database::first(
+                    "SELECT COUNT(*) AS total, MAX($timeColumn) AS latest_event,
+                      SUM(CASE WHEN $timeColumn >= NOW() - INTERVAL 24 HOUR THEN 1 ELSE 0 END) AS events_24h
+                     FROM $table"
+                );
+                $logSources[] = [
+                    'source' => $table,
+                    'status' => 'available',
+                    'total' => (int)($row['total'] ?? 0),
+                    'latest_event' => $row['latest_event'] ?? null,
+                    'events_24h' => (int)($row['events_24h'] ?? 0),
+                ];
+            } catch (\Throwable $e) {
+                $logSources[] = [
+                    'source' => $table,
+                    'status' => 'query_error',
+                    'total' => null,
+                    'latest_event' => null,
+                    'events_24h' => null,
+                ];
+            }
+        }
+
         return [
             'generated_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
             'disclaimer' => 'คะแนนสุขภาพความปลอดภัยคำนวณจากกฎการตั้งค่าและสถานะ MFA จริงในระบบ ไม่ใช่การรับรองมาตรฐานภายนอก (ISO/SOC)',
@@ -900,6 +935,7 @@ class AdminControlCenterService
                 'totp_cipher' => 'AES-256-GCM',
                 'qr_generator' => 'Local SVG (BaconQrCode 3.1.1 — Zero External Leakage)',
             ],
+            'log_sources' => $logSources,
             'recent_events' => $recentEvents,
         ];
     }
