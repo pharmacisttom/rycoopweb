@@ -74,7 +74,7 @@ test "$(status /app/admin/documents)" = 200
 test "$(status /api/public/popup-campaign)" = 200
 OLD_MEMBER="$(status /api/member/dividends)"
 OLD_ADMIN="$(status /api/admin/documents)"
-OLD_CATEGORY="$(status /api/admin/document-categories)"
+# New category route must remain protected after activation.
 case "$OLD_ADMIN" in 302|401|403) ;; *) echo "UNAUTH_ADMIN_UNEXPECTED=$OLD_ADMIN"; exit 1;; esac
 mkdir -p "$BACKUP"
 cp -a "$MAIN" "$BACKUP/main.conf"
@@ -138,7 +138,8 @@ for route in /app/ /app/admin/documents /app/admin/popups /app/welfare /api/publ
 done
 test "$(status /api/member/dividends)" = "$OLD_MEMBER"
 test "$(status /api/admin/documents)" = "$OLD_ADMIN"
-test "$(status /api/admin/document-categories)" = "$OLD_CATEGORY"
+CATEGORY_STATUS="$(status /api/admin/document-categories)"
+case "$CATEGORY_STATUS" in 302|401|403) echo "CATEGORY_ADMIN_AUTH=PASS";; *) echo "UNAUTH_CATEGORY_ROUTE=$CATEGORY_STATUS"; exit 1;; esac
 curl --noproxy '*' -4 -fsS --max-time 20 --resolve "$HOST:443:127.0.0.1" \
  "https://$HOST/api/public/documents" | python3 -c '
 import json,sys
