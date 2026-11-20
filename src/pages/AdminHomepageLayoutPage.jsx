@@ -3,6 +3,7 @@ import AdminControlCenterShell from '../components/admin/AdminControlCenterShell
 import { memberAdminApi } from '../services/memberAdminApi';
 import DynamicLayoutEditor from '../components/admin/DynamicLayoutEditor';
 import SiteChromeVisibilityEditor from '../components/admin/SiteChromeVisibilityEditor';
+import HomeCompositionEditor from '../components/admin/HomeCompositionEditor';
 
 const keys = ['hero', 'quick_services', 'statistics', 'products', 'calculator', 'welfare'];
 const sameVisibility = (a, b) => keys.every(key => a?.[key] === b?.[key]);
@@ -142,6 +143,7 @@ export default function AdminHomepageLayoutPage() {
           </div>
         )}
       </section>
+      <HomeCompositionEditor />
       <SiteChromeVisibilityEditor />
       <DynamicLayoutEditor />
     </AdminControlCenterShell>
