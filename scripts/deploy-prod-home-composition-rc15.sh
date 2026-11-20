@@ -23,6 +23,7 @@ NEW="$BASE/prod-home-rc15-$STAMP"
 BACKUP="/var/backups/rycoop-production/rc15-$STAMP"
 CHANGED=0
 SUCCESS=0
+FPM_RESTARTED=0
 rollback(){
  rc=$?
  trap - EXIT
@@ -30,7 +31,17 @@ rollback(){
   echo RC15_ROLLBACK=BEGIN
   cp -a "$BACKUP/main.conf" "$MAIN"
   cp -a "$BACKUP/loop.conf" "$LOOP"
-  if nginx -t && systemctl reload nginx; then echo RC15_ROLLBACK=PASS; else echo RC15_ROLLBACK=FAILED; fi
+  if nginx -t && systemctl reload nginx; then
+    # RC15 troubleshooting may have restarted this dedicated production FPM master.
+    # Refresh its route cache after restoring the original document root.
+    if test "${FPM_RESTARTED:-0}" -eq 1; then
+      systemctl restart rycoop-prod-fpm || echo "RC15_ROLLBACK_FPM_RESTART=FAILED"
+    fi
+    systemctl is-active --quiet nginx && systemctl is-active --quiet rycoop-prod-fpm &&
+      echo RC15_ROLLBACK=PASS || echo RC15_ROLLBACK=SERVICE_CHECK_FAILED
+  else
+    echo RC15_ROLLBACK=FAILED
+  fi
  fi
  exit "$rc"
 }
@@ -199,12 +210,40 @@ test "$ROOT_LOCATION" = "https://www.rayongcoop.org/app/"
 for P in /app/ /app/admin/layout /app/admin/security /api/public/documents "$ASSET"; do
  CODE="$(http "$P")";echo "$P HTTP=$CODE";test "$CODE" = 200
 done
+# Check both the loopback backend and public reverse proxy. They must agree.
+# A proxy 404 can be explained by a backend that still executes an old route table.
+LOOPBACK_CODE="$(curl -sS -4 --noproxy '*' --connect-timeout 5 --max-time 20 \
+ -H 'Host: www.rayongcoop.org' -o /dev/null -w '%{http_code}' \
+ http://127.0.0.1:18092/api/public/home-composition)"
 PUBLIC_CODE="$(http /api/public/home-composition)"
 ADMIN_CODE="$(http /api/admin/home-composition)"
+echo "RC15_LOOPBACK_COMPOSITION_HTTP=$LOOPBACK_CODE"
+echo "RC15_PUBLIC_COMPOSITION_HTTP_INITIAL=$PUBLIC_CODE"
+if test "$PUBLIC_CODE" != 200; then
+ echo "===== RC15 ROUTING DIAGNOSIS ====="
+ echo "EXPECTED_PHP_ROOT=$NEW/public"
+ echo "ACTIVE_LOOPBACK_ROOT=$(grep -E '^[[:space:]]*root[[:space:]]+' "$LOOP" | head -1 | tr -d ';')"
+ if test "$LOOPBACK_CODE" = 404 && test "$PUBLIC_CODE" = 404; then
+   # Only restart the dedicated rycoop-prod FPM service; no PHP global restart.
+   # This refreshes potentially stale OPcache, then validates both routes again.
+   echo "RC15_OPCACHE_REMEDIATION=DEDICATED_FPM_RESTART"
+   FPM_RESTARTED=1
+   systemctl restart rycoop-prod-fpm
+   systemctl is-active --quiet rycoop-prod-fpm
+   test -S /run/php/rycoop-prod.sock
+   LOOPBACK_CODE="$(curl -sS -4 --noproxy '*' --connect-timeout 5 --max-time 20 \
+     -H 'Host: www.rayongcoop.org' -o /dev/null -w '%{http_code}' \
+     http://127.0.0.1:18092/api/public/home-composition)"
+   PUBLIC_CODE="$(http /api/public/home-composition)"
+   ADMIN_CODE="$(http /api/admin/home-composition)"
+   echo "RC15_LOOPBACK_COMPOSITION_HTTP_AFTER_FPM=$LOOPBACK_CODE"
+   echo "RC15_PUBLIC_COMPOSITION_HTTP_AFTER_FPM=$PUBLIC_CODE"
+ fi
+fi
 echo "RC15_PUBLIC_COMPOSITION_HTTP=$PUBLIC_CODE"
 echo "RC15_ADMIN_COMPOSITION_HTTP=$ADMIN_CODE"
 echo "RC15_EXPECTED_ADMIN_GUARD=$AUTH_BEFORE"
-if test "$PUBLIC_CODE" != 200; then
+if test "$PUBLIC_CODE" != 200 || test "$LOOPBACK_CODE" != 200; then
  echo "RC15_PUBLIC_COMPOSITION_GATE=FAILED"
  echo "Inspect PHP-FPM / Nginx logs for the request; do not expose credentials."
  exit 1
