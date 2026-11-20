@@ -30,7 +30,7 @@ rollback(){
 trap rollback EXIT
 [[ "$EUID" -eq 0 ]] || { echo 'ERROR: require sudo'; exit 1; }
 [[ "$CONF" == /etc/nginx/*rycoopweb-test-v2* ]] || { echo 'TEST_CONFIG_GUARD=FAIL';exit 1; }
-[[ -f "$CONF" && -d "$REPO/.git" && ! -e "$NEW" ]] || { echo 'SOURCE_GUARD=FAIL';exit 1; }
+[[ -f "$CONF" && ! -e "$NEW" ]] && git -C "$REPO" rev-parse --git-dir >/dev/null || { echo 'SOURCE_GUARD=FAIL';exit 1; }
 ACTIVE="$(grep -oE '/var/www/rycoopweb/test-releases/[^ ;]+/public' "$CONF" | sort -u)"
 [[ -n "$ACTIVE" ]] || { echo 'ACTIVE_TEST_RELEASE_NOT_FOUND';exit 1; }
 OLD="${ACTIVE%/public}"
