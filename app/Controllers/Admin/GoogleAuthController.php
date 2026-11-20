@@ -289,10 +289,7 @@ class GoogleAuthController extends Controller
         // Identity verification is NOT a completed privileged login. TOTP remains mandatory.
         // This event is best-effort in RC13A to preserve the existing authentication flow.
         // Do not include Google identifiers, tokens, email, IP or MFA secrets in the payload.
-        AuditService::log('google_auth', 'identity_verified', (string) $userId, null, [
-            'provider' => 'google',
-            'stage' => 'pre_mfa',
-        ]);
+        AuditService::logVerifiedGoogleIdentity($userId);
 
         if ($hasMfa) {
             // User has already enrolled in MFA: require TOTP verification
