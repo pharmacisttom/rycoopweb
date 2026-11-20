@@ -31,13 +31,26 @@ const BOARD_SERVER_FIELDS = ['id','name','position','image','term','workplace','
 const BOARD_SERVER_FIELD_SET = new Set(BOARD_SERVER_FIELDS);
 const normalizeBoardDraft = rows => rows.map((person,index) => {
   if (!person || typeof person !== 'object' || Array.isArray(person)) {
-    throw new Error(`ข้อมูลกรรมการรายการที่ ${index+1} ไม่ถูกต้อง`);
+    throw new Error('ข้อมูลกรรมการรายการที่ '+(index+1)+' ไม่ถูกต้อง');
   }
-  // Preserve all server-supported fields, not arbitrary legacy keys.
-  const board = Object.fromEntries(Object.entries(person).filter(([key]) => BOARD_SERVER_FIELD_SET.has(key)));
-  if (typeof board.id === 'string' && /^\d+$/.test(board.id.trim())) board.id = Number(board.id.trim());
-  if (board.image === '') board.image = null;
-  if (board.status === '') board.status = 'active';
+  const board=Object.fromEntries(Object.entries(person).filter(([key])=>BOARD_SERVER_FIELD_SET.has(key)));
+  if (typeof board.id==='string' && /^\d+$/.test(board.id.trim())) board.id=Number(board.id.trim());
+  if (!Number.isSafeInteger(board.id)||board.id<1||board.id>999999) {
+    throw new Error('รหัสกรรมการรายการที่ '+(index+1)+' ไม่ถูกต้อง');
+  }
+  // Image is nullable; optional textual properties must not be sent as null to PHP.
+  if (board.image==null||board.image==='') board.image=null;
+  else if (typeof board.image!=='string') throw new Error('ลิงก์รูปภาพรายการที่ '+(index+1)+' ไม่ถูกต้อง');
+  for(const key of ['name','position','term','workplace']){
+    const field=board[key];
+    if(field==null&&['term','workplace'].includes(key)){delete board[key];continue;}
+    if(typeof field!=='string')throw new Error('ฟิลด์ '+key+' รายการที่ '+(index+1)+' ต้องเป็นข้อความ');
+    if(field.length>1000||/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(field))throw new Error('ฟิลด์ '+key+' รายการที่ '+(index+1)+' ยาวเกินกำหนดหรือมีอักขระควบคุม');
+    if(['name','position'].includes(key)&&!field.trim())throw new Error('กรุณากรอก '+key+' รายการที่ '+(index+1));
+    board[key]=field.trim();
+  }
+  if(board.status==null||board.status==='')delete board.status;
+  else if(!['active','former'].includes(board.status))throw new Error('สถานะกรรมการรายการที่ '+(index+1)+' ไม่ถูกต้อง');
   return board;
 });
 const safeRevisionValue = (payload, section) => {
