@@ -26,6 +26,20 @@ const labelOf = row => row?.name || row?.title || row?.type || 'รายกา�
 const safeRows = (value, section) => section === 'profile'
   ? (value && !Array.isArray(value) && typeof value === 'object' ? [value] : [])
   : (Array.isArray(value) ? value : []);
+// Strip only UI/legacy metadata from the board draft request. Never mutate the published catalog.
+const BOARD_SERVER_FIELDS = ['id','name','position','image','term','workplace','status'];
+const BOARD_SERVER_FIELD_SET = new Set(BOARD_SERVER_FIELDS);
+const normalizeBoardDraft = rows => rows.map((person,index) => {
+  if (!person || typeof person !== 'object' || Array.isArray(person)) {
+    throw new Error(`ข้อมูลกรรมการรายการที่ ${index+1} ไม่ถูกต้อง`);
+  }
+  // Preserve all server-supported fields, not arbitrary legacy keys.
+  const board = Object.fromEntries(Object.entries(person).filter(([key]) => BOARD_SERVER_FIELD_SET.has(key)));
+  if (typeof board.id === 'string' && /^\\d+$/.test(board.id.trim())) board.id = Number(board.id.trim());
+  if (board.image === '') board.image = null;
+  if (board.status === '') board.status = 'active';
+  return board;
+});
 const safeRevisionValue = (payload, section) => {
   try {
     const value = typeof payload === 'string' ? JSON.parse(payload) : payload;
@@ -168,7 +182,8 @@ export default function PublicContentAdminPage() {
     finally {setMediaBusy(false);}
   }
   async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');try{
-    const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
+    const draftValue=section==='boards'?normalizeBoardDraft(value):value;
+     const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value:draftValue,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
     setDirty(false);setBoardModalOpen(false);setBoardRemoveSelection([]);setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);setRefresh(n=>n+1);
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   async function publish(revision){if(!window.confirm(`เผยแพร่ร่าง #${revision.id} มีผล ${revision.effective_on}?`))return;setBusy(true);setError('');try{
