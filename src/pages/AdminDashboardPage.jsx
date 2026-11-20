@@ -2042,6 +2042,7 @@ export default function AdminDashboardPage() {
   if (user?.role === 'super_admin') {
     modules.push({ permission: null, path: '/admin/layout', label: 'Hero, สี และ Layout หน้าแรก' });
     modules.push({ permission: null, path: '/admin/navigation-copy', label: 'จัดการข้อความเมนูเว็บไซต์' });
+    modules.push({ permission: null, path: '/admin/popups', label: 'Popup ประชาสัมพันธ์' });
   }
   const visible = modules.filter(item => !item.permission || can(item.permission));
   return <section className="admin-module">
