@@ -236,6 +236,12 @@ export default function PublicContentAdminPage() {
   async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');setBoardValidationIssues([]);try{
     if(section==='boards'){
       const issues=collectBoardIssues(value,[...groupBoardIds]);
+      if(!note.trim())issues.push({row:null,field:'เหตุผลการแก้ไข',message:'ต้องระบุเหตุผลก่อนบันทึก'});
+      if(note.length>1000)issues.push({row:null,field:'เหตุผลการแก้ไข',message:'ยาวเกิน 1,000 อักขระ'});
+      try{const url=new URL(source);if(url.protocol!=='https:'||url.username||url.password)throw Error('invalid');}
+      catch{issues.push({row:null,field:'แหล่งอ้างอิง',message:'ต้องเป็น HTTPS URL ที่ถูกต้อง'});}
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(effective)||Number.isNaN(Date.parse(effective)))issues.push({row:null,field:'วันที่มีผล',message:'วันที่ไม่ถูกต้อง'});
+      if(expires&&expires<effective)issues.push({row:null,field:'วันสิ้นสุด',message:'วันสิ้นสุดต้องไม่ก่อนวันที่มีผล'});
       if(issues.length){
         setBoardValidationIssues(issues);
         setError('พบข้อผิดพลาด '+issues.length+' จุด กรุณาดูรายละเอียดและแก้ไขให้ครบก่อนบันทึก');
