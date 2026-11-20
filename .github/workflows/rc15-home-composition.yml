@@ -1,0 +1,69 @@
+name: RC15 Homepage Composition QA
+on:
+  pull_request:
+    paths:
+      - 'src/pages/HomePage.jsx'
+      - 'scripts/deploy-prod-home-images-rc15.sh'
+      - 'scripts/deploy-prod-home-direct-upload-rc15.sh'
+      - 'src/components/home/HomeHighlightSlider.*'
+      - 'src/components/admin/HomeCompositionEditor.*'
+      - 'src/components/layout/TopBar.jsx'
+      - 'src/pages/AdminHomepageLayoutPage.jsx'
+      - 'app/Services/HomeCompositionService.php'
+      - 'app/Controllers/Admin/HomeCompositionController.php'
+      - 'config/routes.php'
+      - 'tests/HomeCompositionRc15*.php'
+      - '.github/workflows/rc15-home-composition.yml'
+  workflow_dispatch:
+jobs:
+  rc15-source-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+          coverage: none
+      - name: Direct image upload contract checks
+        run: node tests/HomeCompositionRc15DirectUploadTest.mjs
+      - name: RC15 production deploy script shell syntax
+        run: |
+          bash -n scripts/deploy-prod-home-composition-rc15.sh
+          bash -n scripts/deploy-prod-home-images-rc15.sh
+          bash -n scripts/deploy-prod-home-direct-upload-rc15.sh
+      - name: PHP syntax checks
+        run: |
+          php -l config/routes.php
+          php -l app/Services/HomeCompositionService.php
+          php -l app/Controllers/Admin/HomeCompositionController.php
+          php -l tests/HomeCompositionRc15ContractTest.php
+          php -l tests/HomeCompositionRc15ValidationTest.php
+      - name: Validate homepage composition without database
+        run: |
+          php tests/HomeCompositionRc15ContractTest.php
+          php tests/HomeCompositionRc15ValidationTest.php
+          python3 tests/HomepageLayoutBoardContractTest.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies and generate scoped CSS
+        run: npm ci --no-audit --no-fund
+      - name: Build React frontend
+        run: npm run build
+      - name: Install Chromium for browser regression
+        run: npx playwright install chromium
+      - name: Browser smoke — no null crash and correct published ordering
+        run: |
+          set -Eeuo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/rycoop-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:4173/app/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          RC15_BROWSER_BASE=http://127.0.0.1:4173 node tests/HomeCompositionRc15BrowserTest.mjs

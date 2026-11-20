@@ -1,0 +1,25 @@
+.home-highlight-slider{background:linear-gradient(115deg,#133565,#2d59a9);color:#fff;padding:clamp(25px,4vw,54px) 0}.home-highlight-slider.theme-ocean{background:linear-gradient(115deg,#064d62,#1483a2)}.home-highlight-slider.theme-midnight{background:linear-gradient(115deg,#09182f,#1f3355)}.home-highlight-inner{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:35px;min-height:180px}.home-highlight-copy{min-width:0;max-width:900px}.home-highlight-kicker{display:inline-block;color:#f9cf64;font-weight:700;font-size:.86rem;margin-bottom:14px}.home-highlight-copy h2{font-size:clamp(1.4rem,2.6vw,2.4rem);line-height:1.23;color:#fff;margin-bottom:12px}.home-highlight-copy p{color:#e6efff;font-size:clamp(.92rem,1.3vw,1.1rem);line-height:1.65;white-space:pre-line}.home-highlight-link{display:inline-flex;color:#ffdc80;font-weight:700;margin-top:12px}.home-highlight-controls{display:flex;align-items:center;gap:10px}.home-highlight-controls>button{background:#ffffff1c;border:1px solid #ffffff55;border-radius:10px;color:white;width:42px;height:42px;cursor:pointer;font-size:1.4rem}.home-highlight-dots{display:flex;gap:7px;align-items:center}.home-highlight-dots button{border:0;background:#ffffff70;border-radius:20px;width:9px;height:9px;cursor:pointer}.home-highlight-dots button.is-active{width:26px;background:#fbbf24}.home-highlight-controls button:focus-visible,.home-highlight-link:focus-visible{outline:3px solid #ffcf5b;outline-offset:3px}.home-rates-news-lowered{background:linear-gradient(115deg,#17376a,#254e9a);padding:24px 0 44px}.home-rates-news-lowered .hero-dashboard-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.home-rates-news-lowered .glass-card{min-width:0}@media(max-width:960px){.home-highlight-inner{grid-template-columns:1fr}.home-highlight-controls{justify-content:flex-start}.home-rates-news-lowered .hero-dashboard-row{grid-template-columns:1fr}}
+/* RC15 photographic editorial slider: readable at every breakpoint and safe if media fails. */
+.home-highlight-slider{position:relative;isolation:isolate;overflow:hidden;min-height:280px;display:flex;align-items:center}
+.home-highlight-photo,.home-highlight-image-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.home-highlight-photo{object-fit:cover;z-index:-2}
+.home-highlight-image-overlay{z-index:-1}
+.home-highlight-inner{position:relative;width:100%;min-height:230px;padding-block:clamp(12px,2vw,28px)}
+.home-highlight-copy{max-width:850px;text-shadow:0 2px 16px rgba(0,0,0,.25)}
+.home-highlight-copy h2{font-weight:800;letter-spacing:-.025em;text-wrap:balance}
+.home-highlight-copy p{max-width:68ch}
+.home-highlight-controls{padding:10px 12px;border-radius:16px;background:rgba(8,23,49,.18);backdrop-filter:blur(8px)}
+.home-highlight-controls>button{transition:background .2s ease,transform .2s ease}
+.home-highlight-controls>button:hover{background:rgba(255,255,255,.28)}
+@media(max-width:720px){
+ .home-highlight-slider{min-height:320px}
+ .home-highlight-inner{min-height:250px;gap:18px}
+ .home-highlight-copy h2{font-size:clamp(1.45rem,5vw,2rem)}
+ .home-highlight-controls{width:max-content;max-width:100%;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){.home-highlight-controls>button{transition:none}}
+
+/* Responsive picture fills the entire slide; mobile art direction uses a separate source. */
+.home-highlight-picture{position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none}
+.home-highlight-picture .home-highlight-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+@media(max-width:767px){.home-highlight-picture .home-highlight-photo{object-position:center center}}

@@ -13,6 +13,7 @@ import { normalizeNewsItem } from '../utils/news';
 import { useAuth } from '../context/AuthContext';
 import SafeImage from '../components/common/SafeImage';
 import PublishedDynamicSections from '../components/layout/PublishedDynamicSections';
+import HomeHighlightSlider from '../components/home/HomeHighlightSlider';
 
 import { usePublicInformation } from '../context/PublicContentContext';
 
@@ -25,6 +26,7 @@ export default function HomePage() {
   const { setShowAuthModal, isLoggedIn } = useAuth();
   // Published-only visibility. No draft config is consumed by the public UI.
   const [layout, setLayout] = useState(null);
+  const [composition,setComposition]=useState(null);
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/public/layout', { signal: controller.signal, credentials: 'same-origin', cache: 'no-cache' })
@@ -37,7 +39,19 @@ export default function HomePage() {
       .catch(() => {});
     return () => controller.abort();
   }, []);
-  const showSection = key => layout?.[key] !== false;
+  useEffect(()=>{
+    const controller=new AbortController();
+    fetch('/api/public/home-composition',{signal:controller.signal,credentials:'same-origin',cache:'no-cache'})
+      .then(response=>response.ok?response.json():null)
+      .then(result=>{
+        const candidate=result?.data;
+        if(candidate&&Array.isArray(candidate.order)&&Array.isArray(candidate.slides)&&candidate.visible){
+          setComposition(candidate);
+        }
+      }).catch(()=>{});
+    return()=>controller.abort();
+  },[]);
+  const showSection = key => layout?.[key] !== false && composition?.visible?.[key] !== false;
   const [activeRateTab, setActiveRateTab] = useState('deposits');
   const [activeNewsTab, setActiveNewsTab] = useState('news');
   const [activeNewsSlide, setActiveNewsSlide] = useState(0);
@@ -168,13 +182,9 @@ export default function HomePage() {
     bgImageUrl: '/assets/img/hero_bg_coop.jpg'
   };
 
-  return (
-    <div>
-
-      {/* =========================================================================
-          HERO SECTION (High Impact Modern Banner)
-          ========================================================================= */}
-      {showSection('hero') && <section style={{
+  const sectionsById = {
+    hero: (
+<section style={{
         position: 'relative',
         backgroundImage: heroSettings.bgImageUrl ? `linear-gradient(135deg, rgba(15, 43, 92, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%), url(${heroSettings.bgImageUrl})` : 'var(--gradient-hero)',
         backgroundSize: 'cover',
@@ -280,6 +290,32 @@ export default function HomePage() {
 
             </div>
 
+            <figure className="hero-portrait">
+              <div className="hero-portrait-frame">
+                <img
+                  src={heroPortrait}
+                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
+                  width="294"
+                  height="394"
+                  fetchPriority="high"
+                />
+              </div>
+              <figcaption className="hero-portrait-caption">
+                <strong>นางสาวอุษา อิศรางกูร ณ อยุธยา</strong>
+                <span>ประธานกรรมการสหกรณ์</span>
+              </figcaption>
+            </figure>
+
+          </div>
+        </div>
+      </section>
+    ),
+    highlights: (
+<HomeHighlightSlider composition={composition}/>
+    ),
+    rates_news: (
+<div className="home-rates-news-lowered">
+        <div className="container">
             <div className="hero-dashboard-row">
             {/* Right Hero Card: Quick Rates & Services Widget */}
             <div className="glass-card hero-rate-card" style={{
@@ -442,30 +478,12 @@ export default function HomePage() {
             </section>
             </div>
 
-            <figure className="hero-portrait">
-              <div className="hero-portrait-frame">
-                <img
-                  src={heroPortrait}
-                  alt="นางสาวอุษา อิศรางกูร ณ อยุธยา ประธานกรรมการสหกรณ์"
-                  width="294"
-                  height="394"
-                  fetchPriority="high"
-                />
-              </div>
-              <figcaption className="hero-portrait-caption">
-                <strong>นางสาวอุษา อิศรางกูร ณ อยุธยา</strong>
-                <span>ประธานกรรมการสหกรณ์</span>
-              </figcaption>
-            </figure>
 
-          </div>
         </div>
-      </section>}
-
-      {/* =========================================================================
-          QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
-          ========================================================================= */}
-      {showSection('quick_services') && <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
+      </div>
+    ),
+    quick_services: (
+<section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
@@ -523,12 +541,10 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>}
-
-      {/* =========================================================================
-          KEY COOPERATIVE STATS
-          ========================================================================= */}
-      {showSection('statistics') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>
+    ),
+    statistics: (
+<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -571,12 +587,10 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>}
-
-      {/* =========================================================================
-          FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)
-          ========================================================================= */}
-      {showSection('products') && <section className="section" style={{ background: 'var(--bg-main)' }}>
+      </section>
+    ),
+    products: (
+<section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -630,21 +644,17 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>}
-
-      {/* =========================================================================
-          INTERACTIVE LOAN CALCULATOR SUITE EMBED
-          ========================================================================= */}
-      {showSection('calculator') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>
+    ),
+    calculator: (
+<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           <LoanCalculator />
         </div>
-      </section>}
-
-      {/* =========================================================================
-          MEMBER WELFARE HIGHLIGHTS
-          ========================================================================= */}
-      {showSection('welfare') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>
+    ),
+    welfare: (
+<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -679,7 +689,39 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>}
+      </section>
+    ),
+  };
+  const sectionOrder = composition?.order || ["hero","highlights","rates_news","quick_services","statistics","products","calculator","welfare"];
+  // Apply allowlisted appearance presets to the actual published DOM section.
+  // Existing layouts remain unchanged when no RC15 composition is published.
+  const renderSection = key => {
+    const element=sectionsById[key];
+    const layer=composition?.layers?.[key];
+    if(!element||!layer)return element;
+    if(key==='highlights')return React.cloneElement(element,{appearance:layer});
+    const darkSection=key==='hero'||key==='rates_news';
+    const backgroundOptions=darkSection
+      ?{light:'linear-gradient(130deg,#2a4e83,#5174aa)',navy:'linear-gradient(120deg,#101e40,#1c3766)',ocean:'linear-gradient(120deg,#0a4b61,#167a95)'}
+      :{light:'#f7faff',navy:'#e5ecfa',ocean:'#e3f5f4'};
+    const background=backgroundOptions[layer.surface];
+    const spacing=layer.spacing==='compact'?'1.5rem':layer.spacing==='spacious'?'5rem':null;
+    return React.cloneElement(element,{
+      style:{...element.props.style,
+        ...(background?{background,backgroundImage:'none'}:{}),
+        ...(spacing?{paddingBlock:spacing}:{})}
+    });
+  };
+
+  return (
+    <div>
+
+      {/* =========================================================================
+          HERO SECTION (High Impact Modern Banner)
+          ========================================================================= */}
+      {sectionOrder.filter(key=>showSection(key)).map(key=><React.Fragment key={key}>{renderSection(key)}</React.Fragment>)}
+
+
 
 
       <PublishedDynamicSections />

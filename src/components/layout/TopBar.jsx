@@ -7,6 +7,8 @@ import { useTheme } from '../../context/ThemeContext';
 export default function TopBar() {
   const { COOP_INFO } = usePublicInformation();
   const { theme, toggleTheme } = useTheme();
+  const primaryPhone = typeof COOP_INFO?.phone === 'string' ? COOP_INFO.phone.split(',')[0].trim() : '';
+  const workHours = typeof COOP_INFO?.workHours === 'string' ? COOP_INFO.workHours : '';
 
   return (
     <div style={{
@@ -20,14 +22,14 @@ export default function TopBar() {
         
         {/* Left: Contact Info & Rates Ticker */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          {primaryPhone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
             <Phone size={14} style={{ color: 'var(--accent-gold)' }} />
-            <span>โทร: <strong>{COOP_INFO.phone.split(',')[0]}</strong></span>
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} className="hide-mobile">
+            <span>โทร: <strong>{primaryPhone}</strong></span>
+          </span>}
+          {workHours && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} className="hide-mobile">
             <Clock size={14} style={{ color: 'var(--accent-teal)' }} />
-            <span>{COOP_INFO.workHours}</span>
-          </span>
+            <span>{workHours}</span>
+          </span>}
           <span style={{ 
             background: 'rgba(245, 158, 11, 0.15)', 
             color: '#fbbf24', 

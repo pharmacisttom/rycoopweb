@@ -602,6 +602,14 @@ $router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::clas
     $r->post('/publish', 'Admin\\HomepageLayoutController@publish', [CsrfMiddleware::class]);
 });
 
+// RC15 homepage composition: published-only public output, super-admin MFA for draft/publish.
+$router->get('/api/public/home-composition', 'Admin\\HomeCompositionController@published');
+$router->group(['prefix'=>'api/admin/home-composition','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\HomeCompositionController@show');
+    $r->post('/draft', 'Admin\\HomeCompositionController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\HomeCompositionController@publish', [CsrfMiddleware::class]);
+});
+
 // New dynamic homepage CMS: isolated from legacy six visibility toggles.
 $router->get('/api/public/dynamic-layout', 'Admin\\DynamicLayoutController@published');
 $router->group(['prefix'=>'api/admin/dynamic-layout','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
