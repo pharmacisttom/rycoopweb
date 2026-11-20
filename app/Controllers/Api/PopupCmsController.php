@@ -151,4 +151,22 @@ final class PopupCmsController extends Controller
             $this->json(['success'=>false,'message'=>'ไม่สามารถปิด Popup ได้'],503);
         }
     }
+    public function destroy(string $id): void
+    {
+        try {
+            if (!ctype_digit($id) || (int)$id < 1) throw new \InvalidArgumentException('รหัสรายการไม่ถูกต้อง');
+            $old = Database::first('SELECT id,title,status FROM popups WHERE id=? AND deleted_at IS NULL',[(int)$id]);
+            if (!$old) { $this->json(['success'=>false,'message'=>'ไม่พบรายการ'],404); return; }
+            Database::transaction(static function () use ($id,$old) {
+                Database::execute('UPDATE popups SET deleted_at=NOW(), updated_by=? WHERE id=? AND deleted_at IS NULL',[Auth::id(),(int)$id]);
+                AuditService::log('popups','delete',$id,$old,['deleted'=>true],true);
+            });
+            $this->json(['success'=>true,'message'=>'ลบ Popup แล้ว']);
+        } catch (\InvalidArgumentException $e) {
+            $this->json(['success'=>false,'message'=>$e->getMessage()],422);
+        } catch (Throwable $e) {
+            $this->json(['success'=>false,'message'=>'ไม่สามารถลบ Popup ได้'],503);
+        }
+    }
+
 }
