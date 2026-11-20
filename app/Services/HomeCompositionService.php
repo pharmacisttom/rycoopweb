@@ -15,6 +15,32 @@ final class HomeCompositionService
     private const THEMES = ['royal-blue','ocean','midnight'];
     private const SURFACES = ['original','light','navy','ocean'];
     private const SPACINGS = ['compact','comfortable','spacious'];
+    private const IMAGE_POSITIONS = ['center','top','bottom','left','right'];
+    private static function imagePath(mixed $value): string
+    {
+        if (!is_string($value) || strlen($value) > 350) throw new InvalidArgumentException('ที่อยู่รูปพื้นหลังไม่ถูกต้อง');
+        $value = trim($value);
+        if ($value === '') return '';
+        // Same-origin media only: no external trackers, CSS URLs, query strings or SVG.
+        if (!preg_match('~^/(?:storage/uploads|uploads|assets)/[a-zA-Z0-9_./-]+\\.(?:webp|png|jpe?g)$~D', $value)
+            || str_contains($value, '..') || str_contains($value, '//')) {
+            throw new InvalidArgumentException('ใช้เฉพาะรูป JPG PNG WEBP จาก Media Library ภายในเว็บไซต์');
+        }
+        return $value;
+    }
+    private static function background(mixed $value): array
+    {
+        if ($value === null) $value = [];
+        if (!is_array($value) || array_diff(array_keys($value), ['image_url','overlay_opacity','position'])) {
+            throw new InvalidArgumentException('รูปแบบพื้นหลังไม่ถูกต้อง');
+        }
+        $opacity = $value['overlay_opacity'] ?? 60;
+        $position = $value['position'] ?? 'center';
+        if (!is_int($opacity) || $opacity < 35 || $opacity > 85 || !in_array($position,self::IMAGE_POSITIONS,true)) {
+            throw new InvalidArgumentException('ความทึบและตำแหน่งรูปไม่ถูกต้อง');
+        }
+        return ['image_url'=>self::imagePath($value['image_url'] ?? ''), 'overlay_opacity'=>$opacity, 'position'=>$position];
+    }
     private static function defaultLayers(): array
     {
         return array_fill_keys(self::BLOCKS, ['surface'=>'original','spacing'=>'comfortable']);
@@ -22,7 +48,7 @@ final class HomeCompositionService
     public static function defaults(): array
     {
         return ['order'=>self::BLOCKS,'visible'=>array_fill_keys(self::BLOCKS,true),
-            'theme'=>'royal-blue','autoplay_seconds'=>6,'slides'=>[], 'layers'=>self::defaultLayers()];
+            'theme'=>'royal-blue','autoplay_seconds'=>6,'slides'=>[], 'background'=>self::background(null), 'layers'=>self::defaultLayers()];
     }
     public static function validate(mixed $input): array
     {
@@ -54,7 +80,11 @@ final class HomeCompositionService
                 throw new InvalidArgumentException('หัวข้อ รายละเอียด หรือลิงก์สไลด์ไม่ถูกต้อง');
             }
             $ids[$id]=true;
-            $normalized[]=['id'=>$id,'title'=>trim($title),'body'=>trim($body),'link'=>$link];
+            if (array_diff(array_keys($slide), ['id','title','body','link','image_url'])) {
+                throw new InvalidArgumentException('ข้อมูลสไลด์มีฟิลด์ที่ไม่รองรับ');
+            }
+            $normalized[]=['id'=>$id,'title'=>trim($title),'body'=>trim($body),'link'=>$link,
+                'image_url'=>self::imagePath($slide['image_url'] ?? '')];
         }
         // Only predefined appearance values are accepted, never arbitrary CSS or HTML.
         $layers=$input['layers']??self::defaultLayers();
@@ -76,7 +106,8 @@ final class HomeCompositionService
             $normalizedLayers[$block]=['surface'=>$surface,'spacing'=>$spacing];
         }
         return ['order'=>array_values($order),'visible'=>$visible,'theme'=>$theme,
-            'autoplay_seconds'=>$seconds,'slides'=>$normalized,'layers'=>$normalizedLayers];
+            'autoplay_seconds'=>$seconds,'slides'=>$normalized,
+            'background'=>self::background($input['background']??null),'layers'=>$normalizedLayers];
     }
     private static function read(string $key,bool $lock=false): ?array
     {
