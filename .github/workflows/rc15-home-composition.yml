@@ -27,6 +27,8 @@ jobs:
           php-version: '8.3'
           extensions: mbstring
           coverage: none
+      - name: Direct image upload contract checks
+        run: node tests/HomeCompositionRc15DirectUploadTest.mjs
       - name: RC15 production deploy script shell syntax
         run: |
           bash -n scripts/deploy-prod-home-composition-rc15.sh
