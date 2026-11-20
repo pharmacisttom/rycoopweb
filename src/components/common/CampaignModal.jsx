@@ -18,14 +18,8 @@ export default function CampaignModal() {
         if (sessionStorage.getItem('coop_campaign_shown')) return;
 
         const saved = localStorage.getItem('coop_popup_campaign');
-        const data = saved ? JSON.parse(saved) : {
-          enabled: true,
-          title: 'โครงการประมาณการเงินปันผลและเฉลี่ยคืน ประจำปี 2567',
-          subtitle: 'สมาชิกสามารถคำนวณและตรวจสอบสิทธิประโยชน์ได้แล้ววันนี้ผ่านระบบดิจิทัล',
-          imageUrl: '/assets/img/popup_dividend.jpg',
-          buttonText: 'ประมาณการเงินปันผลทันที',
-          linkUrl: '/dividend-estimator'
-        };
+        // Never publish an outdated hardcoded campaign as a fallback.
+        const data = saved ? JSON.parse(saved) : null;
         if (!data?.enabled || timer) return;
         setCampaign(data);
         timer = setTimeout(() => {
