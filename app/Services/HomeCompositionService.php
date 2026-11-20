@@ -31,7 +31,7 @@ final class HomeCompositionService
     private static function background(mixed $value): array
     {
         if ($value === null) $value = [];
-        if (!is_array($value) || array_diff(array_keys($value), ['image_url','overlay_opacity','position'])) {
+        if (!is_array($value) || array_diff(array_keys($value), ['image_url','mobile_image_url','overlay_opacity','position'])) {
             throw new InvalidArgumentException('รูปแบบพื้นหลังไม่ถูกต้อง');
         }
         $opacity = $value['overlay_opacity'] ?? 60;
@@ -39,7 +39,9 @@ final class HomeCompositionService
         if (!is_int($opacity) || $opacity < 35 || $opacity > 85 || !in_array($position,self::IMAGE_POSITIONS,true)) {
             throw new InvalidArgumentException('ความทึบและตำแหน่งรูปไม่ถูกต้อง');
         }
-        return ['image_url'=>self::imagePath($value['image_url'] ?? ''), 'overlay_opacity'=>$opacity, 'position'=>$position];
+        return ['image_url'=>self::imagePath($value['image_url'] ?? ''),
+            'mobile_image_url'=>self::imagePath($value['mobile_image_url'] ?? ''),
+            'overlay_opacity'=>$opacity, 'position'=>$position];
     }
     private static function defaultLayers(): array
     {
@@ -80,11 +82,12 @@ final class HomeCompositionService
                 throw new InvalidArgumentException('หัวข้อ รายละเอียด หรือลิงก์สไลด์ไม่ถูกต้อง');
             }
             $ids[$id]=true;
-            if (array_diff(array_keys($slide), ['id','title','body','link','image_url'])) {
+            if (array_diff(array_keys($slide), ['id','title','body','link','image_url','mobile_image_url'])) {
                 throw new InvalidArgumentException('ข้อมูลสไลด์มีฟิลด์ที่ไม่รองรับ');
             }
             $normalized[]=['id'=>$id,'title'=>trim($title),'body'=>trim($body),'link'=>$link,
-                'image_url'=>self::imagePath($slide['image_url'] ?? '')];
+                'image_url'=>self::imagePath($slide['image_url'] ?? ''),
+                'mobile_image_url'=>self::imagePath($slide['mobile_image_url'] ?? '')];
         }
         // Only predefined appearance values are accepted, never arbitrary CSS or HTML.
         $layers=$input['layers']??self::defaultLayers();
