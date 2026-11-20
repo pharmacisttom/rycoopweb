@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState, useId, useRef} from 'react';
 import {memberAdminApi} from '../../services/memberAdminApi';
 import {mediaLibraryApi} from '../../services/mediaLibraryApi';
 import './HomeCompositionEditor.css';
@@ -20,17 +20,21 @@ const allowedImage = path => !path || (['/storage/uploads/','/uploads/','/assets
 const prepare = value => ({...copy(value),background:normalBackground(value.background),slides:value.slides.map(item=>({...item,image_url:item.image_url||'',mobile_image_url:item.mobile_image_url||''}))});
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 function UploadImageField({label,description,value,onUpload,onClear,disabled,uploading}){
+  const inputId=useId();
+  const inputRef=useRef(null);
   return <div className="hc-upload-field">
     <div className="hc-upload-heading"><strong>{label}</strong><small>{description}</small></div>
-    <label className={'hc-upload-button'+(disabled?' is-disabled':'')}>
-      <input type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled}
-        onChange={async event=>{
-          const file=event.target.files?.[0];
-          event.target.value='';
-          if(file)await onUpload(file);
-        }} aria-label={'เลือกไฟล์'+label}/>
-      {uploading?'กำลังอัปโหลด…':'เลือกไฟล์ภาพจากเครื่อง'}
-    </label>
+    <input ref={inputRef} id={inputId} className="hc-upload-native" type="file"
+      accept="image/jpeg,image/png,image/webp" disabled={disabled}
+      onChange={async event=>{
+        const file=event.currentTarget.files?.[0];
+        event.currentTarget.value='';
+        if(file)await onUpload(file);
+      }} aria-label={'เลือกไฟล์'+label}/>
+    <button type="button" className="hc-upload-button" disabled={disabled}
+      onClick={event=>{event.stopPropagation();inputRef.current?.click();}}>
+      {uploading?'กำลังอัปโหลด…':'เลือกรูปภาพจากเครื่อง'}
+    </button>
     {value&&allowedImage(value)&&<div className="hc-upload-existing">
       <img src={value} alt={'ตัวอย่าง'+label} loading="lazy"/>
       <button type="button" disabled={disabled} onClick={onClear}>นำรูปออก</button>
