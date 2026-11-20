@@ -78,7 +78,7 @@ $router->post('/surveys/{slug}/submit', 'Public\\SurveyController@submit', [Csrf
 $router->get('/csrf-token', function ($request, $response) {
     $response->json(['token' => \App\Core\Csrf::token()]);
 });
-$router->post('/api/cookie-consent', 'Public\\ApiController@logCookieConsent');
+$router->post('/api/cookie-consent', 'Public\\ApiController@logCookieConsent', [CsrfMiddleware::class]);
 $router->post('/api/popups/event', 'Public\\ApiController@logPopupEvent');
 $router->get('/api/public/popup-campaign', 'Api\\PopupCmsController@published');
 $router->get('/api/public/popup-campaign/image', 'Api\\PopupCmsController@image');
