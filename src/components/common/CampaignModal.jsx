@@ -10,30 +10,46 @@ export default function CampaignModal() {
   const closeRef = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
     let timer;
-    const showCampaignAfterConsent = () => {
+    let fetching = false;
+    const showCampaignAfterConsent = async () => {
       try {
-        // Do not place a promotional dialog over the required cookie choice.
         if (!localStorage.getItem('coop_cookie_consent_v1')) return;
-        if (sessionStorage.getItem('coop_campaign_shown')) return;
-
-        const saved = localStorage.getItem('coop_popup_campaign');
-        // Never publish an outdated hardcoded campaign as a fallback.
-        const data = saved ? JSON.parse(saved) : null;
-        if (!data?.enabled || timer) return;
+        if (sessionStorage.getItem('coop_campaign_shown') || fetching || timer) return;
+        fetching = true;
+        const response = await fetch('/api/public/popup-campaign', {
+          credentials: 'include', headers: { Accept: 'application/json' }, cache: 'no-store'
+        });
+        if (!response.ok || cancelled) return;
+        const result = await response.json();
+        const item = result?.success ? result.data : null;
+        if (!item || cancelled) return; // No active database campaign; never use mock content.
+        const data = {
+          title: String(item.title || ''),
+          subtitle: String(item.content || ''),
+          imageUrl: item.desktop_image || '',
+          buttonText: item.button_text || 'ดูรายละเอียดเพิ่มเติม',
+          linkUrl: item.button_url || ''
+        };
+        if (!data.title) return;
         setCampaign(data);
         timer = setTimeout(() => {
+          if (cancelled) return;
           setIsOpen(true);
           sessionStorage.setItem('coop_campaign_shown', 'true');
           timer = undefined;
         }, 1200);
       } catch {
-        // Invalid browser storage must not block the rest of the site.
+        // Fail closed: unavailable public API must never trigger mock content.
+      } finally {
+        fetching = false;
       }
     };
     showCampaignAfterConsent();
     window.addEventListener('rycoop:cookie-consent-updated', showCampaignAfterConsent);
     return () => {
+      cancelled = true;
       if (timer) clearTimeout(timer);
       window.removeEventListener('rycoop:cookie-consent-updated', showCampaignAfterConsent);
     };
