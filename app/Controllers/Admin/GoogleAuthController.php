@@ -286,6 +286,10 @@ class GoogleAuthController extends Controller
         // Update login stats
         Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$ip, $userId]);
         $this->logLoginAttempt($userId, $identity['google_email'], 'success', null, $ip, $ua, $sub);
+        // Identity verification is NOT a completed privileged login. TOTP remains mandatory.
+        // This event is best-effort in RC13A to preserve the existing authentication flow.
+        // Do not include Google identifiers, tokens, email, IP or MFA secrets in the payload.
+        AuditService::logVerifiedGoogleIdentity($userId);
 
         if ($hasMfa) {
             // User has already enrolled in MFA: require TOTP verification
