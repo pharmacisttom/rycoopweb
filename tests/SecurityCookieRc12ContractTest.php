@@ -21,6 +21,8 @@ $checks=[
    str_contains($service,"'cookie_consents' => 'consented_at'"),
  'separate read errors'=>str_contains($service,"'status' => 'query_error'"),
  'UI table'=>str_contains($screen,'securityData.log_sources'),
+ 'audit read error'=>str_contains($service,"'records_read_error' =>") &&
+    str_contains($screen,'auditData.records_read_error'),
 ];
 foreach($checks as $key=>$ok) {
  if(!$ok) throw new RuntimeException("RC12 contract failed: $key");
