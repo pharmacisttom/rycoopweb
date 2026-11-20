@@ -170,8 +170,8 @@ echo '===== 5. SMOKE / AUTH / PUBLIC API ====='
 ROOT_HEADERS="$(curl --noproxy '*' -4 -sS --connect-timeout 5 --max-time 20 \
  --resolve www.rayongcoop.org:443:127.0.0.1 \
  -o /dev/null -D - https://www.rayongcoop.org/)"
-ROOT_CODE="$(printf '%s\n' "$ROOT_HEADERS" | awk 'toupper($1) ~ /^HTTP\\// {code=$2} END {print code}')"
-ROOT_LOCATION="$(printf '%s\n' "$ROOT_HEADERS" | awk 'tolower($1)=="location:" {v=$2;sub(/\\r$/,"",v);print v}' | tail -1)"
+ROOT_CODE="$(printf '%s\n' "$ROOT_HEADERS" | awk 'index(toupper($1),"HTTP/")==1 {code=$2} END {print code}')"
+ROOT_LOCATION="$(printf '%s\n' "$ROOT_HEADERS" | awk 'tolower($1)=="location:" {v=$2;gsub(sprintf("%c",13),"",v);print v}' | tail -1)"
 echo "ROOT_HTTP=$ROOT_CODE"
 echo "ROOT_LOCATION=$ROOT_LOCATION"
 test "$ROOT_CODE" = 302
