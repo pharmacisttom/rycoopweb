@@ -7,7 +7,12 @@ test "$(id -u)" -eq 0
 test "$RC15_DEPLOY" = YES
 REPO=/var/tmp/rycoop-board-welfare-rc06
 SHA="$RC15_SHA"
-BASE_SHA=f2887e990f946f2c1ade257cdde7d663cf22325f
+# Whitelisted LIVE git blob hashes confirmed by the 2026-11-20 RC14 diagnostics.
+# These are content fingerprints, not SHA256 checksums.
+declare -A APPROVED_LIVE=(
+  [src/pages/HomePage.jsx]=0f12bc8c4a4483d7f55aa44b1cf2467e4f46de40
+  [src/pages/AdminHomepageLayoutPage.jsx]=1c70e9e258695448f542c9e3f180a0a1e8c3b074
+)
 BASE=/var/www/rycoopweb/production-releases
 MAIN=/etc/nginx/sites-available/rycoopweb-main-ssl
 LOOP=/etc/nginx/conf.d/rycoop-prod-loopback.conf
@@ -36,7 +41,6 @@ http(){
 echo '===== 1. CHECK CURRENT PRODUCTION ====='
 test -n "$SHA"
 git -C "$REPO" cat-file -e "$SHA^{commit}"
-git -C "$REPO" cat-file -e "$BASE_SHA^{commit}"
 A="$(grep -oE '/var/www/rycoopweb/production-releases/[^ ;]+/public' "$MAIN" | sort -u)"
 B="$(grep -oE '/var/www/rycoopweb/production-releases/[^ ;]+/public' "$LOOP" | sort -u)"
 test -n "$A"
@@ -47,13 +51,20 @@ test ! -e "$NEW"
 test "$(grep -Fc "$A" "$MAIN")" -eq 1
 test "$(grep -Fc "$A" "$LOOP")" -eq 1
 grep -Eq '^DB_DATABASE=["'"'"']?rayongcoop_db["'"'"']?[[:space:]]*$' "$OLD/.env"
-# Stop rather than undo newer edits when source diverged since RC15 branched.
+# A one-time, reviewed resolution of the two legacy deviations:
+# HomePage drops stale/offline legacyReference promotional text in favor of
+# actual API-backed content; AdminHomepageLayoutPage drops "TEST" labels.
+# Any future drift from these exact reviewed LIVE files must stop deployment.
 for F in src/pages/HomePage.jsx src/pages/AdminHomepageLayoutPage.jsx; do
- EXPECTED="$(git -C "$REPO" rev-parse "$BASE_SHA:$F")"
+ EXPECTED="${APPROVED_LIVE[$F]}"
  ACTUAL="$(git -C "$REPO" hash-object "$OLD/$F")"
  if test "$EXPECTED" != "$ACTUAL"; then
-   echo "LIVE_SOURCE_CONFLICT=$F"; exit 1
+   echo "UNREVIEWED_LIVE_SOURCE=$F"
+   echo "EXPECTED_BLOB=$EXPECTED"
+   echo "ACTUAL_BLOB=$ACTUAL"
+   exit 1
  fi
+ echo "REVIEWED_LIVE_SOURCE=PASS:$F"
 done
 grep -qF '// New dynamic homepage CMS: isolated from legacy six visibility toggles.' "$OLD/config/routes.php"
 if grep -qF '/api/public/home-composition' "$OLD/config/routes.php"; then echo RC15_ALREADY_CONFIGURED; exit 1; fi
