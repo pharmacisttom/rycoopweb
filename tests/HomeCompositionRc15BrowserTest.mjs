@@ -8,6 +8,10 @@ try {
   const context = await browser.newContext({viewport:{width:1366,height:850},reducedMotion:'reduce'});
   const page = await context.newPage();
   const errors = [];
+  const network = [];
+  const browserConsole = [];
+  page.on('console', m => {if(m.type()==='error')browserConsole.push(m.text());});
+  page.on('response', r => {if(r.status()>=400)network.push({url:r.url(),status:r.status()});});
   page.on('pageerror', error => errors.push(error.message));
   await context.route('**/api/public/content', route => route.fulfill({
     status:200,contentType:'application/json',
@@ -34,7 +38,7 @@ try {
   const hasRate=heading.includes('อัตราดอกเบี้ยเด่นวันนี้');
   const hasNews=heading.includes('ข่าวสาร');
   const pass=!errors.length&&!hasReactCrash&&hasRate&&hasNews&&response?.ok();
-  output.push({name:'Homepage null interest source',pass,errors:errors.slice(0,4),status:response?.status(),hasRate,hasNews});
+  output.push({name:'Homepage null interest source',pass,errors:errors.slice(0,4),status:response?.status(),hasRate,hasNews,body:heading.slice(0,400),network:network.slice(0,8),browserConsole:browserConsole.slice(0,5)});
   if(!pass)failures++;
   // Test public reordering and highlight rendering against an API-bound response.
   await context.route('**/api/public/home-composition',route=>route.fulfill({
