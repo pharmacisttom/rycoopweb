@@ -16,6 +16,7 @@ export default function AdminPopupCampaignPage() {
   const [editingId,setEditingId] = useState(null);
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
+  const [uploadedPreview,setUploadedPreview] = useState('');
   const [error,setError] = useState('');
   const [message,setMessage] = useState('');
 
@@ -30,7 +31,7 @@ export default function AdminPopupCampaignPage() {
 
   useEffect(()=>{load();},[load]);
 
-  const openForm = row => {setEditingId(row?.id ?? null);setForm(asForm(row));setError('');setMessage('');};
+  const openForm = row => {setEditingId(row?.id ?? null);setForm(asForm(row));setUploadedPreview(row?.preview_url || '');setError('');setMessage('');};
   const change=(name,value)=>setForm(previous=>({...previous,[name]:value}));
 
   const uploadImage = async file => {
@@ -44,6 +45,8 @@ export default function AdminPopupCampaignPage() {
       const url = result.data?.url || result.data?.data?.url || result.url;
       if (!url || !url.startsWith('/storage/uploads/')) throw new Error('Media Library ไม่ได้ส่ง URL ที่รองรับ');
       change('desktop_image',url);
+      const mediaId = result.data?.id || result.data?.data?.id;
+      setUploadedPreview(mediaId ? '/api/admin/media/'+encodeURIComponent(mediaId)+'/image' : '');
     } catch(e){setError(e.message||'อัปโหลดรูปภาพไม่สำเร็จ');}
     finally{setBusy(false);}
   };
@@ -106,7 +109,7 @@ export default function AdminPopupCampaignPage() {
             <td><strong>{row.title}</strong><div className="popup-admin__muted">{String(row.content||'').slice(0,110)}</div></td>
             <td>{row.status==='active'?'เผยแพร่':'ปิดการแสดง'}</td>
             <td>{row.priority}</td>
-            <td>{row.desktop_image?<a href={row.desktop_image} target="_blank" rel="noopener noreferrer">ดูภาพ</a>:'—'}</td>
+            <td>{row.preview_url?<a href={row.preview_url} target="_blank" rel="noopener noreferrer" aria-label={'ดูภาพ Popup '+row.title}><img src={row.preview_url} alt="" className="popup-admin__thumbnail"/></a>:row.desktop_image?'ภาพเดิมไม่มีตัวอย่าง':'—'}</td>
             <td className="popup-admin__actions">
               <button type="button" disabled={busy} onClick={()=>openForm(row)}>แก้ไข</button>
               {row.status==='active'&&<button type="button" disabled={busy} onClick={()=>disable(row)}>ปิดใช้งาน</button>}
@@ -133,6 +136,7 @@ export default function AdminPopupCampaignPage() {
         <label>อัปโหลดภาพไปยัง Media Library
           <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event=>uploadImage(event.target.files?.[0])}/>
         </label>
+        {uploadedPreview && <img src={uploadedPreview} alt="ตัวอย่างภาพ Popup ก่อนบันทึก" className="popup-admin__preview"/>}
         <label>URL ภาพจาก Media Library (เช่น /storage/uploads/...webp)
           <input maxLength={400} value={form.desktop_image} onChange={event=>change('desktop_image',event.target.value)}/>
         </label>
