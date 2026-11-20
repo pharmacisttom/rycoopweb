@@ -165,7 +165,18 @@ PY
 nginx -t && systemctl reload nginx
 
 echo '===== 5. SMOKE / AUTH / PUBLIC API ====='
-for P in / /app/ /app/admin/layout /app/admin/security /api/public/documents "$ASSET"; do
+# Nginx intentionally redirects the root URL to the React app.
+# Accept only the exact established canonical destination, never arbitrary 302.
+ROOT_HEADERS="$(curl --noproxy '*' -4 -sS --connect-timeout 5 --max-time 20 \
+ --resolve www.rayongcoop.org:443:127.0.0.1 \
+ -o /dev/null -D - https://www.rayongcoop.org/)"
+ROOT_CODE="$(printf '%s\n' "$ROOT_HEADERS" | awk 'toupper($1) ~ /^HTTP\\// {code=$2} END {print code}')"
+ROOT_LOCATION="$(printf '%s\n' "$ROOT_HEADERS" | awk 'tolower($1)=="location:" {v=$2;sub(/\\r$/,"",v);print v}' | tail -1)"
+echo "ROOT_HTTP=$ROOT_CODE"
+echo "ROOT_LOCATION=$ROOT_LOCATION"
+test "$ROOT_CODE" = 302
+test "$ROOT_LOCATION" = "https://www.rayongcoop.org/app/"
+for P in /app/ /app/admin/layout /app/admin/security /api/public/documents "$ASSET"; do
  CODE="$(http "$P")";echo "$P HTTP=$CODE";test "$CODE" = 200
 done
 test "$(http /api/public/home-composition)" = 200
