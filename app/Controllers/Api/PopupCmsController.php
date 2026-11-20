@@ -94,13 +94,16 @@ final class PopupCmsController extends Controller
     {
         try {
             [$title,$content,$buttonText,$url,$image,$priority,$status] = $this->input();
-            $id = Database::insert(
-                "INSERT INTO popups
-                 (title,type,content,button_text,button_url,desktop_image,display_mode,delay_seconds,frequency,priority,status,start_at,created_by,created_at)
-                 VALUES (?,'image_text',?,?,?,?,'load',0,'session',?,?,NOW(),?,NOW())",
-                [$title,$content,$buttonText,$url,$image ?: null,$priority,$status,Auth::id()]
-            );
-            AuditService::log('popups','create',(string)$id,null,['title'=>$title,'status'=>$status]);
+            $id = Database::transaction(static function () use ($title,$content,$buttonText,$url,$image,$priority,$status) {
+                $id = Database::insert(
+                    "INSERT INTO popups
+                     (title,type,content,button_text,button_url,desktop_image,display_mode,delay_seconds,frequency,priority,status,start_at,created_by,created_at)
+                     VALUES (?,'image_text',?,?,?,?,'load',0,'session',?,?,NOW(),?,NOW())",
+                    [$title,$content,$buttonText,$url,$image ?: null,$priority,$status,Auth::id()]
+                );
+                AuditService::log('popups','create',(string)$id,null,['title'=>$title,'status'=>$status],true);
+                return $id;
+            });
             $this->json(['success'=>true,'message'=>'บันทึก Popup แล้ว','id'=>$id]);
         } catch (\InvalidArgumentException $e) {
             $this->json(['success'=>false,'message'=>$e->getMessage()],422);
@@ -116,11 +119,13 @@ final class PopupCmsController extends Controller
             $old = Database::first('SELECT '.self::SELECT_FIELDS.' FROM popups WHERE id=? AND deleted_at IS NULL',[(int)$id]);
             if (!$old) { $this->json(['success'=>false,'message'=>'ไม่พบรายการ'],404); return; }
             [$title,$content,$buttonText,$url,$image,$priority,$status] = $this->input();
-            Database::execute(
-                'UPDATE popups SET title=?,content=?,button_text=?,button_url=?,desktop_image=?,priority=?,status=?,updated_by=? WHERE id=? AND deleted_at IS NULL',
-                [$title,$content,$buttonText,$url,$image ?: null,$priority,$status,Auth::id(),(int)$id]
-            );
-            AuditService::log('popups','update',$id,['title'=>$old['title'],'status'=>$old['status']],['title'=>$title,'status'=>$status]);
+            Database::transaction(static function () use ($title,$content,$buttonText,$url,$image,$priority,$status,$id,$old) {
+                Database::execute(
+                    'UPDATE popups SET title=?,content=?,button_text=?,button_url=?,desktop_image=?,priority=?,status=?,updated_by=? WHERE id=? AND deleted_at IS NULL',
+                    [$title,$content,$buttonText,$url,$image ?: null,$priority,$status,Auth::id(),(int)$id]
+                );
+                AuditService::log('popups','update',$id,['title'=>$old['title'],'status'=>$old['status']],['title'=>$title,'status'=>$status],true);
+            });
             $this->json(['success'=>true,'message'=>'แก้ไข Popup แล้ว']);
         } catch (\InvalidArgumentException $e) {
             $this->json(['success'=>false,'message'=>$e->getMessage()],422);
@@ -135,8 +140,10 @@ final class PopupCmsController extends Controller
             if (!ctype_digit($id) || (int)$id < 1) throw new \InvalidArgumentException('รหัสรายการไม่ถูกต้อง');
             $old = Database::first('SELECT id,title,status FROM popups WHERE id=? AND deleted_at IS NULL',[(int)$id]);
             if (!$old) { $this->json(['success'=>false,'message'=>'ไม่พบรายการ'],404); return; }
-            Database::execute("UPDATE popups SET status='inactive', updated_by=? WHERE id=? AND deleted_at IS NULL",[Auth::id(),(int)$id]);
-            AuditService::log('popups','disable',$id,$old,['status'=>'inactive']);
+            Database::transaction(static function () use ($id,$old) {
+                Database::execute("UPDATE popups SET status='inactive', updated_by=? WHERE id=? AND deleted_at IS NULL",[Auth::id(),(int)$id]);
+                AuditService::log('popups','disable',$id,$old,['status'=>'inactive'],true);
+            });
             $this->json(['success'=>true,'message'=>'ปิดการแสดง Popup แล้ว']);
         } catch (\InvalidArgumentException $e) {
             $this->json(['success'=>false,'message'=>$e->getMessage()],422);
