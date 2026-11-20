@@ -14,6 +14,7 @@ $routes = (new ReflectionProperty(Router::class,'routes'))->getValue($router);
 
 $expected = [
   ['GET','/api/public/popup-campaign',false,false],
+  ['GET','/api/public/popup-campaign/image',false,false],
   ['GET','/api/admin/popup-campaigns',true,false],
   ['POST','/api/admin/popup-campaigns',true,true],
   ['POST','/api/admin/popup-campaigns/{id}/update',true,true],
