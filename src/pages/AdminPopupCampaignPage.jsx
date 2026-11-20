@@ -74,6 +74,18 @@ export default function AdminPopupCampaignPage() {
     finally {setBusy(false);}
   };
 
+  const remove = async row => {
+    const confirmed = await confirmDialog({title:'ลบ Popup',message:'ลบรายการ "'+row.title+'" แบบซ่อนถาวรจากหน้า CMS หรือไม่?',confirmText:'ลบรายการ',type:'danger'});
+    if (!confirmed) return;
+    setBusy(true);setError('');setMessage('');
+    try {
+      const result=await memberAdminApi('/api/admin/popup-campaigns/'+row.id+'/delete',{data:{}});
+      setMessage(result.message||'ลบรายการแล้ว');
+      await load();
+    } catch(e){setError(e.message||'ลบรายการไม่สำเร็จ');}
+    finally {setBusy(false);}
+  };
+
   return <section className="popup-admin">
     <header className="popup-admin__header">
       <div>
@@ -98,6 +110,7 @@ export default function AdminPopupCampaignPage() {
             <td className="popup-admin__actions">
               <button type="button" disabled={busy} onClick={()=>openForm(row)}>แก้ไข</button>
               {row.status==='active'&&<button type="button" disabled={busy} onClick={()=>disable(row)}>ปิดใช้งาน</button>}
+              <button type="button" disabled={busy} onClick={()=>remove(row)}>ลบ</button>
             </td>
           </tr>)}</tbody>
         </table></div>}
