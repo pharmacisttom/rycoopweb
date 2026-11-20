@@ -76,6 +76,11 @@ cp -a "$OLD" "$NEW"
 cp -a "$SOURCE/config/routes.php" "$NEW/config/routes.php"
 cp -a "$SOURCE/app/Controllers/Api/PopupCmsController.php" "$NEW/app/Controllers/Api/PopupCmsController.php"
 cp -a "$SOURCE/tests/PopupCmsContractTest.php" "$NEW/tests/PopupCmsContractTest.php"
+# The contract test checks the exact frontend source shipped in this build.
+# RC08's source tree is older, so stage these two RC09 source files as well.
+mkdir -p "$NEW/src/components/common" "$NEW/src/pages"
+cp -a "$SOURCE/src/components/common/CampaignModal.jsx" "$NEW/src/components/common/CampaignModal.jsx"
+cp -a "$SOURCE/src/pages/AdminDashboardPage.jsx" "$NEW/src/pages/AdminDashboardPage.jsx"
 test ! -L "$NEW/public/app"
 rm -rf "$NEW/public/app"
 mkdir -p "$NEW/public/app"
