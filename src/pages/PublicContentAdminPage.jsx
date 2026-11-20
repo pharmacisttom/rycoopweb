@@ -35,7 +35,7 @@ const normalizeBoardDraft = rows => rows.map((person,index) => {
   }
   // Preserve all server-supported fields, not arbitrary legacy keys.
   const board = Object.fromEntries(Object.entries(person).filter(([key]) => BOARD_SERVER_FIELD_SET.has(key)));
-  if (typeof board.id === 'string' && /^\\d+$/.test(board.id.trim())) board.id = Number(board.id.trim());
+  if (typeof board.id === 'string' && /^\d+$/.test(board.id.trim())) board.id = Number(board.id.trim());
   if (board.image === '') board.image = null;
   if (board.status === '') board.status = 'active';
   return board;
@@ -183,7 +183,7 @@ export default function PublicContentAdminPage() {
   }
   async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');try{
     const unknownBoardKeys=section==='boards'?[...new Set(value.flatMap(person=>Object.keys(person||{}).filter(key=>!BOARD_SERVER_FIELD_SET.has(key))))]:[];
-     if(unknownBoardKeys.length&&!window.confirm('พบฟิลด์เดิมที่ Backend ไม่รองรับ: '+unknownBoardKeys.join(', ')+'\\nฟิลด์เหล่านี้จะไม่รวมในร่างใหม่ ข้อมูลที่เผยแพร่อยู่ยังไม่เปลี่ยนจนกว่าจะอนุมัติ\\nตรวจสอบแล้วต้องการบันทึกร่างต่อหรือไม่?'))return;
+     if(unknownBoardKeys.length&&!window.confirm('พบฟิลด์เดิมที่ Backend ไม่รองรับ: '+unknownBoardKeys.join(', ')+'\nฟิลด์เหล่านี้จะไม่รวมในร่างใหม่ ข้อมูลที่เผยแพร่อยู่ยังไม่เปลี่ยนจนกว่าจะอนุมัติ\nตรวจสอบแล้วต้องการบันทึกร่างต่อหรือไม่?'))return;
      const draftValue=section==='boards'?normalizeBoardDraft(value):value;
      const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value:draftValue,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
     setDirty(false);setBoardModalOpen(false);setBoardRemoveSelection([]);setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);setRefresh(n=>n+1);
