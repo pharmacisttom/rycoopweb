@@ -168,6 +168,26 @@ grep -RFl 'home-highlight-slider' public/app/assets --include='*.js' >/dev/null
 chown -R root:www-data "$NEW"
 chmod 750 "$NEW"
 chmod 640 "$NEW/.env"
+# SECURITY/AVAILABILITY: umask 077 makes newly created PHP files mode 600.
+# Composer's PSR-4 autoloader then cannot read them as www-data; Router silently
+# falls through to its API 404 despite the route existing in config/routes.php.
+# Grant only the necessary new PHP source files group-read, and their parent
+# directories group-execute. Never expose .env or private storage to the web.
+chmod 750 "$NEW/app" "$NEW/app/Controllers" "$NEW/app/Controllers/Admin" "$NEW/app/Services"
+chmod 640 "$NEW/app/Controllers/Admin/HomeCompositionController.php" "$NEW/app/Services/HomeCompositionService.php"
+runuser -u www-data -- test -r "$NEW/app/Controllers/Admin/HomeCompositionController.php"
+runuser -u www-data -- test -r "$NEW/app/Services/HomeCompositionService.php"
+runuser -u www-data -- test -x "$NEW/app/Controllers/Admin"
+runuser -u www-data -- php -r '
+  require $argv[1] . "/vendor/autoload.php";
+  foreach (["App\\Controllers\\Admin\\HomeCompositionController",
+            "App\\Services\\HomeCompositionService"] as $class) {
+    if (!class_exists($class)) {
+      fwrite(STDERR, "RC15_PSR4_AUTOLOAD_FAILED\n"); exit(1);
+    }
+  }
+  echo "RC15_PSR4_AS_FPM_USER=PASS\n";
+' "$NEW"
 find "$NEW/public/app" -type d -exec chmod 755 '{}' +
 find "$NEW/public/app" -type f -exec chmod 644 '{}' +
 runuser -u www-data -- test -r "$NEW/public/index.php"
