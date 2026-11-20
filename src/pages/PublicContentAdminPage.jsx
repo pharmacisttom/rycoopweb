@@ -245,7 +245,17 @@ export default function PublicContentAdminPage() {
           </div>
         </div>
       </section>}
-      {section!=='boards'||boardModalOpen?<form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
+      {section==='boards'&&!boardModalOpen&&definition?.canEdit&&<form className="board-admin-draft-save" onSubmit={save}>
+        <h3>บันทึกการเปลี่ยนแปลงรายชื่อเป็นร่าง</h3>
+        <p>เลือกนำรายชื่อออกหรือเพิ่ม/แก้ไขแล้ว ต้องบันทึกร่างและให้ผู้มีสิทธิ์อนุมัติเผยแพร่ก่อนข้อมูลหน้าเว็บไซต์จึงเปลี่ยน</p>
+        <fieldset disabled={busy||mediaBusy}>
+          <label>วันที่มีผล<input type="date" required value={effective} onChange={e=>setEffective(e.target.value)}/></label>
+          <label>เอกสารอ้างอิง HTTPS<input type="url" required value={source} onChange={e=>setSource(e.target.value)}/></label>
+          <label>เหตุผลการแก้ไข<textarea required maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
+          <button type="submit" className="btn btn-primary" disabled={!dirty}>บันทึกร่าง (ยังไม่เผยแพร่)</button>
+        </fieldset>
+      </form>}
+      {(section!=='boards'||boardModalOpen)&&<form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
         {row&&(fields[section]||[]).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-position'?<select value={row[key]||''} onChange={e=>change(key,e.target.value)}>
             {row[key]&&!BOARD_POSITION_OPTIONS.includes(row[key])&&<option value={row[key]}>ข้อมูลเดิม: {row[key]} (ควรตรวจสอบ)</option>}
             {BOARD_POSITION_OPTIONS.map(position=><option key={position} value={position}>{position}</option>)}
@@ -257,7 +267,7 @@ export default function PublicContentAdminPage() {
         {section==='groups'&&row&&Array.isArray(row.members)&&<div><label>ชุดกรรมการ<input value={row.term||''} onChange={e=>change('term',e.target.value)} placeholder="ชุดที่ 39" /></label><h3>สมาชิกคณะย่อย</h3>{row.members.map(([id,position],index)=><div key={index} className="public-content-toolbar"><select aria-label="กรรมการ" value={id} onChange={e=>change('members',row.members.map((m,i)=>i===index?[Number(e.target.value),m[1]]:m))}>{catalog.boardMembers.filter(person=>!row.term||person.term===row.term).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><input aria-label="ตำแหน่งในคณะย่อย" value={position} onChange={e=>change('members',row.members.map((m,i)=>i===index?[m[0],e.target.value]:m))}/><button type="button" onClick={()=>change('members',row.members.filter((_,i)=>i!==index))}>นำออก</button></div>)}<button type="button" onClick={()=>change('members',[...row.members,[catalog.boardMembers.find(person=>!row.term||person.term===row.term)?.id,'กรรมการ']])}>เพิ่มกรรมการในคณะ</button></div>}
         <label>วันที่มีผล (ค.ศ.) <input type="date" required value={effective} onChange={e=>setEffective(e.target.value)}/></label><label>เอกสารหรือหน้าอ้างอิง (HTTPS) <input type="url" required value={source} onChange={e=>setSource(e.target.value)}/></label><label>เหตุผลการแก้ไข <textarea required maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
         <label>วันสิ้นสุด (ไม่บังคับ)<input type="date" min={effective} value={expires} onChange={e=>{setExpires(e.target.value);setDirty(true);}} /></label><button type="submit" className="btn btn-primary">บันทึกร่างเพื่อรอเผยแพร่</button>
-      </fieldset></form>:null}
+      </fieldset></form>}
       {section==='boards'&&boardModalOpen&&<section className="board-admin-modal-history"><h3>ร่างและประวัติการเผยแพร่</h3>
         {(Array.isArray(data.history)?data.history:[]).filter(revision=>{
           const before=safeRevisionValue(revision.previous_payload,'boards');
