@@ -36,8 +36,8 @@ class ApiController extends Controller
             // consented_at tracks the latest explicit choice, not full history.
             Database::execute(
                 "INSERT INTO cookie_consents
-                (anonymous_consent_id,consent_version,necessary,functional,analytics,marketing,third_party,ip_hash,user_agent,consented_at)
-                VALUES (?,?,?,?,?,?,?,?,?,NOW())
+                (anonymous_consent_id,consent_version,necessary,functional,analytics,marketing,third_party,ip_hash,user_agent,consented_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW())
                 ON DUPLICATE KEY UPDATE
                   consent_version=VALUES(consent_version),
                   necessary=VALUES(necessary),
