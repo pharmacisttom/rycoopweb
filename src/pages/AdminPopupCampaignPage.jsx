@@ -1,6 +1,8 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
 import {memberAdminApi} from '../services/memberAdminApi';
+import {mediaLibraryApi} from '../services/mediaLibraryApi';
+import {useToast} from '../context/ToastContext';
 import './AdminPopupCampaignPage.css';
 
 const empty = {title:'',content:'',button_text:'',button_url:'',desktop_image:'',priority:'normal',status:'inactive'};
@@ -8,6 +10,7 @@ const priorities = ['critical','high','normal','low'];
 const asForm = row => Object.fromEntries(Object.keys(empty).map(key=>[key,row?.[key] ?? empty[key]]));
 
 export default function AdminPopupCampaignPage() {
+  const {confirmDialog} = useToast();
   const [rows,setRows] = useState([]);
   const [form,setForm] = useState(null);
   const [editingId,setEditingId] = useState(null);
@@ -30,6 +33,21 @@ export default function AdminPopupCampaignPage() {
   const openForm = row => {setEditingId(row?.id ?? null);setForm(asForm(row));setError('');setMessage('');};
   const change=(name,value)=>setForm(previous=>({...previous,[name]:value}));
 
+  const uploadImage = async file => {
+    if (!file) return;
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5*1024*1024) {
+      setError('รองรับภาพ JPG, PNG หรือ WEBP ขนาดไม่เกิน 5MB'); return;
+    }
+    setBusy(true);setError('');
+    try {
+      const result = await mediaLibraryApi.upload(file,{folder:'popup',altText:form?.title||'ภาพประชาสัมพันธ์'});
+      const url = result.data?.url || result.data?.data?.url || result.url;
+      if (!url || !url.startsWith('/storage/uploads/')) throw new Error('Media Library ไม่ได้ส่ง URL ที่รองรับ');
+      change('desktop_image',url);
+    } catch(e){setError(e.message||'อัปโหลดรูปภาพไม่สำเร็จ');}
+    finally{setBusy(false);}
+  };
+
   const save = async event => {
     event.preventDefault();
     if(!form?.title?.trim()){setError('กรุณาระบุหัวข้อ Popup');return;}
@@ -45,7 +63,8 @@ export default function AdminPopupCampaignPage() {
   };
 
   const disable = async row => {
-    if (!window.confirm('ปิดการแสดง Popup "'+row.title+'" หรือไม่?')) return;
+    const confirmed = await confirmDialog({title:'ปิด Popup ประชาสัมพันธ์',message:'ปิดการแสดง "'+row.title+'" หรือไม่?',confirmText:'ปิดใช้งาน',type:'warning'});
+    if (!confirmed) return;
     setBusy(true);setError('');setMessage('');
     try {
       const result=await memberAdminApi('/api/admin/popup-campaigns/'+row.id+'/disable',{data:{}});
@@ -97,6 +116,9 @@ export default function AdminPopupCampaignPage() {
         </label>
         <label>ลิงก์ปุ่ม (เฉพาะ Path ภายในเว็บไซต์ เช่น /loans)
           <input maxLength={300} value={form.button_url} onChange={event=>change('button_url',event.target.value)}/>
+        </label>
+        <label>อัปโหลดภาพไปยัง Media Library
+          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event=>uploadImage(event.target.files?.[0])}/>
         </label>
         <label>URL ภาพจาก Media Library (เช่น /storage/uploads/...webp)
           <input maxLength={400} value={form.desktop_image} onChange={event=>change('desktop_image',event.target.value)}/>
