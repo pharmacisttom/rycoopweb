@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import './HomeHighlightSlider.css';
 
-export default function HomeHighlightSlider({composition}){
+export default function HomeHighlightSlider({composition,appearance}){
   const slides=Array.isArray(composition?.slides)?composition.slides:[];
   const [index,setIndex]=useState(0);
   const [paused,setPaused]=useState(false);
@@ -21,7 +21,16 @@ export default function HomeHighlightSlider({composition}){
   },[paused,reduced,slides.length,composition?.autoplay_seconds]);
   if(!slides.length)return null;
   const slide=slides[index];
-  return <section className={'home-highlight-slider theme-'+(composition?.theme||'royal-blue')} aria-label="ผลงานและจุดเด่นของสหกรณ์"
+  const surfaces={
+    light:'linear-gradient(115deg,#365f9b,#6286c4)',
+    navy:'linear-gradient(115deg,#0e2145,#23365c)',
+    ocean:'linear-gradient(115deg,#065267,#0b7c92)'
+  };
+  const customBackground=surfaces[appearance?.surface];
+  const customPadding=appearance?.spacing==='compact'?'1.5rem':appearance?.spacing==='spacious'?'5rem':null;
+  return <section className={'home-highlight-slider theme-'+(composition?.theme||'royal-blue')}
+    style={{...(customBackground?{background:customBackground}:{}),...(customPadding?{paddingBlock:customPadding}:{})}}
+    aria-label="ผลงานและจุดเด่นของสหกรณ์"
     onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)}
     onFocusCapture={()=>setPaused(true)}
     onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget))setPaused(false);}}>
