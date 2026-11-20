@@ -1171,7 +1171,9 @@ export default function AdminControlCenterPage({ section: propSection }) {
               </div>
             </div>
 
-            {(auditData.records || []).length === 0 ? (
+            {auditData.records_read_error ? (
+              <div className="acc-empty-state" role="alert">ไม่สามารถอ่าน audit_logs ได้ กรุณาตรวจบริการฐานข้อมูล ข้อมูลไม่ได้ถูกยืนยันว่าเป็นศูนย์</div>
+            ) : (auditData.records || []).length === 0 ? (
               <div className="acc-empty-state">ไม่พบบันทึกกิจกรรมที่ตรงกับเงื่อนไขการค้นหา</div>
             ) : (
               <div className="acc-table-wrap">
