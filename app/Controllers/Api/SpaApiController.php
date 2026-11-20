@@ -186,7 +186,7 @@ class SpaApiController extends Controller
     {
         $docs = [];
         try {
-            $docs = Database::query("SELECT d.id, d.title, c.name AS category, d.file_path, d.file_size, d.file_type, d.download_count, d.sort_order, d.created_at FROM documents d JOIN document_categories c ON c.id=d.category_id WHERE d.status='active' AND d.deleted_at IS NULL AND c.status='active' AND c.deleted_at IS NULL ORDER BY COALESCE(d.sort_order,0) ASC, d.created_at DESC, d.id DESC");
+            $docs = Database::query("SELECT d.id, d.title, d.category_id, c.name AS category, c.sort_order AS category_sort_order, d.file_path, d.file_size, d.file_type, d.download_count, d.sort_order, d.created_at FROM documents d JOIN document_categories c ON c.id=d.category_id WHERE d.status='active' AND d.deleted_at IS NULL AND c.status='active' AND c.deleted_at IS NULL ORDER BY COALESCE(c.sort_order,0) ASC, c.id ASC, COALESCE(d.sort_order,0) ASC, d.created_at DESC, d.id DESC");
             $docs = array_map(fn(array $doc): array => $this->withResolvedMediaUrls($doc, ['thumbnail', 'thumbnail_url', 'image_url']), $docs);
         } catch (\Throwable $e) {
             error_log('Published document listing failed: ' . get_class($e));
