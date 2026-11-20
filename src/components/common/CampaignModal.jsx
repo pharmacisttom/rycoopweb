@@ -1,146 +1,120 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import './CampaignModal.css';
 import { Link } from 'react-router-dom';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
 
 export default function CampaignModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [campaign, setCampaign] = useState(null);
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('coop_popup_campaign');
-      const data = saved ? JSON.parse(saved) : {
-        enabled: true,
-        title: 'โครงการประมาณการเงินปันผลและเฉลี่ยคืน ประจำปี 2567',
-        subtitle: 'สมาชิกสามารถคำนวณและตรวจสอบสิทธิประโยชน์ได้แล้ววันนี้ผ่านระบบดิจิทัล',
-        imageUrl: '/assets/img/popup_dividend.jpg',
-        buttonText: 'ประมาณการเงินปันผลทันที',
-        linkUrl: '/dividend-estimator'
-      };
-
-      if (data && data.enabled) {
+    let cancelled = false;
+    let timer;
+    let fetching = false;
+    const showCampaignAfterConsent = async () => {
+      try {
+        if (!localStorage.getItem('coop_cookie_consent_v1')) return;
+        if (sessionStorage.getItem('coop_campaign_shown') || fetching || timer) return;
+        fetching = true;
+        const response = await fetch('/api/public/popup-campaign', {
+          credentials: 'include', headers: { Accept: 'application/json' }, cache: 'no-store'
+        });
+        if (!response.ok || cancelled) return;
+        const result = await response.json();
+        const item = result?.success ? result.data : null;
+        if (!item || cancelled) return; // No active database campaign; never use mock content.
+        const data = {
+          title: String(item.title || ''),
+          subtitle: String(item.content || ''),
+          imageUrl: item.image_url || '',
+          buttonText: item.button_text || 'ดูรายละเอียดเพิ่มเติม',
+          linkUrl: item.button_url || ''
+        };
+        if (!data.title) return;
         setCampaign(data);
-        // Check if shown in current session
-        const alreadyShown = sessionStorage.getItem('coop_campaign_shown');
-        if (!alreadyShown) {
-          const timer = setTimeout(() => {
-            setIsOpen(true);
-            sessionStorage.setItem('coop_campaign_shown', 'true');
-          }, 1200);
-          return () => clearTimeout(timer);
-        }
+        timer = setTimeout(() => {
+          if (cancelled) return;
+          setIsOpen(true);
+          sessionStorage.setItem('coop_campaign_shown', 'true');
+          timer = undefined;
+        }, 1200);
+      } catch {
+        // Fail closed: unavailable public API must never trigger mock content.
+      } finally {
+        fetching = false;
       }
-    } catch (e) {
-      // ignore
-    }
+    };
+    showCampaignAfterConsent();
+    window.addEventListener('rycoop:cookie-consent-updated', showCampaignAfterConsent);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('rycoop:cookie-consent-updated', showCampaignAfterConsent);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsOpen(false);
+      }
+      if (event.key === 'Tab' && dialogRef.current) {
+        const controls = [...dialogRef.current.querySelectorAll('button:not([disabled]),a[href]')];
+        if (controls.length === 0) return;
+        const first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus?.();
+    };
+  }, [isOpen]);
 
   if (!isOpen || !campaign) return null;
 
+  const close = () => setIsOpen(false);
+  const route = typeof campaign.linkUrl === 'string' && /^\/(?!\/)[A-Za-z0-9/_#?=&%-]*$/.test(campaign.linkUrl)
+    ? campaign.linkUrl : null;
+
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 2500,
-      background: 'rgba(15, 23, 42, 0.75)',
-      backdropFilter: 'blur(8px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem'
+    <div className="rycoop-campaign-overlay" onMouseDown={event => {
+      if (event.target === event.currentTarget) close();
     }}>
-      <div 
-        className="glass-card animate-fade-in"
-        style={{
-          width: '100%',
-          maxWidth: '500px',
-          background: 'var(--bg-surface)',
-          borderRadius: 'var(--radius-xl)',
-          overflow: 'hidden',
-          boxShadow: 'var(--shadow-xl)',
-          border: '1px solid var(--border-subtle)',
-          position: 'relative'
-        }}
-      >
-        {/* Close Button */}
-        <button 
-          onClick={() => setIsOpen(false)}
-          style={{
-            position: 'absolute',
-            top: '0.85rem',
-            right: '0.85rem',
-            zIndex: 10,
-            color: '#ffffff',
-            background: 'rgba(15, 23, 42, 0.6)',
-            padding: '0.35rem',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          aria-label="Close campaign popup"
-        >
-          <X size={18} />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rycoop-campaign-title"
+        aria-describedby="rycoop-campaign-description" className="rycoop-campaign-modal">
+        <button ref={closeRef} type="button" className="rycoop-campaign-close" onClick={close} aria-label="ปิดหน้าต่างประชาสัมพันธ์">
+          <X size={26} />
         </button>
-
-        {/* Campaign Banner Image */}
-        <div style={{ height: '220px', background: 'var(--gradient-hero)', position: 'relative', overflow: 'hidden' }}>
-          <img 
-            src={campaign.imageUrl || '/assets/img/popup_dividend.jpg'} 
-            alt={campaign.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => {
-              e.target.style.display = 'none';
-            }}
-          />
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '1rem 1.25rem',
-            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95), transparent)',
-            color: '#ffffff'
-          }}>
-            <span className="badge badge-gold" style={{ marginBottom: '0.25rem' }}>
-              <Sparkles size={12} /> สิทธิประโยชน์สมาชิก
-            </span>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.3 }}>
-              {campaign.title}
-            </h3>
+        <div className="rycoop-campaign-visual">
+          {campaign.imageUrl && <img src={campaign.imageUrl} alt="" className="rycoop-campaign-image"
+            onError={event => { event.currentTarget.style.display = 'none'; }} />}
+          <div className="rycoop-campaign-visual-shade" />
+          <div className="rycoop-campaign-heading">
+            <span className="rycoop-campaign-eyebrow"><Sparkles size={18} aria-hidden="true" /> ข่าวประชาสัมพันธ์สหกรณ์</span>
+            <h2 id="rycoop-campaign-title">{campaign.title}</h2>
           </div>
         </div>
-
-        {/* Content & Action */}
-        <div style={{ padding: '1.5rem' }}>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-            {campaign.subtitle}
-          </p>
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button 
-              onClick={() => setIsOpen(false)} 
-              className="btn btn-subtle"
-              style={{ flex: 1 }}
-            >
-              ปิดหน้าต่าง
-            </button>
-            <Link 
-              to={campaign.linkUrl || '/dividend-estimator'} 
-              onClick={() => setIsOpen(false)}
-              className="btn btn-primary"
-              style={{ flex: 1.5 }}
-            >
-              <span>{campaign.buttonText || 'ดูรายละเอียด'}</span>
-              <ArrowRight size={16} />
-            </Link>
+        <div className="rycoop-campaign-details">
+          <p id="rycoop-campaign-description">{campaign.subtitle}</p>
+          <div className="rycoop-campaign-actions">
+            <button type="button" className="rycoop-campaign-dismiss" onClick={close}>ปิดหน้าต่าง</button>
+            {route && <Link to={route} onClick={close} className="rycoop-campaign-primary">
+              <span>{campaign.buttonText || 'ดูรายละเอียดเพิ่มเติม'}</span><ArrowRight size={21} aria-hidden="true" />
+            </Link>}
           </div>
         </div>
-
       </div>
     </div>
   );

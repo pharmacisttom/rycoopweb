@@ -78,8 +78,19 @@ $router->post('/surveys/{slug}/submit', 'Public\\SurveyController@submit', [Csrf
 $router->get('/csrf-token', function ($request, $response) {
     $response->json(['token' => \App\Core\Csrf::token()]);
 });
-$router->post('/api/cookie-consent', 'Public\\ApiController@logCookieConsent');
+$router->post('/api/cookie-consent', 'Public\\ApiController@logCookieConsent', [CsrfMiddleware::class]);
 $router->post('/api/popups/event', 'Public\\ApiController@logPopupEvent');
+$router->get('/api/public/popup-campaign', 'Api\\PopupCmsController@published');
+$router->get('/api/public/popup-campaign/image', 'Api\\PopupCmsController@image');
+
+// Popup CMS: privileged writes use existing session identity and CSRF.
+$router->group(['prefix'=>'api/admin/popup-campaigns','middleware'=>[AuthMiddleware::class,new RoleMiddleware(['super_admin'])]], function (\App\Core\Router $r) {
+    $r->get('', 'Api\\PopupCmsController@index');
+    $r->post('', 'Api\\PopupCmsController@store', [CsrfMiddleware::class]);
+    $r->post('/{id}/update', 'Api\\PopupCmsController@update', [CsrfMiddleware::class]);
+    $r->post('/{id}/disable', 'Api\\PopupCmsController@disable', [CsrfMiddleware::class]);
+    $r->post('/{id}/delete', 'Api\\PopupCmsController@destroy', [CsrfMiddleware::class]);
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -91,8 +102,11 @@ $router->get('/api/public/coop-info', 'Api\\SpaApiController@coopInfo');
 $router->get('/api/public/interest-rates', 'Api\\SpaApiController@interestRates');
 $router->get('/api/public/loan-products', 'Api\\SpaApiController@loanProducts');
 $router->get('/api/public/news', 'Api\\SpaApiController@news');
+$router->get('/api/public/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@published');
+$router->get('/api/admin/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@admin');
 $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements');
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
+$router->get('/api/public/documents/{id}/download', 'Public\\DocumentController@download');
 $router->get('/api/public/activities', 'Api\\ActivityGalleryController@publicAlbums');
 $router->get('/api/public/activities/{id}', 'Api\\ActivityGalleryController@publicAlbum');
 $router->get('/api/public/activities/{album}/photos/{photo}', 'Api\\ActivityGalleryController@photo');
@@ -227,6 +241,10 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->post('/news/{id}/publish','Admin\\NewsWorkflowController@publish',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','publish'),CsrfMiddleware::class]);
     $r->post('/news/{id}/delete','Api\\SpaApiController@deleteAdminNews',[new PermissionMiddleware('news','view'),new PermissionMiddleware('news','delete'),CsrfMiddleware::class]);
     $r->get('/faqs','Api\\SpaApiController@adminFaqs',[new PermissionMiddleware('faqs','view')]);
+    // Document category CMS (same session/MFA, documents permission and CSRF as documents).
+    $r->get('/document-categories','Admin\\DocumentCategoryController@index',[new PermissionMiddleware('documents','view')]);
+    $r->post('/document-categories','Admin\\DocumentCategoryController@store',[new PermissionMiddleware('documents','create'),CsrfMiddleware::class]);
+    $r->post('/document-categories/{id}/update','Admin\\DocumentCategoryController@update',[new PermissionMiddleware('documents','edit'),CsrfMiddleware::class]);
     $r->get('/documents','Admin\\DocumentController@index',[new PermissionMiddleware('documents','view')]);
     $r->post('/documents','Admin\\DocumentController@store',[new PermissionMiddleware('documents','create'),CsrfMiddleware::class]);
     $r->post('/documents/{id}/update','Admin\\DocumentController@update',[new PermissionMiddleware('documents','edit'),CsrfMiddleware::class]);
@@ -565,6 +583,39 @@ $router->group(['prefix' => 'admin/led', 'middleware' => [AuthMiddleware::class,
     $r->get('/review', 'Admin\\LedController@review');
     $r->get('/batch', 'Admin\\LedController@batch');
     $r->get('/schema', 'Admin\\LedController@schema');
+});
+
+
+// Public navigation/footer visibility: published settings only, MFA for mutations.
+$router->get('/api/public/site-chrome', 'Admin\\SiteChromeVisibilityController@published');
+$router->group(['prefix'=>'api/admin/site-chrome','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\SiteChromeVisibilityController@show');
+    $r->post('/draft', 'Admin\\SiteChromeVisibilityController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\SiteChromeVisibilityController@publish', [CsrfMiddleware::class]);
+});
+
+// Homepage layout: public published state only; admin edits require auth, CSRF and fresh MFA.
+$router->get('/api/public/layout', 'Admin\\HomepageLayoutController@published');
+$router->group(['prefix'=>'api/admin/layout','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\HomepageLayoutController@show');
+    $r->post('/draft', 'Admin\\HomepageLayoutController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\HomepageLayoutController@publish', [CsrfMiddleware::class]);
+});
+
+// New dynamic homepage CMS: isolated from legacy six visibility toggles.
+$router->get('/api/public/dynamic-layout', 'Admin\\DynamicLayoutController@published');
+$router->group(['prefix'=>'api/admin/dynamic-layout','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\DynamicLayoutController@show');
+    $r->post('/draft', 'Admin\\DynamicLayoutController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\DynamicLayoutController@publish', [CsrfMiddleware::class]);
+});
+
+// Navigation text CMS: public published values and MFA-gated admin drafts.
+$router->get('/api/public/navigation-copy', 'Admin\\SiteNavigationCopyController@published');
+$router->group(['prefix'=>'api/admin/navigation-copy','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\SiteNavigationCopyController@show');
+    $r->post('/draft', 'Admin\\SiteNavigationCopyController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\SiteNavigationCopyController@publish', [CsrfMiddleware::class]);
 });
 
 // Public CMS: controller checks the section's module and action on every call.

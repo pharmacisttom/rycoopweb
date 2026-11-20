@@ -848,6 +848,7 @@ class AdminControlCenterService
         $totalScore = array_sum(array_column($scoreRules, 'earned'));
 
         $recentEvents = [];
+        $recentEventsReadError = false;
         try {
             $rows = Database::query(
                 "SELECT l.id, l.user_id, l.email, l.status, l.failure_reason, l.ip_address, l.created_at,
@@ -871,6 +872,42 @@ class AdminControlCenterService
             }
         } catch (\Throwable $e) {
             $recentEvents = [];
+            $recentEventsReadError = true;
+        }
+
+        // Distinct sources, never add counts together: they describe overlapping
+        // types of activity. Missing activity is not proof of a broken writer.
+        $logSources = [];
+        $sourceColumns = [
+            'security_audit_logs' => 'timestamp_utc',
+            'audit_logs' => 'created_at',
+            'login_logs' => 'created_at',
+            'cookie_consents' => 'consented_at',
+            'popup_events' => 'created_at',
+        ];
+        foreach ($sourceColumns as $table => $timeColumn) {
+            try {
+                $row = Database::first(
+                    "SELECT COUNT(*) AS total, MAX($timeColumn) AS latest_event,
+                      SUM(CASE WHEN $timeColumn >= NOW() - INTERVAL 24 HOUR THEN 1 ELSE 0 END) AS events_24h
+                     FROM $table"
+                );
+                $logSources[] = [
+                    'source' => $table,
+                    'status' => 'available',
+                    'total' => (int)($row['total'] ?? 0),
+                    'latest_event' => $row['latest_event'] ?? null,
+                    'events_24h' => (int)($row['events_24h'] ?? 0),
+                ];
+            } catch (\Throwable $e) {
+                $logSources[] = [
+                    'source' => $table,
+                    'status' => 'query_error',
+                    'total' => null,
+                    'latest_event' => null,
+                    'events_24h' => null,
+                ];
+            }
         }
 
         return [
@@ -900,6 +937,8 @@ class AdminControlCenterService
                 'totp_cipher' => 'AES-256-GCM',
                 'qr_generator' => 'Local SVG (BaconQrCode 3.1.1 — Zero External Leakage)',
             ],
+            'log_sources' => $logSources,
+            'recent_events_read_error' => $recentEventsReadError,
             'recent_events' => $recentEvents,
         ];
     }
@@ -1089,6 +1128,7 @@ class AdminControlCenterService
         $whereSql = implode(' AND ', $where);
         $total = 0;
         $records = [];
+        $recordsReadError = false;
 
         try {
             $total = (int) Database::value(
@@ -1146,6 +1186,7 @@ class AdminControlCenterService
             }
         } catch (\Throwable $e) {
             $records = [];
+            $recordsReadError = true;
         }
 
         // Distinct modules for filter dropdown
@@ -1171,6 +1212,7 @@ class AdminControlCenterService
                 'total_pages' => max(1, (int) ceil($total / $perPage)),
             ],
             'available_modules' => $availableModules,
+            'records_read_error' => $recordsReadError,
             'records' => $records,
             'items' => $records,
         ];

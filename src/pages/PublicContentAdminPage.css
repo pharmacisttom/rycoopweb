@@ -1,1 +1,140 @@
 .public-content-admin h1{margin:1rem 0}.public-content-admin>p{margin:.75rem 0}.public-content-admin select,.public-content-admin input,.public-content-admin textarea{width:100%;padding:.7rem;border:1px solid var(--border-subtle);border-radius:8px;background:var(--bg-surface);color:var(--text-main);font:inherit}.public-content-admin input[type=checkbox]{width:auto}.public-content-admin>label{display:block;margin:1rem 0}.public-content-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1.5rem 0;padding:1.5rem;border:1px solid var(--border-subtle);border-radius:12px}.public-content-fields label{display:flex;flex-direction:column;gap:.4rem}.public-content-fields textarea{resize:vertical}.public-content-fields>div{grid-column:1/-1}.public-content-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;margin:1rem 0}.public-content-toolbar label{flex:1;min-width:180px}.public-content-toolbar>input,.public-content-toolbar>select{flex:1;min-width:160px}.public-content-admin button{cursor:pointer}.public-content-admin button:disabled{cursor:not-allowed;opacity:.6}.public-content-admin section{margin-top:2rem}.public-content-revision{padding:1.5rem;margin:1rem 0;overflow-wrap:anywhere}.public-content-revision p{margin:.5rem 0}.public-content-preview{display:grid;gap:1rem;margin:1rem 0}.public-content-preview article{border:1px solid var(--border-subtle);border-radius:8px;padding:1rem}.public-content-preview dl{display:grid;grid-template-columns:minmax(100px,1fr) 3fr;gap:.4rem}.public-content-preview dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.public-content-preview dt{color:var(--text-muted)}.public-content-error{color:var(--danger,#b91c1c)}@media(max-width:700px){.public-content-fields{grid-template-columns:minmax(0,1fr);padding:1rem}.public-content-preview dl{grid-template-columns:minmax(0,1fr)}.public-content-toolbar button{min-height:42px}.public-content-admin details{margin:1rem 0}}
+
+
+/* Board manager RC02: isolate action buttons, upload and portrait preview.
+   Scoped to the Public Content admin page, never public board/member pages. */
+.public-content-admin .public-content-board-tools {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: clamp(16px,2vw,24px);
+  margin: 20px 0;
+}
+.public-content-admin .public-content-board-tools-heading h3 {
+  margin: 0 0 8px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.public-content-admin .public-content-board-tools-heading p {
+  margin: 0 0 20px;
+  color: var(--acc-text-secondary,var(--text-muted));
+  line-height: 1.6;
+}
+.public-content-admin .public-content-board-tools-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(280px,1fr);
+  gap: clamp(16px,2vw,28px);
+  align-items: start;
+}
+.public-content-admin :is(.public-content-board-actions,.public-content-board-media) {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.public-content-admin :is(.public-content-board-actions,.public-content-board-media) h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.public-content-admin .public-content-board-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+.public-content-admin .public-content-board-action-buttons button {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 14px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.public-content-admin .public-content-board-media label {
+  display: block;
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.public-content-admin .public-content-board-media input[type=file] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--acc-border-strong,var(--border-subtle));
+  border-radius: 10px;
+}
+.public-content-admin .public-content-board-photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 8px 0 0;
+  padding: 12px;
+  border: 1px solid var(--acc-border,var(--border-subtle));
+  border-radius: 12px;
+  background: var(--acc-surface-elevated,var(--bg-subtle));
+}
+.public-content-admin .public-content-board-photo-preview img {
+  display: block;
+  width: 120px;
+  height: 120px;
+  flex: 0 0 120px;
+  max-width: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.public-content-admin .public-content-board-photo-preview figcaption {
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.public-content-admin .public-content-board-no-photo {
+  color: var(--acc-text-secondary,var(--text-muted));
+  font-size: .9rem;
+  margin: 0;
+}
+@media(max-width:860px) {
+  .public-content-admin .public-content-board-tools-grid {
+    grid-template-columns: minmax(0,1fr);
+  }
+}
+@media(max-width:520px) {
+  .public-content-admin .public-content-board-action-buttons button {width:100%;flex:1 1 100%}
+  .public-content-admin .public-content-board-photo-preview img {width:96px;height:96px;flex-basis:96px}
+}
+
+
+.public-content-admin .public-content-board-audit {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #b3c4d8;
+  border-radius: 12px;
+}
+.public-content-admin .public-content-board-audit h3 {margin:0 0 8px;font-size:1.1rem}
+.public-content-admin .public-content-board-audit > p {margin:0 0 14px;color:var(--acc-text-secondary,#475569)}
+.public-content-admin .public-content-board-audit-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+.public-content-admin .public-content-board-audit-term {
+  min-width:0;
+  border:1px solid #bdcddd;
+  border-radius:12px;
+  background:#f8fafc;
+  color:#13263e;
+  padding:16px;
+}
+.public-content-admin .public-content-board-audit-term h4 {margin:0 0 8px}
+.public-content-admin .public-content-board-audit-term ul {margin:8px 0;padding-left:22px;line-height:1.65}
+.public-content-admin .public-content-board-audit-ok {color:#166534;font-weight:700}
+.public-content-admin .public-content-board-audit-warning {color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px}
+.public-content-admin .public-content-board-audit-note {margin-top:12px!important}
+@media(max-width:800px){.public-content-admin .public-content-board-audit-grid{grid-template-columns:minmax(0,1fr)}}

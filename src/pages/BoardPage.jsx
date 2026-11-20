@@ -1,14 +1,15 @@
 import { usePublicInformation } from '../context/PublicContentContext';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Building, Landmark } from 'lucide-react';
 
 import SafeImage from '../components/common/SafeImage';
+import './BoardPage.css';
 
 function PeopleGrid({ members, type }) {
   const isBoard = type === 'board';
 
   return (
-    <div className="grid-3">
+    <div className={isBoard ? 'board-org-chart' : 'grid-3'}>
       {members.map((member) => {
         const isFeaturedLeader =
           (isBoard && member.position === 'ประธานกรรมการ') ||
@@ -17,7 +18,7 @@ function PeopleGrid({ members, type }) {
         return (
           <article
             key={member.id}
-            className="surface-card"
+            className={isBoard ? `surface-card board-person-card ${isFeaturedLeader ? 'board-person-chair' : ''}` : 'surface-card'}
             style={{
               padding: '2rem',
               textAlign: 'center',
@@ -79,7 +80,7 @@ function PeopleGrid({ members, type }) {
   );
 }
 
-export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, members, type, children }) {
+export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, members, type, toolbar, children }) {
   return (
     <div className="section">
       <div className="container">
@@ -90,6 +91,7 @@ export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, mem
           <div className="section-line" />
         </div>
 
+        {toolbar}
         <section aria-labelledby="directory-heading">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem', marginBottom: '1.5rem' }}>
             <Icon size={25} color={type === 'board' ? 'var(--primary-600)' : 'var(--accent-teal-dark)'} aria-hidden="true" />
@@ -105,33 +107,61 @@ export function PeopleDirectoryPage({ badge, title, subtitle, heading, Icon, mem
 
 export default function BoardPage() {
   const { COOP_INFO, BOARD_MEMBERS, legacyReference } = usePublicInformation();
+  const members = Array.isArray(BOARD_MEMBERS) ? BOARD_MEMBERS.filter(person=>person && typeof person === 'object') : [];
+  const boardGroups = Array.isArray(legacyReference?.boardGroups) ? legacyReference.boardGroups.filter(Boolean) : [];
+  const publishedSources = legacyReference?.sources?.board;
+  const terms = useMemo(() => [...new Set(members.map(person => person.term).filter(Boolean))].sort((a,b) => b.localeCompare(a,'th', {numeric:true})), [members]);
+  const [selectedTerm, setSelectedTerm] = useState('ชุดที่ 39');
+  const activeTerm = terms.includes(selectedTerm) ? selectedTerm : (terms.includes('ชุดที่ 39') ? 'ชุดที่ 39' : terms[0]);
+  const selectedMembers = members.filter(person => (!activeTerm || person.term === activeTerm) && person.status !== 'former');
+  const formerMembers = members.filter(person => person.term === activeTerm && person.status === 'former');
+  const activeGroups = boardGroups.filter(group => {
+    if (group.term) return group.term === activeTerm;
+    // Older groups have no explicit term; inherit it from their original members.
+    const first = members.find(person => person.id === Number(group.members?.[0]?.[0]));
+    return first?.term === activeTerm;
+  });
   return (
     <PeopleDirectoryPage
       badge="คณะผู้บริหาร"
-      title={BOARD_MEMBERS[0]?.term ? `คณะกรรมการดำเนินงาน ${BOARD_MEMBERS[0].term}` : 'คณะกรรมการดำเนินงาน'}
+      title={activeTerm ? `คณะกรรมการดำเนินงาน ${activeTerm}` : 'คณะกรรมการดำเนินงาน'}
       subtitle={`ทำเนียบคณะกรรมการดำเนินการ ${COOP_INFO.nameTh}`}
-      heading={BOARD_MEMBERS[0]?.term ? `คณะกรรมการดำเนินงาน ${BOARD_MEMBERS[0].term}` : 'คณะกรรมการดำเนินงาน'}
+      heading={activeTerm ? `คณะกรรมการดำเนินงาน ${activeTerm}` : 'คณะกรรมการดำเนินงาน'}
       Icon={Landmark}
-      members={BOARD_MEMBERS}
+      members={selectedMembers}
       type="board"
+      toolbar={<>
+      {terms.length > 0 && <nav aria-label="เลือกชุดคณะกรรมการ" className="board-term-switcher">
+        {terms.map(term=><button type="button" key={term} className={term===activeTerm?'board-term-active':''}
+          aria-pressed={term===activeTerm} onClick={()=>setSelectedTerm(term)}>{term}</button>)}
+      </nav>}
+      {!terms.length && <p className="board-term-empty" role="status">ยังไม่มีรายชื่อคณะกรรมการที่เผยแพร่ผ่านระบบหลังบ้าน</p>}
+      {!!activeTerm && selectedMembers.length === 0 && <p className="board-term-empty" role="status">ยังไม่มีรายชื่อกรรมการที่ดำรงตำแหน่งใน {activeTerm} ที่เผยแพร่</p>}
+      </>}
     >
-      <p style={{ margin: '1.5rem 0', color: 'var(--text-muted)' }}>
-        อ้างอิงรายชื่อจาก{' '}
-        <a href={legacyReference.sources.board.url} target="_blank" rel="noopener noreferrer">เอกสารอ้างอิงสหกรณ์</a>
-        {' '}ตรวจเทียบ {legacyReference.sources.board.checkedOn}
-      </p>
-      {legacyReference.boardGroups.map(group => (
+      {typeof publishedSources?.url==='string' && /^https:\/\//i.test(publishedSources.url) && <p style={{margin:'1.5rem 0',color:'var(--text-muted)'}}>แหล่งข้อมูลที่เผยแพร่: <a href={publishedSources.url} target="_blank" rel="noopener noreferrer">เอกสารอ้างอิงสหกรณ์</a>{publishedSources.checkedOn && <> · ตรวจเทียบ {publishedSources.checkedOn}</>}</p>}
+      {activeGroups.map(group => (
         <section key={group.title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
           <h2>{group.title}</h2>
-          <ul>{group.members.map(([id, position]) => (
-            <li key={id}>{BOARD_MEMBERS.find(member => member.id === id).name} — {position}</li>
-          ))}</ul>
+          <div className="board-subcommittee-grid">{(Array.isArray(group.members) ? group.members : []).filter(([id]) => selectedMembers.some(member => member.id === Number(id))).map(([id, position]) => {
+            const person=selectedMembers.find(member=>member.id===Number(id));
+            return <article key={id} className="board-subcommittee-person">
+              <div className="board-subcommittee-photo"><SafeImage src={person?.image} alt={`ภาพ ${person?.name||''}`} loading="lazy"/></div>
+              <div><strong>{person?.name}</strong><span>{position}</span></div>
+            </article>;
+          })}</div>
         </section>
       ))}
-      {[["ที่ปรึกษาสหกรณ์", legacyReference.advisors], ["คณะผู้ตรวจสอบกิจการสหกรณ์", legacyReference.auditors]].map(([title, people]) => (
+      {formerMembers.length > 0 && (
+        <section className="surface-card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
+          <h2>ทำเนียบกรรมการพ้นตำแหน่ง {activeTerm}</h2>
+          <div className="board-subcommittee-grid">{formerMembers.map(person=><article key={person.id} className="board-subcommittee-person"><div className="board-subcommittee-photo"><SafeImage src={person.image} alt={`ภาพ ${person.name}`} loading="lazy"/></div><div><strong>{person.name}</strong><span>{person.position} · พ้นตำแหน่ง</span></div></article>)}</div>
+        </section>
+      )}
+      {[["ที่ปรึกษาสหกรณ์", legacyReference?.advisors || []], ["คณะผู้ตรวจสอบกิจการสหกรณ์", legacyReference?.auditors || []]].map(([title, people]) => (
         <section key={title} className="surface-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
           <h2>{title}</h2>
-          <ul>{people.map(([name, position]) => <li key={name}>{name} — {position}</li>)}</ul>
+          <ul>{(Array.isArray(people) ? people : []).map((person,index) => <li key={index}>{Array.isArray(person) ? person.join(' — ') : (person?.name || '') + ' — ' + (person?.position || '')}</li>)}</ul>
         </section>
       ))}
     </PeopleDirectoryPage>

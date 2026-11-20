@@ -1,0 +1,20 @@
+/* Public board directory — term-aware organizational chart */
+.board-term-switcher{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:6px 0 30px}
+.board-term-switcher button{border:1px solid #cbd5e1;background:#fff;color:#183a66;font:inherit;font-weight:750;min-height:46px;padding:10px 22px;border-radius:999px;cursor:pointer}
+.board-term-switcher button.board-term-active{background:linear-gradient(120deg,#123c83,#245fe1);color:#fff;border-color:#245fe1;box-shadow:0 7px 20px #163c8630}
+.board-term-switcher button:focus-visible{outline:3px solid #f59e0b;outline-offset:3px}
+.board-term-empty{padding:20px;border-radius:14px;background:#eff6ff;text-align:center;color:#334155;margin:0 0 22px}
+.board-org-chart{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:stretch;margin-bottom:26px}
+.board-org-chart .board-person-card{padding:26px 14px!important;position:relative;border-radius:19px;box-shadow:0 8px 26px #0f274010;min-width:0}
+.board-org-chart .board-person-chair{grid-column:1/-1;width:min(100%,430px);justify-self:center;border:2px solid #d9b56d}
+.board-org-chart .board-person-card h3{max-width:100%;overflow-wrap:anywhere}
+.board-org-chart .board-person-card img{width:100%;height:100%;object-fit:cover}
+.board-subcommittee-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px;margin-top:18px}
+.board-subcommittee-person{display:flex;align-items:center;gap:14px;padding:13px;border:1px solid #e2e8f0;border-radius:13px;background:#f8fafc;min-width:0}
+.board-subcommittee-photo{width:74px;height:74px;flex-shrink:0;border-radius:12px;overflow:hidden;background:#e2e8f0}
+.board-subcommittee-photo img{display:block;width:100%;height:100%;object-fit:cover}
+.board-subcommittee-person>div:last-child{min-width:0;display:grid;gap:5px}
+.board-subcommittee-person strong,.board-subcommittee-person span{overflow-wrap:anywhere}
+.board-subcommittee-person span{font-size:.87rem;color:#475569}
+@media(max-width:900px){.board-org-chart{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}}
+@media(max-width:580px){.board-org-chart{grid-template-columns:1fr}.board-org-chart .board-person-chair{width:100%}.board-term-switcher button{flex:1;min-width:135px}}

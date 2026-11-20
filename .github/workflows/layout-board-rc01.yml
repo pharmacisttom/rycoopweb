@@ -1,0 +1,49 @@
+name: Layout and Board RC01 Isolated QA
+
+on:
+  pull_request:
+    paths:
+      - 'app/Services/HomepageLayoutService.php'
+      - 'app/Controllers/Admin/HomepageLayoutController.php'
+      - 'src/pages/AdminHomepageLayoutPage.jsx'
+      - 'src/pages/BoardPage.jsx'
+      - 'src/pages/PublicContentAdminPage.jsx'
+      - 'src/pages/HomePage.jsx'
+      - 'config/routes.php'
+      - 'tests/HomepageLayoutBoardContractTest.py'
+      - 'tests/SiteNavigationCopyContractTest.py'
+      - 'src/components/layout/Navbar.jsx'
+      - 'src/pages/AdminNavigationCopyPage.jsx'
+      - 'app/Services/SiteNavigationCopyService.php'
+      - 'app/Controllers/Admin/SiteNavigationCopyController.php'
+      - '.github/workflows/layout-board-rc01.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-static-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: PHP and Python source contracts
+        run: |
+          php -l app/Services/HomepageLayoutService.php
+          php -l app/Controllers/Admin/HomepageLayoutController.php
+          php -l app/Services/PublicContentService.php
+          php -l config/routes.php
+          php -l app/Services/SiteNavigationCopyService.php
+          php -l app/Controllers/Admin/SiteNavigationCopyController.php
+          python3 tests/AdminSidebarPublicContentRouteTest.py
+          python3 tests/HomepageLayoutBoardContractTest.py
+          node tests/LayoutManagerCrudUiTest.mjs
+          python3 tests/SiteNavigationCopyContractTest.py
+      - name: Install dependencies and build (security audit remains a separate required gate)
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build

@@ -27,7 +27,10 @@ final class AdminCrudService
     }
     public static function listing(string $module): array {
         self::permission($module,'view');$table=self::TABLES[$module];
-        return array_map([self::class,'version'],Database::query("SELECT * FROM $table".($module==='faqs'?'':' WHERE deleted_at IS NULL').' ORDER BY id DESC'));
+        $order = $module==='documents'
+            ? ' ORDER BY COALESCE(sort_order, 0) ASC, created_at DESC, id DESC'
+            : ' ORDER BY id DESC';
+        return array_map([self::class,'version'],Database::query("SELECT * FROM $table".($module==='faqs'?'':' WHERE deleted_at IS NULL').$order));
     }
     private static function row(string $module,int $id): array {
         $table=self::TABLES[$module];$row=Database::first("SELECT * FROM $table WHERE id=?".($module==='faqs'?'':' AND deleted_at IS NULL').self::lock(),[$id]);
@@ -59,7 +62,9 @@ final class AdminCrudService
                     }elseif($module==='documents'){
                         $category=(int)($merged['category_id']??0);$state=(string)($merged['status']??'inactive');$year=(int)($merged['year']??(date('Y')+543));
                         if(!Database::value("SELECT id FROM document_categories WHERE id=? AND status='active'",[$category])||!in_array($state,['active','inactive'],true)||$year<2400||$year>2800)throw new \InvalidArgumentException('กรุณาตรวจหมวดเอกสาร ปี พ.ศ. และสถานะ');
-                        $data+=['category_id'=>$category,'status'=>$state,'year'=>$year,'document_number'=>(string)($merged['document_number']??''),'tag'=>(string)($merged['tag']??''),'file_path'=>$old['file_path']??'','file_size'=>$old['file_size']??0,'file_type'=>$old['file_type']??'application/pdf'];
+                        $rawOrder=$merged['sort_order']??($old['sort_order']??1000);
+                        if(!is_scalar($rawOrder)||!preg_match('/^[0-9]{1,5}$/D',(string)$rawOrder)||(int)$rawOrder>99999)throw new \InvalidArgumentException('ลำดับเอกสารต้องเป็นจำนวนเต็ม 0 ถึง 99999');
+                        $data+=['category_id'=>$category,'status'=>$state,'year'=>$year,'sort_order'=>(int)$rawOrder,'document_number'=>(string)($merged['document_number']??''),'tag'=>(string)($merged['tag']??''),'file_path'=>$old['file_path']??'','file_size'=>$old['file_size']??0,'file_type'=>$old['file_type']??'application/pdf'];
                         if(mb_strlen($data['document_number'])>100||mb_strlen($data['tag'])>100)throw new \InvalidArgumentException('เลขเอกสารหรือแท็กยาวเกินกำหนด');
                     }
                     if($file&&($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE){

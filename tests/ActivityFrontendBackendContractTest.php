@@ -18,7 +18,7 @@ $ui = file_get_contents(__DIR__ . '/../src/pages/AdminActivitiesPage.jsx');
 $public = file_get_contents(__DIR__ . '/../src/pages/ActivitiesPage.jsx');
 $helper = file_get_contents(__DIR__ . '/../src/services/memberAdminApi.js');
 $controller = file_get_contents(__DIR__ . '/../app/Controllers/Api/ActivityGalleryController.php');
-$migration = file_get_contents(__DIR__ . '/../database/migrations/031_create_activity_photo_albums.sql');
+$migration = file_get_contents(__DIR__ . '/../database/migrations/032_create_activity_photo_albums.sql');
 foreach ([$ui, $public, $helper, $controller, $migration] as $source) {
     assertContract(is_string($source), 'Source file is readable');
 }
