@@ -5,6 +5,7 @@ on:
       - 'src/pages/HomePage.jsx'
       - 'src/components/home/HomeHighlightSlider.*'
       - 'src/components/admin/HomeCompositionEditor.*'
+      - 'src/components/layout/TopBar.jsx'
       - 'src/pages/AdminHomepageLayoutPage.jsx'
       - 'app/Services/HomeCompositionService.php'
       - 'app/Controllers/Admin/HomeCompositionController.php'
