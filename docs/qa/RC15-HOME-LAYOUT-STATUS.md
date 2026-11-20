@@ -23,3 +23,11 @@ This branch is **independent** of RC14 board management.
 5. Check mobile, desktop, reduce-motion, focus navigation, link whitelist, visual contrast and responsive behavior.
 6. Verify old layout manager and published content remain intact.
 7. Production promotion from actual live baseline with no DB migration without explicit verification.
+
+## 2026-11-20 production-hotfix integration
+- The production homepage crash was repaired separately; the active baseline reported as `prod-home-nullfix-20261120T130611Z`.
+- RC15 production deployment script refuses any different active release, verifies the parent RC14 source + exact one-line null URL hotfix, and preserves the live Board Editor source byte-for-byte.
+- Anonymous Admin API smoke now requires an authorization denial (302/401/403), rather than assuming all API endpoints use an identical denial status.
+- Added a Chromium browser regression with mocked Public Content `depositSource:null` and five published Highlights; this catches full-page crashes and validates DOM order. This is a build-time simulated API test, not authenticated Production UAT.
+- Run `npm ci`, `npm run build`, `php tests/HomeCompositionRc15ValidationTest.php`, GitHub RC15 QA, and staff-authenticated draft/publish tests before claiming complete integration.
+- The user-supplied RC14 board history update is a separate workstream and must not be replaced by the RC15 branch.
