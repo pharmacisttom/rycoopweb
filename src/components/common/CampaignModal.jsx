@@ -28,7 +28,7 @@ export default function CampaignModal() {
         const data = {
           title: String(item.title || ''),
           subtitle: String(item.content || ''),
-          imageUrl: item.desktop_image || '',
+          imageUrl: item.image_url || '',
           buttonText: item.button_text || 'ดูรายละเอียดเพิ่มเติม',
           linkUrl: item.button_url || ''
         };
