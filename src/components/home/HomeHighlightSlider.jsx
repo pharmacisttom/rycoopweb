@@ -24,7 +24,7 @@ export default function HomeHighlightSlider({composition,appearance}){
   const slide=slides[index];
   const background=composition?.background||{};
   const imageUrl=slide?.image_url || background.image_url || '';
-  const isAllowedImage=typeof imageUrl==='string' && /^\\/(?:storage\\/uploads|uploads|assets)\\/[a-zA-Z0-9_./-]+\\.(?:webp|png|jpe?g)$/.test(imageUrl) && !imageUrl.includes('..') && !imageUrl.includes('//');
+  const isAllowedImage=typeof imageUrl==='string' && ['/storage/uploads/','/uploads/','/assets/'].some(prefix=>imageUrl.startsWith(prefix)) && /^[a-zA-Z0-9_./-]+$/.test(imageUrl) && ['.jpg','.jpeg','.png','.webp'].some(ext=>imageUrl.toLowerCase().endsWith(ext)) && !imageUrl.includes('..') && !imageUrl.includes('//');
   const showImage=isAllowedImage && !failedImages[imageUrl];
   const overlayOpacity=Number.isInteger(background.overlay_opacity)?Math.max(35,Math.min(85,background.overlay_opacity))/100:0.6;
   const positions={center:'center center',top:'center top',bottom:'center bottom',left:'left center',right:'right center'};
