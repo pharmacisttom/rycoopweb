@@ -53,6 +53,44 @@ const normalizeBoardDraft = rows => rows.map((person,index) => {
   else if(!['active','former'].includes(board.status))throw new Error('สถานะกรรมการรายการที่ '+(index+1)+' ไม่ถูกต้อง');
   return board;
 });
+// Report every board-row issue before POST; backend remains authoritative.
+const collectBoardIssues=(rows,groupIds=[])=>{
+  const issues=[],ids=new Map();
+  const add=(row,field,message)=>issues.push({row,field,message});
+  rows.forEach((person,index)=>{
+    if(!person||typeof person!=='object'||Array.isArray(person)){add(index,'รายการ','ข้อมูลไม่ถูกต้อง');return;}
+    const id=typeof person.id==='string'&&/^\d+$/.test(person.id.trim())?Number(person.id.trim()):person.id;
+    if(!Number.isSafeInteger(id)||id<1||id>999999)add(index,'id','รหัสต้องเป็นจำนวนเต็ม 1–999999');
+    else if(ids.has(id))add(index,'id','รหัสซ้ำกับรายการที่ '+(ids.get(id)+1));
+    else ids.set(id,index);
+    for(const field of ['name','position','term','workplace']){
+      const v=person[field];
+      if(v==null&&['term','workplace'].includes(field))continue;
+      if(typeof v!=='string')add(index,field,'ต้องเป็นข้อความ');
+      else {
+        if(v.length>1000)add(index,field,'ข้อความเกิน 1,000 อักขระ');
+        if(/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(v))add(index,field,'มีอักขระควบคุมที่ไม่ได้รับอนุญาต');
+        if(['name','position'].includes(field)&&!v.trim())add(index,field,'กรุณากรอกข้อมูล');
+      }
+    }
+    if(person.status!=null&&person.status!==''&&!['active','former'].includes(person.status))add(index,'status','สถานะไม่ถูกต้อง');
+    if(person.image!=null&&person.image!==''){
+      const v=person.image;
+      if(typeof v!=='string')add(index,'image','ต้องเป็นข้อความ');
+      else{
+        let valid=false;
+        if(v.length<=500){
+          valid=/^(?:\.\/|\/)(?:assets|storage\/uploads|uploads)\/[A-Za-z0-9_./%-]+$/.test(v)&&!v.includes('..');
+          try{const u=new URL(v);if(u.protocol==='https:'&&!u.username&&!u.password)valid=true;}catch{}
+        }
+        if(!valid)add(index,'image','URL รูปไม่ถูกต้องหรือเกิน 500 อักขระ');
+      }
+    }
+  });
+  const active=new Set(rows.filter(x=>x&&typeof x==='object'&&x.status!=='former').map(x=>Number(x.id)));
+  groupIds.forEach(id=>{if(!active.has(Number(id)))add(null,'boardGroups','สมาชิกคณะอนุกรรมการอ้างอิงรหัส '+String(id).replace(/\D/g,'')+' ที่ไม่อยู่ในรายชื่อกรรมการดำรงตำแหน่ง');});
+  return issues;
+};
 const safeRevisionValue = (payload, section) => {
   try {
     const value = typeof payload === 'string' ? JSON.parse(payload) : payload;
@@ -86,6 +124,7 @@ export default function PublicContentAdminPage() {
   const [boardRemoveSelection,setBoardRemoveSelection]=useState([]);
   const [boardModalOpen,setBoardModalOpen]=useState(false);
   const [boardSearch,setBoardSearch]=useState('');
+  const [boardValidationIssues,setBoardValidationIssues]=useState([]);
   const [boardTermFilter,setBoardTermFilter]=useState('ทั้งหมด');
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
@@ -99,7 +138,7 @@ export default function PublicContentAdminPage() {
     if (!sections.length || !requestedSection || requestedSection === section || dirty) return;
     if (sections.some(item => item.key === requestedSection)) setSection(requestedSection);
   }, [requestedSection, sections, section, dirty]);
-  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);setBoardRemoveSelection([]);setBoardModalOpen(false);setBoardSearch('');
+  useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);setBoardRemoveSelection([]);setBoardModalOpen(false);setBoardSearch('');setBoardValidationIssues([]);
     memberAdminApi(`/api/admin/public-content/sections/${section}`,{signal:controller.signal}).then(result=>{setData(result);setValue(result.value);}).catch(e=>{if(e.name!=='AbortError')setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[section,refresh]);
@@ -194,18 +233,35 @@ export default function PublicContentAdminPage() {
     } catch(e){setError(e.message||'อัปโหลดรูปไม่สำเร็จ กรุณาตรวจสิทธิ์ Media Library');}
     finally {setMediaBusy(false);}
   }
-  async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');try{
+  async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');setBoardValidationIssues([]);try{
+    if(section==='boards'){
+      const issues=collectBoardIssues(value,[...groupBoardIds]);
+      if(issues.length){
+        setBoardValidationIssues(issues);
+        setError('พบข้อผิดพลาด '+issues.length+' จุด กรุณาดูรายละเอียดและแก้ไขให้ครบก่อนบันทึก');
+        return;
+      }
+    }
     const unknownBoardKeys=section==='boards'?[...new Set(value.flatMap(person=>Object.keys(person||{}).filter(key=>!BOARD_SERVER_FIELD_SET.has(key))))]:[];
      if(unknownBoardKeys.length&&!window.confirm('พบฟิลด์เดิมที่ Backend ไม่รองรับ: '+unknownBoardKeys.join(', ')+'\nฟิลด์เหล่านี้จะไม่รวมในร่างใหม่ ข้อมูลที่เผยแพร่อยู่ยังไม่เปลี่ยนจนกว่าจะอนุมัติ\nตรวจสอบแล้วต้องการบันทึกร่างต่อหรือไม่?'))return;
      const draftValue=section==='boards'?normalizeBoardDraft(value):value;
      const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value:draftValue,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
     setDirty(false);setBoardModalOpen(false);setBoardRemoveSelection([]);setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);setRefresh(n=>n+1);
-  }catch(e){setError(e.message);}finally{setBusy(false);}}
+  }catch(e){setError(e.message);if(section==='boards')setBoardValidationIssues([{row:null,field:'API',message:e.message||'บันทึกร่างไม่สำเร็จ'}]);}finally{setBusy(false);}}
   async function publish(revision){if(!window.confirm(`เผยแพร่ร่าง #${revision.id} มีผล ${revision.effective_on}?`))return;setBusy(true);setError('');try{
     await memberAdminApi(`/api/admin/public-content/revisions/${revision.id}/publish`,{data:{}});await reload();setMessage('อนุมัติแล้ว ข้อมูลจะแสดงตามวันที่มีผล');setRefresh(n=>n+1);
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   return <section className="admin-module public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่"/>
     {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
+    {section==='boards'&&boardValidationIssues.length>0&&<section className="board-validation-report" role="alert" aria-label="ข้อผิดพลาดของกรรมการทั้งหมด">
+      <h3>รายการข้อผิดพลาดทั้งหมด ({boardValidationIssues.length} จุด)</h3>
+      <p>แสดงลำดับและฟิลด์โดยไม่แสดงชื่อกรรมการ</p>
+      <div className="board-table-scroll"><table className="board-admin-table"><thead><tr><th>ลำดับ</th><th>ฟิลด์</th><th>สาเหตุ</th><th>จัดการ</th></tr></thead>
+      <tbody>{boardValidationIssues.map((item,i)=><tr key={i}>
+        <td>{item.row===null?'ภาพรวม':'รายการที่ '+(item.row+1)}</td><td>{item.field}</td><td>{item.message}</td>
+        <td>{item.row===null?'ตรวจข้อมูลอ้างอิง':<button type="button" onClick={()=>{setSelected(item.row);setBoardTermFilter('ทั้งหมด');setBoardSearch('');setBoardModalOpen(true);}}>เปิดแก้ไข</button>}</td>
+      </tr>)}</tbody></table></div>
+    </section>}
     <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?')){setBoardModalOpen(false);setBoardRemoveSelection([]);setSection(e.target.value);setSearchParams(params=>{const next=new URLSearchParams(params);next.set('section',e.target.value);return next;});}}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
     <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
