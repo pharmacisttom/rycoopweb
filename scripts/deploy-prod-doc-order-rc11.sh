@@ -37,7 +37,11 @@ for file in \
   "$SRC/app/Services/AdminCrudService.php" \
   "$SRC/app/Controllers/Api/SpaApiController.php" \
   "$SRC/src/pages/AdminStoredContentPage.jsx" \
-  "$SRC/tests/DocumentOrderContractTest.php"; do
+  "$SRC/tests/DocumentOrderContractTest.php" \
+  "$SRC/tests/DocumentCategoriesContractTest.php" \
+  "$SRC/app/Controllers/Admin/DocumentCategoryController.php" \
+  "$SRC/app/Controllers/Admin/DocumentController.php" \
+  "$SRC/config/routes.php"; do
  test -f "$file"
 done
 test -d "$OLD"
@@ -47,18 +51,30 @@ test "$(grep -Fc "$OLD/public" "$LOOP")" -eq 1
 grep -Fq '/app/assets/index-' "$SRC/public/app/index.html"
 COL="$(mysql -N "$DB" -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='documents' AND COLUMN_NAME='sort_order'")"
 test "$COL" = 1 || { echo "DOCUMENT_SORT_COLUMN=MISSING"; exit 1; }
+# These are existing production columns: no migration is permitted.
+for column in id name slug sort_order status deleted_at created_at updated_at; do
+  found="$(mysql -N "$DB" -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='document_categories' AND COLUMN_NAME='$column'")"
+  test "$found" = 1 || { echo "CATEGORY_COLUMN_MISSING=$column"; exit 1; }
+done
+echo "CATEGORY_DB_SCHEMA=PASS"
 php -l "$SRC/app/Services/AdminCrudService.php"
 php -l "$SRC/app/Controllers/Api/SpaApiController.php"
 php -l "$SRC/tests/DocumentOrderContractTest.php"
+php -l "$SRC/tests/DocumentCategoriesContractTest.php"
+php -l "$SRC/app/Controllers/Admin/DocumentCategoryController.php"
+php -l "$SRC/app/Controllers/Admin/DocumentController.php"
+php -l "$SRC/config/routes.php"
 (
  cd "$SRC"
  php tests/DocumentOrderContractTest.php
+ php tests/DocumentCategoriesContractTest.php
 )
 test "$(status /api/public/documents)" = 200
 test "$(status /app/admin/documents)" = 200
 test "$(status /api/public/popup-campaign)" = 200
 OLD_MEMBER="$(status /api/member/dividends)"
 OLD_ADMIN="$(status /api/admin/documents)"
+OLD_CATEGORY="$(status /api/admin/document-categories)"
 case "$OLD_ADMIN" in 302|401|403) ;; *) echo "UNAUTH_ADMIN_UNEXPECTED=$OLD_ADMIN"; exit 1;; esac
 mkdir -p "$BACKUP"
 cp -a "$MAIN" "$BACKUP/main.conf"
@@ -71,6 +87,10 @@ cp -a "$SRC/app/Services/AdminCrudService.php" "$NEW/app/Services/AdminCrudServi
 cp -a "$SRC/app/Controllers/Api/SpaApiController.php" "$NEW/app/Controllers/Api/SpaApiController.php"
 cp -a "$SRC/src/pages/AdminStoredContentPage.jsx" "$NEW/src/pages/AdminStoredContentPage.jsx"
 cp -a "$SRC/tests/DocumentOrderContractTest.php" "$NEW/tests/DocumentOrderContractTest.php"
+cp -a "$SRC/tests/DocumentCategoriesContractTest.php" "$NEW/tests/DocumentCategoriesContractTest.php"
+cp -a "$SRC/app/Controllers/Admin/DocumentCategoryController.php" "$NEW/app/Controllers/Admin/DocumentCategoryController.php"
+cp -a "$SRC/app/Controllers/Admin/DocumentController.php" "$NEW/app/Controllers/Admin/DocumentController.php"
+cp -a "$SRC/config/routes.php" "$NEW/config/routes.php"
 test ! -L "$NEW/public/app"
 rm -rf "$NEW/public/app"
 mkdir -p "$NEW/public/app"
@@ -79,11 +99,13 @@ find "$NEW/public/app" -type d -exec chmod 755 {} +
 find "$NEW/public/app" -type f -exec chmod 644 {} +
 cmp -s "$OLD/app/Core/Session.php" "$NEW/app/Core/Session.php"
 cmp -s "$OLD/app/Core/Router.php" "$NEW/app/Core/Router.php"
-cmp -s "$OLD/config/routes.php" "$NEW/config/routes.php"
+# Routes differ only by the new guarded category management endpoints.
+grep -Fq "DocumentCategoryController@update" "$NEW/config/routes.php"
 cmp -s "$OLD/app/Controllers/Api/PopupCmsController.php" "$NEW/app/Controllers/Api/PopupCmsController.php"
 (
  cd "$NEW"
  php tests/DocumentOrderContractTest.php
+ php tests/DocumentCategoriesContractTest.php
  php tests/PopupCmsContractTest.php
  php tests/RouterErrorContractTest.php
 )
@@ -116,6 +138,7 @@ for route in /app/ /app/admin/documents /app/admin/popups /app/welfare /api/publ
 done
 test "$(status /api/member/dividends)" = "$OLD_MEMBER"
 test "$(status /api/admin/documents)" = "$OLD_ADMIN"
+test "$(status /api/admin/document-categories)" = "$OLD_CATEGORY"
 curl --noproxy '*' -4 -fsS --max-time 20 --resolve "$HOST:443:127.0.0.1" \
  "https://$HOST/api/public/documents" | python3 -c '
 import json,sys
@@ -123,8 +146,8 @@ data=json.load(sys.stdin)
 assert data.get("success") is True
 rows=data.get("data")
 assert isinstance(rows,list)
-key=lambda r:(int(r.get("sort_order") or 0),-(int(r.get("id") or 0)))
-assert all(int(rows[i].get("sort_order") or 0)<=int(rows[i+1].get("sort_order") or 0) for i in range(len(rows)-1))
+key=lambda r:(int(r.get("category_sort_order") or 0),int(r.get("category_id") or 0),int(r.get("sort_order") or 0))
+assert all(key(rows[i])<=key(rows[i+1]) for i in range(len(rows)-1))
 print("DOCUMENT_PUBLIC_ORDER=PASS")
 print("DOCUMENT_COUNT="+str(len(rows)))
 '
