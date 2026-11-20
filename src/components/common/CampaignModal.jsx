@@ -10,32 +10,39 @@ export default function CampaignModal() {
   const closeRef = useRef(null);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('coop_popup_campaign');
-      const data = saved ? JSON.parse(saved) : {
-        enabled: true,
-        title: 'โครงการประมาณการเงินปันผลและเฉลี่ยคืน ประจำปี 2567',
-        subtitle: 'สมาชิกสามารถคำนวณและตรวจสอบสิทธิประโยชน์ได้แล้ววันนี้ผ่านระบบดิจิทัล',
-        imageUrl: '/assets/img/popup_dividend.jpg',
-        buttonText: 'ประมาณการเงินปันผลทันที',
-        linkUrl: '/dividend-estimator'
-      };
+    let timer;
+    const showCampaignAfterConsent = () => {
+      try {
+        // Do not place a promotional dialog over the required cookie choice.
+        if (!localStorage.getItem('coop_cookie_consent_v1')) return;
+        if (sessionStorage.getItem('coop_campaign_shown')) return;
 
-      if (data && data.enabled) {
+        const saved = localStorage.getItem('coop_popup_campaign');
+        const data = saved ? JSON.parse(saved) : {
+          enabled: true,
+          title: 'โครงการประมาณการเงินปันผลและเฉลี่ยคืน ประจำปี 2567',
+          subtitle: 'สมาชิกสามารถคำนวณและตรวจสอบสิทธิประโยชน์ได้แล้ววันนี้ผ่านระบบดิจิทัล',
+          imageUrl: '/assets/img/popup_dividend.jpg',
+          buttonText: 'ประมาณการเงินปันผลทันที',
+          linkUrl: '/dividend-estimator'
+        };
+        if (!data?.enabled || timer) return;
         setCampaign(data);
-        // Check if shown in current session
-        const alreadyShown = sessionStorage.getItem('coop_campaign_shown');
-        if (!alreadyShown) {
-          const timer = setTimeout(() => {
-            setIsOpen(true);
-            sessionStorage.setItem('coop_campaign_shown', 'true');
-          }, 1200);
-          return () => clearTimeout(timer);
-        }
+        timer = setTimeout(() => {
+          setIsOpen(true);
+          sessionStorage.setItem('coop_campaign_shown', 'true');
+          timer = undefined;
+        }, 1200);
+      } catch {
+        // Invalid browser storage must not block the rest of the site.
       }
-    } catch (e) {
-      // ignore
-    }
+    };
+    showCampaignAfterConsent();
+    window.addEventListener('rycoop:cookie-consent-updated', showCampaignAfterConsent);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('rycoop:cookie-consent-updated', showCampaignAfterConsent);
+    };
   }, []);
 
   useEffect(() => {
