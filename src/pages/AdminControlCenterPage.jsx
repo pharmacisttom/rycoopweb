@@ -408,7 +408,12 @@ export default function AdminControlCenterPage({ section: propSection }) {
         setAuditData(logs);
       } else if (section === 'security') {
         const sec = await memberAdminApi('/api/admin/security/overview', { signal });
-        setSecurityData(sec);
+        // memberAdminApi returns the response envelope { success, data }.
+        // Read the payload, not the envelope; never display a fallback 0/100 on malformed data.
+        if (!sec.data || !sec.data.health_score || !sec.data.metrics) {
+          throw new Error('เซิร์ฟเวอร์ส่งข้อมูล Security Center ไม่ครบถ้วน');
+        }
+        setSecurityData(sec.data);
       } else if (section === 'sessions') {
         const ses = await memberAdminApi('/api/admin/security/sessions', { signal });
         setSessionsData(ses);
