@@ -13,10 +13,10 @@ const NAMES = {
   welfare: 'สวัสดิการ'
 };
 const copy = value => JSON.parse(JSON.stringify(value));
-const makeSlide = () => ({id:'slide-'+crypto.randomUUID().replaceAll('-','').slice(0,16),title:'',body:'',link:'',image_url:''});
-const normalBackground = value => ({image_url:value?.image_url||'', overlay_opacity:value?.overlay_opacity??60, position:value?.position||'center'});
+const makeSlide = () => ({id:'slide-'+crypto.randomUUID().replaceAll('-','').slice(0,16),title:'',body:'',link:'',image_url:'',mobile_image_url:''});
+const normalBackground = value => ({image_url:value?.image_url||'', mobile_image_url:value?.mobile_image_url||'', overlay_opacity:value?.overlay_opacity??60, position:value?.position||'center'});
 const allowedImage = path => !path || (['/storage/uploads/','/uploads/','/assets/'].some(prefix=>path.startsWith(prefix)) && /^[a-zA-Z0-9_./-]+$/.test(path) && ['.jpg','.jpeg','.png','.webp'].some(ext=>path.toLowerCase().endsWith(ext)) && !path.includes('..') && !path.includes('//'));
-const prepare = value => ({...copy(value),background:normalBackground(value.background),slides:value.slides.map(item=>({...item,image_url:item.image_url||''}))});
+const prepare = value => ({...copy(value),background:normalBackground(value.background),slides:value.slides.map(item=>({...item,image_url:item.image_url||'',mobile_image_url:item.mobile_image_url||''}))});
 function Preview({composition}) {
   return <div className="hc-preview" aria-label="ตัวอย่างการจัดลำดับหน้าแรก">
     {composition.order.filter(id=>composition.visible[id]).map(id=><section key={id} className={'hc-preview-section hc-preview-'+id}>
@@ -65,7 +65,7 @@ export default function HomeCompositionEditor(){
   });
   const submit=async action=>{
     if(!mfa||busy||!server||!model||(action==='draft'?!dirty:dirty||!server.draft))return;
-    if(!allowedImage(model.background?.image_url)||model.slides.some(item=>!allowedImage(item.image_url))){setError('กรุณาใช้ที่อยู่รูป JPG, PNG หรือ WEBP ภายในเว็บไซต์ เช่น /storage/uploads/...');return;}
+    if(!allowedImage(model.background?.image_url)||!allowedImage(model.background?.mobile_image_url)||model.slides.some(item=>!allowedImage(item.image_url)||!allowedImage(item.mobile_image_url))){setError('กรุณาใช้ที่อยู่รูป JPG, PNG หรือ WEBP ภายในเว็บไซต์ เช่น /storage/uploads/...');return;}
     if(action==='publish'&&!window.confirm('ยืนยันเผยแพร่ผังหน้าแรกและ Highlight Slider ไปยังเว็บไซต์จริง?'))return;
     setBusy(true);setError('');setNotice('');
     try{
@@ -125,6 +125,25 @@ export default function HomeCompositionEditor(){
               <input type="text" placeholder="/storage/uploads/..." value={model.background?.image_url||''}
                 onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.image_url=e.target.value.trim();return m;})}/>
             </label>
+            <label>ภาพพื้นหลังมือถือ (1080 × 1350 px, สัดส่วน 4:5)
+              <input type="text" placeholder="/storage/uploads/... (เว้นว่างใช้ภาพ Desktop)"
+                value={model.background?.mobile_image_url||''}
+                onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.mobile_image_url=e.target.value.trim();return m;})}/>
+            </label>
+            <p className="hc-image-guidance">Desktop: 1920 × 640 px (3:1) · Mobile: 1080 × 1350 px (4:5) · แนะนำ WebP และเก็บวัตถุสำคัญไว้กลางภาพ</p>
+            <div className="hc-art-direction-preview" aria-label="ตัวอย่างพื้นหลัง Desktop และ Mobile">
+              {['desktop','mobile'].map(view=>{
+                const url=view==='mobile'?(model.background?.mobile_image_url||model.background?.image_url):model.background?.image_url;
+                return <div key={view} className={'hc-device-preview hc-device-'+view}>
+                  <strong>{view==='mobile'?'Mobile · 4:5':'Desktop · 3:1'}</strong>
+                  <div className="hc-device-canvas" style={allowedImage(url)?{
+                    backgroundImage:`linear-gradient(rgba(8,22,48,${(model.background?.overlay_opacity??60)/100}),rgba(8,22,48,${(model.background?.overlay_opacity??60)/100})),url("${url}")`,
+                    backgroundPosition:model.background?.position||'center'}:{}}>
+                    <span>Highlight Slider</span><small>ตัวอย่างการครอบตัด · {view}</small>
+                  </div>
+                </div>;
+              })}
+            </div>
             <div className="hc-background-row">
               <label>ความเข้ม Overlay ({model.background?.overlay_opacity??60}%)
                 <input type="range" min="35" max="85" step="5" value={model.background?.overlay_opacity??60}
@@ -156,6 +175,15 @@ export default function HomeCompositionEditor(){
                 value={slide.image_url||''}
                 onChange={e=>update(m=>{m.slides[index].image_url=e.target.value.trim();return m;})}/>
             </label>
+            <label>ภาพเฉพาะสไลด์สำหรับมือถือ (1080 × 1350 px)
+              <input type="text" placeholder="เว้นว่างเพื่อใช้ภาพมือถือหลัก หรือภาพ Desktop"
+                value={slide.mobile_image_url||''}
+                onChange={e=>update(m=>{m.slides[index].mobile_image_url=e.target.value.trim();return m;})}/>
+            </label>
+            {!!slide.mobile_image_url && allowedImage(slide.mobile_image_url) && <div className="hc-mini-image hc-mini-mobile" style={{backgroundImage:`linear-gradient(#08163077,#08163077),url("${slide.mobile_image_url}")`}}>
+              <span>ตัวอย่างภาพมือถือของสไลด์นี้</span>
+              <button type="button" onClick={()=>update(m=>{m.slides[index].mobile_image_url='';return m;})}>ลบรูปมือถือ</button>
+            </div>}
             {!!slide.image_url && allowedImage(slide.image_url) && <div className="hc-mini-image" style={{backgroundImage:`linear-gradient(#08163077,#08163077),url("${slide.image_url}")`}}>
               <span>ตัวอย่างรูปของสไลด์นี้</span>
               <button type="button" onClick={()=>update(m=>{m.slides[index].image_url='';return m;})}>ลบรูป</button>
