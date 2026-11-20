@@ -17,7 +17,8 @@ $expected = [
   ['GET','/api/admin/popup-campaigns',true,false],
   ['POST','/api/admin/popup-campaigns',true,true],
   ['POST','/api/admin/popup-campaigns/{id}/update',true,true],
-  ['POST','/api/admin/popup-campaigns/{id}/disable',true,true]
+  ['POST','/api/admin/popup-campaigns/{id}/disable',true,true],
+  ['POST','/api/admin/popup-campaigns/{id}/delete',true,true]
 ];
 
 foreach ($expected as [$method,$path,$private,$write]) {
