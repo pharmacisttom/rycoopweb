@@ -182,13 +182,9 @@ export default function HomePage() {
     bgImageUrl: '/assets/img/hero_bg_coop.jpg'
   };
 
-  return (
-    <div>
-
-      {/* =========================================================================
-          HERO SECTION (High Impact Modern Banner)
-          ========================================================================= */}
-      {showSection('hero') && <section style={{
+  const sectionsById = {
+    hero: (
+<section style={{
         position: 'relative',
         backgroundImage: heroSettings.bgImageUrl ? `linear-gradient(135deg, rgba(15, 43, 92, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%), url(${heroSettings.bgImageUrl})` : 'var(--gradient-hero)',
         backgroundSize: 'cover',
@@ -312,10 +308,13 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>}
-
-      {showSection('highlights')&&<HomeHighlightSlider composition={composition}/>}
-      {showSection('rates_news')&&<div className="home-rates-news-lowered">
+      </section>
+    ),
+    highlights: (
+<HomeHighlightSlider composition={composition}/>
+    ),
+    rates_news: (
+<div className="home-rates-news-lowered">
         <div className="container">
             <div className="hero-dashboard-row">
             {/* Right Hero Card: Quick Rates & Services Widget */}
@@ -481,12 +480,10 @@ export default function HomePage() {
 
 
         </div>
-      </div>}
-
-      {/* =========================================================================
-          QUICK SERVICES GRID (บริการดิจิทัลด่วน - Proper Spacing & Padding)
-          ========================================================================= */}
-      {showSection('quick_services') && <section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
+      </div>
+    ),
+    quick_services: (
+<section style={{ padding: '3.5rem 0 2.5rem 0', background: 'var(--bg-main)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
@@ -544,12 +541,10 @@ export default function HomePage() {
 
           </div>
         </div>
-      </section>}
-
-      {/* =========================================================================
-          KEY COOPERATIVE STATS
-          ========================================================================= */}
-      {showSection('statistics') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>
+    ),
+    statistics: (
+<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -592,12 +587,10 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>}
-
-      {/* =========================================================================
-          FEATURED FINANCIAL PRODUCTS (เงินกู้และเงินฝากยอดนิยม)
-          ========================================================================= */}
-      {showSection('products') && <section className="section" style={{ background: 'var(--bg-main)' }}>
+      </section>
+    ),
+    products: (
+<section className="section" style={{ background: 'var(--bg-main)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -651,21 +644,17 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>}
-
-      {/* =========================================================================
-          INTERACTIVE LOAN CALCULATOR SUITE EMBED
-          ========================================================================= */}
-      {showSection('calculator') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>
+    ),
+    calculator: (
+<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
           <LoanCalculator />
         </div>
-      </section>}
-
-      {/* =========================================================================
-          MEMBER WELFARE HIGHLIGHTS
-          ========================================================================= */}
-      {showSection('welfare') && <section className="section" style={{ background: 'var(--bg-surface)' }}>
+      </section>
+    ),
+    welfare: (
+<section className="section" style={{ background: 'var(--bg-surface)' }}>
         <div className="container">
 
           <div className="section-title-wrap">
@@ -700,7 +689,20 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>}
+      </section>
+    ),
+  };
+  const sectionOrder = composition?.order || ["hero","highlights","rates_news","quick_services","statistics","products","calculator","welfare"];
+
+  return (
+    <div>
+
+      {/* =========================================================================
+          HERO SECTION (High Impact Modern Banner)
+          ========================================================================= */}
+      {sectionOrder.filter(key=>showSection(key)).map(key=><React.Fragment key={key}>{sectionsById[key]}</React.Fragment>)}
+
+
 
 
       <PublishedDynamicSections />
