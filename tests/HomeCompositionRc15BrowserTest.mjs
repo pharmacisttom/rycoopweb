@@ -40,6 +40,9 @@ try {
   const pass=!errors.length&&!hasReactCrash&&hasRate&&hasNews&&response?.ok();
   output.push({name:'Homepage null interest source',pass,errors:errors.slice(0,4),status:response?.status(),hasRate,hasNews,body:heading.slice(0,400),network:network.slice(0,8),browserConsole:browserConsole.slice(-30)});
   if(!pass)failures++;
+  // Intercept image URLs so art-direction logic can be tested without a media server.
+  const tinyPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLytQAAAABJRU5ErkJggg==','base64');
+  await context.route('**/storage/uploads/highlights/*.webp',route=>route.fulfill({status:200,contentType:'image/png',body:tinyPng}));
   // Test public reordering and highlight rendering against an API-bound response.
   await context.route('**/api/public/home-composition',route=>route.fulfill({
     status:200,contentType:'application/json',
@@ -47,7 +50,8 @@ try {
       order:['highlights','hero','rates_news','quick_services','statistics','products','calculator','welfare'],
       visible:Object.fromEntries(['hero','highlights','rates_news','quick_services','statistics','products','calculator','welfare'].map(x=>[x,true])),
       theme:'ocean',autoplay_seconds:6,
-      slides:Array.from({length:5},(_,i)=>({id:'smoke-'+i,title:'ทดสอบ Highlight '+(i+1),body:'ข้อความทดสอบเท่านั้น',link:'/about'})),
+      slides:Array.from({length:5},(_,i)=>({id:'smoke-'+i,title:'ทดสอบ Highlight '+(i+1),body:'ข้อความทดสอบเท่านั้น',link:'/about',image_url:'/storage/uploads/highlights/desktop.webp',mobile_image_url:'/storage/uploads/highlights/mobile.webp'})),
+      background:{image_url:'',mobile_image_url:'',overlay_opacity:60,position:'center'},
       layers:Object.fromEntries(['hero','highlights','rates_news','quick_services','statistics','products','calculator','welfare'].map(x=>[x,{surface:'original',spacing:'comfortable'}]))
     }})
   }));
@@ -65,6 +69,16 @@ try {
   const pass2=highlight===1&&documentOrder!==0&&!secondErrors.length;
   output.push({name:'Highlights & published DOM ordering',pass:pass2,highlight,documentOrder,errors:secondErrors.slice(0,4)});
   if(!pass2)failures++;
+  const picture=second.locator('.home-highlight-picture');
+  const desktopPath=await picture.locator('img').evaluate(img=>new URL(img.currentSrc).pathname);
+  const desktopPass=desktopPath==='/storage/uploads/highlights/desktop.webp';
+  await second.setViewportSize({width:390,height:844});
+  await second.waitForTimeout(300);
+  const mobilePath=await picture.locator('img').evaluate(img=>new URL(img.currentSrc).pathname);
+  const mobilePass=mobilePath==='/storage/uploads/highlights/mobile.webp';
+  const responsivePass=desktopPass&&mobilePass;
+  output.push({name:'Desktop and mobile photographic sources',pass:responsivePass,desktopPath,mobilePath});
+  if(!responsivePass)failures++;
   await context.close();
 } finally {
   await browser.close();
