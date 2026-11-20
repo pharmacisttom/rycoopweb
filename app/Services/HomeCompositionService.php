@@ -13,10 +13,16 @@ final class HomeCompositionService
     private const DRAFT = 'home_composition_rc15_draft';
     public const BLOCKS = ['hero','highlights','rates_news','quick_services','statistics','products','calculator','welfare'];
     private const THEMES = ['royal-blue','ocean','midnight'];
+    private const SURFACES = ['original','light','navy','ocean'];
+    private const SPACINGS = ['compact','comfortable','spacious'];
+    private static function defaultLayers(): array
+    {
+        return array_fill_keys(self::BLOCKS, ['surface'=>'original','spacing'=>'comfortable']);
+    }
     public static function defaults(): array
     {
         return ['order'=>self::BLOCKS,'visible'=>array_fill_keys(self::BLOCKS,true),
-            'theme'=>'royal-blue','autoplay_seconds'=>6,'slides'=>[]];
+            'theme'=>'royal-blue','autoplay_seconds'=>6,'slides'=>[], 'layers'=>self::defaultLayers()];
     }
     public static function validate(mixed $input): array
     {
@@ -50,8 +56,27 @@ final class HomeCompositionService
             $ids[$id]=true;
             $normalized[]=['id'=>$id,'title'=>trim($title),'body'=>trim($body),'link'=>$link];
         }
+        // Only predefined appearance values are accepted, never arbitrary CSS or HTML.
+        $layers=$input['layers']??self::defaultLayers();
+        if (!is_array($layers)||array_diff(array_keys($layers),self::BLOCKS)
+            ||array_diff(self::BLOCKS,array_keys($layers))) {
+            throw new InvalidArgumentException('ข้อมูล Layer ไม่ตรงกับส่วนที่รองรับ');
+        }
+        $normalizedLayers=[];
+        foreach (self::BLOCKS as $block) {
+            $layer=$layers[$block]??null;
+            if (!is_array($layer) || array_diff(array_keys($layer),['surface','spacing'])) {
+                throw new InvalidArgumentException('ข้อมูลตกแต่ง Layer ไม่ถูกต้อง');
+            }
+            $surface=$layer['surface']??null;
+            $spacing=$layer['spacing']??null;
+            if (!in_array($surface,self::SURFACES,true)||!in_array($spacing,self::SPACINGS,true)) {
+                throw new InvalidArgumentException('ธีมพื้นหลังหรือระยะห่างไม่รองรับ');
+            }
+            $normalizedLayers[$block]=['surface'=>$surface,'spacing'=>$spacing];
+        }
         return ['order'=>array_values($order),'visible'=>$visible,'theme'=>$theme,
-            'autoplay_seconds'=>$seconds,'slides'=>$normalized];
+            'autoplay_seconds'=>$seconds,'slides'=>$normalized,'layers'=>$normalizedLayers];
     }
     private static function read(string $key,bool $lock=false): ?array
     {
