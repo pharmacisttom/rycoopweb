@@ -53,3 +53,10 @@
 .board-admin-draft-save label:has(textarea),.board-admin-draft-save button[type=submit]{grid-column:1/-1}
 .board-admin-table button:focus-visible,.board-admin-modal button:focus-visible{outline:3px solid #e59d23;outline-offset:2px}
 @media(max-width:700px){.board-admin-modal{padding:14px}.board-admin-modal .public-content-fields,.board-admin-draft-save fieldset{grid-template-columns:1fr}.board-admin-draft-save label:has(textarea),.board-admin-draft-save button[type=submit]{grid-column:auto}}
+
+/* RC14 validation report */
+.board-validation-report{margin:18px 0;padding:18px;border:1px solid #f0b9b9;border-radius:12px;background:#fff7f7;scroll-margin-top:24px}
+.board-validation-report h3{margin:0 0 8px;color:#a52323}
+.board-validation-report .board-table-scroll{margin-top:12px;background:white}
+.board-validation-report td:nth-child(3){min-width:200px;overflow-wrap:anywhere}
+.board-validation-report button{border:1px solid #c6d7ee;background:white;color:#1f4e86;border-radius:8px;padding:8px 12px;cursor:pointer}
