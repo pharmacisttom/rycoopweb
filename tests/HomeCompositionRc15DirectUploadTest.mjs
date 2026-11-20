@@ -8,6 +8,9 @@ const release=readFileSync('scripts/deploy-prod-home-direct-upload-rc15.sh','utf
 
 const requires=[
   ['file input restricted to raster images',editor,'accept="image/jpeg,image/png,image/webp"'],
+  ['individual picker references',editor,'inputRef.current?.click()'],
+  ['independent React input identifiers',editor,'const inputId=useId()'],
+  ['individual button does not submit form',editor,'<button type="button" className="hc-upload-button"'],
   ['upload per slot',editor,'uploadImage=async (file,slot,key,slideId=null)'],
   ['existing CSRF-protected media client',editor,"mediaLibraryApi.upload(file,{folder:'highlights'"],
   ['only accepted public media URL',editor,"if(!allowedImage(url)||!url)"],
