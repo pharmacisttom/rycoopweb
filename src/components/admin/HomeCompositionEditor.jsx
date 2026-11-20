@@ -120,7 +120,7 @@ export default function HomeCompositionEditor(){
         <div>
           <section className="hc-background-settings" aria-label="ภาพพื้นหลัง Highlight Slider">
             <h3>ภาพพื้นหลัง Highlight Slider</h3>
-            <p>เลือกรูปที่อัปโหลดไว้ใน Media Library แล้วคัดลอกที่อยู่ไฟล์ภายในเว็บไซต์มาใส่ รองรับ JPG, PNG และ WEBP ไม่รับ URL ภายนอก เพื่อป้องกันการติดตามผู้เข้าชม</p>
+            <p>ขนาดภาพแนะนำ 1920 × 640 พิกเซล (สัดส่วน 3:1), WebP ประมาณ 150–400 KB เว้นพื้นที่ด้านซ้ายไว้สำหรับข้อความ และหลีกเลี่ยงการใส่ตัวหนังสือลงในรูป ภาพจะถูกครอบตัดอัตโนมัติบนมือถือ เลือกรูปจาก Media Library แล้วนำที่อยู่ภายในเว็บไซต์มาใส่ รองรับ JPG, PNG และ WEBP เท่านั้น</p>
             <label>ที่อยู่ภาพพื้นหลังหลัก
               <input type="text" placeholder="/storage/uploads/..." value={model.background?.image_url||''}
                 onChange={e=>update(m=>{m.background=normalBackground(m.background);m.background.image_url=e.target.value.trim();return m;})}/>
