@@ -59,7 +59,7 @@ export default function PublicContentAdminPage() {
   const [boardRemoveSelection,setBoardRemoveSelection]=useState([]);
   const [boardModalOpen,setBoardModalOpen]=useState(false);
   const [boardSearch,setBoardSearch]=useState('');
-  const [boardTermFilter,setBoardTermFilter]=useState('ชุดที่ 39');
+  const [boardTermFilter,setBoardTermFilter]=useState('ทั้งหมด');
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
@@ -217,6 +217,7 @@ export default function PublicContentAdminPage() {
           {visibleBoardIndices.length===0&&<tr><td colSpan={7}>ไม่พบกรรมการตามเงื่อนไขที่ค้นหา</td></tr>}
         </tbody></table></div>
         <p className="public-content-board-audit-note">รายการชุดที่ 38 และกรรมการที่ยังถูกอ้างอิงในคณะอนุกรรมการจะไม่สามารถเลือกลบได้ เพื่อป้องกันข้อมูลประวัติและความสัมพันธ์เสียหาย</p>
+        {dirty&&<p role="status" className="public-content-board-audit-warning">มีการแก้ไขรายชื่อหรือลำดับที่ยังไม่ได้บันทึก โปรดกรอกเหตุผลด้านล่างแล้วกด “บันทึกร่าง” ก่อนออกจากหน้า</p>}
       </section>}
       {section==='boards'&&<section className="public-content-board-audit surface-card" aria-labelledby="board-audit-heading">
         <h3 id="board-audit-heading">ตรวจสอบคณะกรรมการชุดที่ 38 และ 39</h3>
