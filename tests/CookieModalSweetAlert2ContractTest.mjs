@@ -16,6 +16,7 @@ assert.match(cookie, /!read\(RECEIPT_KEY\)/);
 assert.match(cookie, /\/api\/cookie-consent/);
 assert.match(cookie, /response\.ok\s*\|\|\s*result\.success/);
 assert.match(css, /\.cookie-consent\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*11000;/s);
+assert.match(css, /\.swal2-container\s*\{[^}]*z-index:\s*30000\s*!important;/s);
 assert.match(toast, /void swalToast\(/);
 assert.match(adminAction, /showConfirm as showSwalConfirm/);
 assert.match(adminAction, /await showSwalConfirm\(/);
