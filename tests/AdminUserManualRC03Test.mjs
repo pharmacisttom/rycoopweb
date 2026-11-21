@@ -14,6 +14,7 @@ assert(css.includes('@media print'),'print stylesheet absent');
 for (const section of ['id="manual-crud"', 'id="manual-cookie"', 'Cookie Consent', 'SweetAlert2', 'Create:', 'Read:', 'Update:', 'Delete/Disable:', 'Publish/Approve:', 'Verify:', '21 พฤศจิกายน 2569']) {
   assert(page.includes(section), 'missing handbook operation or revision: ' + section);
 }
+for (const section of ['แคมเปญ Popup', 'จัดการสวัสดิการ', 'บัญชีเจ้าหน้าที่และคำเชิญ', 'ตั้งค่าเนื้อหาระบบ', 'ประกาศสำคัญ']) assert(page.includes(section), 'manual missing module ' + section);
 for (const code of ['401','403','409','419']) assert(page.includes(code),'missing status troubleshooting '+code);
 assert(page.includes('TEST') && page.includes('Production'), 'missing safe CRUD environment distinction');
 assert(page.includes('Step-up MFA') && page.includes('Cookie Dialog'), 'missing safety boundaries');
