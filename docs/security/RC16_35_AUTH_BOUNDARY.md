@@ -19,7 +19,7 @@ No database migrations, production settings or shared session storage were chang
 
 ## Local evidence
 
-Passed: AuthBoundarySessionTest (65 checks), SessionMfaStabilityTest,
+Passed: AuthBoundarySessionTest (69 checks), SessionMfaStabilityTest,
 MfaWorkflowTest, MfaRateLimitTest, PermissionBehaviorTest, RequestSecurityTest,
 SecurityRegressionTest, PHP syntax checks for Auth/Session, and Vite build.
 Build reports the existing large-chunk warning.
@@ -85,6 +85,12 @@ for denied authentication after completion. Native file-session locking and a
 test-only SessionHandler barrier are used; this is not a proof for arbitrary
 custom Production save handlers. Production concurrency UAT is still required.
 Never log session IDs or export/delete existing shared session files.
+
+Pre-hotfix forwarding links lack the explicit bounded-grace marker and are now
+rejected, including legacy anonymous/MFA-pending snapshots. Current authenticated
+target sessions remain usable; a client still using a retired legacy ID must log
+in again. This prevents a pre-cutover unsafe forwarding record from authorizing
+through the new code. No shared session purge or rewrite is required.
 
 Local worktree was clean before this patch and the fetched release branch matched
 the base above. The reported dirty VPS candidate has NOT been inspected. Preserve

@@ -70,7 +70,8 @@ class Session
             $at = (int) ($_SESSION['__rotated_at'] ?? 0);
             $grace = min(60, max(0, (int) ($_SESSION['__rotated_grace'] ?? 60)));
             $target = (string) ($_SESSION['__rotated_to'] ?? '');
-            if (++$hops > 4 || $at <= 0 || $at > $now || $now - $at > $grace ||
+            // Pre-hotfix links have no bounded-grace marker and may cross a login/MFA boundary.
+            if (!array_key_exists('__rotated_grace', $_SESSION) || ++$hops > 4 || $at <= 0 || $at > $now || $now - $at > $grace ||
                 !preg_match('/^[a-zA-Z0-9,-]{16,256}$/D', $target) || $target === session_id()) {
                 self::destroy(); session_id(''); self::start(); return;
             }

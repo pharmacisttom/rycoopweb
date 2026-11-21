@@ -86,6 +86,13 @@ try {
     session_write_close();session_id($expiredForward);session_start();$_SESSION['__rotated_at']=time()-61;session_write_close();
     boundaryRequest($expiredForward);workflowCheck(!Auth::check(),'expired forwarding record cannot authorize');
     boundaryRequest($target);workflowCheck(Auth::check(),'expired predecessor does not destroy a separately valid target');
+    foreach([[],['user_id'=>1,'2fa_verified'=>false]] as $legacySnapshot) {
+        session_write_close();session_id('');
+        (new ReflectionProperty(Session::class,'started'))->setValue(null,false);Session::start();$legacyId=session_id();
+        $_SESSION=$legacySnapshot+['__is_rotated'=>true,'__rotated_to'=>$target,'__rotated_at'=>time()];
+        boundaryRequest($legacyId);workflowCheck(!Auth::check(),'pre-hotfix forwarding cannot promote legacy lower-trust state');
+        boundaryRequest($target);workflowCheck(Auth::check(),'rejecting legacy forwarding preserves the current authenticated target');
+    }
     Session::rotate(60);$releaseSession=session_id();
     boundaryRequest($releaseSession);workflowCheck(Auth::check(),'ordinary release restart retains compatible current session state');
     workflowCheck(ini_get('session.use_strict_mode')==='1'&&ini_get('session.gc_maxlifetime')===(string)config('security.session.lifetime'),'effective isolated PHP session configuration remains aligned');
