@@ -93,7 +93,12 @@ export default function CookieConsent() {
             คุณสามารถยอมรับ ปฏิเสธ หรือเปลี่ยนการเลือกได้ภายหลัง
             {' '}<Link to="/privacy/cookies">อ่านนโยบายคุกกี้</Link>
           </p>
-          {error && <p role="alert" style={{color:'#a71d2a'}}>{error} — ยังไม่ได้บันทึกการเลือกครั้งนี้</p>}
+          {error && <div role="alert" style={{color:'#a71d2a'}}>
+            <p>{error} — ยังไม่ได้บันทึกการเลือกครั้งนี้</p>
+            <button type="button" className="cookie-consent__reject" onClick={() => setIsVisible(false)}>
+              ดำเนินการต่อโดยใช้เฉพาะคุกกี้จำเป็น (ยังไม่บันทึกการเลือก)
+            </button>
+          </div>
         </div>
         <div className="cookie-consent__actions" aria-describedby="cookie-consent-description">
           <button type="button" className="cookie-consent__reject" disabled={saving} onClick={() => saveChoice('rejected')}>ปฏิเสธ</button>
