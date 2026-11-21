@@ -418,6 +418,12 @@ input, select, textarea {
   border-radius: var(--radius-full);
 }
 
+/* Dialogs are rendered at document.body level. AdminLTE overlays and transformed
+   admin shells must never intercept SweetAlert2 confirmation clicks. */
+.swal2-container {
+  z-index: 30000 !important;
+}
+
 /* Cookie consent */
 .cookie-consent {
   position: fixed;
