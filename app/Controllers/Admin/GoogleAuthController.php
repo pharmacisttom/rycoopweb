@@ -282,7 +282,7 @@ class GoogleAuthController extends Controller
         $roleSlug = (string) ($identity['role_slug'] ?? 'staff');
         $hasMfa = (int) ($identity['two_factor_enabled'] ?? 0) === 1 && !empty($identity['two_factor_confirmed_at']);
         $mfaRequired = \App\Services\PrOfficerPolicy::requiresMfa($roleSlug);
-        
+
         // The Google identity row's id is NOT the local users.id.
         // Never pass the identity-link primary key into Auth::login().
         $sessionIdentity = $identity;
