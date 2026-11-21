@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { Cookie, ShieldCheck } from 'lucide-react';
 
@@ -76,13 +77,13 @@ export default function CookieConsent() {
   if (/^\/(?:admin\/(?:login|mfa|2fa)(?:\/|$)|member\/login(?:\/|$)|login(?:\/|$))/.test(pathname)) return null;
 
   if (!isVisible) {
-    return <button type="button" className="cookie-consent__reopen"
+    return createPortal(<button type="button" className="cookie-consent__reopen"
       style={{position:'fixed',bottom:12,left:12,zIndex:11001,padding:'7px 12px',borderRadius:24,border:'1px solid #b9c8d8',background:'#fff',color:'#143960',boxShadow:'0 3px 12px #0002',cursor:'pointer',fontSize:12}}
       onClick={() => { setError(''); setIsVisible(true); }}
-      aria-label="เปลี่ยนการตั้งค่าคุกกี้">ตั้งค่าคุกกี้</button>;
+      aria-label="เปลี่ยนการตั้งค่าคุกกี้">ตั้งค่าคุกกี้</button>, document.body);
   }
 
-  return (
+  return createPortal(
     <aside className="cookie-consent" role="dialog" aria-modal="true" aria-labelledby="rycoop-cookie-title" aria-describedby="cookie-consent-description">
       <div className="cookie-consent__panel">
         <div className="cookie-consent__icon" aria-hidden="true"><Cookie size={24} /></div>
@@ -107,6 +108,7 @@ export default function CookieConsent() {
           </button>
         </div>
       </div>
-    </aside>
+    </aside>,
+    document.body
   );
 }
