@@ -103,7 +103,7 @@ $router->get('/api/public/interest-rates', 'Api\\SpaApiController@interestRates'
 $router->get('/api/public/loan-products', 'Api\\SpaApiController@loanProducts');
 $router->get('/api/public/news', 'Api\\SpaApiController@news');
 $router->get('/api/public/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@published');
-$router->get('/api/admin/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@admin');
+$router->get('/api/admin/news/{id}/gallery/{filename}', 'Api\\NewsGalleryImageController@admin', [AuthMiddleware::class, new PermissionMiddleware('news', 'view')]);
 $router->get('/api/public/announcements', 'Api\\SpaApiController@announcements');
 $router->get('/api/public/documents', 'Api\\SpaApiController@documents');
 $router->get('/api/public/documents/{id}/download', 'Public\\DocumentController@download');

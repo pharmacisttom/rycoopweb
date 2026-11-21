@@ -124,6 +124,8 @@ jobs:
           php tests/FeatureFlagContractTest.php
           php tests/DividendImportTest.php
           php tests/MfaWorkflowTest.php
+          php tests/AuthBoundarySessionTest.php
+          php tests/SessionMfaStabilityTest.php
           php tests/MfaRateLimitTest.php
           php tests/QrCodeGeneratorTest.php
           php tests/TwoFactorServiceTest.php
@@ -131,6 +133,7 @@ jobs:
           php tests/StaffRouteDispatchTest.php
           php tests/PrOfficerWorkflowTest.php
           php tests/NewsGalleryTest.php
+          php tests/NewsGalleryAccessTest.php
           php tests/PasswordWorkflowTest.php
           php tests/MigrationRunnerTest.php
           php tests/LegacyMemberMigrationTest.php

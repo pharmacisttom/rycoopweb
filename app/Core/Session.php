@@ -10,10 +10,12 @@ class Session
 
     public static function start(): void
     {
-        if (self::$started || session_status() === PHP_SESSION_ACTIVE) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
             self::$started = true;
             return;
         }
+        // session_write_close() may have released the native session in this request.
+        self::$started = false;
 
         $sessionConfig = config('security.session') ?? [];
         $lifetime = (int) ($sessionConfig['lifetime'] ?? 7200);
@@ -51,26 +53,32 @@ class Session
         self::$started = true;
         $now = time();
 
-        // Handle gracefully rotated session ID within bounded grace period
-        if (!empty($_SESSION['__is_rotated'])) {
-            $rotatedAt = (int) ($_SESSION['__rotated_at'] ?? 0);
-            $gracePeriod = 60; // 60s bounded transition window
-            $targetId = (string) ($_SESSION['__rotated_to'] ?? '');
-
-            if ($targetId !== '' && ($now - $rotatedAt <= $gracePeriod)) {
-                self::sendCookie($targetId, $sessionConfig);
-                $cookieName = $sessionConfig['name'] ?? 'rayongcoop_session';
-                $_COOKIE[$cookieName] = $targetId;
-                session_write_close();
-                session_id($targetId);
-                session_start();
-            } else {
-                // Grace period expired: reject and destroy old session
-                self::destroy();
-                self::start();
-                return;
+        // A concurrent logout must not mistake a rotation handoff for an anonymous session.
+        $handoffAttempts = 0;
+        while (!empty($_SESSION['__rotation_in_progress'])) {
+            if (++$handoffAttempts > 20) {
+                // Cancellation removes the predecessor; the rotator must discard its target.
+                self::destroy(); session_id(''); self::start(); return;
             }
+            $waitingId = session_id();
+            session_write_close(); usleep(25000); session_id($waitingId); session_start();
         }
+
+        // Follow metadata-only links with strict-mode target validation and a hop cap.
+        $hops = 0;
+        while (!empty($_SESSION['__is_rotated'])) {
+            $at = (int) ($_SESSION['__rotated_at'] ?? 0);
+            $grace = min(60, max(0, (int) ($_SESSION['__rotated_grace'] ?? 60)));
+            $target = (string) ($_SESSION['__rotated_to'] ?? '');
+            // Pre-hotfix links have no bounded-grace marker and may cross a login/MFA boundary.
+            if (!array_key_exists('__rotated_grace', $_SESSION) || ++$hops > 4 || $at <= 0 || $at > $now || $now - $at > $grace ||
+                !preg_match('/^[a-zA-Z0-9,-]{16,256}$/D', $target) || $target === session_id()) {
+                self::destroy(); session_id(''); self::start(); return;
+            }
+            session_write_close(); session_id($target); session_start();
+            if (session_id() !== $target) { $_SESSION = []; break; }
+        }
+        if ($hops > 0) self::sendCookie(session_id(), $sessionConfig);
 
         // Idle Timeout Check
         $idleTimeout = (int) ($sessionConfig['idle_timeout'] ?? 1200); // 20 mins
@@ -152,7 +160,20 @@ class Session
         self::remove('__old_input');
     }
 
-    public static function regenerate(bool $deleteOld = false): void
+    /** Privilege changes must delete the old ID, never forward it. */
+    public static function regenerateForAuthentication(bool $preserveIdentity = true): void
+    {
+        self::start();
+        if (!$preserveIdentity) $_SESSION = [];
+        if (!session_regenerate_id(true)) throw new \RuntimeException('Secure session regeneration failed');
+        unset($_SESSION['__is_rotated'], $_SESSION['__rotated_to'], $_SESSION['__rotated_at'], $_SESSION['__rotated_grace'], $_SESSION['_csrf_token'], $_SESSION['mfa_step_up_verified_at'], $_SESSION['mfa_step_up_user_id'], $_SESSION['mfa_step_up_scope'], $_SESSION['mfa_step_up_consumed']);
+        foreach (array_keys($_SESSION) as $key) {
+            if (str_starts_with((string)$key, 'mfa_step_up_')) unset($_SESSION[$key]);
+        }
+        $_SESSION['__created_at'] = time();
+    }
+
+    public static function regenerate(bool $deleteOld = true): void
     {
         self::start();
         if ($deleteOld) {
@@ -173,10 +194,16 @@ class Session
         $sessionConfig = config('security.session') ?? [];
         $oldId = session_id();
         $oldData = $_SESSION;
+        // Retired IDs must not retain an independently authenticated snapshot.
+        $_SESSION = ['__rotation_in_progress' => true];
 
         // Use PHP native session_regenerate_id(false) to create and initialize new session ID
-        session_regenerate_id(false);
+        if (!session_regenerate_id(false)) {
+            $_SESSION = $oldData;
+            throw new \RuntimeException('Session rotation failed');
+        }
         $newId = session_id();
+        $_SESSION = $oldData;
 
         // In new session: clean metadata
         unset($_SESSION['__is_rotated'], $_SESSION['__rotated_to'], $_SESSION['__rotated_at']);
@@ -186,10 +213,14 @@ class Session
         // Open old session to write transition pointer
         session_id($oldId);
         session_start();
-        $_SESSION = $oldData;
-        $_SESSION['__is_rotated'] = true;
-        $_SESSION['__rotated_to'] = $newId;
-        $_SESSION['__rotated_at'] = time();
+        if (session_id() === $oldId) {
+            $_SESSION = ['__is_rotated' => true, '__rotated_to' => $newId,
+                '__rotated_at' => time(), '__rotated_grace' => min(60, max(0, $gracePeriod))];
+        } else {
+            // A timed-out concurrent request cancelled the handoff. Never publish its target.
+            session_write_close(); session_id($newId); session_start();
+            self::destroy(); session_id(''); self::start(); return;
+        }
         session_write_close();
 
         // Reopen new session as active
@@ -224,6 +255,10 @@ class Session
 
     public static function destroy(): void
     {
+        // Logout can follow an early session_write_close(); reopen to invalidate persisted state.
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            self::start();
+        }
         if (session_status() === PHP_SESSION_ACTIVE) {
             $_SESSION = [];
             if (ini_get("session.use_cookies")) {
