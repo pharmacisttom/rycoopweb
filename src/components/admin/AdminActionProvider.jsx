@@ -19,7 +19,15 @@ export default function AdminActionProvider({children}){
     if(locked.current)throw Object.assign(new Error('มีคำสั่งกำลังดำเนินการ กรุณารอสักครู่'),{code:'ACTION_IN_PROGRESS'});
     locked.current=true;setBusy(true);const invocation=new AbortController();controller.current=invocation;
     try{
-      if(confirm&&!await showSwalConfirm('ยืนยัน'+label, confirm, { confirmText: 'ยืนยันดำเนินการ', cancelText: 'ยกเลิก' }))throw Object.assign(new Error('ยกเลิกการดำเนินการแล้ว'),{code:'ACTION_CANCELLED'});
+      if(confirm){
+        // Native <dialog>.showModal() enters the browser top layer; an external
+        // SweetAlert2 popup cannot receive clicks through that active dialog.
+        // Keep the proven native confirmation path for nested CRUD editors.
+        const nestedModal = typeof document !== 'undefined' && !!document.querySelector('dialog[open]');
+        const confirmed = nestedModal
+          ? await ask({type:'confirm',label,description:confirm})
+          : await showSwalConfirm('ยืนยัน'+label, confirm, { confirmText: 'ยืนยันดำเนินการ', cancelText: 'ยกเลิก' });
+        if(!confirmed)throw Object.assign(new Error('ยกเลิกการดำเนินการแล้ว'),{code:'ACTION_CANCELLED'});
       if(!active.current||invocation.signal.aborted)throw new DOMException('Aborted','AbortError');
       try{return await operation(invocation.signal);}
       catch(exception){
