@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Cookie, ShieldCheck } from 'lucide-react';
 
 const CHOICE_KEY = 'coop_cookie_consent_v1';
@@ -11,6 +11,7 @@ function read(key) {
 }
 
 export default function CookieConsent() {
+  const { pathname } = useLocation();
   // Re-prompt pre-RC12 visitors once so choices previously held only in
   // localStorage can be recorded with clear user action, never inferred.
   const [isVisible, setIsVisible] = useState(() => !read(RECEIPT_KEY));
@@ -69,6 +70,10 @@ export default function CookieConsent() {
       setSaving(false);
     }
   };
+
+  // Never interrupt OAuth/TOTP enrollment or verification with a privacy dialog.
+  // The prompt appears on the next regular page if acknowledgment is missing.
+  if (/^\/(?:admin\/(?:login|mfa\/|2fa)|member\/login|login)(?:\/|$)/.test(pathname)) return null;
 
   if (!isVisible) {
     return <button type="button" className="cookie-consent__reopen"
