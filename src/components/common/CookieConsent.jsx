@@ -78,11 +78,11 @@ export default function CookieConsent() {
   }
 
   return (
-    <aside className="cookie-consent" aria-label="การตั้งค่าคุกกี้">
+    <aside className="cookie-consent" role="dialog" aria-modal="true" aria-labelledby="rycoop-cookie-title" aria-describedby="cookie-consent-description">
       <div className="cookie-consent__panel">
         <div className="cookie-consent__icon" aria-hidden="true"><Cookie size={24} /></div>
         <div className="cookie-consent__content">
-          <h2>เว็บไซต์นี้ใช้คุกกี้</h2>
+          <h2 id="rycoop-cookie-title">เว็บไซต์นี้ใช้คุกกี้</h2>
           <p id="cookie-consent-description">
             เราใช้คุกกี้จำเป็นเพื่อให้เว็บไซต์ทำงาน และขอความยินยอมสำหรับคุกกี้ประเภทอื่น
             คุณสามารถยอมรับ ปฏิเสธ หรือเปลี่ยนการเลือกได้ภายหลัง
