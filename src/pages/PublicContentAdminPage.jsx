@@ -1,9 +1,15 @@
 import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import {
+  Search, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink,
+  GitCompare, Eye, CheckCircle2, Clock, XCircle, RotateCcw,
+  ChevronLeft, ChevronRight, X
+} from 'lucide-react';
 import { memberAdminApi } from '../services/memberAdminApi';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
 import { usePublicContent } from '../context/PublicContentContext';
+import { showConfirm, showDeleteConfirm, showSuccess, showError, showToast, showInfo } from '../utils/swal';
 import './PublicContentAdminPage.css';
 import './BoardTermAdminRC06.css';
 import {auditBoardTerms,BOARD_TERMS,BOARD_POSITION_OPTIONS} from '../utils/boardTermAudit';
@@ -45,6 +51,16 @@ function Preview({ value, section, boardNames }) {
   })}{!rows.length && <p>ไม่มีรายการ</p>}</div>;
 }
 
+function RevisionStatusBadge({ state }) {
+  if (state === 'published') {
+    return <span className="pcr-badge is-published"><CheckCircle2 size={13} aria-hidden="true" /> อนุมัติแล้ว</span>;
+  }
+  if (state === 'draft') {
+    return <span className="pcr-badge is-draft"><Clock size={13} aria-hidden="true" /> รอเผยแพร่</span>;
+  }
+  return <span className="pcr-badge is-rejected"><XCircle size={13} aria-hidden="true" /> {state || 'ไม่อนุมัติ'}</span>;
+}
+
 export default function PublicContentAdminPage() {
   const { catalog, reload }=usePublicContent();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +73,15 @@ export default function PublicContentAdminPage() {
   const [mediaBusy,setMediaBusy]=useState(false);
   const [carrySelection,setCarrySelection]=useState([]);
   const [boardTermFilter,setBoardTermFilter]=useState('ชุดที่ 39');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyStatus, setHistoryStatus] = useState('all');
+  const [historyEditor, setHistoryEditor] = useState('all');
+  const [historySortField, setHistorySortField] = useState('id');
+  const [historySortOrder, setHistorySortOrder] = useState('desc');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPerPage, setHistoryPerPage] = useState(10);
+  const [detailModalRevision, setDetailModalRevision] = useState(null);
+  const [diffModalRevision, setDiffModalRevision] = useState(null);
   const definition=sections.find(item=>item.key===section);
   const boardNames=Object.fromEntries((Array.isArray(catalog?.boardMembers) ? catalog.boardMembers : []).filter(p=>p && typeof p==='object').map(p=>[p.id,p.name]));
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
@@ -92,17 +117,22 @@ export default function PublicContentAdminPage() {
     setSelected(value.length);setDirty(true);
     setMessage('สร้างสำเนากรรมการในร่างใหม่แล้ว ชุดเดิมยังคงอยู่ ต้องบันทึกและเผยแพร่ร่างก่อนหน้าเว็บเปลี่ยน');
   }
-  function carryBoardsTo39(){
+  async function carryBoardsTo39(){
     if(section!=='boards' || !Array.isArray(value) || !carrySelection.length || busy)return;
     const from38=value.filter(p=>p && p.term==='ชุดที่ 38' && p.status!=='former' && carrySelection.includes(Number(p.id)));
     const existing39=new Set(value.filter(p=>p && p.term==='ชุดที่ 39').map(p=>String(p.name||'').trim()));
     const eligible=from38.filter(p=>!existing39.has(String(p.name||'').trim()));
-    if(!eligible.length){setMessage('ไม่มีกรรมการที่ต้องคัดลอกใหม่: รายชื่อที่เลือกมีในชุดที่ 39 แล้ว');return;}
-    if(!window.confirm(`คัดลอกกรรมการ ${eligible.length} ท่านจากชุด 38 ไปเป็นร่างชุด 39 โดยคงชุด 38 ไว้ทั้งหมด? กรุณาตรวจตำแหน่งและรูปภาพก่อนเผยแพร่`))return;
+    if(!eligible.length){showInfo('ไม่มีกรรมการที่ต้องคัดลอกใหม่', 'รายชื่อที่เลือกมีในชุดที่ 39 แล้ว');return;}
+    const confirmed = await showConfirm(
+      `คัดลอกกรรมการ ${eligible.length} ท่าน?`,
+      `คัดลอกกรรมการ ${eligible.length} ท่านจากชุด 38 ไปเป็นร่างชุด 39 โดยคงชุด 38 ไว้ทั้งหมด? กรุณาตรวจตำแหน่งและรูปภาพก่อนเผยแพร่`
+    );
+    if(!confirmed)return;
     let nextId=Math.max(0,...value.map(p=>Number(p.id)||0));
     const additions=eligible.map(person=>({...person,id:++nextId,term:'ชุดที่ 39',status:'active'}));
     setValue(current=>[...current,...additions]);setSelected(value.length);setDirty(true);setCarrySelection([]);
     setMessage(`เพิ่มร่างกรรมการชุด 39 จำนวน ${additions.length} ท่านแล้ว ชุด 38 ไม่ถูกเปลี่ยน โปรดตรวจสอบรายชื่อ รูปภาพ ตำแหน่ง และเอกสารแต่งตั้งก่อนบันทึกร่าง`);
+    showSuccess('คัดลอกสำเร็จ', `เพิ่มร่างกรรมการชุด 39 จำนวน ${additions.length} ท่านแล้ว`);
   }
   function startBoardReplacement(){
     if(section!=='boards'||!row)return;
@@ -120,23 +150,75 @@ export default function PublicContentAdminPage() {
       if(!photo)throw new Error('ไม่พบ URL รูปภาพหลังอัปโหลด');
       change('image',photo);
       setMessage('อัปโหลดรูปแล้ว กรุณาบันทึกร่างและเผยแพร่ก่อนหน้าเว็บเปลี่ยน');
-    } catch(e){setError(e.message||'อัปโหลดรูปไม่สำเร็จ กรุณาตรวจสิทธิ์ Media Library');}
+      showToast('อัปโหลดรูปภาพสำเร็จ');
+    } catch(e){
+      setError(e.message||'อัปโหลดรูปไม่สำเร็จ กรุณาตรวจสิทธิ์ Media Library');
+      showError('อัปโหลดรูปไม่สำเร็จ', e.message);
+    }
     finally {setMediaBusy(false);}
   }
-  async function save(e){e.preventDefault();if(busy||!definition?.canEdit)return;setBusy(true);setError('');setMessage('');try{
-    const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
-    setDirty(false);setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);setRefresh(n=>n+1);
-  }catch(e){setError(e.message);}finally{setBusy(false);}}
-  async function publish(revision){if(!window.confirm(`เผยแพร่ร่าง #${revision.id} มีผล ${revision.effective_on}?`))return;setBusy(true);setError('');try{
-    await memberAdminApi(`/api/admin/public-content/revisions/${revision.id}/publish`,{data:{}});await reload();setMessage('อนุมัติแล้ว ข้อมูลจะแสดงตามวันที่มีผล');setRefresh(n=>n+1);
-  }catch(e){setError(e.message);}finally{setBusy(false);}}
+  async function save(e){
+    e.preventDefault();
+    if(busy||!definition?.canEdit)return;
+    setBusy(true);setError('');setMessage('');
+    try{
+      const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
+      setDirty(false);
+      setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);
+      showSuccess('บันทึกร่างสำเร็จ!', `บันทึกร่าง #${result.id} แล้ว (ยังไม่เปลี่ยนข้อมูลหน้าเว็บจนกว่าจะอนุมัติเผยแพร่)`);
+      setRefresh(n=>n+1);
+    }catch(e){
+      setError(e.message);
+      showError('ไม่สามารถบันทึกร่างได้', e.message);
+    }finally{
+      setBusy(false);
+    }
+  }
+  async function publish(revision){
+    const confirmed = await showConfirm(
+      `ยืนยันเผยแพร่ร่าง #${revision.id}?`,
+      `มีผลตั้งแต่วันที่ ${revision.effective_on} ข้อมูลหน้าเว็บจะเปลี่ยนตามเนื้อหาร่างนี้ทันทีหรือตามวันที่มีผล`
+    );
+    if(!confirmed)return;
+    setBusy(true);setError('');
+    try{
+      await memberAdminApi(`/api/admin/public-content/revisions/${revision.id}/publish`,{data:{}});
+      await reload();
+      setMessage('อนุมัติแล้ว ข้อมูลจะแสดงตามวันที่มีผล');
+      showSuccess('อนุมัติและเผยแพร่สำเร็จ!', `ร่าง #${revision.id} ได้รับการเผยแพร่เรียบร้อยแล้ว`);
+      setRefresh(n=>n+1);
+    }catch(e){
+      setError(e.message);
+      showError('ไม่สามารถเผยแพร่ได้', e.message);
+    }finally{
+      setBusy(false);
+    }
+  }
   return <section className="admin-module public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่"/>
     {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
-    <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={e=>{if(!dirty||window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?')){setSection(e.target.value);setSearchParams(params=>{const next=new URLSearchParams(params);next.set('section',e.target.value);return next;});}}}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
-    <button className="btn btn-outline" disabled={busy||loading||!section} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขและโหลดล่าสุด?'))setRefresh(n=>n+1);}}>โหลดล่าสุด</button>
+    <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={async e=>{
+      const nextVal = e.target.value;
+      if(dirty){
+        const confirmed = await showConfirm('เปลี่ยนหมวดข้อมูล?', 'มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?');
+        if(!confirmed) return;
+      }
+      setSection(nextVal);
+      setSearchParams(params=>{const next=new URLSearchParams(params);next.set('section',nextVal);return next;});
+    }}>{sections.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+    <button className="btn btn-outline" disabled={busy||loading||!section} onClick={async ()=>{
+      if(dirty){
+        const confirmed = await showConfirm('โหลดข้อมูลล่าสุด?', 'ทิ้งการแก้ไขและโหลดล่าสุด?');
+        if(!confirmed) return;
+      }
+      setRefresh(n=>n+1);
+    }}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
-      {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={()=>{if(window.confirm('นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่')){setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);}}}>นำออกจากร่าง</button></>}</div>}
+      {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={async ()=>{
+        const confirmed = await showDeleteConfirm('นำรายการออกจากร่าง?', 'นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่');
+        if(!confirmed) return;
+        setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);
+      }}>นำออกจากร่าง</button></>}</div>}
       {section==='boards'&&Array.isArray(value)&&<section className="surface-card public-content-board-directory" aria-label="เลือกกรรมการเพื่อแก้ไขข้อมูลและรูปภาพ">
         <header className="public-content-board-tools-heading">
           <h3>ทำเนียบกรรมการแยกตามชุด · จัดการรูปทุกท่าน</h3>
@@ -230,8 +312,464 @@ export default function PublicContentAdminPage() {
         <label>วันสิ้นสุด (ไม่บังคับ)<input type="date" min={effective} value={expires} onChange={e=>{setExpires(e.target.value);setDirty(true);}} /></label><button type="submit" className="btn btn-primary">บันทึกร่างเพื่อรอเผยแพร่</button>
       </fieldset></form>
       <button className="btn btn-outline" onClick={()=>setPreview(p=>!p)}>ดูตัวอย่างร่าง</button>{preview&&<Preview value={value} section={section} boardNames={boardNames}/>}
-      <section><h2>ร่างและประวัติการเผยแพร่</h2>{!(Array.isArray(data.history) && data.history.length)&&<p>ยังไม่มีประวัติในระบบใหม่นี้</p>}{(Array.isArray(data.history) ? data.history : []).map(revision=><article className="surface-card public-content-revision" key={revision.id}><h3>#{revision.id} · {revision.state==='draft'?'รอเผยแพร่':revision.state==='published'?'อนุมัติแล้ว':'ไม่อนุมัติ'}</h3><p>{revision.note}</p><p>มีผล {revision.effective_on} · ผู้แก้ไข #{revision.created_by}{revision.published_by&&` · ผู้เผยแพร่ #${revision.published_by}`}</p><a href={revision.source_url} target="_blank" rel="noopener noreferrer">แหล่งอ้างอิง</a><details><summary>ตรวจข้อมูลก่อน–หลัง</summary><h4>ก่อนแก้ไข</h4><Preview value={safeRevisionValue(revision.previous_payload,section)} section={section} boardNames={boardNames}/><h4>หลังแก้ไข</h4><Preview value={safeRevisionValue(revision.payload,section)} section={section} boardNames={boardNames}/></details>
-        <div className="public-content-toolbar">{revision.state==='draft'&&definition?.canPublish&&<button disabled={busy||dirty} className="btn btn-primary" onClick={()=>publish(revision)}>อนุมัติและเผยแพร่</button>}{definition?.canEdit&&<button disabled={busy} onClick={()=>{if(!dirty||window.confirm('แทนร่างปัจจุบันด้วยเวอร์ชันนี้?')){setValue(safeRevisionValue(revision.payload,section));setSelected(0);setNote(`นำข้อมูลเวอร์ชัน #${revision.id} มาจัดทำร่างใหม่`);setSource(revision.source_url);setEffective(today());setDirty(true);}}}>ใช้เวอร์ชันนี้สร้างร่างใหม่</button>}</div></article>)}</section>
+      {/* -------------------------------------------------------------
+          ร่างและประวัติการเผยแพร่ (Data Table)
+          ------------------------------------------------------------- */}
+      {(() => {
+        const handleSort = (field) => {
+          if (historySortField === field) {
+            setHistorySortOrder(current => current === 'asc' ? 'desc' : 'asc');
+          } else {
+            setHistorySortField(field);
+            setHistorySortOrder('desc');
+          }
+          setHistoryPage(1);
+        };
+
+        const rawHistory = (Array.isArray(data.history) ? data.history : []).map(revision=>{
+          return {
+            ...revision,
+            sortId: Number(revision.id) || 0,
+            creatorDisplay: revision.creator_name || (revision.created_by ? `ผู้ใช้ #${revision.created_by}` : 'ระบบ'),
+            publisherDisplay: revision.published_by ? (revision.publisher_name || `ผู้ใช้ #${revision.published_by}`) : '—',
+          };
+        });
+
+        const editors = Array.from(new Set(rawHistory.map(r => r.creatorDisplay).filter(Boolean)));
+
+        const filteredHistory = rawHistory.filter(item => {
+          if (historyStatus !== 'all' && item.state !== historyStatus) return false;
+          if (historyEditor !== 'all' && item.creatorDisplay !== historyEditor) return false;
+          if (historySearch.trim()) {
+            const q = historySearch.toLowerCase().trim();
+            const matchNote = String(item.note || '').toLowerCase().includes(q);
+            const matchId = String(item.id || '').includes(q);
+            const matchCreator = item.creatorDisplay.toLowerCase().includes(q);
+            const matchPublisher = item.publisherDisplay.toLowerCase().includes(q);
+            const matchDate = String(item.effective_on || '').includes(q);
+            if (!matchNote && !matchId && !matchCreator && !matchPublisher && !matchDate) return false;
+          }
+          return true;
+        });
+
+        const sortedHistory = [...filteredHistory].sort((a, b) => {
+          let cmp = 0;
+          if (historySortField === 'id') {
+            cmp = a.sortId - b.sortId;
+          } else if (historySortField === 'effective_on') {
+            cmp = String(a.effective_on || '').localeCompare(String(b.effective_on || ''));
+          } else if (historySortField === 'created_at') {
+            cmp = String(a.created_at || '').localeCompare(String(b.created_at || ''));
+          }
+          return historySortOrder === 'asc' ? cmp : -cmp;
+        });
+
+        const totalPages = Math.max(1, Math.ceil(sortedHistory.length / historyPerPage));
+        const safePage = Math.min(Math.max(1, historyPage), totalPages);
+        const paginatedHistory = sortedHistory.slice((safePage - 1) * historyPerPage, safePage * historyPerPage);
+
+        return (
+          <>
+            <section className="pcr-table-card" aria-labelledby="history-table-heading">
+              <header className="pcr-table-header">
+                <div>
+                  <h2 id="history-table-heading">ร่างและประวัติการเผยแพร่</h2>
+                  <p className="pcr-table-subtitle">
+                    ตรวจสอบประวัติการแก้ไข การอนุมัติ และเปรียบเทียบข้อมูลก่อน–หลังของแต่ละเวอร์ชัน
+                  </p>
+                </div>
+                <div className="pcr-stats-badges">
+                  <span
+                    className={`pcr-stat-pill ${historyStatus === 'all' ? 'is-active' : ''}`}
+                    onClick={() => { setHistoryStatus('all'); setHistoryPage(1); }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    ทั้งหมด: {rawHistory.length}
+                  </span>
+                  <span
+                    className={`pcr-stat-pill ${historyStatus === 'published' ? 'is-active' : ''}`}
+                    onClick={() => { setHistoryStatus('published'); setHistoryPage(1); }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    เผยแพร่แล้ว: {rawHistory.filter(h => h.state === 'published').length}
+                  </span>
+                  <span
+                    className={`pcr-stat-pill ${historyStatus === 'draft' ? 'is-active' : ''}`}
+                    onClick={() => { setHistoryStatus('draft'); setHistoryPage(1); }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    รออนุมัติ: {rawHistory.filter(h => h.state === 'draft').length}
+                  </span>
+                </div>
+              </header>
+
+              {/* Filter & Search Bar */}
+              <div className="pcr-controls-bar">
+                <div className="pcr-search-box">
+                  <Search size={16} className="pcr-search-icon" aria-hidden="true" />
+                  <input
+                    type="search"
+                    className="pcr-search-input form-control"
+                    placeholder="ค้นหา Version, เหตุผล, ผู้แก้ไข..."
+                    value={historySearch}
+                    onChange={e => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                  />
+                </div>
+
+                <div className="pcr-filters-group">
+                  <select
+                    className="pcr-filter-select form-control"
+                    value={historyStatus}
+                    onChange={e => { setHistoryStatus(e.target.value); setHistoryPage(1); }}
+                    aria-label="กรองตามสถานะ"
+                  >
+                    <option value="all">ทุกสถานะ</option>
+                    <option value="draft">รอเผยแพร่ (Draft)</option>
+                    <option value="published">อนุมัติแล้ว (Published)</option>
+                    <option value="rejected">ไม่อนุมัติ (Rejected)</option>
+                  </select>
+
+                  {editors.length > 1 && (
+                    <select
+                      className="pcr-filter-select form-control"
+                      value={historyEditor}
+                      onChange={e => { setHistoryEditor(e.target.value); setHistoryPage(1); }}
+                      aria-label="กรองตามผู้แก้ไข"
+                    >
+                      <option value="all">ผู้แก้ไขทุกคน</option>
+                      {editors.map(ed => (
+                        <option key={ed} value={ed}>{ed}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  <select
+                    className="pcr-filter-select form-control"
+                    value={historyPerPage}
+                    onChange={e => { setHistoryPerPage(Number(e.target.value)); setHistoryPage(1); }}
+                    aria-label="จำนวนต่อหน้า"
+                  >
+                    <option value={5}>5 รายการ / หน้า</option>
+                    <option value={10}>10 รายการ / หน้า</option>
+                    <option value={25}>25 รายการ / หน้า</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Responsive Table */}
+              <div className="pcr-scroll-container">
+                <table className="pcr-data-table">
+                  <thead>
+                    <tr>
+                      <th className="pcr-th-sortable" onClick={() => handleSort('id')}>
+                        Version {historySortField === 'id' ? (historySortOrder === 'asc' ? <ArrowUp size={13} className="pcr-sort-indicator" /> : <ArrowDown size={13} className="pcr-sort-indicator" />) : <ArrowUpDown size={13} className="pcr-sort-indicator" />}
+                      </th>
+                      <th>Status</th>
+                      <th>Change Summary</th>
+                      <th className="pcr-th-sortable" onClick={() => handleSort('effective_on')}>
+                        Effective Date {historySortField === 'effective_on' ? (historySortOrder === 'asc' ? <ArrowUp size={13} className="pcr-sort-indicator" /> : <ArrowDown size={13} className="pcr-sort-indicator" />) : <ArrowUpDown size={13} className="pcr-sort-indicator" />}
+                      </th>
+                      <th>Editor</th>
+                      <th>Publisher</th>
+                      <th>Reference</th>
+                      <th>Before/After Diff</th>
+                      <th style={{ textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedHistory.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="pcr-empty-cell">
+                          {rawHistory.length === 0
+                            ? 'ยังไม่มีประวัติในระบบใหม่นี้'
+                            : 'ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา'}
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedHistory.map(revision => (
+                        <tr key={revision.id}>
+                          <td className="pcr-version-col">
+                            <span className="pcr-version-badge">#{revision.id}</span>
+                          </td>
+                          <td>
+                            <RevisionStatusBadge state={revision.state} />
+                          </td>
+                          <td className="pcr-summary-cell" title={revision.note}>
+                            <span className="pcr-summary-text">{revision.note || '—'}</span>
+                          </td>
+                          <td className="pcr-effective-col">
+                            <div>{revision.effective_on || '—'}</div>
+                            {revision.expires_on && (
+                              <small style={{ color: 'var(--text-muted)' }}>ถึง {revision.expires_on}</small>
+                            )}
+                          </td>
+                          <td className="pcr-user-col">
+                            {revision.creatorDisplay}
+                          </td>
+                          <td className="pcr-user-col">
+                            {revision.publisherDisplay}
+                          </td>
+                          <td className="pcr-ref-col">
+                            {revision.source_url ? (
+                              <a
+                                href={revision.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="pcr-btn-link"
+                                title={revision.source_url}
+                              >
+                                <ExternalLink size={13} /> แหล่งอ้างอิง
+                              </a>
+                            ) : '—'}
+                          </td>
+                          <td className="pcr-diff-col-cell">
+                            <button
+                              type="button"
+                              className="pcr-btn-diff"
+                              onClick={() => setDiffModalRevision(revision)}
+                              title="ดูความแตกต่างก่อนและหลังแก้ไข"
+                            >
+                              <GitCompare size={14} /> เปรียบเทียบ
+                            </button>
+                          </td>
+                          <td>
+                            <div className="pcr-actions-cell">
+                              <button
+                                type="button"
+                                className="btn btn-outline pcr-btn-sm"
+                                onClick={() => setDetailModalRevision(revision)}
+                                title="ดูรายละเอียดฉบับสมบูรณ์"
+                              >
+                                <Eye size={13} /> ดูรายละเอียด
+                              </button>
+                              {revision.state === 'draft' && definition?.canPublish && (
+                                <button
+                                  type="button"
+                                  disabled={busy || dirty}
+                                  className="btn btn-primary pcr-btn-sm"
+                                  onClick={() => publish(revision)}
+                                  title="อนุมัติและเผยแพร่ข้อมูลนี้"
+                                >
+                                  <CheckCircle2 size={13} /> อนุมัติและเผยแพร่
+                                </button>
+                              )}
+                              {definition?.canEdit && (
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  className="btn btn-outline pcr-btn-sm"
+                                  onClick={() => useRevisionAsDraft(revision)}
+                                  title="นำข้อมูลนี้ไปเป็นร่างใหม่ในฟอร์ม"
+                                >
+                                  <RotateCcw size={13} /> ใช้เป็นร่างใหม่
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Bar */}
+              {sortedHistory.length > 0 && (
+                <div className="pcr-pagination-bar">
+                  <div>
+                    แสดง {(safePage - 1) * historyPerPage + 1} - {Math.min(safePage * historyPerPage, sortedHistory.length)} จากทั้งหมด {sortedHistory.length} รายการ
+                  </div>
+                  <div className="pcr-pagination-nav">
+                    <button
+                      type="button"
+                      className="pcr-page-btn"
+                      disabled={safePage <= 1}
+                      onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft size={16} /> ก่อนหน้า
+                    </button>
+                    <span className="pcr-page-info">
+                      หน้า {safePage} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      className="pcr-page-btn"
+                      disabled={safePage >= totalPages}
+                      onClick={() => setHistoryPage(p => Math.min(totalPages, p + 1))}
+                    >
+                      ถัดไป <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Detail Modal */}
+            {detailModalRevision && (
+              <div
+                className="pcr-modal-overlay"
+                onMouseDown={e => { if (e.target === e.currentTarget) setDetailModalRevision(null); }}
+              >
+                <div className="pcr-modal-card" role="dialog" aria-modal="true" aria-labelledby="pcr-detail-title">
+                  <header className="pcr-modal-header">
+                    <h3 id="pcr-detail-title">รายละเอียดร่างและประวัติเวอร์ชัน #{detailModalRevision.id}</h3>
+                    <button
+                      type="button"
+                      className="pcr-modal-close-btn"
+                      onClick={() => setDetailModalRevision(null)}
+                      aria-label="ปิดหน้าต่าง"
+                    >
+                      <X size={20} />
+                    </button>
+                  </header>
+                  <div className="pcr-modal-body">
+                    <div className="pcr-meta-grid">
+                      <div className="pcr-meta-item">
+                        <label>เวอร์ชัน / ลำดับ</label>
+                        <div>#{detailModalRevision.id}</div>
+                      </div>
+                      <div className="pcr-meta-item">
+                        <label>สถานะ</label>
+                        <div><RevisionStatusBadge state={detailModalRevision.state} /></div>
+                      </div>
+                      <div className="pcr-meta-item">
+                        <label>วันที่มีผล</label>
+                        <div>{detailModalRevision.effective_on || '—'}</div>
+                      </div>
+                      <div className="pcr-meta-item">
+                        <label>วันสิ้นสุด</label>
+                        <div>{detailModalRevision.expires_on || 'ไม่มีกำหนด'}</div>
+                      </div>
+                      <div className="pcr-meta-item">
+                        <label>ผู้จัดทำร่าง (Editor)</label>
+                        <div>{detailModalRevision.creatorDisplay}</div>
+                      </div>
+                      <div className="pcr-meta-item">
+                        <label>วันที่บันทึกร่าง</label>
+                        <div>{detailModalRevision.created_at || '—'}</div>
+                      </div>
+                      <div className="pcr-meta-item">
+                        <label>ผู้อนุมัติ / เผยแพร่ (Publisher)</label>
+                        <div>{detailModalRevision.publisherDisplay}</div>
+                      </div>
+                      <div className="pcr-meta-item">
+                        <label>วันที่เผยแพร่</label>
+                        <div>{detailModalRevision.published_at || '—'}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>แหล่งอ้างอิง</label>
+                      <div style={{ marginTop: '0.25rem' }}>
+                        {detailModalRevision.source_url ? (
+                          <a
+                            href={detailModalRevision.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="pcr-btn-link"
+                          >
+                            <ExternalLink size={14} /> {detailModalRevision.source_url}
+                          </a>
+                        ) : 'ไม่มีระบุ'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>เหตุผลการแก้ไข (Change Summary)</label>
+                      <div className="pcr-note-block">{detailModalRevision.note || 'ไม่มีเหตุผลระบุ'}</div>
+                    </div>
+                  </div>
+                  <footer className="pcr-modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => {
+                        const targetRev = detailModalRevision;
+                        setDetailModalRevision(null);
+                        setDiffModalRevision(targetRev);
+                      }}
+                    >
+                      <GitCompare size={14} /> ตรวจข้อมูลก่อน–หลัง
+                    </button>
+                    {detailModalRevision.state === 'draft' && definition?.canPublish && (
+                      <button
+                        type="button"
+                        disabled={busy || dirty}
+                        className="btn btn-primary"
+                        onClick={() => {
+                          const targetRev = detailModalRevision;
+                          setDetailModalRevision(null);
+                          publish(targetRev);
+                        }}
+                      >
+                        <CheckCircle2 size={14} /> อนุมัติและเผยแพร่
+                      </button>
+                    )}
+                    {definition?.canEdit && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="btn btn-outline"
+                        onClick={() => useRevisionAsDraft(detailModalRevision)}
+                      >
+                        <RotateCcw size={14} /> ใช้เวอร์ชันนี้สร้างร่างใหม่
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-outline" onClick={() => setDetailModalRevision(null)}>
+                      ปิด
+                    </button>
+                  </footer>
+                </div>
+              </div>
+            )}
+
+            {/* Before / After Diff Modal */}
+            {diffModalRevision && (() => {
+              const revision = diffModalRevision;
+              return (
+                <div
+                  className="pcr-modal-overlay"
+                  onMouseDown={e => { if (e.target === e.currentTarget) setDiffModalRevision(null); }}
+                >
+                  <div className="pcr-modal-card is-wide" role="dialog" aria-modal="true" aria-labelledby="pcr-diff-title">
+                    <header className="pcr-modal-header">
+                      <div>
+                        <h3 id="pcr-diff-title">เปรียบเทียบข้อมูลก่อน–หลังแก้ไข: เวอร์ชัน #{revision.id}</h3>
+                        <small style={{ color: 'var(--text-muted)' }}>{revision.note}</small>
+                      </div>
+                      <button
+                        type="button"
+                        className="pcr-modal-close-btn"
+                        onClick={() => setDiffModalRevision(null)}
+                        aria-label="ปิดหน้าต่าง"
+                      >
+                        <X size={20} />
+                      </button>
+                    </header>
+                    <div className="pcr-modal-body">
+                      <div className="pcr-diff-split">
+                        <div className="pcr-diff-col is-before">
+                          <h4>ข้อมูลก่อนแก้ไข</h4>
+                          <Preview value={safeRevisionValue(revision.previous_payload,section)} section={section} boardNames={boardNames}/>
+                        </div>
+                        <div className="pcr-diff-col is-after">
+                          <h4>ข้อมูลหลังแก้ไข</h4>
+                          <Preview value={safeRevisionValue(revision.payload,section)} section={section} boardNames={boardNames}/>
+                        </div>
+                      </div>
+                    </div>
+                    <footer className="pcr-modal-footer">
+                      <button type="button" className="btn btn-outline" onClick={() => setDiffModalRevision(null)}>
+                        ปิด
+                      </button>
+                    </footer>
+                  </div>
+                </div>
+              );
+            })()}
+          </>
+        );
+      })()}
     </>}
   </section>;
 }

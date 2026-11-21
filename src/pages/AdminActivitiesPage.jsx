@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Images, Plus, UploadCloud, RefreshCw } from 'lucide-react';
 import { memberAdminApi } from '../services/memberAdminApi';
+import { showConfirm, showDeleteConfirm, showSuccess, showError } from '../utils/swal';
 
 const emptyForm = { title: '', description: '', location: '', event_date: '' };
 const MAX_QUEUE = 200;
@@ -81,13 +82,16 @@ export default function AdminActivitiesPage() {
     else setNotice('ส่งไฟล์ครบแล้ว กรุณาตรวจภาพที่บันทึกในอัลบั้ม');
   };
   const publish = async () => {
-    if (!selected || !window.confirm('ยืนยันเผยแพร่อัลบั้มนี้ต่อสาธารณะ?')) return;
+    if (!selected) return;
+    const confirmed = await showConfirm('ยืนยันเผยแพร่อัลบั้ม?', 'ยืนยันเผยแพร่อัลบั้มนี้ต่อสาธารณะหรือไม่?');
+    if (!confirmed) return;
     setBusy(true); setError('');
     try {
       await memberAdminApi(`/api/admin/activities/${selected.id}/publish`, { data: {} });
       await refresh(); await chooseAlbum({ id: selected.id });
       setNotice('เผยแพร่อัลบั้มเรียบร้อยแล้ว');
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+      showSuccess('เผยแพร่อัลบั้มสำเร็จ!', 'อัลบั้มภาพกิจกรรมเผยแพร่สู่หน้าเว็บแล้ว');
+    } catch (e) { setError(e.message); showError('ไม่สามารถเผยแพร่ได้', e.message); } finally { setBusy(false); }
   };
 
   const action = async (suffix, payload = {}) => {
@@ -107,7 +111,8 @@ export default function AdminActivitiesPage() {
     await action(`/photos/${photo.id}/caption`, { caption });
   };
   const remove = async (photo) => {
-    if (!window.confirm('ลบภาพนี้จากอัลบั้ม Draft ใช่หรือไม่?')) return;
+    const confirmed = await showDeleteConfirm('ลบภาพนี้?', 'ลบภาพนี้จากอัลบั้ม Draft ใช่หรือไม่?');
+    if (!confirmed) return;
     await action(`/photos/${photo.id}/remove`);
   };
   const move = async (index, delta) => {
@@ -118,9 +123,14 @@ export default function AdminActivitiesPage() {
     await action('/reorder', { ids });
   };
   const archive = async () => {
-    if (!selected || !window.confirm('ยืนยันซ่อนอัลบั้มและนำออกจากหน้าสาธารณะ?')) return;
+    if (!selected) return;
+    const confirmed = await showDeleteConfirm('ซ่อนอัลบั้มภาพ?', 'ยืนยันซ่อนอัลบั้มและนำออกจากหน้าสาธารณะ?');
+    if (!confirmed) return;
     const archived = await action('/archive');
-    if (archived) { setSelected(null); setPhotos([]); setForm(emptyForm); }
+    if (archived) {
+      setSelected(null); setPhotos([]); setForm(emptyForm);
+      showSuccess('ซ่อนอัลบั้มแล้ว', 'อัลบั้มภาพกิจกรรมถูกนำออกจากหน้าสาธารณะเรียบร้อยแล้ว');
+    }
   };
   const isDraft = !selected || selected.status === 'draft';
   return <section style={{ padding: '1.25rem', maxWidth: 1280, margin: '0 auto' }}>

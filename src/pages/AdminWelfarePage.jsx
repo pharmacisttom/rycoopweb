@@ -3,6 +3,7 @@ import { AdminPageHeader, AdminCard, AdminErrorState, AdminEmptyState, AdminStat
 import './AdminWelfarePage.css';
 import {Link} from 'react-router-dom';
 import {memberAdminApi} from '../services/memberAdminApi';
+import {showDeleteConfirm, showSuccess, showError} from '../utils/swal';
 const blank={category:'',title:'',slug:'',short_description:'',full_description:'',benefit_amount:'',eligibility:'',required_documents:'',application_process:'',contact_info:'',sort_order:0,status:'inactive'};
 const fields=[['category','หมวดหมู่'],['title','ชื่อสวัสดิการ'],['slug','รหัส URL (อังกฤษตัวเล็ก)'],['short_description','คำอธิบายสั้น'],['full_description','รายละเอียด'],['benefit_amount','วงเงิน / สิทธิประโยชน์'],['eligibility','คุณสมบัติ'],['required_documents','เอกสารที่ต้องใช้'],['application_process','ขั้นตอนขอรับ'],['contact_info','ช่องทางติดต่อ']];
 export default function AdminWelfarePage(){
@@ -10,9 +11,18 @@ export default function AdminWelfarePage(){
  useEffect(()=>{let active=true;memberAdminApi('/api/admin/welfare').then(r=>{if(active)setRows(r.data||[])}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[revision]);
  async function save(e){e.preventDefault();setBusy(true);setError('');try{
   await memberAdminApi('/api/admin/welfare'+(editing.id?'/'+editing.id+'/update':''),{data:editing});
+  showSuccess('บันทึกสำเร็จ', `บันทึกข้อมูลสวัสดิการ "${editing.title}" เรียบร้อยแล้ว`);
   setEditing(null);setRevision(v=>v+1)
- }catch(e){setError(e.message)}finally{setBusy(false)}}
- async function remove(item){if(!window.confirm('ยืนยันปิดรายการสวัสดิการนี้?'))return;setBusy(true);setError('');try{await memberAdminApi('/api/admin/welfare/'+item.id+'/delete',{data:{version:item.version}});setRevision(v=>v+1)}catch(e){setError(e.message)}finally{setBusy(false)}}
+ }catch(e){setError(e.message);showError('เกิดข้อผิดพลาด', e.message);}finally{setBusy(false)}}
+ async function remove(item){
+  const confirmed = await showDeleteConfirm('ยืนยันปิดรายการสวัสดิการ?', `ต้องการปิดรายการสวัสดิการ "${item.title}" ใช่หรือไม่`);
+  if(!confirmed)return;
+  setBusy(true);setError('');try{
+   await memberAdminApi('/api/admin/welfare/'+item.id+'/delete',{data:{version:item.version}});
+   showSuccess('ปิดรายการสำเร็จ', `ปิดรายการสวัสดิการ "${item.title}" แล้ว`);
+   setRevision(v=>v+1)
+  }catch(e){setError(e.message);showError('เกิดข้อผิดพลาด', e.message);}finally{setBusy(false)}
+ }
  return (
   <section className="admin-module welfare-admin-page">
     <AdminPageHeader

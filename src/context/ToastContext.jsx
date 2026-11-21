@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+﻿import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { CheckCircle2, AlertTriangle, AlertCircle, Info, X, ShieldAlert } from 'lucide-react';
+import { showConfirm, showDeleteConfirm, showToast as swalToast } from '../utils/swal';
 
 const ToastContext = createContext(null);
 
@@ -29,30 +30,27 @@ export function ToastProvider({ children }) {
 
   // Shortcut helpers
   const toast = {
-    success: (message, title = 'สำเร็จ') => showToast({ type: 'success', title, message }),
-    error: (message, title = 'ข้อผิดพลาด') => showToast({ type: 'error', title, message }),
-    warning: (message, title = 'แจ้งเตือน') => showToast({ type: 'warning', title, message }),
-    info: (message, title = 'ข้อมูล') => showToast({ type: 'info', title, message }),
+    success: (message, title = 'เธชเธณเน€เธฃเนเธ') => showToast({ type: 'success', title, message }),
+    error: (message, title = 'เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”') => showToast({ type: 'error', title, message }),
+    warning: (message, title = 'เนเธเนเธเน€เธ•เธทเธญเธ') => showToast({ type: 'warning', title, message }),
+    info: (message, title = 'เธเนเธญเธกเธนเธฅ') => showToast({ type: 'info', title, message }),
   };
 
-  // Accessible Confirm Dialog returning Promise<boolean>
-  const confirmDialog = useCallback(({
-    title = 'ยืนยันการทำรายการ',
-    message = 'ท่านต้องการดำเนินการต่อหรือไม่?',
-    confirmText = 'ยืนยัน',
-    cancelText = 'ยกเลิก',
+  // Standardized SweetAlert2 Confirm Dialog returning Promise<boolean>
+  const confirmDialog = useCallback(async ({
+    title = 'เธขเธทเธเธขเธฑเธเธเธฒเธฃเธ—เธณเธฃเธฒเธขเธเธฒเธฃ',
+    message = 'เธ—เนเธฒเธเธ•เนเธญเธเธเธฒเธฃเธ”เธณเน€เธเธดเธเธเธฒเธฃเธ•เนเธญเธซเธฃเธทเธญเนเธกเน?',
+    confirmText = 'เธขเธทเธเธขเธฑเธ',
+    cancelText = 'เธขเธเน€เธฅเธดเธ',
     type = 'danger' // 'danger' | 'primary' | 'warning'
   }) => {
-    return new Promise((resolve) => {
-      confirmResolveRef.current = resolve;
-      setConfirmState({
-        isOpen: true,
-        title,
-        message,
-        confirmText,
-        cancelText,
-        type
-      });
+    if (type === 'danger') {
+      return showDeleteConfirm(title, message, { confirmText, cancelButtonText: cancelText });
+    }
+    return showConfirm(title, message, {
+      confirmText,
+      cancelButtonText: cancelText,
+      icon: type === 'warning' ? 'warning' : 'question'
     });
   }, []);
 
@@ -84,7 +82,7 @@ export function ToastProvider({ children }) {
         className="toast-container"
         aria-live="polite"
         role="region"
-        aria-label="การแจ้งเตือนระบบ"
+        aria-label="เธเธฒเธฃเนเธเนเธเน€เธ•เธทเธญเธเธฃเธฐเธเธ"
         style={{
           position: 'fixed',
           top: '1.25rem',
@@ -166,7 +164,7 @@ export function ToastProvider({ children }) {
               <button
                 type="button"
                 onClick={() => removeToast(t.id)}
-                aria-label="ปิดการแจ้งเตือน"
+                aria-label="เธเธดเธ”เธเธฒเธฃเนเธเนเธเน€เธ•เธทเธญเธ"
                 style={{
                   background: 'none',
                   border: 'none',

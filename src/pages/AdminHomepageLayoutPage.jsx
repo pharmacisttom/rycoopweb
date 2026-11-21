@@ -4,6 +4,7 @@ import { memberAdminApi } from '../services/memberAdminApi';
 import DynamicLayoutEditor from '../components/admin/DynamicLayoutEditor';
 import SiteChromeVisibilityEditor from '../components/admin/SiteChromeVisibilityEditor';
 import HomeCompositionEditor from '../components/admin/HomeCompositionEditor';
+import { showConfirm, showSuccess, showError } from '../utils/swal';
 
 const keys = ['hero', 'quick_services', 'statistics', 'products', 'calculator', 'welfare'];
 const sameVisibility = (a, b) => keys.every(key => a?.[key] === b?.[key]);
@@ -129,11 +130,18 @@ export default function AdminHomepageLayoutPage() {
             </p>
             <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:16}}>
               <button type="button" disabled={!canSave} onClick={() => perform('draft')}>1. บันทึกร่าง</button>
-              <button type="button" disabled={!canPublish} onClick={() => {
-                if (window.confirm('ยืนยันเผยแพร่ Layout จากร่างล่าสุดไปยังเว็บไซต์ที่กำลังใช้งานอยู่?')) perform('publish');
+              <button type="button" disabled={!canPublish} onClick={async () => {
+                const confirmed = await showConfirm(
+                  'ยืนยันเผยแพร่ Layout?',
+                  'ยืนยันเผยแพร่ Layout จากร่างล่าสุดไปยังเว็บไซต์ที่กำลังใช้งานอยู่?'
+                );
+                if (confirmed) perform('publish');
               }}>2. อนุมัติเผยแพร่</button>
-              <button type="button" disabled={busy || loading} onClick={() => {
-                if (dirty && !window.confirm('มีข้อมูลแก้ไขที่ยังไม่บันทึก ต้องการทิ้งการแก้ไขแล้วโหลดล่าสุด?')) return;
+              <button type="button" disabled={busy || loading} onClick={async () => {
+                if (dirty) {
+                  const confirmed = await showConfirm('ทิ้งการแก้ไขและโหลดล่าสุด?', 'มีข้อมูลแก้ไขที่ยังไม่บันทึก ต้องการทิ้งการแก้ไขแล้วโหลดล่าสุด?');
+                  if (!confirmed) return;
+                }
                 load();
               }}>โหลดข้อมูลล่าสุด</button>
               {dirty && <button type="button" disabled={busy} onClick={() => {

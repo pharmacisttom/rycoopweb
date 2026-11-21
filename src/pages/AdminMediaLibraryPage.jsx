@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
+import { showDeleteConfirm, showSuccess, showError, showToast } from '../utils/swal';
 import './AdminMediaLibraryPage.css';
 import './AdminMediaModern.css';
 
@@ -46,12 +47,13 @@ export default function AdminMediaLibraryPage({ onSelect }) {
     try {
       await mediaLibraryApi.upload(file, { folder: folder || 'general', altText: uploadAlt, caption: uploadCaption });
       setFile(null); setUploadAlt(''); setUploadCaption('');
-      // React synthetic event currentTarget is cleared after await; the file input is reset on the next render.
       setFileInputKey((key) => key + 1);
       setQuery({ page: 1, search: '', folder: '' });
       setSearch(''); setFolder('');
+      showSuccess('อัปโหลดสำเร็จ!', 'รูปภาพได้รับการบันทึกเข้าสู่คลังเรียบร้อยแล้ว');
     } catch (e) {
       setError(e.message);
+      showError('อัปโหลดไม่สำเร็จ', e.message);
     } finally { setBusy(false); }
   };
 
@@ -65,17 +67,23 @@ export default function AdminMediaLibraryPage({ onSelect }) {
       });
       setEditing(null);
       await reload();
-    } catch (e) { setError(e.message); }
+      showToast('บันทึกรายละเอียดรูปภาพแล้ว');
+    } catch (e) { setError(e.message); showError('เกิดข้อผิดพลาด', e.message); }
     finally { setBusy(false); }
   };
 
   const remove = async (image) => {
-    if (busy || !window.confirm('ยืนยันซ่อนรูปนี้จากคลัง? รูปที่ถูกอ้างอิงอาจยังแสดงอยู่ในหน้าเว็บ')) return;
+    const confirmed = await showDeleteConfirm(
+      'ซ่อนรูปนี้จากคลัง?',
+      'ยืนยันซ่อนรูปนี้จากคลัง? รูปที่ถูกอ้างอิงอาจยังแสดงอยู่ในหน้าเว็บ'
+    );
+    if (!confirmed || busy) return;
     setBusy(true); setError('');
     try {
       await mediaLibraryApi.remove(image.id, image.version);
       await reload();
-    } catch (e) { setError(e.message); }
+      showSuccess('นำรูปออกจากคลังแล้ว', 'ซ่อนรูปภาพจากคลังเรียบร้อยแล้ว');
+    } catch (e) { setError(e.message); showError('ไม่สามารถซ่อนรูปได้', e.message); }
     finally { setBusy(false); }
   };
 

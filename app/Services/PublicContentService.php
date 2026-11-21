@@ -118,7 +118,7 @@ class PublicContentService
         $value = self::payload(self::catalog(),$section);
         $latest = Database::value("SELECT MAX(id) FROM public_content_revisions WHERE section=? AND state='published'",[$section]);
         return ['value'=>$value,'version'=>hash('sha256',self::json([$value,(int)$latest])),
-            'history'=>Database::query('SELECT id,section,payload,previous_payload,source_url,effective_on,expires_on,note,state,created_by,published_by,created_at,published_at FROM public_content_revisions WHERE section=? ORDER BY id DESC LIMIT 50',[$section])];
+            'history'=>Database::query('SELECT r.id,r.section,r.payload,r.previous_payload,r.source_url,r.effective_on,r.expires_on,r.note,r.state,r.created_by,r.published_by,r.created_at,r.published_at,u1.name AS creator_name,u2.name AS publisher_name FROM public_content_revisions r LEFT JOIN users u1 ON r.created_by=u1.id LEFT JOIN users u2 ON r.published_by=u2.id WHERE r.section=? ORDER BY r.id DESC LIMIT 50',[$section])];
     }
     private static function text(mixed $value, int $limit = 255, bool $required = false): string
     {

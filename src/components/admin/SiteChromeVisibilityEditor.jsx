@@ -1,5 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import {memberAdminApi} from '../../services/memberAdminApi';
+import {showConfirm, showSuccess, showError} from '../../utils/swal';
 
 const keys=['nav_menu','footer_brand','footer_finance','footer_welfare','footer_contact','footer_counter'];
 const equal=(a,b)=>keys.every(key=>a?.[key]===b?.[key]);
@@ -52,8 +53,17 @@ export default function SiteChromeVisibilityEditor(){
       <input id="site-chrome-totp" type="password" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,'').slice(0,6))} style={{display:'block',maxWidth:260,margin:'8px 0 14px',padding:10}}/>
       <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
         <button type="button" disabled={busy||!dirty||!validTotp} onClick={()=>save('draft')}>1. บันทึกร่าง</button>
-        <button type="button" disabled={busy||dirty||!state.draft||!validTotp} onClick={()=>{if(window.confirm('ยืนยันเผยแพร่การเปิด–ปิดเมนูและ Footer?'))save('publish');}}>2. อนุมัติเผยแพร่</button>
-        <button type="button" disabled={busy} onClick={()=>{if(dirty&&!window.confirm('ยกเลิกการแก้ไขที่ยังไม่ได้บันทึก?'))return;load();}}>โหลดล่าสุด</button>
+        <button type="button" disabled={busy||dirty||!state.draft||!validTotp} onClick={async ()=>{
+          const confirmed = await showConfirm('ยืนยันเผยแพร่?', 'ยืนยันเผยแพร่การเปิด–ปิดเมนูและ Footer?');
+          if(confirmed) save('publish');
+        }}>2. อนุมัติเผยแพร่</button>
+        <button type="button" disabled={busy} onClick={async ()=>{
+          if(dirty){
+            const confirmed = await showConfirm('ยกเลิกการแก้ไข?', 'ยกเลิกการแก้ไขที่ยังไม่ได้บันทึก?');
+            if(!confirmed) return;
+          }
+          load();
+        }}>โหลดล่าสุด</button>
       </div>
    </>}
  </section>;

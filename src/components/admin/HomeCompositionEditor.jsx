@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState, useId, useRef} from 'react';
 import {memberAdminApi} from '../../services/memberAdminApi';
 import {mediaLibraryApi} from '../../services/mediaLibraryApi';
+import {showConfirm, showSuccess, showError} from '../../utils/swal';
 import './HomeCompositionEditor.css';
 
 const NAMES = {
@@ -125,15 +126,23 @@ export default function HomeCompositionEditor(){
   const submit=async action=>{
     if(!mfa||busy||!server||!model||(action==='draft'?!dirty:dirty||!server.draft))return;
     if(!allowedImage(model.background?.image_url)||!allowedImage(model.background?.mobile_image_url)||model.slides.some(item=>!allowedImage(item.image_url)||!allowedImage(item.mobile_image_url))){setError('กรุณาใช้ที่อยู่รูป JPG, PNG หรือ WEBP ภายในเว็บไซต์ เช่น /storage/uploads/...');return;}
-    if(action==='publish'&&!window.confirm('ยืนยันเผยแพร่ผังหน้าแรกและ Highlight Slider ไปยังเว็บไซต์จริง?'))return;
+    if(action==='publish'){
+      const confirmed = await showConfirm(
+        'ยืนยันเผยแพร่ผังหน้าแรก?',
+        'ยืนยันเผยแพร่ผังหน้าแรกและ Highlight Slider ไปยังเว็บไซต์จริง?'
+      );
+      if(!confirmed)return;
+    }
     setBusy(true);setError('');setNotice('');
     try{
       const body={version:server.version,totp_code:totp};
       if(action==='draft')body.composition=model;
       const result=await memberAdminApi('/api/admin/home-composition/'+action,{data:body});
       setServer(result.data);setModel(prepare(result.data.draft??result.data.published));setTotp('');
-      setNotice(action==='draft'?'บันทึกร่างแล้ว หน้าเว็บไซต์ยังไม่เปลี่ยน':'เผยแพร่เรียบร้อย');
-    }catch(e){setTotp('');setError(e.message||'บันทึกไม่สำเร็จ');}
+      const msg = action==='draft'?'บันทึกร่างแล้ว หน้าเว็บไซต์ยังไม่เปลี่ยน':'เผยแพร่เรียบร้อย';
+      setNotice(msg);
+      showSuccess(action==='draft'?'บันทึกร่างสำเร็จ':'เผยแพร่สำเร็จ!', msg);
+    }catch(e){setTotp('');const err=e.message||'บันทึกไม่สำเร็จ';setError(err);showError('เกิดข้อผิดพลาด', err);}
     finally{setBusy(false);}
   };
   return <section className="surface-card hc-editor">
@@ -256,7 +265,13 @@ export default function HomeCompositionEditor(){
           value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,'').slice(0,6))}/></label>
         <button type="button" disabled={!dirty||!mfa||busy||!!uploading} onClick={()=>submit('draft')}>1. บันทึกร่าง</button>
         <button type="button" disabled={!server?.draft||dirty||!mfa||busy||!!uploading} onClick={()=>submit('publish')}>2. อนุมัติเผยแพร่</button>
-        <button type="button" disabled={busy} onClick={()=>{if(!dirty||window.confirm('ทิ้งการแก้ไขที่ยังไม่บันทึก?'))load();}}>โหลดล่าสุด / ยกเลิก</button>
+        <button type="button" disabled={busy} onClick={async ()=>{
+          if(dirty){
+            const confirmed = await showConfirm('ทิ้งการแก้ไขที่ยังไม่บันทึก?', 'ต้องการทิ้งการเปลี่ยนแปลงแล้วโหลดข้อมูลล่าสุดหรือไม่?');
+            if(!confirmed)return;
+          }
+          load();
+        }}>โหลดล่าสุด / ยกเลิก</button>
       </div>
     </>}
   </section>;

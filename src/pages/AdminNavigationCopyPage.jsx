@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import { memberAdminApi } from '../services/memberAdminApi';
+import { showConfirm, showSuccess, showError } from '../utils/swal';
 
 const keys = ['about_group','about_title','about_desc','board_title','board_desc','staff_title','staff_desc','finance_group','finance_title','finance_desc','dividends_title','dividends_desc','documents_title','documents_desc','home_nav','about_nav','finance_nav','welfare_nav','news_nav','member_nav','finance_highlight_desc','finance_deposit_group','deposit_savings_title','deposit_savings_desc','deposit_rates_title','deposit_rates_desc','dividend_estimator_title','dividend_estimator_desc','loan_group','emergency_title','emergency_desc','ordinary_title','ordinary_desc','housing_title','housing_desc','loan_apply_title','loan_apply_desc','loan_checklist_title','loan_checklist_desc','welfare_fund_group','welfare_six_title','welfare_six_desc','welfare_education_title','welfare_education_desc','welfare_medical_title','welfare_medical_desc','welfare_protection_group','welfare_senior_title','welfare_senior_desc','welfare_debt_title','welfare_debt_desc','welfare_forms_title','welfare_forms_desc','news_group','news_activity_title','news_activity_desc','announcement_title','announcement_desc','calendar_title','calendar_desc','docs_services_group','forms_title','forms_desc','eservices_title','eservices_desc','receipt_title','receipt_desc','finance_report_button','calc_button','welfare_button','docs_button'];
 
@@ -76,7 +77,10 @@ export default function AdminNavigationCopyPage() {
             </label>
             <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:16}}>
               <button type="button" disabled={busy||!dirty||!/^\d{6,8}$/.test(totp)} onClick={()=>perform('draft')}>บันทึกร่าง</button>
-              <button type="button" disabled={busy||dirty||!state.draft||!/^\d{6,8}$/.test(totp)} onClick={()=>{if(window.confirm('ยืนยันเผยแพร่ข้อความในเมนู?'))perform('publish');}}>อนุมัติเผยแพร่</button>
+              <button type="button" disabled={busy||dirty||!state.draft||!/^\d{6,8}$/.test(totp)} onClick={async ()=>{
+                const confirmed = await showConfirm('ยืนยันเผยแพร่?', 'ยืนยันเผยแพร่ข้อความในเมนูไปยังเว็บไซต์จริง?');
+                if(confirmed) perform('publish');
+              }}>อนุมัติเผยแพร่</button>
               <button type="button" disabled={busy} onClick={async()=>{try{await load();setNotice('โหลดข้อมูลล่าสุดแล้ว');setError('');}catch(e){setError(e.message);}}}>โหลดข้อมูลล่าสุด</button>
             </div>
           </div>

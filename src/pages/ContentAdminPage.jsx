@@ -8,6 +8,7 @@ import RichTextContent from '../components/common/RichTextContent';
 import NewsGalleryEditor from '../components/common/NewsGalleryEditor';
 import ActivitySlideshow from '../components/common/ActivitySlideshow';
 import { normalizeGallery } from '../utils/news';
+import { showConfirm, showDeleteConfirm, showSuccess, showError, showToast } from '../utils/swal';
 const empty={title:'',category:'ข่าวประชาสัมพันธ์',excerpt:'',content:'',image:'',workflow_status:'draft',gallery_images:[]};
 export default function ContentAdminPage(){
  const {can}=useAuth();const [params,setParams]=useSearchParams();
@@ -17,12 +18,48 @@ export default function ContentAdminPage(){
  memberAdminApi(tab==='news'?'/api/admin/news':'/api/admin/faqs',{signal:c.signal}).then(r=>{if(!Array.isArray(r.data))throw new Error('ข้อมูลรายการไม่ครบถ้วน');setItems(r.data.map(item=>tab==='news'?{...item,gallery_images:normalizeGallery(item.gallery_images)}:item));}).catch(e=>{if(e.name!=='AbortError'){setError(e.message);setLoadFailed(true);}}).finally(()=>{if(!c.signal.aborted)setLoading(false);});return()=>c.abort();},[tab,allowed,revision]);
  async function save(e){e.preventDefault();if(readingImages)return;setBusy(true);setError('');try{
  const path=`/api/admin/${tab}${edit.id?`/${edit.id}/update`:''}`;
- await memberAdminApi(path,{data:edit});setEdit(null);setMessage(tab==='news'?'บันทึกร่าง / ส่งตรวจแล้ว ยังไม่เผยแพร่':'บันทึกคำถามแล้ว');setRevision(v=>v+1);
- }catch(e){setError(e.message);}finally{setBusy(false);}}
- async function disable(item){if(!window.confirm('ยืนยันปิดรายการนี้หรือไม่?'))return;setBusy(true);setError('');try{await memberAdminApi(`/api/admin/${tab}/${item.id}/delete`,{data:{version:item.version}});setEdit(null);setPreview(null);setMessage('ปิดรายการแล้ว');setRevision(v=>v+1);}catch(e){setError(e.message);}finally{setBusy(false);}}
- async function publish(item){if(!window.confirm('ตรวจสอบตัวอย่างข่าวแล้ว และยืนยันเผยแพร่สู่หน้าเว็บหรือไม่?'))return;setBusy(true);setError('');try{await memberAdminApi(`/api/admin/news/${item.id}/publish`,{data:{version:item.version}});setPreview(null);setMessage('เผยแพร่ข่าวแล้ว');setRevision(v=>v+1);}catch(e){setError(e.message);}finally{setBusy(false);}}
- return <section className="admin-module"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข่าวและคำถาม" description="บันทึกร่าง ส่งตรวจ และตรวจตัวอย่างก่อนเผยแพร่" actions={<button className="btn btn-outline" disabled={busy||loading} onClick={()=>{if(!edit||window.confirm('ทิ้งข้อมูลที่ยังไม่บันทึกและโหลดล่าสุด?'))setRevision(v=>v+1);}}>โหลดข้อมูลล่าสุด</button>}/>
- <nav style={{display:'flex',gap:12,marginBottom:20}}>{['news','faqs'].filter(t=>can(`${t}.view`)).map(t=><button className="btn btn-outline" key={t} disabled={busy||readingImages} onClick={()=>{if(edit&&!window.confirm('มีข้อมูลยังไม่บันทึก ต้องการเปลี่ยนหมวดหรือไม่?'))return;setParams({tab:t});setPreview(null);}}>{t==='news'?'ข่าวประชาสัมพันธ์':'คำถามที่พบบ่อย'}</button>)}</nav>
+ await memberAdminApi(path,{data:edit});setEdit(null);
+ const successMsg = tab==='news'?'บันทึกร่าง / ส่งตรวจแล้ว ยังไม่เผยแพร่':'บันทึกคำถามแล้ว';
+ setMessage(successMsg);
+ showSuccess('บันทึกสำเร็จ!', successMsg);
+ setRevision(v=>v+1);
+ }catch(e){setError(e.message);showError('เกิดข้อผิดพลาด', e.message);}finally{setBusy(false);}}
+ async function disable(item){
+  const confirmed = await showDeleteConfirm('ยืนยันปิดรายการ?', `ต้องการปิดรายการ "${item.title || item.question}" หรือไม่?`);
+  if(!confirmed)return;
+  setBusy(true);setError('');try{
+   await memberAdminApi(`/api/admin/${tab}/${item.id}/delete`,{data:{version:item.version}});
+   setEdit(null);setPreview(null);
+   setMessage('ปิดรายการแล้ว');
+   showSuccess('ปิดรายการแล้ว', `รายการถูกปิดการแสดงผลเรียบร้อยแล้ว`);
+   setRevision(v=>v+1);
+  }catch(e){setError(e.message);showError('เกิดข้อผิดพลาด', e.message);}finally{setBusy(false);}}
+ async function publish(item){
+  const confirmed = await showConfirm('ยืนยันเผยแพร่?', 'ตรวจสอบตัวอย่างข่าวแล้ว และยืนยันเผยแพร่สู่หน้าเว็บหรือไม่?');
+  if(!confirmed)return;
+  setBusy(true);setError('');try{
+   await memberAdminApi(`/api/admin/news/${item.id}/publish`,{data:{version:item.version}});
+   setPreview(null);
+   setMessage('เผยแพร่ข่าวแล้ว');
+   showSuccess('เผยแพร่สำเร็จ!', 'ข่าวได้รับการเผยแพร่สู่หน้าเว็บไซต์เรียบร้อยแล้ว');
+   setRevision(v=>v+1);
+  }catch(e){setError(e.message);showError('เกิดข้อผิดพลาด', e.message);}finally{setBusy(false);}}
+ async function handleReload(){
+  if(edit){
+   const confirmed = await showConfirm('ทิ้งข้อมูลที่ยังไม่บันทึก?', 'มีข้อมูลที่ยังไม่ได้บันทึก ต้องการทิ้งการแก้ไขแล้วโหลดล่าสุดใช่หรือไม่?');
+   if(!confirmed)return;
+  }
+  setRevision(v=>v+1);
+ }
+ async function handleTabChange(t){
+  if(edit){
+   const confirmed = await showConfirm('เปลี่ยนหมวดข้อมูล?', 'มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?');
+   if(!confirmed)return;
+  }
+  setParams({tab:t});setPreview(null);
+ }
+ return <section className="admin-module"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข่าวและคำถาม" description="บันทึกร่าง ส่งตรวจ และตรวจตัวอย่างก่อนเผยแพร่" actions={<button className="btn btn-outline" disabled={busy||loading} onClick={handleReload}>โหลดข้อมูลล่าสุด</button>}/>
+ <nav style={{display:'flex',gap:12,marginBottom:20}}>{['news','faqs'].filter(t=>can(`${t}.view`)).map(t=><button className="btn btn-outline" key={t} disabled={busy||readingImages} onClick={()=>handleTabChange(t)}>{t==='news'?'ข่าวประชาสัมพันธ์':'คำถามที่พบบ่อย'}</button>)}</nav>
  {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
  {!allowed?<p>ไม่มีสิทธิ์ในหมวดนี้</p>:loading?<p role="status">กำลังโหลด…</p>:loadFailed?null:<>
  {can(`${tab}.create`)&&<button className="btn btn-primary" disabled={busy||readingImages} onClick={()=>setEdit(tab==='news'?{...empty}:{question:'',answer:''})}>เพิ่ม{tab==='news'?'ข่าว':'คำถาม'}</button>}

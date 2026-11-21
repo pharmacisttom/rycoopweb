@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {memberAdminApi} from '../../services/memberAdminApi';
+import {showConfirm, showDeleteConfirm, showSuccess, showError} from '../../utils/swal';
 import './DynamicLayoutEditor.css';
 
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -106,8 +107,11 @@ export default function DynamicLayoutEditor() {
         <button type="button" style={btn} disabled={busy} onClick={() => add(null)}>+ เพิ่มหัวข้อหลัก</button>
         <button type="button" style={btn} disabled={busy || !current || current.depth >= 3} onClick={() => add(selected)}>+ เพิ่มหัวข้อย่อย</button>
         <button type="button" style={btn} onClick={() => setPreview(!preview)}>{preview ? 'ปิดตัวอย่าง' : 'ดูตัวอย่างฉบับร่าง'}</button>
-        <button type="button" style={btn} disabled={busy} onClick={() => {
-          if (dirty && !window.confirm('ยกเลิกการเปลี่ยนแปลงที่ยังไม่ได้บันทึก?')) return;
+        <button type="button" style={btn} disabled={busy} onClick={async () => {
+          if (dirty) {
+            const confirmed = await showConfirm('ยกเลิกการเปลี่ยนแปลง?', 'ยกเลิกการเปลี่ยนแปลงที่ยังไม่ได้บันทึก?');
+            if (!confirmed) return;
+          }
           load();
         }}>โหลดล่าสุด</button>
       </div>
@@ -183,8 +187,9 @@ export default function DynamicLayoutEditor() {
             <label className="dynamic-layout-field-full">ลิงก์ภายในเว็บไซต์<input style={fieldStyle} value={current.link} placeholder="/activities" onChange={e=>update({link:e.target.value})}/></label>
             <label className="dynamic-layout-visible"><input type="checkbox" checked={current.visible} onChange={e=>update({visible:e.target.checked})}/> แสดงหัวข้อนี้</label>
             <div className="dynamic-layout-field-actions" style={{marginTop:18}}>
-              <button type="button" disabled={busy} style={btn} onClick={() => {
-                if (!window.confirm('ลบหัวข้อนี้พร้อมหัวข้อย่อยทั้งหมดจากฉบับร่าง?')) return;
+              <button type="button" disabled={busy} style={btn} onClick={async () => {
+                const confirmed = await showDeleteConfirm('ลบหัวข้อนี้?', 'ลบหัวข้อนี้พร้อมหัวข้อย่อยทั้งหมดจากฉบับร่าง?');
+                if (!confirmed) return;
                 setTree(p => removeNode(p,current.id));setSelected(null);
               }}>ลบหัวข้อ</button>
               {current.type==='gallery' && <a href="/app/admin/activities" style={{marginLeft:8}}>จัดการอัลบั้มกิจกรรม</a>}
@@ -203,8 +208,9 @@ export default function DynamicLayoutEditor() {
       <div style={{marginTop:18}}>
         <label className="dynamic-layout-mfa">รหัส MFA 6 หลัก<input style={{...fieldStyle,maxWidth:220}} inputMode="numeric" type="password" maxLength={6} autoComplete="one-time-code" value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,'').slice(0,6))}/></label>
         <button type="button" style={btn} disabled={!dirty || !validTotp || busy} onClick={()=>save('draft')}>บันทึกร่าง</button>
-        <button type="button" style={btn} disabled={dirty || !server.draft || !validTotp || busy} onClick={()=>{
-          if(window.confirm('ยืนยันเผยแพร่หัวข้อฉบับร่างไปยังเว็บไซต์ TEST?')) save('publish');
+        <button type="button" style={btn} disabled={dirty || !server.draft || !validTotp || busy} onClick={async ()=>{
+          const confirmed = await showConfirm('ยืนยันเผยแพร่?', 'ยืนยันเผยแพร่หัวข้อฉบับร่างไปยังเว็บไซต์?');
+          if(confirmed) save('publish');
         }}>อนุมัติเผยแพร่</button>
         <p>สถานะ: {dirty ? 'มีข้อมูลที่ยังไม่ได้บันทึก' : server.draft ? 'มีร่างรอเผยแพร่' : 'ไม่มีร่างค้าง'} · การเผยแพร่ต้องใช้ MFA ใหม่</p>
       </div>

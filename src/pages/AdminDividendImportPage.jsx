@@ -1,6 +1,7 @@
 import { maskIdCard, maskName } from '../utils/pdpa';
 import React, { useState } from 'react';
 import AdminMemberShell from '../components/member/AdminMemberShell';
+import { showConfirm, showSuccess, showError } from '../utils/swal';
 
 export default function AdminDividendImportPage() {
   const [file, setFile] = useState(null);
@@ -13,6 +14,13 @@ export default function AdminDividendImportPage() {
   const [acknowledged, setAcknowledged] = useState(false);
   async function submit(confirm) {
     if (confirm && !acknowledged) { setMessage('กรุณายืนยันว่าตรวจสอบจำนวนรายการและยอดเงินก่อนนำเข้า'); return; }
+    if (confirm) {
+      const confirmed = await showConfirm(
+        `ยืนยันนำเข้าข้อมูลปันผลปี ${preview.year}?`,
+        `จำนวน ${preview.count.toLocaleString('th-TH')} รายการ ยอดสุทธิรวม ${Number(preview.total_net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`
+      );
+      if (!confirmed) return;
+    }
     setBusy(true); setMessage(''); setErrors([]); setErrorCount(0);
     try {
       const csrf = await fetch('/csrf-token', { credentials: 'include', headers: { Accept: 'application/json' } });
@@ -24,9 +32,17 @@ export default function AdminDividendImportPage() {
       const response = await fetch(`/api/admin/dividends/${confirm ? 'confirm' : 'preview'}`, { method: 'POST', credentials: 'include', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body });
       const result = await response.json();
       if (!response.ok || !result.success) { setErrors(result.errors || []); setErrorCount(result.error_count || 0); if (confirm) setPreview(null); throw new Error(result.message || 'ดำเนินการไม่สำเร็จ'); }
-      if (confirm) { setPreview(null); setAcknowledged(false); setMessage(`นำเข้าสำเร็จ ${result.count.toLocaleString('th-TH')} รายการ`); }
+      if (confirm) {
+        setPreview(null); setAcknowledged(false);
+        const successMsg = `นำเข้าสำเร็จ ${result.count.toLocaleString('th-TH')} รายการ`;
+        setMessage(successMsg);
+        showSuccess('นำเข้าข้อมูลสำเร็จ!', successMsg);
+      }
       else setPreview(result);
-    } catch (e) { setMessage(e.message); }
+    } catch (e) {
+      setMessage(e.message);
+      if (confirm) showError('ไม่สามารถนำเข้าข้อมูลได้', e.message);
+    }
     finally { setBusy(false); }
   }
   return <AdminMemberShell title="นำเข้าเงินปันผลรายปี" description="ตรวจข้อมูลจาก Excel เทียบฐานข้อมูล ก่อนยืนยันบันทึก">

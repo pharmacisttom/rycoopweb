@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { memberAdminApi } from '../services/memberAdminApi';
 import { useAdminAction } from '../components/admin/AdminActionProvider';
 import { AdminPageHeader, AdminCard, AdminDataTable, AdminFormField, AdminErrorState, AdminModal, AdminPagination, AdminStatusBadge } from '../components/admin/AdminUI';
+import { showDeleteConfirm, showSuccess, showError } from '../utils/swal';
 const labels={site_title:'ชื่อสหกรณ์',site_subtitle:'ชื่อภาษาอังกฤษ',site_phone:'โทรศัพท์',site_fax:'โทรสาร',site_email:'อีเมล',site_address:'ที่อยู่',office_hours:'เวลาทำการ',facebook_url:'ลิงก์ Facebook (HTTPS)',line_oa:'LINE OA'};
 
 export default function AdminStoredContentPage({kind='documents'}){
@@ -12,15 +13,30 @@ export default function AdminStoredContentPage({kind='documents'}){
  async function save(event){event.preventDefault();if(busy||actionBusy)return;setBusy(true);setError('');setMessage('');try{
    if(settings)await run(signal=>memberAdminApi(path,{data:{settings:edit,version:data.version},signal}),{scope:'settings.update',label:'บันทึกข้อมูลเว็บไซต์',confirm:'ตรวจสอบข้อมูลก่อนบันทึก การตั้งค่านี้มีผลต่อเว็บไซต์ส่วนกลาง'});
    else{const form=new FormData();for(const key of ['title','category_id','document_number','year','tag','sort_order','status','version'])if(edit[key]!=null)form.set(key,String(edit[key]));if(file)form.set('file',file);await memberAdminApi(path+(edit.id?`/${edit.id}/update`:''),{data:form});setEdit(null);setFile(null);}
-   setMessage('บันทึกข้อมูลส่วนกลางสำเร็จ');setRevision(v=>v+1);
- }catch(e){if(e.code!=='ACTION_CANCELLED')setError(e.message);}finally{setBusy(false);}}
+   const successMsg = 'บันทึกข้อมูลส่วนกลางสำเร็จ';
+   setMessage(successMsg);
+   showSuccess('บันทึกสำเร็จ!', successMsg);
+   setRevision(v=>v+1);
+ }catch(e){if(e.code!=='ACTION_CANCELLED'){setError(e.message);showError('เกิดข้อผิดพลาด', e.message);}}finally{setBusy(false);}}
  async function saveCategory(event){event.preventDefault();if(busy||!categoryEdit)return;setBusy(true);setError('');setMessage('');try{
    const id=categoryEdit.id;
    const url=id?`/api/admin/document-categories/${id}/update`:'/api/admin/document-categories';
    await memberAdminApi(url,{data:{name:categoryEdit.name,sort_order:categoryEdit.sort_order}});
-   setCategoryEdit(null);setMessage('บันทึกหมวดหมู่เอกสารแล้ว');setRevision(v=>v+1);
- }catch(e){setError(e.message||'บันทึกหมวดหมู่ไม่ได้');}finally{setBusy(false);}}
- async function remove(item){if(!window.confirm(`ปิดรายการเอกสาร “${item.title}” หรือไม่?`))return;setBusy(true);setError('');try{await memberAdminApi(`${path}/${item.id}/delete`,{data:{version:item.version}});setMessage('ปิดรายการเอกสารแล้ว');setRevision(v=>v+1);}catch(e){setError(e.message);}finally{setBusy(false);}}
+   setCategoryEdit(null);
+   const successMsg = 'บันทึกหมวดหมู่เอกสารแล้ว';
+   setMessage(successMsg);
+   showSuccess('บันทึกสำเร็จ!', successMsg);
+   setRevision(v=>v+1);
+ }catch(e){const err=e.message||'บันทึกหมวดหมู่ไม่ได้';setError(err);showError('เกิดข้อผิดพลาด', err);}finally{setBusy(false);}}
+ async function remove(item){
+   const confirmed = await showDeleteConfirm('ปิดรายการเอกสาร?', `ต้องการปิดรายการเอกสาร “${item.title}” ใช่หรือไม่?`);
+   if(!confirmed)return;
+   setBusy(true);setError('');try{
+     await memberAdminApi(`${path}/${item.id}/delete`,{data:{version:item.version}});
+     setMessage('ปิดรายการเอกสารแล้ว');
+     showSuccess('ปิดรายการแล้ว', `ปิดรายการเอกสาร “${item.title}” เรียบร้อยแล้ว`);
+     setRevision(v=>v+1);
+   }catch(e){setError(e.message);showError('เกิดข้อผิดพลาด', e.message);}finally{setBusy(false);}}
  const rows=[...(data?.data||[])].filter(item=>categoryFilter==='all'||String(item.category_id)===categoryFilter).sort((a,b)=>(Number(a.sort_order??0)-Number(b.sort_order??0)) || String(b.created_at||'').localeCompare(String(a.created_at||'')) || Number(b.id)-Number(a.id)).filter(item=>`${item.title} ${item.document_number||''} ${item.year}`.toLowerCase().includes(search.toLowerCase()));const current=Math.min(page,Math.max(1,Math.ceil(rows.length/25)));
  return <section className="admin-module"><AdminPageHeader title={settings?'ข้อมูลเว็บไซต์ที่อนุญาตให้แก้ไข':'จัดการเอกสารสหกรณ์'} description={settings?'ข้อมูลติดต่อและชื่อองค์กร · ไม่รวม secrets, feature flags หรือการตั้งค่า MFA':'จัดลำดับเอกสารด้วยเลขน้อยอยู่ก่อน ใช้ลำดับเดียวกันทั้งหน้าบ้านและหลังบ้าน · รองรับฉบับร่างและปิดใช้งาน'} actions={<button className="acc-btn" disabled={busy||loading||actionBusy} onClick={()=>setRevision(v=>v+1)}>โหลดข้อมูลล่าสุด</button>}/>
  {error&&<AdminErrorState message={error}/>} {message&&<p role="status">{message}</p>}

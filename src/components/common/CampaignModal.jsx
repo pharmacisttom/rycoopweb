@@ -102,7 +102,10 @@ export default function CampaignModal() {
             onError={event => { event.currentTarget.style.display = 'none'; }} />}
           <div className="rycoop-campaign-visual-shade" />
           <div className="rycoop-campaign-heading">
-            <span className="rycoop-campaign-eyebrow"><Sparkles size={18} aria-hidden="true" /> ข่าวประชาสัมพันธ์สหกรณ์</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+              <img src="/assets/img/logo.webp" alt="ตราสัญลักษณ์สหกรณ์" style={{ width: 48, height: 48, objectFit: 'contain' }} />
+              <span className="rycoop-campaign-eyebrow" style={{ margin: 0 }}><Sparkles size={18} aria-hidden="true" /> ข่าวประชาสัมพันธ์สหกรณ์</span>
+            </div>
             <h2 id="rycoop-campaign-title">{campaign.title}</h2>
           </div>
         </div>

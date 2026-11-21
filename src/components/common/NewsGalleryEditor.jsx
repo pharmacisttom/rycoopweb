@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import SafeImage from './SafeImage';
 import { mediaLibraryApi } from '../../services/mediaLibraryApi';
+import { showConfirm } from '../../utils/swal';
 import './ActivitySlideshow.css';
 import './NewsGalleryMediaPicker.css';
 
@@ -78,8 +79,12 @@ export default function NewsGalleryEditor({ images, newsId, onChange, disabled, 
         <button type="button" disabled={index === 0} onClick={() => move(index, -1)}>เลื่อนขึ้น</button>
         <button type="button" disabled={index === images.length - 1} onClick={() => move(index, 1)}>เลื่อนลง</button>
         <button type="button" disabled={index === 0} onClick={() => onChange([image, ...images.filter((_, position) => position !== index)])}>ใช้เป็นภาพปก</button>
-        <button type="button" onClick={() => {
-          if (window.confirm('นำภาพออกจากอัลบั้มนี้? ไฟล์เดิมจะยังเก็บไว้เพื่อไม่กระทบข่าวอื่นและประวัติการแก้ไข')) onChange(images.filter((_, position) => position !== index));
+        <button type="button" onClick={async () => {
+          const confirmed = await showConfirm(
+            'นำภาพออกจากอัลบั้มนี้?',
+            'ไฟล์เดิมจะยังเก็บไว้ในคลังรูปภาพเพื่อไม่กระทบข่าวอื่นและประวัติการแก้ไข'
+          );
+          if (confirmed) onChange(images.filter((_, position) => position !== index));
         }}>นำภาพออก</button>
       </div>
     </li>)}</ol>
