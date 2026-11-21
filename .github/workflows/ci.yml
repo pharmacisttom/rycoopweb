@@ -354,6 +354,11 @@ jobs:
       - name: Verify board terms 38 and 39 seat allocation
         run: node tests/BoardTerms38And39AuditTest.mjs
 
+      - name: Verify all 23 subsystem CRUD audit classifications and handbook
+        run: |
+          node tests/AdminCrudAuditCoverageContractTest.mjs
+          node tests/AdminUserManualRC03Test.mjs
+
       - name: Verify staff manual sidebar and route RC03
         run: node tests/AdminUserManualRC03Test.mjs
 
