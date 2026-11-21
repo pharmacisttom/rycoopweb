@@ -20,6 +20,8 @@ assert.match(css, /\.swal2-container\s*\{[^}]*z-index:\s*30000\s*!important;/s);
 assert.match(toast, /void swalToast\(/);
 assert.match(adminAction, /showConfirm as showSwalConfirm/);
 assert.match(adminAction, /await showSwalConfirm\(/);
+assert.match(adminAction, /document\.querySelector\('dialog\[open\]'\)/);
+assert.match(adminAction, /await ask\(\{type:'confirm'/);
 assert.match(swal, /import Swal from 'sweetalert2'/);
 assert.match(swal, /export function showToast\(/);
 console.log('COOKIE_MODAL_AND_SWEETALERT2_CONTRACT=PASS');
