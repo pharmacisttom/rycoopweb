@@ -22,13 +22,13 @@ class MfaController extends Controller
         }
         $user = Auth::user();
         if (!$user) {
-            $this->response->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบ'], 401);
+            $this->response->json(['success' => false, 'code' => 'AUTH_REQUIRED', 'message' => 'กรุณาเข้าสู่ระบบ'], 401);
             return null;
         }
 
         // If user is already fully authenticated (2FA verified), they cannot use login MFA challenge endpoints
         if (Session::get('2fa_verified', false) === true) {
-            $this->response->json(['success' => false, 'message' => 'เซสชันยืนยันตัวตนเรียบร้อยแล้ว'], 401);
+            $this->response->json(['success' => false, 'code' => 'ALREADY_AUTHENTICATED', 'message' => 'เซสชันยืนยันตัวตนเรียบร้อยแล้ว'], 401);
             return null;
         }
 
@@ -37,7 +37,7 @@ class MfaController extends Controller
         $dbVersion = (int) ($user['session_version'] ?? 1);
         if ($sessionVersion !== $dbVersion) {
             Auth::logout();
-            $this->response->json(['success' => false, 'message' => 'เซสชันไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'], 401);
+            $this->response->json(['success' => false, 'code' => 'SESSION_REVOKED', 'message' => 'เซสชันไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'], 401);
             return null;
         }
 
@@ -45,7 +45,7 @@ class MfaController extends Controller
         $mfaStartedAt = (int) Session::get('mfa_started_at', 0);
         if ($mfaStartedAt <= 0 || (time() - $mfaStartedAt > 600)) {
             Auth::logout();
-            $this->response->json(['success' => false, 'message' => 'เซสชันยืนยันตัวตนหมดอายุ กรุณาเข้าสู่ระบบใหม่'], 401);
+            $this->response->json(['success' => false, 'code' => 'MFA_CHALLENGE_EXPIRED', 'message' => 'เซสชันยืนยันตัวตนหมดอายุ (เกิน 10 นาที) กรุณาเข้าสู่ระบบใหม่'], 401);
             return null;
         }
 
@@ -54,7 +54,7 @@ class MfaController extends Controller
             : (Auth::checkPending2FA() && !empty($user['two_factor_enabled']));
 
         if (!$isPending) {
-            $this->response->json(['success' => false, 'message' => 'สถานะการยืนยันตัวตนไม่ถูกต้อง'], 403);
+            $this->response->json(['success' => false, 'code' => 'INVALID_MFA_STATE', 'message' => 'สถานะการยืนยันตัวตนไม่ถูกต้อง'], 403);
             return null;
         }
 
@@ -73,7 +73,7 @@ class MfaController extends Controller
         if (!Auth::check() && !$this->challenge(Auth::checkPendingMfaEnrollment())) return;
         $userId = Auth::id();
         if (!$userId) {
-            $this->response->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            $this->response->json(['success' => false, 'code' => 'AUTH_REQUIRED', 'message' => 'Unauthorized'], 401);
             return;
         }
 
@@ -130,7 +130,7 @@ class MfaController extends Controller
         if (!$this->challenge(true)) return;
         $userId = Auth::id();
         if (!$userId) {
-            $this->response->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            $this->response->json(['success' => false, 'code' => 'AUTH_REQUIRED', 'message' => 'Unauthorized'], 401);
             return;
         }
 
@@ -169,7 +169,7 @@ class MfaController extends Controller
         if (!$this->challenge(true)) return;
         $userId = Auth::id();
         if (!$userId) {
-            $this->response->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            $this->response->json(['success' => false, 'code' => 'AUTH_REQUIRED', 'message' => 'Unauthorized'], 401);
             return;
         }
 

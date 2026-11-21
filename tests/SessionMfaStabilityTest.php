@@ -15,6 +15,13 @@ function callMfa(string $method, array $body = []): WorkflowResponse
     return $r;
 }
 
+function callSpaMe(): WorkflowResponse
+{
+    $r = new WorkflowResponse();
+    (new \App\Controllers\Api\SpaApiController(workflowRequest(), $r))->me();
+    return $r;
+}
+
 try {
     $tempSessionPath = __DIR__ . '/../storage/tmp/stability-test-sessions-' . uniqid();
     if (!is_dir($tempSessionPath)) {
@@ -114,6 +121,43 @@ try {
     $confirmResp = callMfa('confirm', ['code' => $validCode]);
     workflowCheck($confirmResp->status === 200, 'enrollment confirmed successfully');
     workflowCheck(Auth::check(), 'admin is fully authenticated after single regeneration');
+
+    // 8. Invalid session version instantly revokes authentication
+    workflowLogin(1, true);
+    Database::execute('UPDATE users SET session_version = 2 WHERE id = 1');
+    workflowCheck(!Auth::check(), 'mismatched session version revokes authentication');
+    Database::execute('UPDATE users SET session_version = 1 WHERE id = 1');
+
+    // 9. HTTP 401 without auth vs HTTP 403 with MFA required
+    Auth::logout();
+    $guestMe = callSpaMe();
+    workflowCheck($guestMe->status === 401 && ($guestMe->data['authenticated'] ?? null) === false, 'guest /api/auth/me returns HTTP 401 unauthenticated');
+
+    workflowLogin(1, false); // Pending MFA verification
+    $mfaMe = callSpaMe();
+    workflowCheck($mfaMe->status === 403 && ($mfaMe->data['code'] ?? null) === 'TWO_FACTOR_REQUIRED', 'pending MFA /api/auth/me returns HTTP 403 TWO_FACTOR_REQUIRED');
+
+    // 10. Logout invalidation completely clears session
+    workflowLogin(1, true);
+    workflowCheck(Auth::check(), 'login active before logout');
+    Auth::logout();
+    workflowCheck(!Auth::check(), 'logout completely clears authentication state');
+    workflowCheck(!Session::has('user_id'), 'session user_id removed on logout');
+
+    // 11. Valid Admin session surviving simulated Release cutover (shared session storage)
+    workflowLogin(1, true);
+    $cutoverSessionId = session_id();
+    workflowCheck(Auth::check(), 'admin authenticated prior to release cutover');
+
+    // Simulate release cutover: PHP-FPM worker boundary / new release process reload
+    session_write_close();
+    (new ReflectionProperty(Session::class, 'started'))->setValue(null, false);
+
+    session_id($cutoverSessionId);
+    $_COOKIE['rayongcoop_session'] = $cutoverSessionId;
+    Session::start();
+    workflowCheck(Auth::check(), 'valid admin session survives release cutover');
+    workflowCheck(Session::get('user_id') === 1, 'admin user ID preserved across cutover');
 
     // Cleanup temp sessions
     if (is_dir($tempSessionPath)) {

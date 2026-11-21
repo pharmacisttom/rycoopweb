@@ -57,12 +57,18 @@ export function resolveSafeMfaError(error, isRecovery = false) {
     !/exception|stack trace|sqlstate|pdo|syntax error|\/var\/www|\.php/i.test(rawMessage);
 
   if (status === 401) {
+    const isChallengeExpired = code === 'MFA_CHALLENGE_EXPIRED';
+    const isAuthRequired = code === 'AUTH_REQUIRED' || (!code && !isChallengeExpired);
     return {
       status: 401,
-      expired: true,
+      code,
+      expired: isChallengeExpired,
+      authRequired: isAuthRequired,
       message: isSafeThaiMessage
         ? rawMessage
-        : 'เซสชันยืนยันตัวตนหมดอายุหรือไม่ถูกต้อง กรุณาเริ่มเข้าสู่ระบบใหม่',
+        : isChallengeExpired
+          ? 'เซสชันยืนยันตัวตนหมดอายุ (เกิน 10 นาที) กรุณาเริ่มเข้าสู่ระบบใหม่'
+          : 'กรุณาเข้าสู่ระบบก่อนทำการยืนยันตัวตน',
     };
   }
 
@@ -216,6 +222,10 @@ export default function MfaPage({ mode = 'verify' }) {
       .catch((e) => {
         if (e?.name === 'AbortError') return;
         const resolved = resolveSafeMfaError(e, false);
+        if (resolved.authRequired) {
+          navigate('/admin/login', { replace: true });
+          return;
+        }
         if (resolved.redirectMode) {
           navigate(`/admin/mfa/${resolved.redirectMode}`, { replace: true });
           return;
