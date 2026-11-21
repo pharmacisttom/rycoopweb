@@ -28,6 +28,7 @@ export default function AdminActionProvider({children}){
           ? await ask({type:'confirm',label,description:confirm})
           : await showSwalConfirm('ยืนยัน'+label, confirm, { confirmText: 'ยืนยันดำเนินการ', cancelText: 'ยกเลิก' });
         if(!confirmed)throw Object.assign(new Error('ยกเลิกการดำเนินการแล้ว'),{code:'ACTION_CANCELLED'});
+      }
       if(!active.current||invocation.signal.aborted)throw new DOMException('Aborted','AbortError');
       try{return await operation(invocation.signal);}
       catch(exception){
