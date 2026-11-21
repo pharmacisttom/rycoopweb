@@ -282,6 +282,20 @@ class GoogleAuthController extends Controller
         $roleSlug = (string) ($identity['role_slug'] ?? 'staff');
         $hasMfa = (int) ($identity['two_factor_enabled'] ?? 0) === 1 && !empty($identity['two_factor_confirmed_at']);
         $mfaRequired = \App\Services\PrOfficerPolicy::requiresMfa($roleSlug);
+        
+        // The Google identity row's id is NOT the local users.id.
+        // Never pass the identity-link primary key into Auth::login().
+        $sessionIdentity = $identity;
+        $sessionIdentity['id'] = $userId;
+        $sessionIdentity['email'] = (string) ($identity['user_email'] ?? '');
+        $sessionIdentity['name'] = (string) ($identity['user_name'] ?? '');
+
+        if ($userId <= 0 ||
+            $sessionIdentity['email'] === '' ||
+            $sessionIdentity['name'] === '') {
+            throw new \RuntimeException('Invalid linked staff identity');
+        }
+
 
         // Update login stats
         Database::execute("UPDATE users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?", [$ip, $userId]);
@@ -293,21 +307,21 @@ class GoogleAuthController extends Controller
 
         if ($hasMfa) {
             // User has already enrolled in MFA: require TOTP verification
-            Auth::login($identity, false, false);
+            Auth::login($sessionIdentity, false, false);
             $this->redirect(url('admin/mfa/verify'));
             return;
         }
 
         if ($mfaRequired) {
             // Mandatory MFA policy: user must enroll in MFA before gaining full access
-            Auth::login($identity, false, true);
+            Auth::login($sessionIdentity, false, true);
             Session::flash('info', 'สหกรณ์กำหนดให้เจ้าหน้าที่ทุกคนต้องเปิดใช้งานการยืนยันตัวตนสองขั้นตอน (2FA)');
             $this->redirect(url('admin/mfa/enroll'));
             return;
         }
 
         // If MFA is not enforced (e.g. testing)
-        Auth::login($identity, true, false);
+        Auth::login($sessionIdentity, true, false);
         $targetPath = match ($roleSlug) {
             'super_admin' => 'admin/dashboard',
             'member_admin' => 'admin/members/dashboard',
