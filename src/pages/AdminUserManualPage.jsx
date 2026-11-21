@@ -39,7 +39,7 @@ export default function AdminUserManualPage(){
   <article className="admin-module admin-manual" aria-label="คู่มือการใช้งานระบบหลังบ้าน">
    <div className="admin-manual-intro">
     <h1>คู่มือการใช้งาน RYCOOPWEB Admin</h1>
-    <p>คู่มืออ้างอิงเมนูระบบใน Source Code ปัจจุบัน การเข้าถึงแต่ละหน้าแตกต่างกันตาม Role และ Permission บางฟังก์ชันใน RC02/RC03 ยังอยู่ระหว่างตรวจรับ TEST</p>
+    <p>คู่มือปฏิบัติงาน RYCOOPWEB Admin • ฉบับปรับปรุง 21 พฤศจิกายน 2569 สำหรับ Google Login/MFA, Cookie Consent, SweetAlert2 และการจัดการข้อมูลแต่ละโมดูล โดยสิทธิ์ขึ้นกับบทบาทและ Permission ของผู้ใช้ ทั้งนี้ผล CI ไม่เท่ากับการรับรอง CRUD กับ Production ทุกโมดูล</p>
     <div className="admin-manual-actions">
      <button type="button" onClick={()=>window.print()}>พิมพ์ / บันทึก PDF</button>
      <a href="#manual-index">ดูสารบัญ</a>
@@ -48,6 +48,8 @@ export default function AdminUserManualPage(){
    <nav id="manual-index" className="admin-manual-index" aria-label="สารบัญคู่มือ">
     <h2>สารบัญ</h2>
     {groups.map((g,i)=><a key={i} href={'#manual-'+i}>{i+1}. {g.title}</a>)}
+    <a href="#manual-crud">ขั้นตอน CRUD และการทดสอบรายการ</a>
+    <a href="#manual-cookie">Cookie Consent และ SweetAlert2</a>
     <a href="#manual-guidelines">แนวปฏิบัติการบันทึกและเผยแพร่ข้อมูล</a>
     <a href="#manual-problems">แก้ปัญหาเบื้องต้น</a>
    </nav>
@@ -57,6 +59,28 @@ export default function AdminUserManualPage(){
        <h3>{name}</h3><p>{description}</p><Link to={url}>เปิดหน้าระบบ</Link>
      </div>)}
    </section>)}
+   <section id="manual-crud" className="admin-manual-section">
+    <h2>การจัดการข้อมูล (CRUD): เพิ่ม ดู แก้ไข และปิด/ลบรายการ</h2>
+    <ol>
+     <li><strong>Create:</strong> เปิดเมนูตามสิทธิ์ กดเพิ่มข้อมูล กรอกฟิลด์ที่จำเป็น ตรวจเอกสาร/รูปภาพและบันทึกร่าง ตรวจข้อความตอบกลับ</li>
+     <li><strong>Read:</strong> ค้นหารายการที่สร้าง ตรวจรายละเอียด สถานะ เจ้าของข้อมูล วันมีผล และสิทธิ์การมองเห็น</li>
+     <li><strong>Update:</strong> แก้จากข้อมูลล่าสุด ตรวจ Version/Conflict (409) และไม่บันทึกทับการแก้ของผู้อื่น</li>
+     <li><strong>Delete/Disable:</strong> ตรวจผลกระทบและสิทธิ์ ยืนยันด้วย Dialog; การปิดใช้งาน/Soft Delete ไม่ใช่การลบถาวร</li>
+     <li><strong>Publish/Approve:</strong> เป็น Workflow แยกจาก Save; ตรวจ Preview, Maker–Checker และ Step-up MFA ตามที่ระบบกำหนด</li>
+     <li><strong>Verify:</strong> โหลดรายการซ้ำ ตรวจ Audit Trail และหน้าสาธารณะเมื่อมีการเผยแพร่; เมื่อผิดพลาดให้บันทึกรหัส HTTP กับเวลาโดยไม่เปิดเผยข้อมูลลับ</li>
+    </ol>
+    <p>ไม่ควรทดสอบ Create/Update/Delete ด้วยข้อมูลจริงของสมาชิกหรือการเงินบน Production การตรวจ CRUD ให้ใช้ฐานข้อมูล TEST ที่แยกจาก Production หรือ Fixture จำลองเท่านั้น ฟังก์ชันแบบอ่านอย่างเดียว เช่น Reports/Audit Logs ไม่จำเป็นต้องมีปุ่มเพิ่ม/ลบ</p>
+   </section>
+   <section id="manual-cookie" className="admin-manual-section">
+    <h2>Cookie Consent และ SweetAlert2</h2>
+    <ol>
+     <li>ผู้ที่ยังไม่ได้บันทึกการเลือกจะเห็น Cookie Dialog ที่หน้าเว็บไซต์หรือหน้า CMS แต่จะไม่ขัดขวางหน้า Login และ MFA</li>
+     <li>เลือกยอมรับหรือปฏิเสธคุกกี้ไม่จำเป็น ระบบจะบันทึกผ่าน API พร้อม CSRF ก่อนปิด Dialog; หากบันทึกไม่สำเร็จให้ลองใหม่</li>
+     <li>เมื่อเคยเลือกแล้ว ให้ใช้ปุ่ม “ตั้งค่าคุกกี้” เพื่อกลับมาเปลี่ยนการเลือก โดยไม่ต้องล้างข้อมูลผู้ใช้</li>
+     <li>SweetAlert2 Toast จะแสดงเมื่อมีเหตุการณ์แจ้งเตือน ไม่ได้เปิดค้างตั้งแต่โหลดหน้า ส่วนคำสั่งสำคัญอาจใช้ Dialog เดิมภายใน Native Modal เพื่อไม่ให้ Layer บังปุ่ม</li>
+     <li>การยืนยัน MFA/Step-up เป็นระบบความปลอดภัยแยกต่างหาก ห้ามข้ามหรือใช้รหัสของผู้อื่น</li>
+    </ol>
+   </section>
    <section id="manual-guidelines" className="admin-manual-section">
     <h2>แนวปฏิบัติการบันทึกและเผยแพร่</h2>
     <ol><li>ตรวจว่ากำลังอยู่ใน TEST หรือ Production</li><li>ตรวจความถูกต้องและแหล่งอ้างอิงของข้อมูลก่อนบันทึก</li><li>บันทึกร่างและตรวจตัวอย่าง/ประวัติการเปลี่ยนแปลง</li><li>อนุมัติหรือยืนยัน MFA เฉพาะเมื่อระบบร้องขอ และเป็นผู้มีสิทธิ์</li><li>ตรวจหน้าสาธารณะหลังเผยแพร่และบันทึกหลักฐานการตรวจรับ</li></ol>
@@ -70,10 +94,13 @@ export default function AdminUserManualPage(){
       <dt>บันทึกร่างไม่ได้</dt><dd>ตรวจข้อมูลจำเป็น วันที่มีผล Permission และข้อความแจ้งเตือน</dd>
       <dt>หน้าเว็บไม่เปลี่ยนหลังบันทึก</dt><dd>การบันทึกร่างยังไม่ใช่การเผยแพร่ ต้องตรวจสถานะอนุมัติและวันที่มีผล</dd>
       <dt>รูปภาพไม่แสดง</dt><dd>ตรวจชนิดไฟล์ ขนาด สิทธิ์ Media Library และ URL รูป</dd>
+      <dt>Cookie Dialog ไม่ปรากฏ</dt><dd>ตรวจว่าเคยเลือกแล้วหรือไม่ และใช้ปุ่ม “ตั้งค่าคุกกี้”; ทดสอบผู้ใช้ใหม่ในหน้าต่างส่วนตัวโดยไม่ใช้ Session เจ้าหน้าที่จริง</dd>
+      <dt>SweetAlert2 ไม่ปรากฏ</dt><dd>ให้ทำรายการที่มีข้อความแจ้งเตือนหรือยืนยันก่อน; หาก Dialog ถูกบัง ให้เก็บภาพหน้าจอและแจ้ง URL/Browser ไม่ต้องปรับ z-index เอง</dd>
+      <dt>CRUD บันทึกไม่ได้ หรือพบ 401/403/409/419</dt><dd>401 ตรวจ Session; 403 ตรวจสิทธิ์/Step-up; 409 โหลด Version ล่าสุด; 419 ขอ CSRF ใหม่โดยรีเฟรชหน้าและทำรายการใหม่ ห้ามข้าม Security Gate</dd>
       <dt>CSS ซ้อนหรือหน้าแสดงผิด</dt><dd>บันทึก URL เวลา เบราว์เซอร์ ภาพหน้าจอ และแจ้งผู้ดูแลเพื่อตรวจ Asset/Console</dd>
     </dl>
    </section>
-   <p className="admin-manual-footnote">เอกสารในระบบนี้เป็นคู่มือใช้งานเชิงปฏิบัติ ไม่ใช่หลักฐานว่าทุกโมดูลผ่าน UAT แล้ว | ปรับปรุง 18 พฤศจิกายน 2569</p>
+   <p className="admin-manual-footnote">เอกสารในระบบนี้เป็นคู่มือใช้งานเชิงปฏิบัติ ไม่ใช่หลักฐานว่าทุกโมดูลผ่าน UAT แล้ว | ปรับปรุง 21 พฤศจิกายน 2569</p>
   </article>
  </AdminControlCenterShell>;
 }
