@@ -98,7 +98,7 @@ export default function CookieConsent() {
             <button type="button" className="cookie-consent__reject" onClick={() => setIsVisible(false)}>
               ดำเนินการต่อโดยใช้เฉพาะคุกกี้จำเป็น (ยังไม่บันทึกการเลือก)
             </button>
-          </div>
+          </div>}
         </div>
         <div className="cookie-consent__actions" aria-describedby="cookie-consent-description">
           <button type="button" className="cookie-consent__reject" disabled={saving} onClick={() => saveChoice('rejected')}>ปฏิเสธ</button>
