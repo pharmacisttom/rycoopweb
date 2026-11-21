@@ -360,6 +360,9 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Verify cookie modal and SweetAlert2 integration
+        run: node tests/CookieModalSweetAlert2ContractTest.mjs
+
       - name: Verify official branding build
         run: node tests/BrandingTest.mjs
 
@@ -394,6 +397,8 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           sudo apt-get install -y fonts-noto-core
+      - name: Verify visible cookie consent and SweetAlert2 in Chromium
+        run: node tests/CookieSweetAlertBrowserTest.mjs
       - name: Verify admin UI and critical action contracts
         run: node tests/AdminUIBrowserTest.mjs
       - name: Set up PHP for real staff-session integration

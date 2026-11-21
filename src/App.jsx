@@ -292,7 +292,9 @@ export default function App() {
         </Suspense>
       </main>
 
-      {!memberAdminPage && <><Footer /><QuickActionDock /><AIChatWidget /><CookieConsent />{memberPortalEnabled && <AuthModal />}<CampaignModal /></>}
+      {/* Consent must remain available on public and admin routes, including /admin/cms. */}
+      <CookieConsent />
+      {!memberAdminPage && <><Footer /><QuickActionDock /><AIChatWidget />{memberPortalEnabled && <AuthModal />}<CampaignModal /></>}
 
       {/* Inactivity Warning Modal */}
       <SessionTimeoutModal

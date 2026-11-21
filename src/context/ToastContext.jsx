@@ -16,14 +16,16 @@ export function ToastProvider({ children }) {
 
   const showToast = useCallback(({ type = 'info', title = '', message = '', duration = 4000 }) => {
     const id = Date.now() + Math.random().toString(36).substring(2, 7);
-    const newToast = { id, type, title, message, duration };
-
-    setToasts((prev) => [...prev.slice(-4), newToast]); // keep at most 5 toasts
-
-    if (duration > 0) {
-      setTimeout(() => {
-        removeToast(id);
-      }, duration);
+    // React routes use the bundled SweetAlert2 integration, not the legacy
+    // public/assets/js/swal-config.js script (which is not loaded by Vite).
+    // Preserve a local fallback if SweetAlert2 cannot open for any reason.
+    try {
+      void swalToast([title, message].filter(Boolean).join(' — '), type, duration);
+    } catch {
+      setToasts((prev) => [...prev.slice(-4), { id, type, title, message, duration }]);
+      if (duration > 0) {
+        setTimeout(() => removeToast(id), duration);
+      }
     }
     return id;
   }, [removeToast]);

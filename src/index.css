@@ -418,30 +418,37 @@ input, select, textarea {
   border-radius: var(--radius-full);
 }
 
+/* Dialogs are rendered at document.body level. AdminLTE overlays and transformed
+   admin shells must never intercept SweetAlert2 confirmation clicks. */
+.swal2-container {
+  z-index: 30000 !important;
+}
+
 /* Cookie consent */
 .cookie-consent {
   position: fixed;
-  z-index: 1100;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 1rem 1.25rem max(1rem, env(safe-area-inset-bottom));
-  pointer-events: none;
+  z-index: 11000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: rgba(13, 32, 58, 0.64);
 }
 
 .cookie-consent__panel {
-  width: min(100%, 1060px);
-  margin: 0 auto;
-  padding: 1rem 1.25rem;
+  width: min(100%, 680px);
+  margin: auto;
+  padding: 1.5rem;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--bg-surface-elevated);
+  background: var(--bg-surface-elevated, #fff);
   box-shadow: var(--shadow-xl);
-  pointer-events: auto;
 }
 
 .cookie-consent__icon {
@@ -469,6 +476,7 @@ input, select, textarea {
 }
 
 .cookie-consent__actions {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 0.65rem;
