@@ -19,7 +19,7 @@ No database migrations, production settings or shared session storage were chang
 
 ## Local evidence
 
-Passed: AuthBoundarySessionTest (60 checks), SessionMfaStabilityTest,
+Passed: AuthBoundarySessionTest (65 checks), SessionMfaStabilityTest,
 MfaWorkflowTest, MfaRateLimitTest, PermissionBehaviorTest, RequestSecurityTest,
 SecurityRegressionTest, PHP syntax checks for Auth/Session, and Vite build.
 Build reports the existing large-chunk warning.
@@ -47,6 +47,15 @@ Quality Gate run 44876343235 failed as follows:
   module's accessible status element; the saved gallery payload assertion remains.
 No required CI check was removed or made optional. Fresh CI evidence must be tied
 to the final Git SHA, not the previous failed run.
+
+The next run at 9fef700 revealed two later gates previously skipped:
+- Real MySQL CRUD on PHP 8.3 reached Auth::login after session_write_close();
+  Session::$started incorrectly claimed a native session was still active.
+  Session::start now checks native session_status, and logout reopens closed
+  persisted sessions before destroying them. Both paths have isolated regressions.
+- Layout/Board static QA expected direct e.target.value use. The existing async
+  confirmation handler correctly captures nextVal before awaiting. The contract
+  test now checks capture, local selection and URL query update explicitly.
 
 The new test uses synthetic SQLite identities and a private temporary session
 directory, with concurrent child processes. It covers login/MFA predecessors,

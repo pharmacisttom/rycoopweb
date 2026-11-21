@@ -13,7 +13,9 @@ assert 'useSearchParams' in page
 assert "searchParams.get('section')" in page
 assert "available.some(item => item.key === requestedSection)" in page
 assert "setSection(requestedSection)" in page
-assert "next.set('section',e.target.value)" in page
+assert "const nextVal = e.target.value;" in page
+assert "setSection(nextVal)" in page
+assert "next.set('section',nextVal)" in page
 assert "if (!sections.length || !requestedSection || requestedSection === section || dirty) return;" in page
 assert re.search(r"memberAdminApi\('/api/admin/public-content/sections'",page)
 print("PASS: public content sidebar route / section query contract")

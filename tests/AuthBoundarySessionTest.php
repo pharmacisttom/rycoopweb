@@ -40,6 +40,10 @@ try {
     boundaryRequest($anonymous);workflowCheck(!Auth::check()&&!Auth::checkPending2FA(),'anonymous old ID cannot reach successful login');
     boundaryRequest($authenticated);workflowCheck(Auth::check(),'new login session remains usable');
     workflowCheck(!Csrf::validate($oldCsrf),'pre-login CSRF token is not promoted');
+    session_write_close();Session::regenerateForAuthentication();
+    workflowCheck(session_status()===PHP_SESSION_ACTIVE&&session_id()!==$authenticated&&Auth::check(),'authentication regeneration reopens a natively closed session');
+    $closedSession=session_id();session_write_close();Auth::logout();boundaryRequest($closedSession);
+    workflowCheck(!Auth::check(),'logout after native session close invalidates persisted authentication');
     workflowLogin(1,false);$pending=session_id();Session::rotate(60);$pendingCurrent=session_id();
     Auth::verify2FA();$verified=session_id();
     boundaryRequest($pending);workflowCheck(!Auth::check(),'pre-rotation pending ID cannot forward across MFA success');
@@ -119,5 +123,14 @@ try {
             boundaryRequest($identifier);
             workflowCheck(!Auth::check(),$cancelHandoff?'cancelled handoff discards target authentication':'logout inside handoff invalidates all reachable authentication');
         }
+    }
+    workflowLogin(1,true);$predecessor=session_id();session_write_close();
+    $rotator=boundaryWorker('rotate-paused',$predecessor);boundarySignal($rotator[1],'HANDOFF');
+    Database::execute('UPDATE users SET session_version=session_version+1 WHERE id=1');
+    fwrite($rotator[1][0],"RESUME\n");fflush($rotator[1][0]);
+    $rotated=boundaryResult($rotator);
+    workflowCheck(!$rotated['authenticated'],'revocation inside handoff rejects rotator authentication');
+    foreach([$predecessor,$rotated['id']] as $identifier) {
+        boundaryRequest($identifier);workflowCheck(!Auth::check(),'revocation inside handoff cannot be restored through forwarding');
     }
 }finally{workflowFinish();}

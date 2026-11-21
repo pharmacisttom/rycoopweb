@@ -10,10 +10,12 @@ class Session
 
     public static function start(): void
     {
-        if (self::$started || session_status() === PHP_SESSION_ACTIVE) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
             self::$started = true;
             return;
         }
+        // session_write_close() may have released the native session in this request.
+        self::$started = false;
 
         $sessionConfig = config('security.session') ?? [];
         $lifetime = (int) ($sessionConfig['lifetime'] ?? 7200);
@@ -252,6 +254,10 @@ class Session
 
     public static function destroy(): void
     {
+        // Logout can follow an early session_write_close(); reopen to invalidate persisted state.
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            self::start();
+        }
         if (session_status() === PHP_SESSION_ACTIVE) {
             $_SESSION = [];
             if (ini_get("session.use_cookies")) {
