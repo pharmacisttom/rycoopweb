@@ -9,7 +9,7 @@ import {
 import { memberAdminApi } from '../services/memberAdminApi';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
 import { usePublicContent } from '../context/PublicContentContext';
-import { showConfirm, showDeleteConfirm, showSuccess, showError, showToast, showInfo } from '../utils/swal';
+import { showConfirm, showDeleteConfirm, showSuccess, showError, showToast, showInfo, confirmPublish, showPrompt } from '../utils/swal';
 import './PublicContentAdminPage.css';
 import './BoardTermAdminRC06.css';
 import {auditBoardTerms,BOARD_TERMS,BOARD_POSITION_OPTIONS} from '../utils/boardTermAudit';
@@ -108,9 +108,9 @@ export default function PublicContentAdminPage() {
     return current.map((item,index)=>index!==selected?item:tupleSection(section)?[key==='name'?newValue:item[0],key==='position'?newValue:item[1]]:{...item,[key]:newValue});
   });setDirty(true);}
   function add(){if(!Array.isArray(value) || section==='profile')return;let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:section==='boards'?'กรรมการ':'',image:'',...(section==='boards'?{term:BOARD_TERMS.find(term=>term===value[selected]?.term)||'ชุดที่ 39',status:'active'}:{})};else if(section==='groups')entry={title:'',members:[],term:(catalog.boardMembers||[]).some(person=>person?.term==='ชุดที่ 39') ? 'ชุดที่ 39' : (catalog.boardMembers?.[0]?.term || 'ชุดที่ 39')};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
-  function copyBoardToTerm(){
+  async function copyBoardToTerm(){
     if(section!=='boards'||!row)return;
-    const target=window.prompt('ระบุชุดกรรมการใหม่ เช่น ชุดที่ 39', 'ชุดที่ 39');
+    const target = await showPrompt('ระบุชุดกรรมการใหม่', 'เช่น ชุดที่ 39', 'ชุดที่ 39');
     if(!target?.trim() || target.trim()===row.term)return;
     const id=Math.max(0,...value.map(person=>Number(person.id)||0))+1;
     setValue(current=>[...current,{...row,id,term:target.trim()}]);
@@ -175,7 +175,7 @@ export default function PublicContentAdminPage() {
     }
   }
   async function publish(revision){
-    const confirmed = await showConfirm(
+    const confirmed = await confirmPublish(
       `ยืนยันเผยแพร่ร่าง #${revision.id}?`,
       `มีผลตั้งแต่วันที่ ${revision.effective_on} ข้อมูลหน้าเว็บจะเปลี่ยนตามเนื้อหาร่างนี้ทันทีหรือตามวันที่มีผล`
     );

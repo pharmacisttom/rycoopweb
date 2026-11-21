@@ -190,4 +190,79 @@ export function showValidationError(message = 'กรุณาตรวจสอ
   });
 }
 
+/**
+ * 11. confirmPublish() -> Promise<boolean>
+ */
+export async function confirmPublish(
+  title = 'ยืนยันการเผยแพร่ข้อมูลสู่สาธารณะ?',
+  text = 'ข้อมูลนี้จะถูกแสดงผลบนเว็บไซต์จริงทันทีสำหรับสมาชิกและประชาชนทั่วไป ท่านต้องการดำเนินการต่อหรือไม่?',
+  options = {}
+) {
+  const result = await SwalApp.fire({
+    icon: options.icon || 'question',
+    iconColor: options.iconColor || '#073B74',
+    title,
+    text: typeof text === 'string' ? text : undefined,
+    html: typeof text !== 'string' ? text : undefined,
+    showCancelButton: true,
+    confirmButtonText: options.confirmText || 'เผยแพร่ทันที',
+    cancelButtonText: options.cancelText || 'ยกเลิก',
+    customClass: {
+      popup: 'swal2-rayongcoop-popup rounded-4 shadow-lg border-0',
+      confirmButton: 'btn btn-success px-4 py-2 me-2 font-weight-medium shadow-sm',
+      cancelButton: 'btn btn-outline-secondary px-4 py-2 font-weight-medium',
+    },
+    ...options,
+  });
+  return result.isConfirmed;
+}
+
+/**
+ * 12. showPrompt() -> Promise<string|null>
+ */
+export async function showPrompt(title = 'กรอกข้อมูล', inputLabel = '', defaultValue = '', options = {}) {
+  const result = await SwalApp.fire({
+    title,
+    input: 'text',
+    inputLabel,
+    inputValue: defaultValue,
+    showCancelButton: true,
+    confirmButtonText: options.confirmText || 'ตกลง',
+    cancelButtonText: options.cancelText || 'ยกเลิก',
+    inputValidator: options.validator || null,
+    ...options,
+  });
+  if (result.isConfirmed) {
+    return result.value ?? '';
+  }
+  return null;
+}
+
+// Reusable Admin Alert Service Aliases matching specifications
+export const success = showSuccess;
+export const error = showError;
+export const warning = showWarning;
+export const info = showInfo;
+export const confirm = showConfirm;
+export const confirmDelete = showDeleteConfirm;
+export const prompt = showPrompt;
+export const loading = showLoading;
+export const closeLoadingAction = closeLoading;
+export const toast = showToast;
+
+export const adminAlert = {
+  success,
+  error,
+  warning,
+  info,
+  confirm,
+  confirmDelete,
+  confirmPublish,
+  prompt,
+  loading,
+  closeLoading,
+  toast,
+  showValidationError,
+};
+
 export default SwalApp;

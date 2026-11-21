@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Images, Plus, UploadCloud, RefreshCw } from 'lucide-react';
 import { memberAdminApi } from '../services/memberAdminApi';
-import { showConfirm, showDeleteConfirm, showSuccess, showError } from '../utils/swal';
+import { showConfirm, showDeleteConfirm, showSuccess, showError, showPrompt } from '../utils/swal';
 
 const emptyForm = { title: '', description: '', location: '', event_date: '' };
 const MAX_QUEUE = 200;
@@ -106,7 +106,7 @@ export default function AdminActivitiesPage() {
     } catch (e) { setError(e.message); return false; } finally { setBusy(false); }
   };
   const changeCaption = async (photo) => {
-    const caption = window.prompt('คำบรรยายภาพ (สูงสุด 500 ตัวอักษร)', photo.caption || '');
+    const caption = await showPrompt('คำบรรยายภาพ (สูงสุด 500 ตัวอักษร)', 'ระบุคำบรรยายภาพ', photo.caption || '');
     if (caption === null) return;
     await action(`/photos/${photo.id}/caption`, { caption });
   };
