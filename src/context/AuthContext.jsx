@@ -56,10 +56,13 @@ export function AuthProvider({ children }) {
         if (result?.success && result.authenticated) {
           if(result.user)setUser(current=>{const updated=mergeServerIdentity(current,result.user);return JSON.stringify(current)===JSON.stringify(updated)?current:updated;});
           setSessionStatus('online');
+        } else if (result?.serverError || result?.networkError) {
+          // Keep cached identity during transient network glitches or release cutovers
+          setSessionStatus('offline');
         } else if (['MFA_ENROLLMENT_REQUIRED','TWO_FACTOR_REQUIRED'].includes(result?.code)) {
           setUser(null);
           setSessionStatus(result.code === 'MFA_ENROLLMENT_REQUIRED' ? 'mfa-enroll' : 'mfa-verify');
-        } else if (result?.authenticated === false) {
+        } else if (result?.authenticated === false || result?.status === 401) {
           setUser(null);
           setSessionStatus('expired');
         } else {

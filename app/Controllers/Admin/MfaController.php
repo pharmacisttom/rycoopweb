@@ -21,11 +21,43 @@ class MfaController extends Controller
             header('Cache-Control: no-store, private');
         }
         $user = Auth::user();
-        $valid = $user && (int) Session::get('session_version', 1) === (int) ($user['session_version'] ?? 1)
-            && time() - (int) Session::get('mfa_started_at', 0) <= 600;
-        if (!$valid && Auth::id()) Auth::logout();
-        $valid = $valid && ($enrollment ? Auth::checkPendingMfaEnrollment() && empty($user['two_factor_enabled']) : Auth::checkPending2FA() && !empty($user['two_factor_enabled']));
-        if (!$valid) { $this->response->json(['success'=>false,'message'=>'เซสชันยืนยันตัวตนหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'],401); return null; }
+        if (!$user) {
+            $this->response->json(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบ'], 401);
+            return null;
+        }
+
+        // If user is already fully authenticated (2FA verified), they cannot use login MFA challenge endpoints
+        if (Session::get('2fa_verified', false) === true) {
+            $this->response->json(['success' => false, 'message' => 'เซสชันยืนยันตัวตนเรียบร้อยแล้ว'], 401);
+            return null;
+        }
+
+        // Validate session version
+        $sessionVersion = (int) Session::get('session_version', 1);
+        $dbVersion = (int) ($user['session_version'] ?? 1);
+        if ($sessionVersion !== $dbVersion) {
+            Auth::logout();
+            $this->response->json(['success' => false, 'message' => 'เซสชันไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'], 401);
+            return null;
+        }
+
+        // MFA challenge is strictly time-limited to 600 seconds
+        $mfaStartedAt = (int) Session::get('mfa_started_at', 0);
+        if ($mfaStartedAt <= 0 || (time() - $mfaStartedAt > 600)) {
+            Auth::logout();
+            $this->response->json(['success' => false, 'message' => 'เซสชันยืนยันตัวตนหมดอายุ กรุณาเข้าสู่ระบบใหม่'], 401);
+            return null;
+        }
+
+        $isPending = $enrollment
+            ? (Auth::checkPendingMfaEnrollment() && empty($user['two_factor_enabled']))
+            : (Auth::checkPending2FA() && !empty($user['two_factor_enabled']));
+
+        if (!$isPending) {
+            $this->response->json(['success' => false, 'message' => 'สถานะการยืนยันตัวตนไม่ถูกต้อง'], 403);
+            return null;
+        }
+
         return $user;
     }
 
@@ -193,7 +225,6 @@ class MfaController extends Controller
 
         // Mark 2FA verified in active session
         Auth::verify2FA();
-        Session::regenerate();
         $this->clearRateLimit($userId, $this->request->ip());
 
         AuditService::log('mfa', 'enroll_confirmed', (string) $userId, null, [
@@ -293,7 +324,6 @@ class MfaController extends Controller
         if ($used !== 1) { $this->response->json(['success'=>false,'message'=>'รหัสถูกใช้แล้ว กรุณารอรหัสถัดไป'],409); return; }
 
         Auth::verify2FA();
-        Session::regenerate();
 
         $this->clearRateLimit($userId, $ip);
 
@@ -379,7 +409,6 @@ class MfaController extends Controller
 
         // Success
         Auth::verify2FA();
-        Session::regenerate();
         $this->clearRateLimit($userId, $ip);
 
         $remaining = TwoFactorService::getRecoveryCodesRemaining($userId);

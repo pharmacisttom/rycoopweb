@@ -29,19 +29,24 @@ const apiFetch = async (path, options = {}) => {
       if (res.ok) {
         return await res.json();
       }
-      if (res.status === 403 || res.status === 503 || res.status === 429) {
+      if (res.status === 403 || res.status === 429) {
         const result = await res.json();
         return result;
       }
       if (res.status === 401) {
-        return { success: false, authenticated: false, message: 'กรุณาเข้าสู่ระบบ' };
+        let data = {};
+        try { data = await res.json(); } catch (_) {}
+        return { success: false, authenticated: false, status: 401, ...data, message: data.message || 'กรุณาเข้าสู่ระบบ' };
+      }
+      if (res.status >= 500) {
+        return { success: false, serverError: true, status: res.status, message: 'เซิร์ฟเวอร์ขัดข้องชั่วคราว' };
       }
     } catch (e) {
       // try next URL
     }
   }
 
-  return { success: false, message: 'ไม่สามารถติดต่อ API ได้' };
+  return { success: false, networkError: true, message: 'ไม่สามารถติดต่อ API ได้' };
 };
 
 // ──────────────────────────────────────────────
