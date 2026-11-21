@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { memberAdminApi } from '../../services/memberAdminApi';
+import { showConfirm as showSwalConfirm } from '../../utils/swal';
 import { AdminFormField, AdminModal } from './AdminUI';
 
 const Context=createContext(null);
@@ -18,7 +19,7 @@ export default function AdminActionProvider({children}){
     if(locked.current)throw Object.assign(new Error('มีคำสั่งกำลังดำเนินการ กรุณารอสักครู่'),{code:'ACTION_IN_PROGRESS'});
     locked.current=true;setBusy(true);const invocation=new AbortController();controller.current=invocation;
     try{
-      if(confirm&&!await ask({type:'confirm',label,description:confirm}))throw Object.assign(new Error('ยกเลิกการดำเนินการแล้ว'),{code:'ACTION_CANCELLED'});
+      if(confirm&&!await showSwalConfirm('ยืนยัน'+label, confirm, { confirmText: 'ยืนยันดำเนินการ', cancelText: 'ยกเลิก' }))throw Object.assign(new Error('ยกเลิกการดำเนินการแล้ว'),{code:'ACTION_CANCELLED'});
       if(!active.current||invocation.signal.aborted)throw new DOMException('Aborted','AbortError');
       try{return await operation(invocation.signal);}
       catch(exception){
