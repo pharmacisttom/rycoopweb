@@ -1,7 +1,7 @@
 # RC17 — RYCOOPWEB Admin CRUD Audit & Handbook Update
 
-**วันที่:** 21 พฤศจิกายน 2569  
-**Baseline Source:** `429f09ea5ed0d26c98737f61774f5bb5289e9b73` (production cookie-portal source line)  
+**วันที่:** 21 พฤศจิกายน 2569
+**Baseline Source:** `429f09ea5ed0d26c98737f61774f5bb5289e9b73` (production cookie-portal source line)
 **ขอบเขต:** Frontend → API → Service/Database → RBAC/CSRF/MFA → Audit → UI feedback → คู่มือ `/app/admin/manual`
 
 > **หมายเหตุสำคัญ:** รายงานนี้จำแนก *หลักฐานการทดสอบอัตโนมัติ* ออกจาก *การตรวจรับกับระบบ TEST/Production จริง* ไม่อ้างว่า CRUD ทุกหน้าใช้งานได้จริงจากการมี Route หรือ HTTP 200 เท่านั้น ห้ามทดสอบคำสั่งแก้ไขข้อมูลสมาชิก/การเงินบน Production
