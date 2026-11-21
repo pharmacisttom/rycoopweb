@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { CheckCircle2, AlertTriangle, AlertCircle, Info, X, ShieldAlert } from 'lucide-react';
 import { showConfirm, showDeleteConfirm, showToast as swalToast } from '../utils/swal';
 
