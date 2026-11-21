@@ -88,7 +88,7 @@ class Auth
     public static function login(array $user, bool $verified2FA = false, bool $requiresEnrollment = false): void
     {
         Session::start();
-        Session::regenerate();
+        Session::regenerateForAuthentication(false);
         Session::set('user_id', (int) $user['id']);
         Session::set('user_email', $user['email']);
         Session::set('user_name', $user['name']);
@@ -107,7 +107,7 @@ class Auth
     public static function verify2FA(): void
     {
         Session::start();
-        Session::regenerate();
+        Session::regenerateForAuthentication();
         Session::remove('mfa_enroll_secret');
         Session::remove('mfa_enroll_expires');
         Session::set('2fa_verified', true);
