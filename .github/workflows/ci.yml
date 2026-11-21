@@ -210,6 +210,20 @@ jobs:
           CRUD_DISPOSABLE_MYSQL: "1"
         run: php tests/AdminCrudMySqlTest.php
 
+      - name: Generate full registered Admin API CRUD inventory (source-level only)
+        run: |
+          php scripts/export-admin-crud-coverage.php
+          test -s docs/audit/ADMIN_CRUD_COVERAGE_MATRIX.md
+          grep -Fq '/api/admin/media' docs/audit/ADMIN_CRUD_COVERAGE_MATRIX.md
+
+      - name: Upload registered API CRUD coverage for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-crud-source-coverage-php-${{ matrix.php }}
+          path: docs/audit/ADMIN_CRUD_COVERAGE_MATRIX.md
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Real MySQL 8 legacy member migration and rollback
         env:
           CRUD_DISPOSABLE_MYSQL: "1"
@@ -353,6 +367,11 @@ jobs:
 
       - name: Verify board terms 38 and 39 seat allocation
         run: node tests/BoardTerms38And39AuditTest.mjs
+
+      - name: Verify all 23 subsystem CRUD audit classifications and handbook
+        run: |
+          node tests/AdminCrudAuditCoverageContractTest.mjs
+          node tests/AdminUserManualRC03Test.mjs
 
       - name: Verify staff manual sidebar and route RC03
         run: node tests/AdminUserManualRC03Test.mjs
