@@ -19,15 +19,34 @@ No database migrations, production settings or shared session storage were chang
 
 ## Local evidence
 
-Passed: AuthBoundarySessionTest (23 checks), SessionMfaStabilityTest,
+Passed: AuthBoundarySessionTest (60 checks), SessionMfaStabilityTest,
 MfaWorkflowTest, MfaRateLimitTest, PermissionBehaviorTest, RequestSecurityTest,
 SecurityRegressionTest, PHP syntax checks for Auth/Session, and Vite build.
 Build reports the existing large-chunk warning.
 
-FAILED: WorkflowRoutesTest at auth guard
-`/api/admin/news/{id}/gallery/{filename}`. Its route registration and test were
-not changed by this patch. This remains a release gate requiring investigation.
-MemberPdpaGateTest.php was not present, so that requested suite was not run.
+WorkflowRoutesTest now passes 457 checks after adding route-level authentication
+and news.view permission enforcement to the gallery endpoint. Controller checks
+remain in place. NewsGalleryAccessTest passes 7 checks, including actual WebP
+bytes for authorized synthetic users and denial for guests, pending enrollment,
+unprivileged users and images outside article membership.
+
+The complete 22-suite isolated PHP workflow/security batch passes locally.
+MemberPdpaGateTest.php is not present; no claim is made for that nonexistent suite.
+
+## CI failure diagnosis (previous SHA 27f7cfd)
+
+Quality Gate run 44876343235 failed as follows:
+- PHP 8.3 job 136761761072 and PHP 8.5 job 136761761298: WorkflowRoutesTest
+  stopped at the unguarded gallery route. No interpreter-specific failure at this step.
+- React job 136761761339: MfaUiRedesignTest line 122 incorrectly expected every
+  HTTP 401 to mean challenge expiry; the build step was skipped, not a Vite failure.
+  The test now distinguishes AUTH_REQUIRED from MFA_CHALLENGE_EXPIRED, preserving
+  both security assertions and the RC16.31 server contract.
+- Browser job 136761761726: an exact text locator matched both the persistent
+  save-status message and SweetAlert message. The locator now targets the
+  module's accessible status element; the saved gallery payload assertion remains.
+No required CI check was removed or made optional. Fresh CI evidence must be tied
+to the final Git SHA, not the previous failed run.
 
 The new test uses synthetic SQLite identities and a private temporary session
 directory, with concurrent child processes. It covers login/MFA predecessors,
@@ -36,10 +55,16 @@ CSRF rotation and compatible process restart. It does not prove live cutover UAT
 
 ## Remaining risks and VPS verification
 
-Periodic handoff may briefly deny a concurrent request before its forwarding
-record is installed. Tests allow safe denial; they do not prove linearizable
-logout against every possible in-flight writer. Production concurrency UAT is
-required. Never log session IDs or export/delete existing shared session files.
+Periodic handoff now writes an identity-free in-progress marker. Readers wait up
+to 20 attempts of 25ms; timeout cancels the predecessor and the rotator discards
+its target instead of publishing orphaned authentication. Tests force logout
+inside this window, including timeout cancellation. Other tests queue logout
+behind a locked rotating session and revoke the shared synthetic user's version
+while rotation is pending (five repetitions each). All returned IDs are checked
+for denied authentication after completion. Native file-session locking and a
+test-only SessionHandler barrier are used; this is not a proof for arbitrary
+custom Production save handlers. Production concurrency UAT is still required.
+Never log session IDs or export/delete existing shared session files.
 
 Local worktree was clean before this patch and the fetched release branch matched
 the base above. The reported dirty VPS candidate has NOT been inspected. Preserve
@@ -56,7 +81,7 @@ Keep the shared Production session directory and encryption keys unchanged.
 
 1. Resolve the actual active RC16.6 release directory and retain it as rollback.
 2. Preserve/reconcile the dirty candidate and identify the exact new Git SHA.
-3. Resolve the failing route test and pass CI plus isolated authentication tests.
+3. Confirm fresh CI plus isolated authentication tests pass for the approved SHA.
 4. Verify backup/restore evidence and review compatibility; no migrations needed.
 5. Stage a separate immutable directory from the approved SHA; build assets there.
 6. Validate PHP syntax and the actual Nginx/PHP-FPM configuration without exposing

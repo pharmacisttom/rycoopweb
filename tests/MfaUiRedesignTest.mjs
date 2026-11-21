@@ -119,7 +119,14 @@ try {
 
   const err401 = resolveSafeMfaError({ status: 401, message: 'Unauthorized' }, false);
   assert.equal(err401.status, 401);
-  assert.equal(err401.expired, true);
+  assert.equal(err401.expired, false, 'Unauthenticated requests must restart login, not claim MFA expiry');
+  assert.equal(err401.authRequired, true);
+  const errExpired = resolveSafeMfaError({ status: 401, code: 'MFA_CHALLENGE_EXPIRED' }, false);
+  assert.equal(errExpired.expired, true);
+  assert.equal(errExpired.authRequired, false);
+  const errAuthRequired = resolveSafeMfaError({ status: 401, code: 'AUTH_REQUIRED' }, false);
+  assert.equal(errAuthRequired.expired, false);
+  assert.equal(errAuthRequired.authRequired, true);
 
   const err403Challenge = resolveSafeMfaError({ status: 403, code: 'MFA_ENROLLMENT_REQUIRED', message: 'Forbidden' }, false);
   assert.equal(err403Challenge.redirectMode, 'enroll', '403 MFA_ENROLLMENT_REQUIRED redirects cleanly without false error');

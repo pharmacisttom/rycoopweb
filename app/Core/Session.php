@@ -51,6 +51,17 @@ class Session
         self::$started = true;
         $now = time();
 
+        // A concurrent logout must not mistake a rotation handoff for an anonymous session.
+        $handoffAttempts = 0;
+        while (!empty($_SESSION['__rotation_in_progress'])) {
+            if (++$handoffAttempts > 20) {
+                // Cancellation removes the predecessor; the rotator must discard its target.
+                self::destroy(); session_id(''); self::start(); return;
+            }
+            $waitingId = session_id();
+            session_write_close(); usleep(25000); session_id($waitingId); session_start();
+        }
+
         // Follow metadata-only links with strict-mode target validation and a hop cap.
         $hops = 0;
         while (!empty($_SESSION['__is_rotated'])) {
@@ -181,7 +192,7 @@ class Session
         $oldId = session_id();
         $oldData = $_SESSION;
         // Retired IDs must not retain an independently authenticated snapshot.
-        $_SESSION = [];
+        $_SESSION = ['__rotation_in_progress' => true];
 
         // Use PHP native session_regenerate_id(false) to create and initialize new session ID
         if (!session_regenerate_id(false)) {
@@ -202,6 +213,10 @@ class Session
         if (session_id() === $oldId) {
             $_SESSION = ['__is_rotated' => true, '__rotated_to' => $newId,
                 '__rotated_at' => time(), '__rotated_grace' => min(60, max(0, $gracePeriod))];
+        } else {
+            // A timed-out concurrent request cancelled the handoff. Never publish its target.
+            session_write_close(); session_id($newId); session_start();
+            self::destroy(); session_id(''); self::start(); return;
         }
         session_write_close();
 

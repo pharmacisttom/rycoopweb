@@ -12,6 +12,27 @@ function boundaryRequest(string $id): void {
     (new ReflectionProperty(Auth::class,'user'))->setValue(null,null);
     session_id($id);$_COOKIE[config('security.session.name')]=$id;Session::start();
 }
+function boundaryWorker(string $operation,string $id): array {
+    global $boundaryDirectory;
+    $pipes=[];
+    $process=proc_open([PHP_BINARY,__DIR__.'/fixtures/AuthBoundaryWorker.php'],[['pipe','r'],['pipe','w'],['pipe','w']],$pipes);
+    if(!is_resource($process))throw new RuntimeException('Worker creation failed');
+    stream_set_timeout($pipes[1],15);
+    fwrite($pipes[0],json_encode(['directory'=>$boundaryDirectory,'id'=>$id,'operation'=>$operation,'sharedDatabase'=>true])."\n");fflush($pipes[0]);
+    boundarySignal($pipes,'READY');
+    fwrite($pipes[0],"GO\n");fflush($pipes[0]);
+    return [$process,$pipes];
+}
+function boundarySignal(array $pipes,string $expected): void {
+    if(trim((string)fgets($pipes[1]))!==$expected)throw new RuntimeException('Worker synchronization failed: '.$expected);
+}
+function boundaryResult(array $worker): array {
+    [$process,$pipes]=$worker;
+    $result=json_decode((string)fgets($pipes[1]),true,512,JSON_THROW_ON_ERROR);
+    foreach($pipes as $pipe)fclose($pipe);
+    if(proc_close($process)!==0)throw new RuntimeException('Concurrent worker failed');
+    return $result;
+}
 try {
     Session::start();$anonymous=session_id();$oldCsrf=Csrf::token();
     Auth::login(Database::first('SELECT u.*,r.slug AS role_slug FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE u.id=1'),true);$authenticated=session_id();
@@ -64,4 +85,39 @@ try {
     Session::rotate(60);$releaseSession=session_id();
     boundaryRequest($releaseSession);workflowCheck(Auth::check(),'ordinary release restart retains compatible current session state');
     workflowCheck(ini_get('session.use_strict_mode')==='1'&&ini_get('session.gc_maxlifetime')===(string)config('security.session.lifetime'),'effective isolated PHP session configuration remains aligned');
+
+    // Share only the synthetic SQLite fixture so revocation is visible across processes.
+    $pdo->exec('VACUUM INTO '.$pdo->quote($boundaryDirectory.'/fixture.sqlite'));
+    $pdo=new PDO('sqlite:'.$boundaryDirectory.'/fixture.sqlite',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+    $pdo->exec('PRAGMA busy_timeout=5000');
+    (new ReflectionProperty(Database::class,'instance'))->setValue(null,$pdo);
+    foreach(['logout','revoke'] as $operation) {
+        for($iteration=0;$iteration<5;$iteration++) {
+            workflowLogin(1,true);$predecessor=session_id();session_write_close();
+            $rotator=boundaryWorker('rotate-held',$predecessor);boundarySignal($rotator[1],'LOCKED');
+            $other=boundaryWorker($operation,$predecessor);
+            boundarySignal($other[1],$operation==='logout'?'ENTERING':'REVOKED');
+            fwrite($rotator[1][0],"ROTATE\n");fflush($rotator[1][0]);
+            $rotated=boundaryResult($rotator);$completed=boundaryResult($other);
+            foreach([$predecessor,$rotated['id'],$completed['id']] as $identifier) {
+                boundaryRequest($identifier);
+                workflowCheck(!Auth::check(),$operation.' during periodic rotation cannot restore authentication: iteration '.$iteration);
+            }
+        }
+    }
+    workflowLogin(1,true);$_SESSION=['__rotation_in_progress'=>true];$interrupted=session_id();
+    boundaryRequest($interrupted);workflowCheck(!Auth::check(),'interrupted handoff times out without authorizing a predecessor');
+    foreach([false,true] as $cancelHandoff) {
+        workflowLogin(1,true);$predecessor=session_id();session_write_close();
+        $rotator=boundaryWorker('rotate-paused',$predecessor);boundarySignal($rotator[1],'HANDOFF');
+        $logout=boundaryWorker('logout-aware',$predecessor);boundarySignal($logout[1],'ENTERING');boundarySignal($logout[1],'WAITING');
+        if($cancelHandoff) $completed=boundaryResult($logout);
+        fwrite($rotator[1][0],"RESUME\n");fflush($rotator[1][0]);
+        $rotated=boundaryResult($rotator);
+        if(!$cancelHandoff) $completed=boundaryResult($logout);
+        foreach([$predecessor,$rotated['id'],$completed['id']] as $identifier) {
+            boundaryRequest($identifier);
+            workflowCheck(!Auth::check(),$cancelHandoff?'cancelled handoff discards target authentication':'logout inside handoff invalidates all reachable authentication');
+        }
+    }
 }finally{workflowFinish();}

@@ -133,6 +133,7 @@ jobs:
           php tests/StaffRouteDispatchTest.php
           php tests/PrOfficerWorkflowTest.php
           php tests/NewsGalleryTest.php
+          php tests/NewsGalleryAccessTest.php
           php tests/PasswordWorkflowTest.php
           php tests/MigrationRunnerTest.php
           php tests/LegacyMemberMigrationTest.php
