@@ -121,6 +121,7 @@ jobs:
           php tests/PermissionBehaviorTest.php
           php tests/RequestSecurityTest.php
           php tests/GoogleAuthCoreTest.php
+          php tests/GoogleMfaIdentityMappingRegressionTest.php
           php tests/FeatureFlagContractTest.php
           php tests/DividendImportTest.php
           php tests/MfaWorkflowTest.php
