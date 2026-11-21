@@ -73,7 +73,7 @@ export default function CookieConsent() {
 
   // Never interrupt OAuth/TOTP enrollment or verification with a privacy dialog.
   // The prompt appears on the next regular page if acknowledgment is missing.
-  if (/^\/(?:admin\/(?:login|mfa\/|2fa)|member\/login|login)(?:\/|$)/.test(pathname)) return null;
+  if (/^\/(?:admin\/(?:login|mfa|2fa)(?:\/|$)|member\/login(?:\/|$)|login(?:\/|$))/.test(pathname)) return null;
 
   if (!isVisible) {
     return <button type="button" className="cookie-consent__reopen"
