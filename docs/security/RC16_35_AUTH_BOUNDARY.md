@@ -57,6 +57,17 @@ The next run at 9fef700 revealed two later gates previously skipped:
   confirmation handler correctly captures nextVal before awaiting. The contract
   test now checks capture, local selection and URL query update explicitly.
 
+At 5c1477e the PHP 8.3/8.5 jobs passed, including disposable MySQL CRUD/concurrency,
+and React, lint, layout and media checks passed. Browser QA then exposed the
+stored-content test's missing SweetAlert acknowledgement: the success modal
+correctly hid the underlying table from accessible role queries. That test now
+acknowledges success, explicitly cancels and confirms document removal, and still
+asserts multipart/version/CSRF payloads, settings Step-Up, FAQ reactivation and
+failure states. All four browser suites pass locally: AdminUIBrowserTest (195
+responsive screenshots), StaffPageIntegrationTest (real isolated PHP sessions),
+PrOfficerBrowserTest and AdminCrudBrowserTest. Fresh final-SHA CI remains the
+required evidence before closing the source acceptance gate.
+
 The new test uses synthetic SQLite identities and a private temporary session
 directory, with concurrent child processes. It covers login/MFA predecessors,
 periodic forwarding, logout, revocation, idle/600-second MFA expiry, fixation,
