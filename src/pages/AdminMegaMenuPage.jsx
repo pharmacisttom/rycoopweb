@@ -34,6 +34,16 @@ export default function AdminMegaMenuPage() {
     finally{setLoading(false);}
   },[]);
   useEffect(()=>{load();},[load]);
+  const addCategory=()=>setCategories(old=>old.length>=8?old:[...old,{
+    id:'group_'+Date.now().toString(36),title:'หมวดใหม่',enabled:false,items:[]
+  }]);
+  const removeCategory=index=>setCategories(old=>old.length<=1?old:old.filter((_,i)=>i!==index));
+  const moveCategory=(index,delta)=>setCategories(old=>{
+    const items=[...old],target=index+delta;
+    if(target<0||target>=items.length)return old;
+    [items[index],items[target]]=[items[target],items[index]];
+    return items;
+  });
   const editCategory = (index,key,value) => setCategories(old=>old.map((v,i)=>i===index?{...v,[key]:value}:v));
   const editItem = (cat,index,key,value) => setCategories(old=>old.map((v,i)=>i===cat?{
     ...v,items:v.items.map((item,j)=>j===index?{...item,[key]:value}:item)
@@ -80,7 +90,7 @@ export default function AdminMegaMenuPage() {
   };
   return <AdminControlCenterShell title="จัดการ Mega Menu" subtitle="เพิ่ม แก้ไข ซ่อน จัดลำดับ และเผยแพร่เมนูหน้าเว็บไซต์">
     <section className="admin-module" aria-label="จัดการ Mega Menu" style={{maxWidth:1150}}>
-      <p>จัดการเมนูหลัก 4 หมวด โดยเพิ่ม/ลบรายการย่อย แก้ลิงก์ภายใน หมวดหมู่ ไอคอน และข้อความได้ ย้ายลำดับด้วย Drag & Drop หรือปุ่มขึ้น/ลง ทุกรายการเริ่มเป็นร่างก่อนเผยแพร่ ไม่มีผลต่อ Navbar เดิมจนกว่าจะอนุมัติ</p>
+      <p>จัดการเมนูหลัก 1–8 หมวด โดยเพิ่ม/ลบรายการย่อย แก้ลิงก์ภายใน หมวดหมู่ ไอคอน และข้อความได้ ย้ายลำดับด้วย Drag & Drop หรือปุ่มขึ้น/ลง ทุกรายการเริ่มเป็นร่างก่อนเผยแพร่ ไม่มีผลต่อ Navbar เดิมจนกว่าจะอนุมัติ</p>
       <p><strong>ข้อควรทราบ:</strong> ลบรายการในตัวแก้ไขคือการลบจากร่าง (ไม่มีผลต่อข้อมูล CMS) และลิงก์เลือกได้เฉพาะหน้าที่อนุญาต ไม่อนุญาต URL ภายนอกหรือ /eservice ที่ยังไม่เปิดใช้</p>
       {error&&<p role="alert" style={{color:'#b42318'}}>{error}</p>}
       {notice&&<p role="status">{notice}</p>}
@@ -91,15 +101,21 @@ export default function AdminMegaMenuPage() {
           <strong>เว็บไซต์จริง: {state.published?'มีเมนูที่เผยแพร่แล้ว':'ใช้ Navbar เดิม'}</strong>
           <span> · {state.draft?'มีร่างค้าง':'ยังไม่มีร่าง'}</span>
           <span> · {dirty?'มีข้อมูลยังไม่บันทึก':'ข้อมูลตรงกับที่บันทึก'}</span>
+          <button type="button" style={btn} disabled={categories.length>=8} onClick={addCategory}>เพิ่มหมวดเมนูหลัก</button>
           <button type="button" style={btn} onClick={()=>setPreview(v=>!v)}>{preview?'ปิด Preview':'Preview ร่าง'}</button>
           <button type="button" style={btn} onClick={load} disabled={busy}>โหลดข้อมูลล่าสุด</button>
         </div>
         {categories.map((category,ci)=><section key={category.id} className="surface-card" style={{padding:18,margin:'16px 0'}}>
           <div style={style}>
             <strong style={{minWidth:135}}>หมวด {ci+1}</strong>
+            <button type="button" aria-label={'เลื่อนหมวดขึ้น '+category.title} style={btn} disabled={ci===0} onClick={()=>moveCategory(ci,-1)}>↑</button>
+            <button type="button" aria-label={'เลื่อนหมวดลง '+category.title} style={btn} disabled={ci===categories.length-1} onClick={()=>moveCategory(ci,1)}>↓</button>
             <input aria-label={'ชื่อหมวด '+category.id} style={{...field,flex:1}} maxLength={80} value={category.title} onChange={e=>editCategory(ci,'title',e.target.value)}/>
             <label><input type="checkbox" checked={category.enabled} onChange={e=>editCategory(ci,'enabled',e.target.checked)}/> แสดงหมวด</label>
             <button type="button" style={btn} disabled={category.items.length>=30} onClick={()=>addItem(ci)}>เพิ่มรายการ</button>
+            <button type="button" style={{...btn,color:'#b42318'}} disabled={categories.length<=1} onClick={async()=>{
+              if(await showConfirm('ลบหมวดจากร่าง?', 'การลบจะมีผลต่อหน้าบ้านเมื่ออนุมัติเผยแพร่เท่านั้น'))removeCategory(ci);
+            }}>ลบหมวดจากร่าง</button>
           </div>
           {preview?<div style={{display:'flex',flexWrap:'wrap',gap:12}}>
             {category.enabled && category.items.filter(item=>item.enabled).map(item=><div key={item.id} style={{...btn,minWidth:200}}>
