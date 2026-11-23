@@ -36,7 +36,9 @@ try{
  $reverted=Menu::rollback(['version'=>$pub2['version']]);
  verifyMenu(Menu::published()[0]['items'][5]['enabled']===false,'rollback restores previous publication');
  verifyMenu($reverted['published'][0]['items'][5]['enabled']===false,'rollback response matches persistence');
- verifyMenu((int)Database::value("SELECT COUNT(*) FROM audit_logs WHERE module='mega_menu'")>=5,
+ $legacy=Menu::restoreLegacy(['version'=>$reverted['version']]);
+ verifyMenu($legacy['published']===null && Menu::published()===null,'restoring legacy Navbar disables published configuration');
+ verifyMenu((int)Database::value("SELECT COUNT(*) FROM audit_logs WHERE module='mega_menu'" )>=6,
             'draft publish and rollback audited');
 }finally{
  foreach($keys as $key)Database::execute('DELETE FROM site_settings WHERE `key`=?',[$key]);
