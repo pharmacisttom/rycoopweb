@@ -31,6 +31,10 @@ try{
  ]){
   globalThis.__workflowAuth={user:{id:2,name:'Fixture editor',role:'custom_editor'},isLoggedIn:true,sessionStatus:'online',can:key=>permissions.includes(key),logout:async()=>{},refreshSession:async()=>{}};
   const html=await render(React.createElement(StaticRouter,{location:url},React.createElement(App)));
+  if(!html.includes(expected)){
+    const readable=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,1200);
+    console.error('WORKFLOW_SSR_DIAGNOSTIC',url,'expected=',expected,'actualText=',readable);
+  }
   assert.ok(html.includes(expected),`${url} should render ${expected}`);
   if(url==='/admin/workspace'&&permissions.includes('news.view'))assert.ok(!html.includes('จัดการผู้ใช้งานและสิทธิ์'),'custom editor cannot see access management');
   console.log(`PASS: ${url} (${permissions.join(',')||'no module permission'})`);
