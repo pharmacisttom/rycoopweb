@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {Link} from 'react-router-dom';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import './AdminUserManualPage.css';
@@ -41,6 +41,16 @@ const groups = [
   ['ตั้งค่าบัญชี','/admin/settings?tab=profile','จัดการข้อมูลบัญชีและการยืนยันตัวตนโดยไม่แชร์รหัสผ่านหรือ TOTP'] ]}
 ];
 export default function AdminUserManualPage(){
+ useEffect(()=>{
+  // This page is lazy-loaded: the global ScrollToTop may run before the
+  // #manual-mega-menu anchor exists. Re-check once the handbook mounts.
+  const id=decodeURIComponent(window.location.hash.replace(/^#/, ''));
+  if(!id)return undefined;
+  const frame=window.requestAnimationFrame(()=>{
+    document.getElementById(id)?.scrollIntoView({behavior:'auto',block:'start'});
+  });
+  return ()=>window.cancelAnimationFrame(frame);
+ },[]);
  return <AdminControlCenterShell title="คู่มือการใช้งานระบบหลังบ้าน" subtitle="RYCOOPWEB • คู่มือเจ้าหน้าที่และผู้ดูแลระบบ">
   <article className="admin-module admin-manual" aria-label="คู่มือการใช้งานระบบหลังบ้าน">
    <div className="admin-manual-intro">
