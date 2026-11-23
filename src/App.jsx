@@ -1,3 +1,4 @@
+import { ESERVICE_PUBLIC_ENABLED } from './config/publicServiceVisibility';
 import AdminStoredContentPage from './pages/AdminStoredContentPage';
 import AdminActionProvider from './components/admin/AdminActionProvider';
 import AdminAppShell from './components/admin/AdminAppShell';
@@ -68,6 +69,7 @@ const ServiceUnavailablePage = lazy(() => import('./pages/ServiceUnavailablePage
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 
 const memberPortalEnabled = import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
+const eservicePublicEnabled = ESERVICE_PUBLIC_ENABLED;
 
 // RYCOOP LED Member Check Pages
 const AdminLedDashboardPage = lazy(() => import('./pages/AdminLedDashboardPage'));
@@ -221,7 +223,7 @@ export default function App() {
               <Route
                 key={path}
                 path={path}
-                element={path === '/eservice' && !memberPortalEnabled ? <ServiceUnavailablePage /> : <Page />}
+                element={path === '/eservice' && !eservicePublicEnabled ? <ServiceUnavailablePage /> : <Page />}
               />
             ))}
 
