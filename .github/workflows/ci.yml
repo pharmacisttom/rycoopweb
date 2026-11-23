@@ -225,6 +225,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Mega Menu real MySQL draft, CRUD, publish, audit and rollback
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/MegaMenuMySqlTest.php
+
       - name: Real MySQL 8 legacy member migration and rollback
         env:
           CRUD_DISPOSABLE_MYSQL: "1"
