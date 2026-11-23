@@ -15,6 +15,8 @@ assert.match(css, /\.mega-menu-wrapper\s*\{[^}]*max-height:\s*min\(72vh,\s*640px
 assert.match(editor, /to="\/admin\/manual#manual-mega-menu"/);
 assert.match(editor, /คู่มือปุ่มและวิธีใช้งาน Mega Menu/);
 assert.match(manual, /id="manual-mega-menu"/);
+assert.match(manual, /requestAnimationFrame\(/);
+assert.match(manual, /scrollIntoView\(\{behavior:'auto',block:'start'\}\)/);
 assert.match(shell, /จัดการ Mega Menu \(เมนูหน้าบ้าน\)/);
 const labels = [
   'เพิ่มหมวดเมนูหลัก', 'เพิ่มรายการ', 'Preview ร่าง', 'โหลดข้อมูลล่าสุด',
