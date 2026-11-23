@@ -179,7 +179,8 @@ export default function App() {
   useVisitorTracker();
   const { isLoggedIn, logout } = useAuth();
   const { pathname } = useLocation();
-  const memberAdminPage = pathname === '/admin' || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard' || pathname === '/admin/dividends/import' || /^\/admin\/(members|access|workspace|public-content|content|mfa|dashboard|analytics|operations|users|roles|permissions|departments|audit-logs|security|backups|health|reports|settings|cms|documents|led|control-center|approvals|welfare|activities|media|layout|popups|login|2fa)(?:\/|$)/.test(pathname);
+  // Every /admin/* route uses the dedicated Admin Shell. Explicit allowlists leave newly added pages with a duplicate public header.
+  const memberAdminPage = pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/staff' || pathname.startsWith('/staff/') || pathname === '/dashboard';
   const { toast } = useToast();
   const navigate = useNavigate();
 

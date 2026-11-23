@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {Link} from 'react-router-dom';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import './AdminUserManualPage.css';
@@ -41,11 +41,21 @@ const groups = [
   ['ตั้งค่าบัญชี','/admin/settings?tab=profile','จัดการข้อมูลบัญชีและการยืนยันตัวตนโดยไม่แชร์รหัสผ่านหรือ TOTP'] ]}
 ];
 export default function AdminUserManualPage(){
+ useEffect(()=>{
+  // This page is lazy-loaded: the global ScrollToTop may run before the
+  // #manual-mega-menu anchor exists. Re-check once the handbook mounts.
+  const id=decodeURIComponent(window.location.hash.replace(/^#/, ''));
+  if(!id)return undefined;
+  const frame=window.requestAnimationFrame(()=>{
+    document.getElementById(id)?.scrollIntoView({behavior:'auto',block:'start'});
+  });
+  return ()=>window.cancelAnimationFrame(frame);
+ },[]);
  return <AdminControlCenterShell title="คู่มือการใช้งานระบบหลังบ้าน" subtitle="RYCOOPWEB • คู่มือเจ้าหน้าที่และผู้ดูแลระบบ">
   <article className="admin-module admin-manual" aria-label="คู่มือการใช้งานระบบหลังบ้าน">
    <div className="admin-manual-intro">
     <h1>คู่มือการใช้งาน RYCOOPWEB Admin</h1>
-    <p>คู่มือปฏิบัติงาน RYCOOPWEB Admin • ฉบับปรับปรุง 21 พฤศจิกายน 2569 สำหรับ Google Login/MFA, Cookie Consent, SweetAlert2 และการจัดการข้อมูลแต่ละโมดูล โดยสิทธิ์ขึ้นกับบทบาทและ Permission ของผู้ใช้ ทั้งนี้ผล CI ไม่เท่ากับการรับรอง CRUD กับ Production ทุกโมดูล</p>
+    <p>คู่มือปฏิบัติงาน RYCOOPWEB Admin • ฉบับปรับปรุง 23 พฤศจิกายน 2569 สำหรับ Google Login/MFA, Cookie Consent, SweetAlert2 และการจัดการข้อมูลแต่ละโมดูล โดยสิทธิ์ขึ้นกับบทบาทและ Permission ของผู้ใช้ ทั้งนี้ผล CI ไม่เท่ากับการรับรอง CRUD กับ Production ทุกโมดูล</p>
     <div className="admin-manual-actions">
      <button type="button" onClick={()=>window.print()}>พิมพ์ / บันทึก PDF</button>
      <a href="#manual-index">ดูสารบัญ</a>
@@ -54,6 +64,7 @@ export default function AdminUserManualPage(){
    <nav id="manual-index" className="admin-manual-index" aria-label="สารบัญคู่มือ">
     <h2>สารบัญ</h2>
     {groups.map((g,i)=><a key={i} href={'#manual-'+i}>{i+1}. {g.title}</a>)}
+    <a href="#manual-mega-menu">คู่มือปุ่ม Mega Menu และตำแหน่ง Sidebar</a>
     <a href="#manual-crud">ขั้นตอน CRUD และการทดสอบรายการ</a>
     <a href="#manual-cookie">Cookie Consent และ SweetAlert2</a>
     <a href="#manual-guidelines">แนวปฏิบัติการบันทึกและเผยแพร่ข้อมูล</a>
@@ -65,6 +76,28 @@ export default function AdminUserManualPage(){
        <h3>{name}</h3><p>{description}</p><Link to={url}>เปิดหน้าระบบ</Link>
      </div>)}
    </section>)}
+   <section id="manual-mega-menu" className="admin-manual-section">
+    <h2>คู่มือ Mega Menu Manager — ตำแหน่ง Sidebar และปุ่มคำสั่ง</h2>
+    <p><strong>ตำแหน่งใน Sidebar:</strong> Admin Control Center → จัดการเนื้อหาและข่าวสาร → จัดการ Mega Menu (เฉพาะ Super Admin)</p>
+    <p><Link to="/admin/mega-menu">เปิดหน้าจัดการ Mega Menu</Link> | <Link to="/admin/navigation-copy">แก้ไขข้อความเมนูเว็บไซต์เดิม</Link> | <Link to="/admin/layout">จัดการ Layout หน้าแรก</Link></p>
+    <p>หากค้นหาไม่พบ ให้ขยายหมวด “จัดการเนื้อหาและข่าวสาร” หรือค้นหา “Mega Menu” ในช่องค้นหา Sidebar; ผู้ที่ไม่มีสิทธิ์ Super Admin จะไม่เห็นเมนูนี้ ไม่ควรแก้สิทธิ์เพื่อข้ามระบบ</p>
+    <h3>ความหมายของปุ่มและการใช้งาน</h3>
+    <dl>
+     <dt>เพิ่มหมวดเมนูหลัก</dt><dd>สร้างหมวดเมนูใหม่ในร่าง (ไม่เกิน 8 หมวด); ต้องกำหนดชื่อ และเปิด “แสดงหมวด” เมื่อต้องการให้แสดงบนหน้าบ้าน</dd>
+     <dt>เลื่อนหมวดขึ้น ↑ / ลง ↓</dt><dd>เปลี่ยนลำดับหมวดหลัก ขณะที่รายการย่อยใช้ Drag & Drop หรือปุ่ม ↑/↓ ในแต่ละแถว</dd>
+     <dt>เพิ่มรายการ</dt><dd>เพิ่มเมนูย่อยเป็นสถานะซ่อนก่อน กรอกชื่อ คำอธิบาย กลุ่ม ไอคอน และเลือกเส้นทางภายในเว็บไซต์ที่อนุญาต</dd>
+     <dt>ช่องแสดงหมวด / แสดงรายการ</dt><dd>ปิดเพื่อซ่อนจากเว็บไซต์โดยไม่ลบเนื้อหา หรือเปิดเพื่อให้รายการอยู่ในชุดที่เผยแพร่</dd>
+     <dt>ลบหมวดจากร่าง / ลบจากร่าง</dt><dd>นำหมวดหรือรายการออกจากร่างเท่านั้น ยังไม่กระทบเว็บไซต์จริงจนกว่า Admin จะเผยแพร่ ควร Preview ก่อนยืนยัน</dd>
+     <dt>Preview ร่าง / ปิด Preview</dt><dd>ดูรายการที่เปิดแสดงในร่าง โดยยังไม่เผยแพร่หรือเปลี่ยน Navbar จริง</dd>
+     <dt>โหลดข้อมูลล่าสุด</dt><dd>อ่านข้อมูลจากระบบอีกครั้ง; การแก้ไขที่ยังไม่บันทึกอาจหายไป จึงควรตรวจสถานะก่อนกด</dd>
+     <dt>1. บันทึกร่าง</dt><dd>กรอกรหัส TOTP 6 หลัก และบันทึกการเปลี่ยนแปลง; หน้าบ้านยังใช้เมนูที่เผยแพร่ก่อนหน้า</dd>
+     <dt>2. อนุมัติเผยแพร่</dt><dd>เมื่อบันทึกร่างและตรวจ Preview แล้ว ให้ยืนยันด้วย MFA เพื่อให้รายการใหม่แสดงจริง จากนั้นทดสอบบน Desktop และ Mobile</dd>
+     <dt>ย้อนกลับเวอร์ชันก่อนหน้า</dt><dd>คืนชุดเมนูที่เผยแพร่ก่อนหน้า ต้องใช้ MFA และตรวจผลหน้าบ้าน</dd>
+     <dt>คืนค่า Navbar เดิม</dt><dd>ยกเลิกการใช้ชุดเมนูที่กำหนดเองและกลับไปใช้ Navbar เดิม โดยไม่ลบข้อมูล CMS ต้องยืนยัน MFA</dd>
+     <dt>คู่มือการใช้งาน</dt><dd>ปุ่มภายในหน้าจัดการ Mega Menu สำหรับกลับมายังหัวข้อนี้โดยตรง</dd>
+    </dl>
+    <p><strong>การตรวจรับ:</strong> ทดสอบ เพิ่ม → แก้ไข → ซ่อน → จัดลำดับ → บันทึกร่าง → Preview → เผยแพร่ → ตรวจเว็บไซต์ → ย้อนกลับ โดยไม่ทดลองแก้เมนูจริงของสมาชิกหากยังไม่พร้อมเปิดใช้</p>
+   </section>
    <section id="manual-crud" className="admin-manual-section">
     <h2>การจัดการข้อมูล (CRUD): เพิ่ม ดู แก้ไข และปิด/ลบรายการ</h2>
     <ol>

@@ -391,6 +391,9 @@ jobs:
       - name: Verify Mega Menu CRUD and e-Service hold contracts
         run: node tests/MegaMenuSourceContractTest.mjs
 
+      - name: Verify Mega Menu layout, sidebar and manual button descriptions
+        run: node tests/MegaMenuLayoutAndManualContractTest.mjs
+
       - name: Verify official branding build
         run: node tests/BrandingTest.mjs
 

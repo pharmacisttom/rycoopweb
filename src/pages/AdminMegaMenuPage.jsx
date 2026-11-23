@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import { memberAdminApi } from '../services/memberAdminApi';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
@@ -90,6 +91,10 @@ export default function AdminMegaMenuPage() {
   };
   return <AdminControlCenterShell title="จัดการ Mega Menu" subtitle="เพิ่ม แก้ไข ซ่อน จัดลำดับ และเผยแพร่เมนูหน้าเว็บไซต์">
     <section className="admin-module" aria-label="จัดการ Mega Menu" style={{maxWidth:1150}}>
+      <div style={{...style,justifyContent:'space-between',marginBottom:16}}>
+        <p style={{margin:0}}><strong>ตำแหน่ง Sidebar:</strong> จัดการเนื้อหาและข่าวสาร → จัดการ Mega Menu</p>
+        <Link to="/admin/manual#manual-mega-menu" className="btn btn-outline" style={btn}>คู่มือปุ่มและวิธีใช้งาน Mega Menu</Link>
+      </div>
       <p>จัดการเมนูหลัก 1–8 หมวด โดยเพิ่ม/ลบรายการย่อย แก้ลิงก์ภายใน หมวดหมู่ ไอคอน และข้อความได้ ย้ายลำดับด้วย Drag & Drop หรือปุ่มขึ้น/ลง ทุกรายการเริ่มเป็นร่างก่อนเผยแพร่ ไม่มีผลต่อ Navbar เดิมจนกว่าจะอนุมัติ</p>
       <p><strong>ข้อควรทราบ:</strong> ลบรายการในตัวแก้ไขคือการลบจากร่าง (ไม่มีผลต่อข้อมูล CMS) และลิงก์เลือกได้เฉพาะหน้าที่อนุญาต ไม่อนุญาต URL ภายนอกหรือ /eservice ที่ยังไม่เปิดใช้</p>
       {error&&<p role="alert" style={{color:'#b42318'}}>{error}</p>}
