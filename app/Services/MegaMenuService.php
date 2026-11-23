@@ -15,7 +15,6 @@ final class MegaMenuService {
     private const LIVE = 'mega_menu_published_v1';
     private const DRAFT = 'mega_menu_draft_v1';
     private const HISTORY = 'mega_menu_previous_v1';
-    private const IDS = ['about', 'finance', 'welfare', 'news_docs'];
     private const PATHS = [
         '/', '/about', '/board_committee', '/board_officer', '/statistics',
         '/deposits', '/rates', '/loans', '/calculator', '/loan-calculator',
@@ -70,12 +69,12 @@ final class MegaMenuService {
             ['description'=>'','enabled'=>true];
     }
     public static function validate(mixed $raw): array {
-        if (!is_array($raw) || count($raw)!==4 || array_keys($raw)!==range(0,3)) {
-            throw new InvalidArgumentException('ต้องมีเมนูหลัก 4 หมวด');
+        if (!is_array($raw) || count($raw)<1 || count($raw)>8 || array_keys($raw)!==range(0,count($raw)-1)) {
+            throw new InvalidArgumentException('จำนวนเมนูหลักต้องอยู่ระหว่าง 1 ถึง 8 หมวด');
         }
         $seen = []; $total = 0;
         foreach ($raw as &$category) {
-            if(!is_array($category) || !in_array($category['id']??null,self::IDS,true)
+            if(!is_array($category) || !self::text($category['id']??null,48) || !preg_match('/^[a-z][a-z0-9_]*$/D',(string)$category['id'])
                 || isset($seen[$category['id']]) || !is_bool($category['enabled']??null)
                 || !self::text($category['title']??null,80)
                 || !is_array($category['items']??null) || count($category['items'])>30
@@ -103,7 +102,7 @@ final class MegaMenuService {
             unset($item);
         }
         unset($category);
-        if (count($seen)!==4 || $total>100) throw new InvalidArgumentException('จำนวนรายการเมนูเกินกำหนด');
+        if (count($seen)!==count($raw) || $total>100) throw new InvalidArgumentException('จำนวนรายการเมนูเกินกำหนด');
         return $raw;
     }
     private static function text(mixed $value,int $max):bool {
