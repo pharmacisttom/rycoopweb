@@ -83,7 +83,7 @@ export default function AdminMegaMenuPage() {
       if(!next?.version)throw new Error('ข้อมูลตอบกลับไม่ถูกต้อง');
       setState(next);setCategories(clone(next.draft||next.published||next.template));
       setTotp('');setPreview(false);
-      setNotice(action==='draft'?'บันทึกร่างแล้ว เว็บไซต์จริงยังไม่เปลี่ยน':action==='rollback'?'ย้อนกลับชุดเมนูสำเร็จ':'เผยแพร่เมนูสำเร็จ');
+      setNotice(action==='draft'?'บันทึกร่างแล้ว เว็บไซต์จริงยังไม่เปลี่ยน':action==='rollback'?'ย้อนกลับชุดเมนูสำเร็จ':action==='restore-legacy'?'คืนค่า Navbar เดิมสำเร็จ':'เผยแพร่เมนูสำเร็จ');
       await showSuccess('บันทึกสำเร็จ',action==='draft'?'ร่างยังไม่เผยแพร่':'ตรวจผลที่เว็บไซต์หน้าบ้าน');
     }catch(e){setTotp('');setError(e.status===409?'ข้อมูลถูกแก้โดยผู้อื่น กรุณาโหลดล่าสุด':e.message||'บันทึกไม่สำเร็จ');}
     finally{setBusy(false);}
