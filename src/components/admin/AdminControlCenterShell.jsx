@@ -38,6 +38,8 @@ import './AdminModernRefresh.css';
 import './AdminLayoutPolishRC02.css';
 import './AdminVisualConsistencyRC03.css';
 import { AdminBreadcrumb } from './AdminUI';
+import { AdminSidebarItemIcon } from './AdminSidebarItemIcon';
+import './AdminIconPolishRC20.css';
 const ShellContext=createContext(false);
 
 export const ADMIN_SIDEBAR_GROUPS = [
@@ -464,7 +466,8 @@ function FullAdminControlCenterShell({
                           aria-current={active?'page':undefined}
                           className={`acc-nav-link ${active ? 'is-active' : ''}`}
                         >
-                          <span>{item.label}</span>
+                          <AdminSidebarItemIcon path={item.to} />
+                          <span className="acc-nav-item-text">{item.label}</span>
                         </Link>
                       );
                     })}
