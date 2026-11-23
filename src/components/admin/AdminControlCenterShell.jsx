@@ -113,6 +113,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
       { label: 'คลังภาพกิจกรรม', to: '/admin/activities', permissions: ['news.view'] },
       { label: 'จัดการ Layout หน้าแรก', to: '/admin/layout', roles: ['super_admin'] },
       { label: 'แก้ไขข้อความเมนูเว็บไซต์', to: '/admin/navigation-copy', roles: ['super_admin'] },
+      { label: 'จัดการ Mega Menu', to: '/admin/mega-menu', roles: ['super_admin'] },
       { label: 'จัดการชุดกรรมการและอนุกรรมการ', to: '/admin/public-content?section=boards', permissions: ['people.view'] },
       { label: 'จัดการคณะอนุกรรมการ', to: '/admin/public-content?section=groups', permissions: ['people.view'] },
       { label: 'ศูนย์เอกสาร', to: '/admin/documents', permissions: ['documents.view'] },
