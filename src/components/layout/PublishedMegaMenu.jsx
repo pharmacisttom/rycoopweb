@@ -25,8 +25,8 @@ export default function PublishedMegaMenu({ category, onNavigate }) {
     }
     group.items.push(item);
   }
-  return <div className="mega-menu-grid" style={{gridTemplateColumns:"minmax(0,1fr)"}}>
-    <div className="mega-menu-col-main" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:20}}>
+  return <div className="mega-menu-grid mega-menu-grid--published">
+    <div className="mega-menu-col-main mega-menu-col-main--published">
       {groups.map(group=><div key={group.title}>
         <div className="mega-menu-category-title"><strong>{group.title}</strong></div>
         <div style={{display:'flex',flexDirection:'column',gap:'0.25rem'}}>
