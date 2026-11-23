@@ -1,0 +1,26 @@
+/* RC20 – presentation only. Scoped to existing Admin Control Center sidebar. */
+.acc-sidebar-nav .acc-nav-items .acc-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.acc-sidebar-nav .acc-nav-items .acc-nav-item-icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  opacity: 0.86;
+  stroke: currentColor;
+}
+.acc-sidebar-nav .acc-nav-items .acc-nav-item-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+.acc-sidebar-nav .acc-nav-items .acc-nav-link:hover .acc-nav-item-icon,
+.acc-sidebar-nav .acc-nav-items .acc-nav-link.is-active .acc-nav-item-icon {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .acc-sidebar-nav .acc-nav-items .acc-nav-item-icon { transition: none; }
+}

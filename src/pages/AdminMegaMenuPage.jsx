@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminControlCenterShell from '../components/admin/AdminControlCenterShell';
 import { memberAdminApi } from '../services/memberAdminApi';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
+import { ArrowDown, ArrowUp, Eye, EyeOff, ListPlus, Plus, RotateCcw, Save, Send, Trash2, Undo2 } from 'lucide-react';
 
 const ICONS = ['landmark','award','users','shield','wallet','calculator','file-text','newspaper','megaphone','heart','graduation','stethoscope','download','globe','calendar','receipt','piggy-bank','banknote','check-circle','book-open'];
 const PATHS = ['/','/about','/board_committee','/board_officer','/statistics','/deposits','/rates','/loans','/calculator','/loan-calculator','/loans/calculator','/loan-checklist','/loan-readiness','/loans/checklist','/dividend-estimator','/welfare','/documents','/news','/announcements','/events','/calendar','/contact','/faqs','/verify-receipt','/privacy/policy','/privacy/cookies','/service-unavailable'];
 const clone = value => JSON.parse(JSON.stringify(value));
 const style = { display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',margin:'8px 0' };
-const btn = { padding:'8px 12px',border:'1px solid var(--border-strong)',borderRadius:8 };
+const btn = { display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 12px',border:'1px solid var(--border-strong)',borderRadius:8 };
 const field = { padding:8,border:'1px solid var(--border-strong)',borderRadius:8,minWidth:160,maxWidth:'100%' };
 
 export default function AdminMegaMenuPage() {
@@ -101,21 +102,21 @@ export default function AdminMegaMenuPage() {
           <strong>เว็บไซต์จริง: {state.published?'มีเมนูที่เผยแพร่แล้ว':'ใช้ Navbar เดิม'}</strong>
           <span> · {state.draft?'มีร่างค้าง':'ยังไม่มีร่าง'}</span>
           <span> · {dirty?'มีข้อมูลยังไม่บันทึก':'ข้อมูลตรงกับที่บันทึก'}</span>
-          <button type="button" style={btn} disabled={categories.length>=8} onClick={addCategory}>เพิ่มหมวดเมนูหลัก</button>
-          <button type="button" style={btn} onClick={()=>setPreview(v=>!v)}>{preview?'ปิด Preview':'Preview ร่าง'}</button>
-          <button type="button" style={btn} onClick={load} disabled={busy}>โหลดข้อมูลล่าสุด</button>
+          <button type="button" style={btn} disabled={categories.length>=8} onClick={addCategory}><Plus size={16} aria-hidden="true"/> เพิ่มหมวดเมนูหลัก</button>
+          <button type="button" style={btn} onClick={()=>setPreview(v=>!v)}>{preview ? <EyeOff size={16} aria-hidden="true"/> : <Eye size={16} aria-hidden="true"/>}{preview?'ปิด Preview':'Preview ร่าง'}</button>
+          <button type="button" style={btn} onClick={load} disabled={busy}><RotateCcw size={16} aria-hidden="true"/> โหลดข้อมูลล่าสุด</button>
         </div>
         {categories.map((category,ci)=><section key={category.id} className="surface-card" style={{padding:18,margin:'16px 0'}}>
           <div style={style}>
             <strong style={{minWidth:135}}>หมวด {ci+1}</strong>
-            <button type="button" aria-label={'เลื่อนหมวดขึ้น '+category.title} style={btn} disabled={ci===0} onClick={()=>moveCategory(ci,-1)}>↑</button>
-            <button type="button" aria-label={'เลื่อนหมวดลง '+category.title} style={btn} disabled={ci===categories.length-1} onClick={()=>moveCategory(ci,1)}>↓</button>
+            <button type="button" aria-label={'เลื่อนหมวดขึ้น '+category.title} style={btn} disabled={ci===0} onClick={()=>moveCategory(ci,-1)}><ArrowUp size={16} aria-hidden="true"/></button>
+            <button type="button" aria-label={'เลื่อนหมวดลง '+category.title} style={btn} disabled={ci===categories.length-1} onClick={()=>moveCategory(ci,1)}><ArrowDown size={16} aria-hidden="true"/></button>
             <input aria-label={'ชื่อหมวด '+category.id} style={{...field,flex:1}} maxLength={80} value={category.title} onChange={e=>editCategory(ci,'title',e.target.value)}/>
             <label><input type="checkbox" checked={category.enabled} onChange={e=>editCategory(ci,'enabled',e.target.checked)}/> แสดงหมวด</label>
-            <button type="button" style={btn} disabled={category.items.length>=30} onClick={()=>addItem(ci)}>เพิ่มรายการ</button>
+            <button type="button" style={btn} disabled={category.items.length>=30} onClick={()=>addItem(ci)}><ListPlus size={16} aria-hidden="true"/> เพิ่มรายการ</button>
             <button type="button" style={{...btn,color:'#b42318'}} disabled={categories.length<=1} onClick={async()=>{
               if(await showConfirm('ลบหมวดจากร่าง?', 'การลบจะมีผลต่อหน้าบ้านเมื่ออนุมัติเผยแพร่เท่านั้น'))removeCategory(ci);
-            }}>ลบหมวดจากร่าง</button>
+            }}><Trash2 size={16} aria-hidden="true"/> ลบหมวดจากร่าง</button>
           </div>
           {preview?<div style={{display:'flex',flexWrap:'wrap',gap:12}}>
             {category.enabled && category.items.filter(item=>item.enabled).map(item=><div key={item.id} style={{...btn,minWidth:200}}>
@@ -131,8 +132,8 @@ export default function AdminMegaMenuPage() {
               onDrop={e=>{e.preventDefault();drop(ci,ii);}}
               onDragEnd={()=>setDragSource(null)}>
               <td><div style={style}>
-                <button type="button" style={btn} disabled={ii===0} aria-label={'เลื่อนขึ้น '+item.title} onClick={()=>move(ci,ii,-1)}>↑</button>
-                <button type="button" style={btn} disabled={ii===category.items.length-1} aria-label={'เลื่อนลง '+item.title} onClick={()=>move(ci,ii,1)}>↓</button>
+                <button type="button" style={btn} disabled={ii===0} aria-label={'เลื่อนขึ้น '+item.title} onClick={()=>move(ci,ii,-1)}><ArrowUp size={16} aria-hidden="true"/></button>
+                <button type="button" style={btn} disabled={ii===category.items.length-1} aria-label={'เลื่อนลง '+item.title} onClick={()=>move(ci,ii,1)}><ArrowDown size={16} aria-hidden="true"/></button>
                 <label><input type="checkbox" checked={item.enabled} onChange={e=>editItem(ci,ii,'enabled',e.target.checked)}/> แสดง</label>
               </div></td>
               <td><input aria-label={'ชื่อรายการ '+item.id} style={field} maxLength={100} value={item.title} onChange={e=>editItem(ci,ii,'title',e.target.value)}/>
@@ -144,7 +145,7 @@ export default function AdminMegaMenuPage() {
               <td><select aria-label={'เส้นทาง '+item.id} style={field} value={item.path} onChange={e=>editItem(ci,ii,'path',e.target.value)}>{PATHS.map(x=><option key={x} value={x}>{x}</option>)}</select></td>
               <td><button type="button" style={{...btn,color:'#b42318'}} onClick={async()=>{
                 if(await showConfirm('ลบรายการจากร่าง?', 'รายการนี้จะไม่แสดงหลังเผยแพร่ร่างเท่านั้น'))removeItem(ci,ii);
-              }}>ลบจากร่าง</button></td>
+              }}><Trash2 size={16} aria-hidden="true"/> ลบจากร่าง</button></td>
             </tr>)}</tbody>
           </table></div>}
         </section>)}
@@ -153,16 +154,16 @@ export default function AdminMegaMenuPage() {
             <input type="password" inputMode="numeric" autoComplete="one-time-code" style={{...field,display:'block',margin:'8px 0'}} value={totp} maxLength={6} onChange={e=>setTotp(e.target.value.replace(/\D/g,'').slice(0,6))}/>
           </label>
           <div style={style}>
-            <button type="button" style={btn} disabled={busy||!dirty||!validTotp} onClick={()=>request('draft')}>1. บันทึกร่าง</button>
+            <button type="button" style={btn} disabled={busy||!dirty||!validTotp} onClick={()=>request('draft')}><Save size={16} aria-hidden="true"/> 1. บันทึกร่าง</button>
             <button type="button" style={btn} disabled={busy||dirty||!state.draft||!validTotp} onClick={async()=>{
               if(await showConfirm('ยืนยันเผยแพร่ Mega Menu?', 'เว็บไซต์หน้าบ้านจะเริ่มใช้ชุดเมนูใหม่ที่ตรวจแล้ว'))request('publish');
-            }}>2. อนุมัติเผยแพร่</button>
+            }}><Send size={16} aria-hidden="true"/> 2. อนุมัติเผยแพร่</button>
             <button type="button" style={btn} disabled={busy||dirty||!state.published||!validTotp} onClick={async()=>{
               if(await showConfirm('ย้อนกลับเมนู?', 'ใช้ชุดเมนูที่เคยเผยแพร่ก่อนหน้าเมื่อมีข้อมูลย้อนหลัง'))request('rollback');
-            }}>ย้อนกลับเวอร์ชันก่อนหน้า</button>
+            }}><Undo2 size={16} aria-hidden="true"/> ย้อนกลับเวอร์ชันก่อนหน้า</button>
             <button type="button" style={{...btn,color:'#b42318'}} disabled={busy||dirty||!state.published||!validTotp} onClick={async()=>{
               if(await showConfirm('คืนค่าเมนูเดิมของเว็บไซต์?', 'ระบบจะกลับไปใช้ Navbar รูปแบบเดิมทันทีและเก็บชุดใหม่ในประวัติ'))request('restore-legacy');
-            }}>คืนค่า Navbar เดิม</button>
+            }}><RotateCcw size={16} aria-hidden="true"/> คืนค่า Navbar เดิม</button>
           </div>
         </div>
       </div>}
