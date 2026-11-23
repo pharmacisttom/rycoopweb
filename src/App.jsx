@@ -55,6 +55,7 @@ const AdminMegaMenuPage = lazy(() => import('./pages/AdminMegaMenuPage'));
 const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
 const AdminActivitiesPage = lazy(() => import('./pages/AdminActivitiesPage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
+const EServiceUnavailablePage = lazy(() => import('./pages/EServiceUnavailablePage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -224,7 +225,7 @@ export default function App() {
               <Route
                 key={path}
                 path={path}
-                element={path === '/eservice' && !eservicePublicEnabled ? <ServiceUnavailablePage /> : <Page />}
+                element={path === '/eservice' && !eservicePublicEnabled ? <EServiceUnavailablePage /> : <Page />}
               />
             ))}
 
