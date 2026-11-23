@@ -631,6 +631,40 @@ input, select, textarea {
   gap: 1rem;
 }
 
+/* Published menu is a single full-width track. The legacy .mega-menu-col-main
+   uses grid-column: span 8 in a 12-track layout; never inherit that span. */
+.mega-menu-grid--published {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+}
+.mega-menu-col-main--published {
+  grid-column: 1 / -1;
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1.25rem;
+}
+.mega-menu-col-main--published > div,
+.mega-menu-col-main--published .mega-menu-card-item {
+  min-width: 0;
+  max-width: 100%;
+}
+.mega-menu-col-main--published .mega-menu-item-title,
+.mega-menu-col-main--published .mega-menu-item-desc {
+  overflow-wrap: anywhere;
+}
+.mega-menu-wrapper {
+  max-height: min(72vh, 640px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 800px) {
+  .mega-menu-wrapper { width: calc(100vw - 24px); padding: 1rem; }
+  .mega-menu-col-main--published { grid-template-columns: minmax(0,1fr); }
+}
+
 .mega-menu-col-3col {
   grid-column: span 8;
   display: grid;
