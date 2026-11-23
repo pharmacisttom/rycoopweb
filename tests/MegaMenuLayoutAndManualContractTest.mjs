@@ -6,6 +6,7 @@ const css = src('src/index.css');
 const editor = src('src/pages/AdminMegaMenuPage.jsx');
 const manual = src('src/pages/AdminUserManualPage.jsx');
 const shell = src('src/components/admin/AdminControlCenterShell.jsx');
+const app = src('src/App.jsx');
 assert.match(menu, /mega-menu-grid mega-menu-grid--published/);
 assert.match(menu, /mega-menu-col-main mega-menu-col-main--published/);
 assert.match(css, /\.mega-menu-col-main--published\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/s);
@@ -21,4 +22,11 @@ const labels = [
   'คืนค่า Navbar เดิม', 'ลบหมวดจากร่าง', 'ลบจากร่าง'
 ];
 for(const label of labels) assert.ok(manual.includes(label), 'Missing manual button explanation: ' + label);
+// Public Chrome must never mount for newly added /admin routes. This was
+// missing from the previous route-name allowlist and caused a double header.
+assert.match(app, /pathname\.startsWith\('\/admin\/'\)/);
+assert.match(app, /!memberAdminPage && <><TopBar \/><Navbar \/><\/>/);
+for (const route of ['/admin/manual', '/admin/mega-menu', '/admin/navigation-copy']) {
+  assert.ok(route.startsWith('/admin/'), 'Route must be isolated from public chrome: ' + route);
+}
 console.log('MEGA_MENU_LAYOUT_AND_MANUAL_CONTRACT=PASS');
