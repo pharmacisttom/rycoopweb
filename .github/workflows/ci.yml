@@ -122,6 +122,7 @@ jobs:
           php tests/RequestSecurityTest.php
           php tests/GoogleAuthCoreTest.php
           php tests/GoogleMfaIdentityMappingRegressionTest.php
+          php tests/MegaMenuValidationTest.php
           php tests/FeatureFlagContractTest.php
           php tests/DividendImportTest.php
           php tests/MfaWorkflowTest.php
@@ -223,6 +224,11 @@ jobs:
           path: docs/audit/ADMIN_CRUD_COVERAGE_MATRIX.md
           if-no-files-found: error
           retention-days: 14
+
+      - name: Mega Menu real MySQL draft, CRUD, publish, audit and rollback
+        env:
+          CRUD_DISPOSABLE_MYSQL: "1"
+        run: php tests/MegaMenuMySqlTest.php
 
       - name: Real MySQL 8 legacy member migration and rollback
         env:
@@ -381,6 +387,9 @@ jobs:
 
       - name: Verify cookie modal and SweetAlert2 integration
         run: node tests/CookieModalSweetAlert2ContractTest.mjs
+
+      - name: Verify Mega Menu CRUD and e-Service hold contracts
+        run: node tests/MegaMenuSourceContractTest.mjs
 
       - name: Verify official branding build
         run: node tests/BrandingTest.mjs

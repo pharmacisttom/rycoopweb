@@ -1,3 +1,5 @@
+import PublishedMegaMenu from './PublishedMegaMenu';
+import { ESERVICE_PUBLIC_ENABLED } from '../../config/publicServiceVisibility';
 import CoopBrandLogo from '../branding/CoopBrandLogo';
 import { usePublicInformation } from '../../context/PublicContentContext';
 import React, { useState, useEffect, useRef } from 'react';
@@ -21,6 +23,21 @@ export default function Navbar() {
   const { COOP_INFO, BOARD_MEMBERS } = usePublicInformation();
   const { nav_menu: showNavMenu } = useSiteChromeVisibility();
   const [navigationCopy, setNavigationCopy] = useState(null);
+  const [publishedMenu, setPublishedMenu] = useState(null);
+  useEffect(()=>{
+    const controller=new AbortController();
+    fetch('/api/public/mega-menu',{signal:controller.signal,cache:'no-cache'})
+      .then(r=>r.ok?r.json():null)
+      .then(r=>{
+        const next=r?.data;
+        if(r?.success && Array.isArray(next) && next.length>=1 && next.length<=8
+          && next.every(c=>typeof c.id==='string'&&typeof c.enabled==='boolean'&&Array.isArray(c.items))) setPublishedMenu(next);
+      }).catch(()=>{});
+    return ()=>controller.abort();
+  },[]);
+  const configuredCategory=id=>publishedMenu?.find(c=>c.id===id);
+  const categoryVisible=id=>configuredCategory(id)?.enabled!==false;
+
   const currentBoardTerm = [...new Set(BOARD_MEMBERS.filter(person => person.status !== 'former').map(person => person.term).filter(Boolean))].sort((a,b) => b.localeCompare(a,'th',{numeric:true}))[0] || '';
   useEffect(() => {
     const controller = new AbortController();
@@ -148,7 +165,16 @@ export default function Navbar() {
             {navText('home_nav', 'หน้าแรก')}
           </Link>
 
+          {publishedMenu ? publishedMenu.filter(category=>category.enabled).map(category=><div key={category.id} style={{position:'static'}}>
+            <button type="button" onClick={()=>toggleMegaMenu(category.id)}
+              onMouseEnter={()=>setActiveMegaMenu(category.id)}
+              style={{...navLinkStyle(activeMegaMenu===category.id),display:'inline-flex',alignItems:'center',gap:'0.3rem'}}>
+              <span>{category.title}</span>
+              <ChevronDown size={14} style={{transform:activeMegaMenu===category.id?'rotate(180deg)':'none'}}/>
+            </button>
+          </div>) : (<>
           {/* 2. เกี่ยวกับสหกรณ์ (Mega Menu) */}
+          {categoryVisible('about') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('about')}
@@ -160,12 +186,14 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>{navText('about_nav', 'เกี่ยวกับสหกรณ์')}</span>
+              <span>{configuredCategory('about')?.title || navText('about_nav', 'เกี่ยวกับสหกรณ์' )}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'about' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
 
           {/* 3. บริการทางการเงิน (Mega Menu) */}
+          {categoryVisible('finance') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('finance')}
@@ -177,12 +205,14 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>{navText('finance_nav', 'บริการทางการเงิน')}</span>
+              <span>{configuredCategory('finance')?.title || navText('finance_nav', 'บริการทางการเงิน' )}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'finance' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
 
           {/* 4. สวัสดิการ (Mega Menu) */}
+          {categoryVisible('welfare') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('welfare')}
@@ -194,12 +224,14 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>{navText('welfare_nav', 'สวัสดิการ')}</span>
+              <span>{configuredCategory('welfare')?.title || navText('welfare_nav', 'สวัสดิการ' )}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'welfare' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
 
           {/* 5. ข่าวสารและเอกสาร (Mega Menu) */}
+          {categoryVisible('news_docs') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('news_docs')}
@@ -211,10 +243,13 @@ export default function Navbar() {
                 gap: '0.3rem'
               }}
             >
-              <span>{navText('news_nav', 'ข่าวสารและเอกสาร')}</span>
+              <span>{configuredCategory('news_docs')?.title || navText('news_nav', 'ข่าวสารและเอกสาร' )}</span>
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'news_docs' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
+
+          </>)}
 
         </nav>}
 
@@ -355,14 +390,16 @@ export default function Navbar() {
       {/* ========================================================================= */}
       {/* DESKTOP MEGA MENUS CONTAINER                                            */}
       {/* ========================================================================= */}
-      {showNavMenu && activeMegaMenu && (
+      {showNavMenu && activeMegaMenu && categoryVisible(activeMegaMenu) && (
         <div
           className="mega-menu-wrapper"
           onMouseLeave={() => setActiveMegaMenu(null)}
         >
 
+          {publishedMenu && <PublishedMegaMenu category={configuredCategory(activeMegaMenu)} onNavigate={()=>setActiveMegaMenu(null)} />}
+
           {/* MEGA MENU 1: เกี่ยวกับสหกรณ์ */}
-          {activeMegaMenu === 'about' && (
+          {!publishedMenu && activeMegaMenu === 'about' && (
             <div className="mega-menu-grid">
               <div className="mega-menu-col-main">
                 <div>
@@ -473,7 +510,7 @@ export default function Navbar() {
           )}
 
           {/* MEGA MENU 2: บริการทางการเงิน */}
-          {activeMegaMenu === 'finance' && (
+          {!publishedMenu && activeMegaMenu === 'finance' && (
             <div className="mega-menu-grid">
               <div className="mega-menu-col-main">
                 <div>
@@ -613,7 +650,7 @@ export default function Navbar() {
           )}
 
           {/* MEGA MENU 3: สวัสดิการ */}
-          {activeMegaMenu === 'welfare' && (
+          {!publishedMenu && activeMegaMenu === 'welfare' && (
             <div className="mega-menu-grid">
               <div className="mega-menu-col-main">
                 <div>
@@ -724,7 +761,7 @@ export default function Navbar() {
           )}
 
           {/* MEGA MENU 4: ข่าวสารและเอกสาร */}
-          {activeMegaMenu === 'news_docs' && (
+          {!publishedMenu && activeMegaMenu === 'news_docs' && (
             <div className="mega-menu-grid">
               <div className="mega-menu-col-main">
                 <div>
@@ -787,6 +824,7 @@ export default function Navbar() {
                       </div>
                     </Link>
 
+                    {ESERVICE_PUBLIC_ENABLED && (
                     <Link to="/eservice" className="mega-menu-card-item">
                       <div className="mega-menu-icon-wrap" style={{ background: 'var(--primary-100)', color: 'var(--primary-700)' }}>
                         <Globe size={18} />
@@ -796,6 +834,7 @@ export default function Navbar() {
                         <div className="mega-menu-item-desc">{navText('eservices_desc', 'ยื่นคำขอออนไลน์ ปรับค่าหุ้น ขอหนังสือรับรองภาษี')}</div>
                       </div>
                     </Link>
+                    )}
 
                     <Link to="/verify-receipt" className="mega-menu-card-item">
                       <div className="mega-menu-icon-wrap" style={{ background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
@@ -927,6 +966,17 @@ export default function Navbar() {
             <span>หน้าแรก</span>
           </Link>
 
+          {publishedMenu && publishedMenu.filter(c=>c.enabled).map(category=><div key={category.id}>
+            <button type="button" onClick={()=>toggleMobileAccordion(category.id)}
+              style={{...mobileItemStyle,width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:'none',border:'none',cursor:'pointer',textAlign:'left'}}>
+              <span>{category.title}</span><ChevronDown size={16}/>
+            </button>
+            {mobileAccordion===category.id&&<div style={mobileSubMenuStyle}>
+              {category.items.filter(item=>item.enabled).map(item=><Link key={item.id} to={item.path}
+                style={mobileSubItemStyle} onClick={()=>setMobileMenuOpen(false)}>• {item.title}</Link>)}
+            </div>}
+          </div>)}
+          {!publishedMenu && (<>
           {/* 2. เกี่ยวกับสหกรณ์ Accordion */}
           <div>
             <button
@@ -1003,10 +1053,11 @@ export default function Navbar() {
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ข่าวประชาสัมพันธ์ & กิจกรรม</Link>
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ประกาศทางการสหกรณ์</Link>
                 <Link to="/documents" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ดาวน์โหลดแบบฟอร์ม & รายงาน</Link>
-                <span style={mobileSubItemStyle}>• ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
+                {ESERVICE_PUBLIC_ENABLED && <Link to="/eservice" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• e-Services</Link>}
               </div>
             )}
           </div>
+          </>)}
 
         </div>
       )}

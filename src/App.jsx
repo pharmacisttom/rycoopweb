@@ -1,3 +1,4 @@
+import { ESERVICE_PUBLIC_ENABLED } from './config/publicServiceVisibility';
 import AdminStoredContentPage from './pages/AdminStoredContentPage';
 import AdminActionProvider from './components/admin/AdminActionProvider';
 import AdminAppShell from './components/admin/AdminAppShell';
@@ -50,9 +51,11 @@ const AdminWelfarePage = lazy(() => import('./pages/AdminWelfarePage'));
 const AdminHomepageLayoutPage = lazy(() => import('./pages/AdminHomepageLayoutPage'));
 const AdminUserManualPage = lazy(() => import('./pages/AdminUserManualPage'));
 const AdminNavigationCopyPage = lazy(() => import('./pages/AdminNavigationCopyPage'));
+const AdminMegaMenuPage = lazy(() => import('./pages/AdminMegaMenuPage'));
 const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
 const AdminActivitiesPage = lazy(() => import('./pages/AdminActivitiesPage'));
 const EServicePage = lazy(() => import('./pages/EServicePage'));
+const EServiceUnavailablePage = lazy(() => import('./pages/EServiceUnavailablePage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -68,6 +71,7 @@ const ServiceUnavailablePage = lazy(() => import('./pages/ServiceUnavailablePage
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 
 const memberPortalEnabled = import.meta.env.VITE_FEATURE_MEMBER_PORTAL === 'true';
+const eservicePublicEnabled = ESERVICE_PUBLIC_ENABLED;
 
 // RYCOOP LED Member Check Pages
 const AdminLedDashboardPage = lazy(() => import('./pages/AdminLedDashboardPage'));
@@ -221,7 +225,7 @@ export default function App() {
               <Route
                 key={path}
                 path={path}
-                element={path === '/eservice' && !memberPortalEnabled ? <ServiceUnavailablePage /> : <Page />}
+                element={path === '/eservice' && !eservicePublicEnabled ? <EServiceUnavailablePage /> : <Page />}
               />
             ))}
 
@@ -258,6 +262,7 @@ export default function App() {
             <Route path="/admin/media" element={<StaffProtectedRoute permission="news.view"><AdminMediaLibraryPage /></StaffProtectedRoute>} />
 
             <Route path="/admin/navigation-copy" element={<StaffProtectedRoute roles={['super_admin']}><AdminNavigationCopyPage /></StaffProtectedRoute>} />
+            <Route path="/admin/mega-menu" element={<StaffProtectedRoute roles={['super_admin']}><AdminMegaMenuPage /></StaffProtectedRoute>} />
             <Route path="/admin/layout" element={<StaffProtectedRoute roles={['super_admin']}><AdminHomepageLayoutPage /></StaffProtectedRoute>} />
             <Route path="/admin/manual" element={<StaffProtectedRoute><AdminUserManualPage /></StaffProtectedRoute>} />
             <Route path="/admin/public-content" element={<StaffProtectedRoute anyPermissions={['coop_info.view','people.view','rates.view','products.view']}><PublicContentAdminPage /></StaffProtectedRoute>} />

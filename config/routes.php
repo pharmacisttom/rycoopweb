@@ -626,6 +626,16 @@ $router->group(['prefix'=>'api/admin/navigation-copy','middleware'=>[AuthMiddlew
     $r->post('/publish', 'Admin\\SiteNavigationCopyController@publish', [CsrfMiddleware::class]);
 });
 
+// RC19 Mega Menu: legacy Navbar remains the fallback until a publication exists.
+$router->get('/api/public/mega-menu', 'Admin\\MegaMenuController@published');
+$router->group(['prefix'=>'api/admin/mega-menu','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
+    $r->get('', 'Admin\\MegaMenuController@show');
+    $r->post('/draft', 'Admin\\MegaMenuController@draft', [CsrfMiddleware::class]);
+    $r->post('/publish', 'Admin\\MegaMenuController@publish', [CsrfMiddleware::class]);
+    $r->post('/rollback', 'Admin\\MegaMenuController@rollback', [CsrfMiddleware::class]);
+    $r->post('/restore-legacy', 'Admin\\MegaMenuController@restoreLegacy', [CsrfMiddleware::class]);
+});
+
 // Public CMS: controller checks the section's module and action on every call.
 $router->get('/api/public/content', 'Admin\\PublicContentController@publicCatalog');
 $router->group(['prefix'=>'api/admin/public-content','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r){
