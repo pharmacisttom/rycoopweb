@@ -149,6 +149,17 @@ final class MegaMenuService {
             return self::state();
         });
     }
+    public static function restoreLegacy(array $input):array {
+        return Database::transaction(static function()use($input) {
+            $old=self::state(true);
+            if(!hash_equals($old['version'],(string)($input['version']??'')))throw new RuntimeException('VERSION_CONFLICT',409);
+            if(!$old['published'])throw new InvalidArgumentException('ยังไม่มีเมนูเผยแพร่ที่ต้องคืนค่า');
+            self::store(self::HISTORY,$old['published']);
+            Database::execute('DELETE FROM site_settings WHERE `key` IN (?,?)',[self::LIVE,self::DRAFT]);
+            AuditService::log('mega_menu','restore_legacy',null,$old['published'],null,required:true);
+            return self::state();
+        });
+    }
     public static function rollback(array $input):array {
         return Database::transaction(static function()use($input) {
             $old=self::state(true);
