@@ -18,6 +18,7 @@ export default function AdminMegaMenuPage() {
   const [error,setError] = useState('');
   const [totp,setTotp] = useState('');
   const [preview,setPreview] = useState(false);
+  const [dragSource,setDragSource] = useState(null);
   const [notice,setNotice] = useState('');
   const original = state?.draft || state?.published || state?.template;
   const dirty = !!original && JSON.stringify(original)!==JSON.stringify(categories);
@@ -50,6 +51,17 @@ export default function AdminMegaMenuPage() {
     [items[index],items[target]]=[items[target],items[index]];
     return {...v,items};
   }));
+  const drop=(cat,index)=>{
+    if(!dragSource||dragSource.cat!==cat||dragSource.index===index){setDragSource(null);return;}
+    setCategories(old=>old.map((v,i)=>{
+      if(i!==cat)return v;
+      const items=[...v.items];
+      const [picked]=items.splice(dragSource.index,1);
+      items.splice(index,0,picked);
+      return {...v,items};
+    }));
+    setDragSource(null);
+  };
   const request=async(action)=>{
     if(busy||!state||!validTotp)return;
     setBusy(true);setError('');setNotice('');
@@ -68,7 +80,7 @@ export default function AdminMegaMenuPage() {
   };
   return <AdminControlCenterShell title="จัดการ Mega Menu" subtitle="เพิ่ม แก้ไข ซ่อน จัดลำดับ และเผยแพร่เมนูหน้าเว็บไซต์">
     <section className="admin-module" aria-label="จัดการ Mega Menu" style={{maxWidth:1150}}>
-      <p>จัดการเมนูหลัก 4 หมวด โดยเพิ่ม/ลบรายการย่อย แก้ลิงก์ภายใน หมวดหมู่ ไอคอน และข้อความได้ ย้ายลำดับด้วยปุ่มขึ้น/ลง ทุกรายการเริ่มเป็นร่างก่อนเผยแพร่ ไม่มีผลต่อ Navbar เดิมจนกว่าจะอนุมัติ</p>
+      <p>จัดการเมนูหลัก 4 หมวด โดยเพิ่ม/ลบรายการย่อย แก้ลิงก์ภายใน หมวดหมู่ ไอคอน และข้อความได้ ย้ายลำดับด้วย Drag & Drop หรือปุ่มขึ้น/ลง ทุกรายการเริ่มเป็นร่างก่อนเผยแพร่ ไม่มีผลต่อ Navbar เดิมจนกว่าจะอนุมัติ</p>
       <p><strong>ข้อควรทราบ:</strong> ลบรายการในตัวแก้ไขคือการลบจากร่าง (ไม่มีผลต่อข้อมูล CMS) และลิงก์เลือกได้เฉพาะหน้าที่อนุญาต ไม่อนุญาต URL ภายนอกหรือ /eservice ที่ยังไม่เปิดใช้</p>
       {error&&<p role="alert" style={{color:'#b42318'}}>{error}</p>}
       {notice&&<p role="status">{notice}</p>}
@@ -97,7 +109,11 @@ export default function AdminMegaMenuPage() {
           <div style={{overflowX:'auto'}}>
           <table style={{width:'100%',minWidth:800,borderCollapse:'collapse'}}>
             <thead><tr><th>ลำดับ / แสดง</th><th>ชื่อ / คำอธิบาย</th><th>กลุ่ม / ไอคอน</th><th>เส้นทาง</th><th>จัดการ</th></tr></thead>
-            <tbody>{category.items.map((item,ii)=><tr key={item.id}>
+            <tbody>{category.items.map((item,ii)=><tr key={item.id} draggable
+              onDragStart={e=>{e.dataTransfer.effectAllowed='move';setDragSource({cat:ci,index:ii});}}
+              onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';}}
+              onDrop={e=>{e.preventDefault();drop(ci,ii);}}
+              onDragEnd={()=>setDragSource(null)}>
               <td><div style={style}>
                 <button type="button" style={btn} disabled={ii===0} aria-label={'เลื่อนขึ้น '+item.title} onClick={()=>move(ci,ii,-1)}>↑</button>
                 <button type="button" style={btn} disabled={ii===category.items.length-1} aria-label={'เลื่อนลง '+item.title} onClick={()=>move(ci,ii,1)}>↓</button>
