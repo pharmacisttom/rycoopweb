@@ -394,6 +394,9 @@ jobs:
       - name: Verify Admin Lucide icon accessibility and sidebar coverage
         run: node tests/AdminSidebarIconContractTest.mjs
 
+      - name: Verify RC21 Glass Admin design scope and accessibility
+        run: node tests/AdminGlassColorRC21SourceContract.mjs
+
       - name: Verify official branding build
         run: node tests/BrandingTest.mjs
 

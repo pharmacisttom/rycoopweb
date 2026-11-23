@@ -1,4 +1,5 @@
 import { AdminPageHeader } from '../components/admin/AdminUI';
+import { iconForAdminPath } from '../components/admin/AdminSidebarItemIcon';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -2048,9 +2049,16 @@ export default function AdminDashboardPage() {
   return <section className="admin-module">
     <AdminPageHeader title="ศูนย์จัดการเว็บไซต์สหกรณ์ (CMS)"
       description="เข้าถึงโมดูลจัดการข้อมูลจริงจากฐานข้อมูล โดยเจ้าหน้าที่เป็นผู้บันทึกและอนุมัติการเผยแพร่" />
-    <div className="grid-3">
-      {visible.map(item => <Link key={item.path} className="surface-card"
-        style={{padding:24,display:'block',minHeight:82}} to={item.path}>{item.label}</Link>)}
+    <div className="grid-3 rc21-cms-grid">
+      {visible.map((item, index) => {
+        const Icon = iconForAdminPath(item.path);
+        return <Link key={item.path} className={`surface-card rc21-cms-tile rc21-accent-${index % 6}`}
+          to={item.path}>
+          <span className="rc21-cms-icon"><Icon size={22} strokeWidth={1.9} aria-hidden="true" /></span>
+          <span className="rc21-cms-tile-title">{item.label}</span>
+          <ArrowRight className="rc21-cms-arrow" size={18} aria-hidden="true" />
+        </Link>;
+      })}
     </div>
     {!visible.length && <p role="status">ยังไม่มีสิทธิ์ใช้งานโมดูล CMS กรุณาติดต่อผู้ดูแลระบบ</p>}
     <p role="status" style={{marginTop:18}}>ประกาศ Popup และ Hero ที่ยังไม่ได้เชื่อมระบบ CRUD กลางครบถ้วนจะไม่แสดงข้อมูลจำลองแทนรายการจริง</p>

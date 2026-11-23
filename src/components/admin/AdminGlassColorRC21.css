@@ -1,0 +1,177 @@
+/* RC21 RYCOOP Admin Glass Design: scoped, contrast-first, presentation only.
+   No fixed positioning/z-index, no changes to auth, routes, modals or public UI. */
+.acc-shell {
+  --rc21-ink:#17324f;
+  --rc21-muted:#4c647c;
+  --rc21-blue:#2563eb;
+  --rc21-sky:#0891b2;
+  --rc21-teal:#0f766e;
+  --rc21-purple:#7c3aed;
+  --rc21-amber:#b45309;
+  --rc21-rose:#be185d;
+  --rc21-glass:rgba(255,255,255,.88);
+  --rc21-line:rgba(98,141,184,.24);
+  --rc21-shadow:0 16px 42px rgba(35,76,122,.075),0 2px 8px rgba(30,68,110,.035);
+  --rc20-card-bg:var(--rc21-glass);
+  --rc20-card-border:var(--rc21-line);
+  --rc20-card-shadow:var(--rc21-shadow);
+  --acc-focus-ring:#0e7490;
+  color:var(--rc21-ink);
+  background:
+    radial-gradient(circle at 92% 0,rgba(103,232,249,.15),transparent 39%),
+    radial-gradient(circle at 7% 48%,rgba(165,180,252,.14),transparent 42%),
+    #f1f6fd;
+}
+.acc-shell .acc-main-wrapper {
+  background:transparent;
+}
+.acc-shell .acc-sidebar {
+  background:linear-gradient(158deg,#103f68 0%,#10345a 47%,#0d2547 100%);
+}
+.acc-shell .acc-sidebar-nav .acc-nav-group {
+  background:rgba(255,255,255,.075);
+  border-color:rgba(196,225,251,.19);
+  box-shadow:0 3px 12px rgba(0,10,30,.12);
+  transition:background .16s ease,border-color .16s ease;
+}
+.acc-shell .acc-sidebar-nav .acc-nav-group:hover {
+  background:rgba(255,255,255,.115);
+  border-color:rgba(196,225,251,.34);
+}
+.acc-shell .acc-sidebar-nav .acc-nav-group-btn {
+  color:#f3f8ff;
+}
+.acc-shell .acc-sidebar-nav .acc-nav-group-btn.has-active {
+  color:#a5f3fc;
+}
+.acc-shell .acc-sidebar-nav .acc-nav-link {
+  color:#e1efff;
+  text-decoration:none;
+}
+.acc-shell .acc-sidebar-nav .acc-nav-link.is-active {
+  background:linear-gradient(100deg,#1479c9 0%,#0e7490 100%);
+  color:#fff;
+  box-shadow:0 5px 15px rgba(2,16,40,.22);
+}
+.acc-shell .acc-sidebar-nav .acc-nav-link:hover {
+  color:#fff;
+  background:rgba(173,229,255,.16);
+}
+.acc-shell .acc-topbar {
+  background:rgba(255,255,255,.9);
+  border-bottom:1px solid var(--rc21-line);
+}
+.acc-shell .acc-content > .acc-page-header,
+.acc-shell .acc-content > :is(.admin-module,.member-admin,.public-content-admin,.admin-card,.acc-card,.surface-card) {
+  background:var(--rc21-glass);
+  border-color:var(--rc21-line);
+  box-shadow:var(--rc21-shadow);
+}
+.acc-shell .acc-content :is(.admin-card,.surface-card,.acc-card,.admin-panel,.public-content-fields) {
+  border-color:var(--rc21-line);
+  background:rgba(255,255,255,.92);
+}
+.acc-shell .acc-content :is(.acc-page-title,.admin-page-heading h1,.rc21-cms-tile-title) {
+  color:var(--rc21-ink);
+}
+.acc-shell .acc-content :is(.acc-page-desc,.admin-page-heading p) {
+  color:var(--rc21-muted);
+}
+.acc-shell .rc21-cms-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+}
+.acc-shell .rc21-cms-tile {
+  --rc21-accent:#2563eb;
+  --rc21-wash:#e8f0ff;
+  position:relative;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:20px;
+  min-height:108px;
+  border-radius:18px;
+  border:1px solid color-mix(in srgb,var(--rc21-accent) 22%,white);
+  text-decoration:none;
+  background:linear-gradient(125deg,var(--rc21-wash),rgba(255,255,255,.96) 73%);
+  box-shadow:0 6px 20px rgba(37,78,130,.065);
+  color:var(--rc21-ink);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.acc-shell .rc21-cms-tile.rc21-accent-1 {--rc21-accent:#0f766e;--rc21-wash:#e4f7f2;}
+.acc-shell .rc21-cms-tile.rc21-accent-2 {--rc21-accent:#7c3aed;--rc21-wash:#f1eaff;}
+.acc-shell .rc21-cms-tile.rc21-accent-3 {--rc21-accent:#b45309;--rc21-wash:#fff1d9;}
+.acc-shell .rc21-cms-tile.rc21-accent-4 {--rc21-accent:#0369a1;--rc21-wash:#e5f5ff;}
+.acc-shell .rc21-cms-tile.rc21-accent-5 {--rc21-accent:#be185d;--rc21-wash:#ffeaf1;}
+.acc-shell .rc21-cms-icon {
+  flex:0 0 52px;
+  width:52px;height:52px;
+  display:grid;place-items:center;
+  border-radius:15px;
+  background:color-mix(in srgb,var(--rc21-accent) 13%,white);
+  color:var(--rc21-accent);
+  border:1px solid color-mix(in srgb,var(--rc21-accent) 17%,white);
+}
+.acc-shell .rc21-cms-tile-title {
+  flex:1 1 auto;
+  min-width:0;
+  overflow-wrap:anywhere;
+  font-size:.94rem;
+  line-height:1.45;
+  font-weight:700;
+  text-decoration:none;
+}
+.acc-shell .rc21-cms-arrow {
+  flex:0 0 auto;
+  color:var(--rc21-accent);
+  opacity:.78;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference) {
+  .acc-shell .rc21-cms-tile:hover {
+    transform:translateY(-3px);
+    border-color:var(--rc21-accent);
+    box-shadow:0 14px 32px rgba(35,76,122,.13);
+  }
+}
+.acc-shell .rc21-cms-tile:focus-visible {
+  outline:3px solid var(--acc-focus-ring);
+  outline-offset:3px;
+}
+@media(max-width:1100px) {
+  .acc-shell .rc21-cms-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:700px) {
+  .acc-shell .rc21-cms-grid {grid-template-columns:minmax(0,1fr);gap:12px;}
+  .acc-shell .rc21-cms-tile {min-height:86px;padding:14px;}
+  .acc-shell .rc21-cms-icon {flex-basis:46px;width:46px;height:46px;}
+}
+[data-theme='dark'] .acc-shell {
+  --rc21-ink:#e9f2ff;
+  --rc21-muted:#b6c9df;
+  --rc21-glass:rgba(22,37,59,.91);
+  --rc21-line:rgba(122,162,207,.28);
+  --rc21-shadow:0 14px 36px rgba(0,0,0,.19);
+  background:linear-gradient(145deg,#081526,#132643);
+}
+[data-theme='dark'] .acc-shell .acc-topbar {background:rgba(18,36,58,.93);}
+[data-theme='dark'] .acc-shell .acc-content :is(.admin-card,.surface-card,.acc-card,.admin-panel,.public-content-fields) {
+  background:rgba(24,43,68,.94);
+}
+[data-theme='dark'] .acc-shell .rc21-cms-tile {
+  color:#e9f2ff;
+  background:linear-gradient(125deg,color-mix(in srgb,var(--rc21-accent) 18%,#16253e),#172942 83%);
+  border-color:rgba(145,179,213,.28);
+}
+[data-theme='dark'] .acc-shell .rc21-cms-tile-title {color:#e9f2ff;}
+[data-theme='dark'] .acc-shell .rc21-cms-icon {
+  background:rgba(232,241,255,.12);
+  color:#d7ecff;
+  border-color:rgba(196,219,247,.22);
+}
+[data-theme='dark'] .acc-shell .rc21-cms-arrow {color:#d7ecff;}
+@media(prefers-reduced-motion:reduce) {
+  .acc-shell .rc21-cms-tile,
+  .acc-shell .acc-sidebar-nav .acc-nav-group {transition:none;}
+}
