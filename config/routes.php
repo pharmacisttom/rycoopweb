@@ -633,6 +633,7 @@ $router->group(['prefix'=>'api/admin/mega-menu','middleware'=>[AuthMiddleware::c
     $r->post('/draft', 'Admin\\MegaMenuController@draft', [CsrfMiddleware::class]);
     $r->post('/publish', 'Admin\\MegaMenuController@publish', [CsrfMiddleware::class]);
     $r->post('/rollback', 'Admin\\MegaMenuController@rollback', [CsrfMiddleware::class]);
+    $r->post('/restore-legacy', 'Admin\\MegaMenuController@restoreLegacy', [CsrfMiddleware::class]);
 });
 
 // Public CMS: controller checks the section's module and action on every call.
