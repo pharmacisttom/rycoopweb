@@ -160,6 +160,9 @@ export default function AdminMegaMenuPage() {
             <button type="button" style={btn} disabled={busy||dirty||!state.published||!validTotp} onClick={async()=>{
               if(await showConfirm('ย้อนกลับเมนู?', 'ใช้ชุดเมนูที่เคยเผยแพร่ก่อนหน้าเมื่อมีข้อมูลย้อนหลัง'))request('rollback');
             }}>ย้อนกลับเวอร์ชันก่อนหน้า</button>
+            <button type="button" style={{...btn,color:'#b42318'}} disabled={busy||dirty||!state.published||!validTotp} onClick={async()=>{
+              if(await showConfirm('คืนค่าเมนูเดิมของเว็บไซต์?', 'ระบบจะกลับไปใช้ Navbar รูปแบบเดิมทันทีและเก็บชุดใหม่ในประวัติ'))request('restore-legacy');
+            }}>คืนค่า Navbar เดิม</button>
           </div>
         </div>
       </div>}
