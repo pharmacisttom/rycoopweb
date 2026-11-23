@@ -1,3 +1,4 @@
+import { MEMBER_COMING_SOON_PROMO_ENABLED } from '../config/publicServiceVisibility';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -265,10 +266,12 @@ export default function HomePage() {
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                {MEMBER_COMING_SOON_PROMO_ENABLED && (
                 <Link to="/service-unavailable" className="btn btn-gold btn-lg">
                   <span>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
                   <ArrowRight size={18} />
                 </Link>
+                )}
 
                 <Link to="/calculator" className="btn btn-outline btn-lg" style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.08)' }}>
                   <Calculator size={18} />
@@ -531,6 +534,7 @@ export default function HomePage() {
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ทุนการศึกษา & ช่วยเหลือ</p>
             </Link>
 
+                {MEMBER_COMING_SOON_PROMO_ENABLED && (
             <Link to="/service-unavailable" className="surface-card" style={quickServiceCardStyle}>
               <div style={{ ...quickServiceIconWrap, background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
                 <Coins size={24} />
@@ -538,6 +542,7 @@ export default function HomePage() {
               <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</h4>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>ยังไม่เปิดให้บริการในระยะนี้</p>
             </Link>
+                )}
 
           </div>
         </div>
