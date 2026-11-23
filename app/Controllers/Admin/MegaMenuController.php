@@ -72,6 +72,13 @@ final class MegaMenuController extends Controller
             return MegaMenuService::publish($this->request->all());
         });
     }
+    public function restoreLegacy(): void
+    {
+        $this->respond(function () {
+            $this->authorize(true);
+            return MegaMenuService::restoreLegacy($this->request->all());
+        });
+    }
     public function rollback(): void
     {
         $this->respond(function () {
