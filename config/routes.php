@@ -628,7 +628,7 @@ $router->group(['prefix'=>'api/admin/navigation-copy','middleware'=>[AuthMiddlew
 
 // RC19 Mega Menu: legacy Navbar remains the fallback until a publication exists.
 $router->get('/api/public/mega-menu', 'Admin\\MegaMenuController@published');
-$router->group(['prefix'=>'api/admin/mega-menu','middleware'=>[AuthMiddleware::class]], function(\\App\\Core\\Router $r) {
+$router->group(['prefix'=>'api/admin/mega-menu','middleware'=>[AuthMiddleware::class]], function(\App\Core\Router $r) {
     $r->get('', 'Admin\\MegaMenuController@show');
     $r->post('/draft', 'Admin\\MegaMenuController@draft', [CsrfMiddleware::class]);
     $r->post('/publish', 'Admin\\MegaMenuController@publish', [CsrfMiddleware::class]);
