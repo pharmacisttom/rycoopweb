@@ -391,6 +391,9 @@ jobs:
       - name: Verify Mega Menu CRUD and e-Service hold contracts
         run: node tests/MegaMenuSourceContractTest.mjs
 
+      - name: Verify Admin Lucide icon accessibility and sidebar coverage
+        run: node tests/AdminSidebarIconContractTest.mjs
+
       - name: Verify official branding build
         run: node tests/BrandingTest.mjs
 
