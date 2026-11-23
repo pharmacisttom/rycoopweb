@@ -30,7 +30,7 @@ export default function Navbar() {
       .then(r=>r.ok?r.json():null)
       .then(r=>{
         const next=r?.data;
-        if(r?.success && Array.isArray(next) && next.length===4
+        if(r?.success && Array.isArray(next) && next.length>=1 && next.length<=8
           && next.every(c=>typeof c.id==='string'&&typeof c.enabled==='boolean'&&Array.isArray(c.items))) setPublishedMenu(next);
       }).catch(()=>{});
     return ()=>controller.abort();
@@ -165,6 +165,14 @@ export default function Navbar() {
             {navText('home_nav', 'หน้าแรก')}
           </Link>
 
+          {publishedMenu ? publishedMenu.filter(category=>category.enabled).map(category=><div key={category.id} style={{position:'static'}}>
+            <button type="button" onClick={()=>toggleMegaMenu(category.id)}
+              onMouseEnter={()=>setActiveMegaMenu(category.id)}
+              style={{...navLinkStyle(activeMegaMenu===category.id),display:'inline-flex',alignItems:'center',gap:'0.3rem'}}>
+              <span>{category.title}</span>
+              <ChevronDown size={14} style={{transform:activeMegaMenu===category.id?'rotate(180deg)':'none'}}/>
+            </button>
+          </div>) : (<>
           {/* 2. เกี่ยวกับสหกรณ์ (Mega Menu) */}
           {categoryVisible('about') && (
           <div style={{ position: 'static' }}>
@@ -240,6 +248,8 @@ export default function Navbar() {
             </button>
           </div>
           )}
+
+          </>)}
 
         </nav>}
 
