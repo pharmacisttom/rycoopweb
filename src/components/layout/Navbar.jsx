@@ -166,6 +166,7 @@ export default function Navbar() {
           </Link>
 
           {/* 2. เกี่ยวกับสหกรณ์ (Mega Menu) */}
+          {categoryVisible('about') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('about')}
@@ -181,8 +182,10 @@ export default function Navbar() {
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'about' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
 
           {/* 3. บริการทางการเงิน (Mega Menu) */}
+          {categoryVisible('finance') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('finance')}
@@ -198,8 +201,10 @@ export default function Navbar() {
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'finance' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
 
           {/* 4. สวัสดิการ (Mega Menu) */}
+          {categoryVisible('welfare') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('welfare')}
@@ -215,8 +220,10 @@ export default function Navbar() {
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'welfare' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
 
           {/* 5. ข่าวสารและเอกสาร (Mega Menu) */}
+          {categoryVisible('news_docs') && (
           <div style={{ position: 'static' }}>
             <button
               onClick={() => toggleMegaMenu('news_docs')}
@@ -232,6 +239,7 @@ export default function Navbar() {
               <ChevronDown size={14} style={{ transform: activeMegaMenu === 'news_docs' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
           </div>
+          )}
 
         </nav>}
 
