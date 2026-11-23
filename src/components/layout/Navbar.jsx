@@ -948,6 +948,17 @@ export default function Navbar() {
             <span>หน้าแรก</span>
           </Link>
 
+          {publishedMenu && publishedMenu.filter(c=>c.enabled).map(category=><div key={category.id}>
+            <button type="button" onClick={()=>toggleMobileAccordion(category.id)}
+              style={{...mobileItemStyle,width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:'none',border:'none',cursor:'pointer',textAlign:'left'}}>
+              <span>{category.title}</span><ChevronDown size={16}/>
+            </button>
+            {mobileAccordion===category.id&&<div style={mobileSubMenuStyle}>
+              {category.items.filter(item=>item.enabled).map(item=><Link key={item.id} to={item.path}
+                style={mobileSubItemStyle} onClick={()=>setMobileMenuOpen(false)}>• {item.title}</Link>)}
+            </div>}
+          </div>)}
+          {!publishedMenu && (<>
           {/* 2. เกี่ยวกับสหกรณ์ Accordion */}
           <div>
             <button
@@ -1028,6 +1039,7 @@ export default function Navbar() {
               </div>
             )}
           </div>
+          </>)}
 
         </div>
       )}
