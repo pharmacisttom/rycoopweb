@@ -1,3 +1,4 @@
+import { ESERVICE_PUBLIC_ENABLED } from '../../config/publicServiceVisibility';
 import CoopBrandLogo from '../branding/CoopBrandLogo';
 import { usePublicInformation } from '../../context/PublicContentContext';
 import React, { useState, useEffect, useRef } from 'react';
@@ -787,6 +788,7 @@ export default function Navbar() {
                       </div>
                     </Link>
 
+                    {ESERVICE_PUBLIC_ENABLED && (
                     <Link to="/eservice" className="mega-menu-card-item">
                       <div className="mega-menu-icon-wrap" style={{ background: 'var(--primary-100)', color: 'var(--primary-700)' }}>
                         <Globe size={18} />
@@ -796,6 +798,7 @@ export default function Navbar() {
                         <div className="mega-menu-item-desc">{navText('eservices_desc', 'ยื่นคำขอออนไลน์ ปรับค่าหุ้น ขอหนังสือรับรองภาษี')}</div>
                       </div>
                     </Link>
+                    )}
 
                     <Link to="/verify-receipt" className="mega-menu-card-item">
                       <div className="mega-menu-icon-wrap" style={{ background: 'var(--accent-gold-light)', color: 'var(--accent-gold-dark)' }}>
@@ -1003,7 +1006,7 @@ export default function Navbar() {
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ข่าวประชาสัมพันธ์ & กิจกรรม</Link>
                 <Link to="/news" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ประกาศทางการสหกรณ์</Link>
                 <Link to="/documents" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• ดาวน์โหลดแบบฟอร์ม & รายงาน</Link>
-                <span style={mobileSubItemStyle}>• ระบบสมาชิกออนไลน์อยู่ระหว่างดำเนินการ</span>
+                {ESERVICE_PUBLIC_ENABLED && <Link to="/eservice" style={mobileSubItemStyle} onClick={() => setMobileMenuOpen(false)}>• e-Services</Link>}
               </div>
             )}
           </div>
