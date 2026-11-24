@@ -1,0 +1,29 @@
+/* RC22 Impeccable interaction polish – icon controls retain text labels and clear focus. */
+.ry-brand-icon {
+  display:inline-block;
+  width:1.125rem;
+  height:1.125rem;
+  object-fit:contain;
+  flex:none;
+  vertical-align:middle;
+}
+.member-entry-form a:has(> .ry-brand-icon) {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.625rem;
+  min-height:44px;
+  width:100%;
+  text-align:center;
+}
+.member-entry-form a:has(> .ry-brand-icon):focus-visible,
+footer a:has(> .ry-brand-icon):focus-visible {
+  outline:3px solid #0891b2;
+  outline-offset:3px;
+}
+footer a .ry-brand-icon {
+  filter:brightness(0) invert(1);
+}
+@media (prefers-reduced-motion:reduce) {
+  .ry-brand-icon {transition:none;}
+}
