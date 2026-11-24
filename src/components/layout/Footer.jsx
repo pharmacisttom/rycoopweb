@@ -1,4 +1,5 @@
 import CoopBrandLogo from '../branding/CoopBrandLogo';
+import BrandIcon from '../branding/BrandIcon';
 import { usePublicInformation } from '../../context/PublicContentContext';
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -176,7 +177,7 @@ export default function Footer() {
                   style={socialIconStyle}
                   title="Facebook Fanpage"
                 >
-                  Facebook
+                  <BrandIcon brand="facebook" size={17} /> <span>Facebook</span>
                 </a>}
                 {COOP_INFO.lineId && <a
                   href={`https://line.me/R/ti/p/${encodeURIComponent(COOP_INFO.lineId)}`}
@@ -185,7 +186,7 @@ export default function Footer() {
                   style={{ ...socialIconStyle, background: 'rgba(6, 199, 85, 0.2)', color: '#4ade80' }}
                   title="LINE Official Account"
                 >
-                  LINE ID: {COOP_INFO.lineId}
+                  <BrandIcon brand="line" size={17} /> <span>LINE ID: {COOP_INFO.lineId}</span>
                 </a>}
               </div>
             </div>
