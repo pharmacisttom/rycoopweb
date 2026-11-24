@@ -397,6 +397,9 @@ jobs:
       - name: Verify RC21 Glass Admin design scope and accessibility
         run: node tests/AdminGlassColorRC21SourceContract.mjs
 
+      - name: Verify RC22 icon provenance and Impeccable UX contract
+        run: node tests/RC22IconSourceContractTest.mjs
+
       - name: Verify official branding build
         run: node tests/BrandingTest.mjs
 
@@ -435,6 +438,8 @@ jobs:
         run: node tests/CookieSweetAlertBrowserTest.mjs
       - name: Verify admin UI and critical action contracts
         run: node tests/AdminUIBrowserTest.mjs
+      - name: Verify RC22 public and admin icons in Chromium (responsive)
+        run: node tests/RC22IconBrowserTest.mjs
       - name: Set up PHP for real staff-session integration
         uses: shivammathur/setup-php@v2
         with:
