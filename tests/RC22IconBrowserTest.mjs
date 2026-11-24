@@ -35,7 +35,7 @@ try{
       ' httpErrors='+JSON.stringify(responses)+' html='+JSON.stringify((await page.locator('body').innerHTML()).slice(0,2000)));
   });
   for(const brand of ['google','facebook','line']){
-    const icon=page.locator('img.ry-brand-icon[src*="'+brand+'"]');
+    const icon=page.locator('img.ry-brand-icon[data-brand="'+brand+'"]');
     assert.equal(await icon.count(),1,brand+' should be a self-hosted SVG icon');
     assert.ok(await icon.evaluate(el=>el.complete&&el.naturalWidth>0),brand+' image failed to load');
     assert.equal(await icon.getAttribute('aria-hidden'),'true');
