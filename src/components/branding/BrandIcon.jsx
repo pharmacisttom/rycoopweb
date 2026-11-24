@@ -2,6 +2,7 @@ import React from 'react';
 import google from '../../assets/simple-icons/google.svg';
 import facebook from '../../assets/simple-icons/facebook.svg';
 import line from '../../assets/simple-icons/line.svg';
+import './BrandIcon.css';
 
 // Local Simple Icons vector assets, not remote CDN: stable and privacy-preserving.
 // Brand marks are reserved for the corresponding service, never for generic actions.
