@@ -12,5 +12,5 @@ export default function BrandIcon({brand,size=18,className='',...props}) {
   if (!source) return null;
   return <img src={source} width={size} height={size}
     className={`ry-brand-icon ${className}`.trim()}
-    alt="" aria-hidden="true" draggable="false" {...props}/>;
+    alt="" aria-hidden="true" data-brand={brand} draggable="false" {...props}/>;
 }
