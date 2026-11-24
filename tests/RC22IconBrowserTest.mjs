@@ -15,7 +15,7 @@ const fixturePlugin={name:'rc22-icon-qa',configureServer(server){
 }};
 const server=await createServer({configFile:false,plugins:[fixturePlugin,react()],
   resolve:{alias:{'react-router-dom':'react-router'}},
-  server:{host:'127.0.0.1',port,strictPort:true},optimizeDeps:{noDiscovery:true,include:[]}});
+  server:{host:'127.0.0.1',port,strictPort:true,watch:{ignored:['**/public/app/**','**/storage/tmp/**']}},optimizeDeps:{noDiscovery:true,include:['react','react-dom/client','react/jsx-runtime','react/jsx-dev-runtime','react-router','lucide-react']}});
 let browser;
 try{
  await server.listen();
@@ -27,8 +27,13 @@ try{
   page.on('pageerror',e=>errors.push(e.message));
   const failedAssets=[];
   page.on('response',response=>{if(response.status()>=400&&/simple-icons/.test(response.url()))failedAssets.push(response.url());});
+  const responses=[];
+  page.on('response',r=>{if(r.status()>=400)responses.push(r.status()+' '+new URL(r.url()).pathname);});
   await page.goto(host+'/__rc22_icon_qa');
-  await page.getByTestId('rc22-shell').waitFor();
+  await page.getByTestId('rc22-shell').waitFor({timeout:12000}).catch(async()=>{
+    throw new Error('RC22 fixture did not render; pageErrors='+JSON.stringify(errors)+
+      ' httpErrors='+JSON.stringify(responses)+' html='+JSON.stringify((await page.locator('body').innerHTML()).slice(0,2000)));
+  });
   for(const brand of ['google','facebook','line']){
     const icon=page.locator('img.ry-brand-icon[src*="'+brand+'"]');
     assert.equal(await icon.count(),1,brand+' should be a self-hosted SVG icon');
