@@ -398,7 +398,9 @@ jobs:
         run: node tests/MegaMenuSourceContractTest.mjs
 
       - name: Verify Admin Lucide icon accessibility and sidebar coverage
-        run: node tests/AdminSidebarIconContractTest.mjs
+        run: |
+          node tests/AdminSidebarIconContractTest.mjs
+          node tests/RC28NewsReaderResponsiveContractTest.mjs
 
       - name: Verify RC21 Glass Admin design scope and accessibility
         run: node tests/AdminGlassColorRC21SourceContract.mjs
