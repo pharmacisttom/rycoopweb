@@ -56,9 +56,20 @@ try{
     $legacyBoards=$boardsBefore;
     $legacyBoards[0]['is_chairperson']=true;
     $legacyBoards[1]['is_chairperson']=0;
+    // A published legacy board may use JSON null for optional workplace.
+    $legacyBoards[0]['workplace']=null;
     $badLegacy=$legacyBoards;
     $badLegacy[0]['is_chairperson']='arbitrary';
     expectFailure(fn()=>Content::saveDraft('boards',draftInput('boards',$badLegacy)),422,'invalid legacy chair flag rejected');
+    $invalidWorkplace=$legacyBoards;
+    $invalidWorkplace[2]['workplace']=['not','text'];
+    try {
+        Content::saveDraft('boards',draftInput('boards',$invalidWorkplace));
+        throw new RuntimeException('missing validation exception for workplace');
+    } catch (InvalidArgumentException $e) {
+        checkContent(str_contains($e->getMessage(),'รายการที่ 3 ฟิลด์ workplace'),
+            'legacy field error identifies exact row and field without displaying personal data');
+    }
     $boardsWithNew=[...$legacyBoards,[
         'id'=>$nextBoardId,'name'=>'RC24 ทดสอบเพิ่มกรรมการ','position'=>'กรรมการ',
         'term'=>'ชุดที่ 39','workplace'=>'','image'=>'','status'=>'active'
