@@ -1,0 +1,38 @@
+/* RC29 — public, read-only loan preparation. Scoped to avoid affecting admin forms. */
+.loan-preparation{scroll-margin-top:7rem;color:#16314f;font-size:16px;line-height:1.7}
+.loan-preparation-heading{display:flex;align-items:flex-start;gap:15px;background:#eaf3ff;color:#12345c;padding:22px;border:1px solid #bad4f3;border-radius:16px;margin-bottom:16px}
+.loan-preparation-heading>svg{flex-shrink:0;color:#1d4ed8}
+.loan-preparation-heading h2{font-size:clamp(1.3rem,2.4vw,1.8rem);line-height:1.35;margin:0 0 8px;color:#0e315c}
+.loan-preparation-heading p{margin:0;line-height:1.7}
+.loan-preparation-summary{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;background:#fff;border:1px solid #d2e1f1;border-radius:12px;padding:14px 18px;margin:0 0 16px}
+.loan-preparation-summary span{display:flex;align-items:center;gap:9px}
+.loan-preparation-summary span svg{color:#057a55}
+.loan-preparation-summary strong{color:#16477f;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.loan-preparation-summary button{cursor:pointer;min-height:44px;border-radius:8px;padding:8px 14px;border:1px solid #9db7d7;background:#fff;color:#17416e;font-weight:600}
+.loan-preparation-summary button:disabled{opacity:.55;cursor:not-allowed}
+.loan-preparation-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.loan-preparation-group{background:#fff;border:1px solid #d2e1f1;border-radius:14px;padding:18px;min-width:0}
+.loan-preparation-group h3{font-size:1.15rem;margin:0 0 14px;color:#12345c;line-height:1.45}
+.loan-preparation-check{display:flex;gap:12px;padding:13px 8px;align-items:flex-start;border-bottom:1px solid #e4edf8;cursor:pointer}
+.loan-preparation-check:last-child{border-bottom:0}
+.loan-preparation-check input{width:22px;height:22px;min-width:22px;accent-color:#1468a8;margin:3px 0 0;cursor:pointer}
+.loan-preparation-check strong{font-size:1rem;font-weight:650;color:#153d64;display:block}
+.loan-preparation-check small{font-size:.9rem;color:#435b77;display:block;margin-top:3px;line-height:1.5}
+.loan-preparation-caution{display:flex;align-items:flex-start;gap:10px;background:#fff7e5;border-left:4px solid #b47805;color:#5b420d;padding:16px 18px;border-radius:10px;margin:18px 0 24px}
+.loan-preparation-caution svg{flex-shrink:0}
+.loan-preparation-downloads{padding:22px;background:#f7faff;border:1px solid #cddff2;border-radius:16px}
+.loan-preparation-download-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.loan-preparation-download-header h3{font-size:1.28rem;color:#12345c;margin:0 0 6px}
+.loan-preparation-download-header p{margin:0 0 16px;color:#3e5d7b}
+.loan-preparation-download-header .btn{display:inline-flex;align-items:center;gap:8px;min-height:44px}
+.loan-preparation-search{display:flex;align-items:center;gap:10px;background:white;border:1px solid #aac1dc;border-radius:10px;padding:7px 12px;margin-bottom:14px}
+.loan-preparation-search input{flex:1;min-width:0;min-height:36px;border:0;outline-offset:6px;font:inherit;color:#173b63;background:transparent}
+.loan-preparation-document-list{display:grid;gap:10px}
+.loan-preparation-document{background:#fff;border:1px solid #d4e3f2;border-radius:12px;padding:14px;display:flex;gap:14px;align-items:center}
+.loan-preparation-document>svg{flex-shrink:0;color:#215b94}
+.loan-preparation-document>div{flex:1;min-width:0}
+.loan-preparation-document strong{display:block;overflow-wrap:anywhere;color:#153c65}
+.loan-preparation-document small{display:block;color:#4b6684;margin-top:4px}
+.loan-preparation-document .btn{display:inline-flex;align-items:center;gap:7px;min-height:44px}
+.loan-preparation :is(button,a,input):focus-visible{outline:3px solid #175cd3;outline-offset:3px}
+@media(max-width:760px){.loan-preparation-groups{grid-template-columns:1fr}.loan-preparation-document{flex-wrap:wrap}.loan-preparation-document .btn{width:100%;justify-content:center}.loan-preparation-downloads{padding:15px}}
