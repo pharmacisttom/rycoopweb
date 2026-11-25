@@ -8,3 +8,13 @@
 .acc-shell .welfare-admin-fields :is(input,select,textarea){font-size:16px;min-height:44px}
 .acc-shell .welfare-admin-form-actions{justify-content:flex-end;border-top:1px solid var(--acc-border);padding-top:16px}
 @media(max-width:720px){.acc-shell .welfare-admin-fields{grid-template-columns:minmax(0,1fr)}.acc-shell .welfare-admin-form-actions button{flex:1 1 125px}}
+
+/* RC26: readable, responsive CRUD filtering and publication workflow */
+.acc-shell .welfare-admin-search,.acc-shell .welfare-admin-filter{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.acc-shell .welfare-admin-search input,.acc-shell .welfare-admin-filter select{min-height:44px;border:1px solid var(--acc-border);background:var(--acc-surface-elevated);color:inherit;border-radius:10px;padding:9px 12px;font-size:16px}
+.acc-shell .welfare-admin-search input{min-width:240px}
+.acc-shell .welfare-admin-row-actions button{min-height:40px}
+.acc-shell .welfare-admin-public-link,.acc-shell .welfare-admin-state-note{font-size:14px;line-height:1.7;color:var(--acc-text-secondary,#46556a)}
+.acc-shell .welfare-admin-public-link{margin:12px 0 20px}
+.acc-shell .welfare-admin-fields .admin-field{line-height:1.6}
+@media(max-width:720px){.acc-shell .welfare-admin-search,.acc-shell .welfare-admin-filter{width:100%;justify-content:space-between}.acc-shell .welfare-admin-search input,.acc-shell .welfare-admin-filter select{min-width:0;flex:1}}
