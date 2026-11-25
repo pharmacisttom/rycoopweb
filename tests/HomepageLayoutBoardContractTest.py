@@ -22,7 +22,9 @@ assert "requireFreshStepUpMfa" in controller and "role_slug" in controller
 assert "setLayout(candidate)" in homepage
 assert "เลือกชุดคณะกรรมการ" in board
 assert "group.term" in board and "activeGroups" in board
-assert "copyBoardToTerm" in editor and "uploadBoardPhoto" in editor
+assert "copyBoardToTerm" in editor and "uploadPersonPhoto" in editor
+assert "folder:targetSection===" in editor and "'board':'staff'" in editor
+assert "section==='boards'" in editor and "public-content-board-photo" in editor
 assert "mediaLibraryApi.upload" in editor
 assert "person.term===row.term" in editor
 assert "if ($term !== null)" in service
