@@ -279,11 +279,16 @@ export default function PublicContentAdminPage() {
           <p>รองรับ JPEG, PNG, WebP ไม่เกิน 10 MB; รูปจะอยู่ในโฟลเดอร์ staff และผูกกับบุคลากรที่เลือกเท่านั้น</p>
         </header>
         <div className="public-content-board-media">
-          <label htmlFor="public-content-staff-photo">เลือกรูปภาพเจ้าหน้าที่</label>
+          <label htmlFor="public-content-staff-photo">เพิ่มหรือเปลี่ยนรูปเจ้าหน้าที่ในระบบโดยตรง</label>
+          <p className="public-content-photo-note">เลือกรูปจากอุปกรณ์เพื่ออัปโหลดเข้าสู่ระบบ ไม่ต้องกรอกลิงก์หรือเปิดคลังสื่ออื่น</p>
           <input id="public-content-staff-photo" type="file" accept="image/jpeg,image/png,image/webp"
             disabled={busy||mediaBusy}
             onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadPersonPhoto(file);}}/>
           {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพเจ้าหน้าที่...</p>}
+          {row.image&&<button type="button" className="btn btn-outline" disabled={busy||mediaBusy}
+            onClick={async()=>{const ok=await showDeleteConfirm('นำรูปเจ้าหน้าที่ออกจากร่าง?', 'ภาพบนเว็บไซต์จริงจะยังอยู่จนกว่าจะอนุมัติเผยแพร่ร่างใหม่');if(ok)change('image','');}}>
+            นำรูปออกจากร่าง
+          </button>}
           {row.image?<figure className="public-content-board-photo-preview">
             <img src={row.image} alt={'ตัวอย่างรูป '+row.name} loading="lazy"/>
             <figcaption>ตัวอย่างรูป: {row.name}</figcaption>
@@ -359,9 +364,13 @@ export default function PublicContentAdminPage() {
           </div>
           <div className="public-content-board-media">
             <h4>รูปภาพกรรมการ</h4>
-            <label htmlFor="public-content-board-photo">อัปโหลดรูปภาพ (JPEG/PNG/WebP ไม่เกิน 10 MB)</label>
+            <label htmlFor="public-content-board-photo">เพิ่มหรือเปลี่ยนรูปกรรมการในระบบโดยตรง (JPEG/PNG/WebP ไม่เกิน 10 MB)</label>
             <input id="public-content-board-photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadPersonPhoto(file);}} />
             {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพ...</p>}
+            {row.image&&<button type="button" className="btn btn-outline" disabled={busy||mediaBusy}
+              onClick={async()=>{const ok=await showDeleteConfirm('นำรูปกรรมการออกจากร่าง?', 'ภาพเดิมยังอยู่บนเว็บไซต์จริงจนกว่าจะเผยแพร่ร่างใหม่');if(ok)change('image','');}}>
+              นำรูปออกจากร่าง
+            </button>}
             {row.image ? <figure className="public-content-board-photo-preview">
               <img src={row.image} alt={'ตัวอย่างรูป '+row.name} loading="lazy"/>
               <figcaption>ตัวอย่างรูปภาพ: {row.name}</figcaption>
@@ -370,7 +379,7 @@ export default function PublicContentAdminPage() {
         </div>
       </section>}
       <form onSubmit={save}><fieldset disabled={busy||mediaBusy||!definition?.canEdit} className="public-content-fields"><legend>{definition?.label}</legend>
-        {row&&(fields[section]||[]).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-position'?<select value={row[key]||''} onChange={e=>change(key,e.target.value)}>
+        {row&&(fields[section]||[]).filter(([key])=>!(key==='image' && ['staff','boards'].includes(section))).map(([key,label,type='text'])=><label key={key}>{label}{['textarea','lines'].includes(type)?<textarea rows={3} value={type==='lines'?(row[key]||[]).join('\n'):row[key]||''} onChange={e=>change(key,type==='lines'?e.target.value.split('\n'):e.target.value)} />:type==='board-position'?<select value={row[key]||''} onChange={e=>change(key,e.target.value)}>
             {row[key]&&!BOARD_POSITION_OPTIONS.includes(row[key])&&<option value={row[key]}>ข้อมูลเดิม: {row[key]} (ควรตรวจสอบ)</option>}
             {BOARD_POSITION_OPTIONS.map(position=><option key={position} value={position}>{position}</option>)}
           </select>:type==='board-term'?<select value={row[key]||''} onChange={e=>change(key,e.target.value)}>
