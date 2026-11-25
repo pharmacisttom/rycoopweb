@@ -61,7 +61,8 @@ try{
     checkContent(Content::catalog()['boardMembers']===$boardsBefore,'new board draft does not change public roster');
     fixtureLogin(3,'content_publisher');Content::publish($newBoardDraft);
     checkContent(count(Content::catalog()['boardMembers'])===count($boardsBefore)+1,'approved new board member is persisted');
-    checkContent((int)end(Content::catalog()['boardMembers'])['id']===$nextBoardId,'approved board ID remains unique');
+    $publishedBoardIds=array_column(Content::catalog()['boardMembers'],'id');
+    checkContent((int)end($publishedBoardIds)===$nextBoardId,'approved board ID remains unique');
     fixtureLogin(2,'content_editor');
     $boardRestore=Content::saveDraft('boards',draftInput('boards',$boardsBefore,['note'=>'RC24 fixture restore']));
     fixtureLogin(3,'content_publisher');Content::publish($boardRestore);
