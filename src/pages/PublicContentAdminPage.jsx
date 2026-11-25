@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink,
   GitCompare, Eye, CheckCircle2, Clock, XCircle, RotateCcw,
-  ChevronLeft, ChevronRight, X
+  ChevronLeft, ChevronRight, X, Upload
 } from 'lucide-react';
 import { memberAdminApi } from '../services/memberAdminApi';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
@@ -72,6 +72,7 @@ export default function PublicContentAdminPage() {
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [dirty,setDirty]=useState(false),[preview,setPreview]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
+  const staffPhotoFileRef=useRef(null);
   const sectionRef=useRef(section);
   sectionRef.current=section;
   const [carrySelection,setCarrySelection]=useState([]);
@@ -279,9 +280,14 @@ export default function PublicContentAdminPage() {
           <p>รองรับ JPEG, PNG, WebP ไม่เกิน 10 MB; รูปจะอยู่ในโฟลเดอร์ staff และผูกกับบุคลากรที่เลือกเท่านั้น</p>
         </header>
         <div className="public-content-board-media">
-          <label htmlFor="public-content-staff-photo">เพิ่มหรือเปลี่ยนรูปเจ้าหน้าที่ในระบบโดยตรง</label>
           <p className="public-content-photo-note">เลือกรูปจากอุปกรณ์เพื่ออัปโหลดเข้าสู่ระบบ ไม่ต้องกรอกลิงก์หรือเปิดคลังสื่ออื่น</p>
-          <input id="public-content-staff-photo" type="file" accept="image/jpeg,image/png,image/webp"
+          <button type="button" className="btn btn-primary public-content-staff-upload-button"
+            disabled={busy||mediaBusy} onClick={()=>staffPhotoFileRef.current?.click()}>
+            <Upload size={20} aria-hidden="true"/> {row.image?'เลือกไฟล์เปลี่ยนรูปเจ้าหน้าที่':'เลือกไฟล์อัปโหลดรูปเจ้าหน้าที่'}
+          </button>
+          <label className="public-content-file-help" htmlFor="public-content-staff-photo">ไฟล์ JPEG, PNG หรือ WebP ขนาดไม่เกิน 10 MB</label>
+          <input ref={staffPhotoFileRef} id="public-content-staff-photo" className="public-content-visually-hidden-file"
+            type="file" accept="image/jpeg,image/png,image/webp" aria-label="เลือกรูปเจ้าหน้าที่จากไฟล์"
             disabled={busy||mediaBusy}
             onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadPersonPhoto(file);}}/>
           {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพเจ้าหน้าที่...</p>}
