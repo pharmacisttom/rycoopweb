@@ -114,6 +114,7 @@ export const ADMIN_SIDEBAR_GROUPS = [
       { label: 'ประกาศสำคัญ', to: '/admin/workspace', permissions: ['announcements.view'] },
       { label: 'คำถามที่พบบ่อย (FAQ)', to: '/admin/content?tab=faqs', permissions: ['faqs.view'] },
       { label: 'ข้อมูลสหกรณ์ & บุคลากร', to: '/admin/public-content', permissions: ['coop_info.view', 'people.view', 'rates.view', 'products.view'] },
+      { label: 'เจ้าหน้าที่และรูปบุคลากร', to: '/admin/public-content?section=staff', permissions: ['people.view'] },
       { label: 'คลังภาพกิจกรรม', to: '/admin/activities', permissions: ['news.view'] },
       { label: 'จัดการ Layout หน้าแรก', to: '/admin/layout', roles: ['super_admin'] },
       { label: 'แก้ไขข้อความเมนูเว็บไซต์', to: '/admin/navigation-copy', roles: ['super_admin'] },
