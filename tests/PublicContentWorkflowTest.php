@@ -53,7 +53,13 @@ try{
     fixtureLogin(2,'content_editor');
     $boardsBefore=Content::catalog()['boardMembers'];
     $nextBoardId=max(array_map(static fn($member)=>(int)$member['id'],$boardsBefore))+1;
-    $boardsWithNew=[...$boardsBefore,[
+    $legacyBoards=$boardsBefore;
+    $legacyBoards[0]['is_chairperson']=true;
+    $legacyBoards[1]['is_chairperson']=0;
+    $badLegacy=$legacyBoards;
+    $badLegacy[0]['is_chairperson']='arbitrary';
+    expectFailure(fn()=>Content::saveDraft('boards',draftInput('boards',$badLegacy)),422,'invalid legacy chair flag rejected');
+    $boardsWithNew=[...$legacyBoards,[
         'id'=>$nextBoardId,'name'=>'RC24 ทดสอบเพิ่มกรรมการ','position'=>'กรรมการ',
         'term'=>'ชุดที่ 39','workplace'=>'','image'=>'','status'=>'active'
     ]];
@@ -63,6 +69,8 @@ try{
     checkContent(count(Content::catalog()['boardMembers'])===count($boardsBefore)+1,'approved new board member is persisted');
     $publishedBoardIds=array_column(Content::catalog()['boardMembers'],'id');
     checkContent((int)end($publishedBoardIds)===$nextBoardId,'approved board ID remains unique');
+    $publishedBoards=Content::catalog()['boardMembers'];
+    checkContent(($publishedBoards[0]['is_chairperson']??null)===true && ($publishedBoards[1]['is_chairperson']??null)===0,'published board preserves legacy chair flags');
     fixtureLogin(2,'content_editor');
     $boardRestore=Content::saveDraft('boards',draftInput('boards',$boardsBefore,['note'=>'RC24 fixture restore']));
     fixtureLogin(3,'content_publisher');Content::publish($boardRestore);
