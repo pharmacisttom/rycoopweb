@@ -69,7 +69,17 @@ try{
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:'+port+'/__rc23_staff');
- await page.getByRole('heading',{name:/ทำเนียบเจ้าหน้าที่/}).waitFor();
+ try {
+   await page.getByRole('heading',{name:/ทำเนียบเจ้าหน้าที่/}).waitFor({timeout:15000});
+ } catch (cause) {
+   const diagnostics = await page.evaluate(() => ({
+     url:location.href,
+     title:document.title,
+     visibleText:document.body?.innerText?.slice(0,1600),
+     apiCalls:window.__rc23Calls||[],
+   }));
+   throw new Error('RC23 staff fixture did not render: '+JSON.stringify({diagnostics,pageErrors:errors}),{cause});
+ }
  await page.waitForTimeout(200);
  const readCalls=await page.evaluate(()=>window.__rc23Calls.filter(x=>x.startsWith('/api/admin/public-content/sections')));
  assert.equal(readCalls.filter(x=>x==='/api/admin/public-content/sections').length,1,'section catalog must not refetch in a loop');
