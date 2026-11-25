@@ -73,18 +73,20 @@ export default function ActivitySlideshow({ images = [], title = 'ภาพก�
         <span className="activity-reader-title">อ่านภาพเอกสาร · {index+1}/{images.length}</span>
         <div className="activity-reader-actions">
           <button type="button" onClick={()=>setZoom(v=>Math.max(1,Number((v-.25).toFixed(2))))} disabled={zoom<=1} aria-label="ย่อภาพ">−</button>
-          <output aria-label="ระดับการซูม">{Math.round(zoom*100)}%</output>
+          <output aria-label="ระดับการซูม">{zoom===0?'ทั้งหน้า':`${Math.round(zoom*100)}%`}</output>
           <button type="button" onClick={()=>setZoom(v=>Math.min(4,Number((v+.25).toFixed(2))))} disabled={zoom>=4} aria-label="ขยายภาพ">+</button>
-          <button type="button" onClick={()=>setZoom(1)}>พอดีจอ</button>
+          <button type="button" onClick={()=>setZoom(1)}>พอดีความกว้าง</button>
+          <button type="button" onClick={()=>setZoom(0)}>เห็นทั้งหน้า</button>
+          <a className="activity-reader-original" href={image.src} target="_blank" rel="noopener noreferrer">เปิดภาพต้นฉบับ</a>
           <button type="button" className="activity-close" autoFocus onClick={() => lightbox.current.close()}>ปิด (Esc)</button>
         </div>
       </div>
       <div className="activity-reader-viewport" role="region" aria-label="ภาพเอกสาร เลื่อนเพื่ออ่านรายละเอียด" tabIndex={0}>
-        <img src={image.src} alt={image.alt || title} style={zoom===1?undefined:{width:`${zoom*100}%`,height:'auto',maxWidth:'none',maxHeight:'none'}} />
+        <img src={image.src} alt={image.alt || title} style={zoom===0?{width:'auto',height:'auto',maxWidth:'100%',maxHeight:'100%',objectFit:'contain',margin:'auto'}:{width:`${zoom*100}%`,height:'auto',maxWidth:'none',maxHeight:'none',objectFit:'unset',margin:'0'}} />
       </div>
       {image.caption && <p className="activity-reader-caption">{image.caption}</p>}
       {images.length > 1 && controls}
-      <p className="activity-reader-help">ซูมได้สูงสุด 400% · เลื่อนภาพเพื่ออ่านรายละเอียด · ใช้ปุ่ม + / − หรือแป้นพิมพ์ · Esc เพื่อปิด</p>
+      <p className="activity-reader-help">เริ่มที่ขนาดพอดีความกว้างเพื่อให้อ่านตัวอักษรได้ชัด · เลื่อนขึ้นลงเพื่ออ่านเอกสารทั้งหน้า · ซูมได้สูงสุด 400% · Esc เพื่อปิด</p>
     </dialog>
   </section>;
 }
