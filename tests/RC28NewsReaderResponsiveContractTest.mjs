@@ -28,4 +28,10 @@ assert.match(css,/\.activity-reader-viewport\{[^}]*overflow:auto/,'image viewer 
 assert.match(css,/@media\(max-width:640px\)/,'mobile reader rules must exist');
 assert.match(css,/\.activity-lightbox\[open\]\{display:flex\}/,'lightbox must not be forced visible when closed');
 assert.match(css,/min-height:44px/,'touch controls are at least 44px');
+assert.match(css,/--reader-navy:#10223c/,'high-contrast navy reader is scoped');
+assert.match(css,/background:#f8fafc/,'document reading canvas is near-white');
+assert.match(css,/outline:3px solid #facc15/,'keyboard focus must be visible');
+assert.match(css,/activity-reader-original/,'original image link styled as accessible control');
+assert.match(gallery,/เห็นทั้งหน้า/,'fit page control must remain present');
+assert.match(gallery,/พอดีความกว้าง/,'fit width control must remain present');
 console.log('RC28_NEWS_READER_RESPONSIVE_CONTRACT=PASS');
