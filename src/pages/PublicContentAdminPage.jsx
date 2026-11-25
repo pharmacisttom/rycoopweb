@@ -1,5 +1,5 @@
 import { AdminPageHeader, AdminErrorState } from '../components/admin/AdminUI';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { memberAdminApi } from '../services/memberAdminApi';
 import { mediaLibraryApi } from '../services/mediaLibraryApi';
+import { applyPersonPhotoToDraft } from '../utils/personPhotoDraft';
 import { usePublicContent } from '../context/PublicContentContext';
 import { showConfirm, showDeleteConfirm, showSuccess, showError, showToast, showInfo, confirmPublish, showPrompt } from '../utils/swal';
 import './PublicContentAdminPage.css';
@@ -71,6 +72,8 @@ export default function PublicContentAdminPage() {
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [dirty,setDirty]=useState(false),[preview,setPreview]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
+  const sectionRef=useRef(section);
+  sectionRef.current=section;
   const [carrySelection,setCarrySelection]=useState([]);
   const [boardTermFilter,setBoardTermFilter]=useState('ชุดที่ 39');
   const [historySearch, setHistorySearch] = useState('');
@@ -87,8 +90,14 @@ export default function PublicContentAdminPage() {
   useEffect(()=>{const controller=new AbortController();memberAdminApi('/api/admin/public-content/sections',{signal:controller.signal}).then(result=>{
     const available = result.sections || [];
     setSections(available);
-    setSection(available.some(item => item.key === requestedSection) ? requestedSection : (available[0]?.key || ''));
-    if (!available.length) setLoading(false);
+    if (requestedSection && !available.some(item => item.key === requestedSection)) {
+      setSection('');
+      setError('ไม่พบหมวดข้อมูลที่ร้องขอ หรือบัญชีนี้ไม่มีสิทธิ์เข้าถึงหมวด ' + requestedSection + ' — ระบบจะไม่เปลี่ยนไปแก้หมวดอื่นโดยอัตโนมัติ');
+      setLoading(false);
+    } else {
+      setSection(requestedSection || available[0]?.key || '');
+      if (!available.length) setLoading(false);
+    }
   }).catch(e=>{if(e.name!=='AbortError'){setError(e.message);setLoading(false);}});return()=>controller.abort();},[]);
   useEffect(() => {
     if (!sections.length || !requestedSection || requestedSection === section || dirty) return;
@@ -141,21 +150,31 @@ export default function PublicContentAdminPage() {
     setSelected(value.length);setDirty(true);
     setMessage('เพิ่มรายการกรรมการทดแทนเป็นร่างแล้ว: กรอกข้อมูลและเผยแพร่ก่อน จากนั้นปรับคณะอนุกรรมการให้ชี้รายการใหม่ แล้วจึงนำกรรมการเดิมออกตามขั้นตอนรักษาประวัติ');
   }
-  async function uploadBoardPhoto(file){
-    if(!file||section!=='boards'||!row)return;
+  async function uploadPersonPhoto(file){
+    if(!file||!['boards','staff'].includes(section)||!row||!definition?.canEdit||busy||mediaBusy)return;
+    const targetSection=section, targetId=row.id, targetIndex=selected;
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size<1||file.size>10*1024*1024){
+      setError('รองรับเฉพาะ JPEG, PNG, WebP ขนาดไม่เกิน 10 MB');
+      return;
+    }
     setMediaBusy(true);setError('');
-    try {
-      const response=await mediaLibraryApi.upload(file,{folder:'board',altText:row.name||'ภาพกรรมการ'});
+    try{
+      const response=await mediaLibraryApi.upload(file,{folder:targetSection==='boards'?'board':'staff',altText:row.name||'รูปบุคลากร'});
       const photo=response.data?.url||response.data?.data?.url;
       if(!photo)throw new Error('ไม่พบ URL รูปภาพหลังอัปโหลด');
-      change('image',photo);
-      setMessage('อัปโหลดรูปแล้ว กรุณาบันทึกร่างและเผยแพร่ก่อนหน้าเว็บเปลี่ยน');
+      if(sectionRef.current!==targetSection){
+        setMessage('อัปโหลดสำเร็จแต่หมวดข้อมูลเปลี่ยนแล้ว กรุณากลับไปเลือกภาพในรายการเดิม');
+        return;
+      }
+      // Lock the response to the exact row ID and array index used at upload start.
+      setValue(current=>applyPersonPhotoToDraft(current,{currentSection:sectionRef.current,targetSection,targetId,targetIndex,url:photo}));
+      setDirty(true);
+      setMessage('อัปโหลดรูปบุคลากรแล้ว กรุณาบันทึกร่างและอนุมัติเผยแพร่ก่อนภาพเปลี่ยนบนเว็บไซต์');
       showToast('อัปโหลดรูปภาพสำเร็จ');
-    } catch(e){
+    }catch(e){
       setError(e.message||'อัปโหลดรูปไม่สำเร็จ กรุณาตรวจสิทธิ์ Media Library');
-      showError('อัปโหลดรูปไม่สำเร็จ', e.message);
-    }
-    finally {setMediaBusy(false);}
+      showError('อัปโหลดรูปไม่สำเร็จ',e.message);
+    }finally{setMediaBusy(false);}
   }
   async function save(e){
     e.preventDefault();
@@ -196,7 +215,7 @@ export default function PublicContentAdminPage() {
   }
   return <section className="admin-module public-content-admin"><Link to="/admin/workspace">กลับพื้นที่ทำงาน</Link><AdminPageHeader title="จัดการข้อมูลเว็บไซต์สหกรณ์" description="บันทึกร่าง ตรวจข้อมูลก่อน–หลัง แล้วเผยแพร่ตามวันที่มีผล โดยไม่ต้อง build เว็บไซต์ใหม่"/>
     {error&&<AdminErrorState message={error}/>}{message&&<p role="status">{message}</p>}
-    <label>หมวดข้อมูล <select value={section} disabled={busy} onChange={async e=>{
+    <label>หมวดข้อมูล <select value={section} disabled={busy||mediaBusy} onChange={async e=>{
       const nextVal = e.target.value;
       if(dirty){
         const confirmed = await showConfirm('เปลี่ยนหมวดข้อมูล?', 'มีข้อมูลที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?');
@@ -214,11 +233,44 @@ export default function PublicContentAdminPage() {
     }}>โหลดล่าสุด</button>
     {loading&&<p role="status">กำลังโหลดข้อมูล...</p>}{!loading&&!sections.length&&!error&&<p>ยังไม่มีสิทธิ์ดูข้อมูลส่วนนี้ กรุณาติดต่อผู้ดูแลระบบ</p>}
     {value&&data&&<>
-      {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||!value.length} onClick={async ()=>{
+      {section!=='profile'&&Array.isArray(value)&&<div className="public-content-toolbar"><label>เลือกรายการ <select value={selected} disabled={busy||mediaBusy} onChange={e=>setSelected(Number(e.target.value))}>{value.map((item,index)=><option key={index} value={index}>{index+1}. {labelOf(viewRow(item,section))}</option>)}</select></label>{definition?.canEdit&&<><button disabled={busy||mediaBusy} onClick={add}>เพิ่มรายการ</button>{[-1,1].map(offset=><button key={offset} disabled={busy||mediaBusy||selected+offset<0||selected+offset>=value.length} onClick={()=>{const next=[...value];[next[selected],next[selected+offset]]=[next[selected+offset],next[selected]];setValue(next);setSelected(selected+offset);setDirty(true);}}>{offset<0?'เลื่อนขึ้น':'เลื่อนลง'}</button>)}<button disabled={busy||mediaBusy||!value.length} onClick={async ()=>{
         const confirmed = await showDeleteConfirm('นำรายการออกจากร่าง?', 'นำรายการนี้ออกจากร่าง? ข้อมูลจริงยังไม่เปลี่ยนจนกว่าจะเผยแพร่');
         if(!confirmed) return;
         setValue(value.filter((_,index)=>index!==selected));setSelected(0);setDirty(true);
       }}>นำออกจากร่าง</button></>}</div>}
+      {section==='staff'&&Array.isArray(value)&&<section className="surface-card public-content-board-directory" aria-label="เลือกเจ้าหน้าที่เพื่อแก้ไขข้อมูลและรูปภาพ">
+        <header className="public-content-board-tools-heading">
+          <h3>ทำเนียบเจ้าหน้าที่ · จัดการรูปบุคลากร</h3>
+          <p>เลือกรายการเพื่อแก้ไข รูปและข้อมูลอยู่ในร่างของหมวดเจ้าหน้าที่เท่านั้น ไม่เปลี่ยนข้อมูลกรรมการหรือหมวดอื่น</p>
+        </header>
+        <div className="public-content-board-people-grid">
+          {value.map((person,index)=><button type="button" key={person.id||index}
+            className={'public-content-board-person-tile'+(selected===index?' is-selected':'')}
+            aria-pressed={selected===index} disabled={busy||mediaBusy} onClick={()=>setSelected(index)}>
+            {person.image?<img src={person.image} alt="" loading="lazy"/>:<span className="public-content-board-person-noimg">ยังไม่มีรูป</span>}
+            <strong>{person.name||'รอกรอกชื่อ'}</strong>
+            <small>{person.position||'ยังไม่ระบุตำแหน่ง'}</small>
+            <span>{person.department||'ฝ่ายจัดการ'}</span>
+          </button>)}
+        </div>
+      </section>}
+      {section==='staff'&&row&&definition?.canEdit&&<section className="surface-card public-content-board-tools" aria-label="อัปโหลดรูปเจ้าหน้าที่">
+        <header className="public-content-board-tools-heading">
+          <h3>รูปภาพเจ้าหน้าที่: {row.name||'รายการใหม่'}</h3>
+          <p>รองรับ JPEG, PNG, WebP ไม่เกิน 10 MB; รูปจะอยู่ในโฟลเดอร์ staff และผูกกับบุคลากรที่เลือกเท่านั้น</p>
+        </header>
+        <div className="public-content-board-media">
+          <label htmlFor="public-content-staff-photo">เลือกรูปภาพเจ้าหน้าที่</label>
+          <input id="public-content-staff-photo" type="file" accept="image/jpeg,image/png,image/webp"
+            disabled={busy||mediaBusy}
+            onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadPersonPhoto(file);}}/>
+          {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพเจ้าหน้าที่...</p>}
+          {row.image?<figure className="public-content-board-photo-preview">
+            <img src={row.image} alt={'ตัวอย่างรูป '+row.name} loading="lazy"/>
+            <figcaption>ตัวอย่างรูป: {row.name}</figcaption>
+          </figure>:<p className="public-content-board-no-photo">ยังไม่มีรูปเจ้าหน้าที่ในรายการนี้</p>}
+        </div>
+      </section>}
       {section==='boards'&&Array.isArray(value)&&<section className="surface-card public-content-board-directory" aria-label="เลือกกรรมการเพื่อแก้ไขข้อมูลและรูปภาพ">
         <header className="public-content-board-tools-heading">
           <h3>ทำเนียบกรรมการแยกตามชุด · จัดการรูปทุกท่าน</h3>
@@ -232,7 +284,7 @@ export default function PublicContentAdminPage() {
         <div className="public-content-board-people-grid">
           {value.map((person,index)=>({...person,index})).filter(person=>boardTermFilter==='ทั้งหมด'||person.term===boardTermFilter).map(person=>
             <button type="button" key={person.id||person.index} className={'public-content-board-person-tile'+(selected===person.index?' is-selected':'')}
-              aria-pressed={selected===person.index} onClick={()=>setSelected(person.index)}>
+              aria-pressed={selected===person.index} disabled={busy||mediaBusy} onClick={()=>setSelected(person.index)}>
               {person.image?<img src={person.image} alt="" loading="lazy"/>:<span className="public-content-board-person-noimg">ยังไม่มีรูป</span>}
               <strong>{person.name||'รอกรอกชื่อ'}</strong>
               <small>{person.position||'ยังไม่ระบุตำแหน่ง'}</small>
@@ -289,7 +341,7 @@ export default function PublicContentAdminPage() {
           <div className="public-content-board-media">
             <h4>รูปภาพกรรมการ</h4>
             <label htmlFor="public-content-board-photo">อัปโหลดรูปภาพ (JPEG/PNG/WebP ไม่เกิน 10 MB)</label>
-            <input id="public-content-board-photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadBoardPhoto(file);}} />
+            <input id="public-content-board-photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)uploadPersonPhoto(file);}} />
             {mediaBusy&&<p role="status">กำลังอัปโหลดรูปภาพ...</p>}
             {row.image ? <figure className="public-content-board-photo-preview">
               <img src={row.image} alt={'ตัวอย่างรูป '+row.name} loading="lazy"/>
