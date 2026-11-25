@@ -65,7 +65,7 @@ export default function ActivitySlideshow({ images = [], title = 'ภาพก�
       </button>)}
     </div>
     <dialog ref={lightbox} className="activity-lightbox" aria-label={`${title} ภาพขยาย`} onKeyDown={event=>{
-      if(event.key==='+' || event.key==='='){event.preventDefault();setZoom(v=>Math.min(4,Number((v+.25).toFixed(2))));}
+      if(event.key==='+' || event.key==='='){event.preventDefault();setZoom(v=>Math.min(4,Number(((v===0?1:v)+.25).toFixed(2))));}
       else if(event.key==='-'){event.preventDefault();setZoom(v=>Math.max(1,Number((v-.25).toFixed(2))));}
       else keyboard(event);
     }} onCancel={event => { event.stopPropagation(); }} onClick={event => { if (event.target === event.currentTarget) lightbox.current.close(); }}>
@@ -74,7 +74,7 @@ export default function ActivitySlideshow({ images = [], title = 'ภาพก�
         <div className="activity-reader-actions">
           <button type="button" onClick={()=>setZoom(v=>Math.max(1,Number((v-.25).toFixed(2))))} disabled={zoom<=1} aria-label="ย่อภาพ">−</button>
           <output aria-label="ระดับการซูม">{zoom===0?'ทั้งหน้า':`${Math.round(zoom*100)}%`}</output>
-          <button type="button" onClick={()=>setZoom(v=>Math.min(4,Number((v+.25).toFixed(2))))} disabled={zoom>=4} aria-label="ขยายภาพ">+</button>
+          <button type="button" onClick={()=>setZoom(v=>Math.min(4,Number(((v===0?1:v)+.25).toFixed(2))))} disabled={zoom>=4} aria-label="ขยายภาพ">+</button>
           <button type="button" onClick={()=>setZoom(1)}>พอดีความกว้าง</button>
           <button type="button" onClick={()=>setZoom(0)}>เห็นทั้งหน้า</button>
           <a className="activity-reader-original" href={image.src} target="_blank" rel="noopener noreferrer">เปิดภาพต้นฉบับ</a>
