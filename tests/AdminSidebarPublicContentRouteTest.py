@@ -16,6 +16,10 @@ assert "setSection(requestedSection)" in page
 assert "const nextVal = e.target.value;" in page
 assert "setSection(nextVal)" in page
 assert "next.set('section',nextVal)" in page
-assert "if (!sections.length || !requestedSection || requestedSection === section || dirty) return;" in page
+assert "if (!sections.length || !requestedSection || requestedSection === section) return;" in page
+assert "if (dirty && section)" in page
+assert "current.set('section', section)" in page
+assert "setValue(null)" in page
+assert "หมวดข้อมูลที่ระบุใน URL ไม่สามารถเข้าถึงได้" in page
 assert re.search(r"memberAdminApi\('/api/admin/public-content/sections'",page)
 print("PASS: public content sidebar route / section query contract")
