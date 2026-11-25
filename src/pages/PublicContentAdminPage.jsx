@@ -159,7 +159,7 @@ export default function PublicContentAdminPage() {
     }
     setMediaBusy(true);setError('');
     try{
-      const response=await mediaLibraryApi.upload(file,{folder:targetSection==='boards'?'board':'staff',altText:row.name||'รูปบุคลากร'});
+      const response=await mediaLibraryApi.uploadPeople(file,{folder:targetSection==='boards'?'board':'staff',altText:row.name||'รูปบุคลากร'});
       const photo=response.data?.url||response.data?.data?.url;
       if(!photo)throw new Error('ไม่พบ URL รูปภาพหลังอัปโหลด');
       if(sectionRef.current!==targetSection){
