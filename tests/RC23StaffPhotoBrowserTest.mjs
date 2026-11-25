@@ -110,7 +110,7 @@ try{
  const denied=await browser.newPage();
  denied.on('pageerror',e=>errors.push(e.message));
  await denied.goto('http://127.0.0.1:'+port+'/__rc23_staff?deny=1');
- await denied.getByText(/ไม่พบหมวดข้อมูลที่ร้องขอ/).waitFor();
+ await denied.getByText(/ไม่พบหมวดข้อมูลที่ร้องขอ|หมวดข้อมูลที่ระบุใน URL ไม่สามารถเข้าถึงได้/).waitFor();
  const deniedStaffCalls=await denied.evaluate(()=>window.__rc23Calls.filter(x=>x==='/api/admin/public-content/sections/staff').length);
  assert.equal(deniedStaffCalls,0,'denied section must never load staff API');
  assert.equal(await denied.locator('#public-content-staff-photo').count(),0);
