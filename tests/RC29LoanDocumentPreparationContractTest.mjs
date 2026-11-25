@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const loans=readFileSync('src/pages/LoansPage.jsx','utf8');
+const checklist=readFileSync('src/components/calculators/LoanReadinessChecklist.jsx','utf8');
+const checklistPage=readFileSync('src/pages/LoanChecklistPage.jsx','utf8');
+const documents=readFileSync('src/pages/DocumentsPage.jsx','utf8');
+const css=readFileSync('src/components/calculators/LoanDocumentChecklist.css','utf8');
+const routes=readFileSync('config/routes.php','utf8');
+
+assert.match(loans,/LoanReadinessChecklist/,'loan page must show preparation checklist');
+assert.match(loans,/href="#loan-document-checklist"/,'loan product CTA must link to checklist');
+assert.doesNotMatch(loans,/to="\/eservice"|ยื่นคำขอกู้|ยื่นกู้ทันที/,'loan page must not offer online loan application');
+assert.doesNotMatch(checklist,/to="\/eservice"|พร้อมยื่นกู้ได้ทันที|membership6Months|salaryRemain30Percent/,'checklist cannot imply approval or outdated numeric eligibility criteria');
+assert.match(checklist,/type="checkbox"/,'preparation items must be checkable');
+assert.match(checklist,/fetchDocuments\(\)/,'only published API documents may be listed');
+assert.match(checklist,/filter\(isLoanDocument\)/,'loan documents are filtered from live publication');
+assert.match(checklist,/\/api\/public\/documents\/\$\{encodeURIComponent\(doc\.id\)\}\/download/,'downloads use canonical public document route');
+assert.match(documents,/\/api\/public\/documents\/\$\{encodeURIComponent\(doc\.id\)\}\/download/,'same download URL as public document center');
+assert.match(routes,/\/api\/public\/documents/,'public downloads must have registered routes');
+assert.match(checklist,/loanDocs\.length===0/,'do not fabricate downloads when none are published');
+assert.match(checklist,/ตรวจสอบกับเจ้าหน้าที่/,'not a formal eligibility assessment');
+assert.match(checklistPage,/เตรียมเอกสารเงินกู้/);
+assert.match(css,/@media\(max-width:760px\)/,'mobile layout must be responsive');
+assert.match(css,/min-height:44px/,'touch controls must be accessible');
+console.log('RC29_LOAN_DOCUMENT_PREPARATION_CONTRACT=PASS');
