@@ -100,9 +100,26 @@ export default function PublicContentAdminPage() {
     }
   }).catch(e=>{if(e.name!=='AbortError'){setError(e.message);setLoading(false);}});return()=>controller.abort();},[]);
   useEffect(() => {
-    if (!sections.length || !requestedSection || requestedSection === section || dirty) return;
-    if (sections.some(item => item.key === requestedSection)) setSection(requestedSection);
-  }, [requestedSection, sections, section, dirty]);
+    if (!sections.length || !requestedSection || requestedSection === section) return;
+    if (!sections.some(item => item.key === requestedSection)) {
+      // Never silently switch to an unrelated section when deep-link is invalid.
+      setSection('');
+      setError('หมวดข้อมูลที่ระบุใน URL ไม่สามารถเข้าถึงได้: ' + requestedSection);
+      return;
+    }
+    if (dirty && section) {
+      // Browser Back/Forward while editing must not leave URL and editable data
+      // pointing to different sections. Restore the currently edited section.
+      setMessage('ยังมีข้อมูลที่ไม่ได้บันทึก ระบบคงหมวดเดิมไว้เพื่อป้องกันแก้ไขผิดหมวด');
+      setSearchParams(params => {
+        const current = new URLSearchParams(params);
+        current.set('section', section);
+        return current;
+      }, {replace:true});
+      return;
+    }
+    setSection(requestedSection);
+  }, [requestedSection, sections, section, dirty, setSearchParams]);
   useEffect(()=>{if(!section)return;const controller=new AbortController();setLoading(true);setError('');setData(null);setValue(null);setSelected(0);setDirty(false);setPreview(false);setNote('');setCarrySelection([]);
     memberAdminApi(`/api/admin/public-content/sections/${section}`,{signal:controller.signal}).then(result=>{setData(result);setValue(result.value);}).catch(e=>{if(e.name!=='AbortError')setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
