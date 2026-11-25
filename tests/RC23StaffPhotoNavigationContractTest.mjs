@@ -8,7 +8,7 @@ assert.match(page,/section==='staff'&&Array\.isArray\(value\)/,'staff directory 
 assert.match(page,/section==='staff'&&row&&definition\?\.canEdit/,'staff photo editor must require edit rights');
 assert.match(page,/id="public-content-staff-photo"/);
 assert.match(page,/filter\(\(\[key\]\)=>!\(key==='image' && \['staff','boards'\]\.includes\(section\)\)\)/,'person image must not be an editable external URL');
-assert.match(page,/เพิ่มหรือเปลี่ยนรูปเจ้าหน้าที่ในระบบโดยตรง/);
+assert.match(page,/เลือกไฟล์(?:เปลี่ยนรูป|อัปโหลดรูป)เจ้าหน้าที่/,'staff must expose a visible native file upload action');
 assert.match(page,/นำรูปออกจากร่าง/);
 assert.match(page,/showDeleteConfirm\('นำรูปเจ้าหน้าที่ออกจากร่าง/);
 
