@@ -55,6 +55,7 @@ const queryIcons = {
   '/admin/content?tab=faqs': CircleHelp,
   '/admin/content?tab=news': Newspaper,
   '/admin/public-content?section=boards': Users,
+  '/admin/public-content?section=staff': UserRoundCog,
   '/admin/public-content?section=groups': UserRoundCog,
   '/admin/public-content?section=products': Wallet,
   '/admin/control-center?tab=usage': Activity,
