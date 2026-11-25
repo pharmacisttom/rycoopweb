@@ -6,10 +6,12 @@ import SafeImage from '../components/common/SafeImage';
 import RichTextContent from '../components/common/RichTextContent';
 
 import ActivitySlideshow from '../components/common/ActivitySlideshow';
+import '../components/common/ContentReaderModal.css';
 
 export default function NewsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNews, setSelectedNews] = useState(null);
+  const [readerFontSize, setReaderFontSize] = useState(18);
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -120,7 +122,7 @@ export default function NewsPage() {
         {/* News Detail Modal */}
         {selectedNews && (
           <dialog ref={detail} aria-label={selectedNews.title} onCancel={()=>setSelectedNews(null)} style={{
-            border: 0, width:'100vw', maxWidth:'100vw', height:'100dvh', maxHeight:'100dvh', margin:0,
+            border: 0, boxSizing:'border-box', width:'100vw', maxWidth:'100vw', height:'100dvh', maxHeight:'100dvh', margin:0,
             position: 'fixed',
             top: 0,
             left: 0,
@@ -132,9 +134,9 @@ export default function NewsPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem'
+            padding: 'clamp(8px, 2vw, 20px)'
           }}>
-            <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: '2rem', position: 'relative' }}>
+            <div className="glass-card animate-fade-in rycoop-reader-panel" style={{  background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: 'clamp(16px, 3vw, 36px)', position: 'relative' }}>
 
               <button
                 aria-label="ปิดข่าว" onClick={() => setSelectedNews(null)}
@@ -143,17 +145,25 @@ export default function NewsPage() {
                 <X size={20} />
               </button>
 
+              <div className="rycoop-reader-font-controls" role="group" aria-label="ปรับขนาดตัวอักษรข่าว">
+                <span>ขนาดตัวอักษร</span>
+                <button type="button" aria-label="ลดขนาดตัวอักษร" disabled={readerFontSize<=16} onClick={()=>setReaderFontSize(size=>Math.max(16,size-2))}>A−</button>
+                <output aria-live="polite">{readerFontSize}px</output>
+                <button type="button" aria-label="เพิ่มขนาดตัวอักษร" disabled={readerFontSize>=28} onClick={()=>setReaderFontSize(size=>Math.min(28,size+2))}>A+</button>
+                <button type="button" onClick={()=>setReaderFontSize(18)}>ค่าเริ่มต้น</button>
+              </div>
               <span className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{selectedNews.category}</span>
-              <h2 style={{ fontSize: '1.4rem', color: 'var(--primary-900)', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+              <h2 style={{ fontSize: `clamp(1.4rem, ${readerFontSize*1.5}px, 2.65rem)`, color: 'var(--primary-900)', marginBottom: '0.75rem', lineHeight: 1.35 }}>
                 {selectedNews.title}
               </h2>
 
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                 <span>วันที่เผยแพร่: {selectedNews.date}</span>
                 <span>ยอดผู้เข้าชม: {selectedNews.views} ครั้ง</span>
               </div>
 
-              <div style={{ lineHeight: 1.8, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+              <div className="rycoop-reader-copy" style={{ '--reader-font-size': `${readerFontSize}px`, lineHeight: 1.8, color: 'var(--text-main)' }}>
+                {selectedNews.gallery_images?.length > 0 && <p style={{fontSize:'0.95rem',lineHeight:1.6,color:'var(--text-muted)'}}>แตะภาพหรือกด “เปิดภาพเต็มจอ / ซูมอ่าน” เพื่อขยายเอกสารและอ่านข้อความได้ชัดเจน</p>}
                 <ActivitySlideshow images={selectedNews.gallery_images} title={selectedNews.title} />
                 <RichTextContent value={selectedNews.content || selectedNews.excerpt} />
               </div>

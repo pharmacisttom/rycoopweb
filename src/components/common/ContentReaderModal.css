@@ -1,0 +1,49 @@
+/* Shared RC28 reading surfaces: only content/detail viewers, never confirmation,
+   login, MFA or irreversible-action dialogs. */
+.rycoop-reader-panel{
+  box-sizing:border-box;
+  width:75vw;
+  max-width:1600px;
+  max-height:95dvh;
+  margin-inline:auto;
+  overflow:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.rycoop-reader-panel :is(img,video,iframe){max-width:100%}
+.rycoop-reader-panel :is(p,li,figcaption){overflow-wrap:anywhere}
+@media(max-width:1023px){
+  .rycoop-reader-panel{width:94vw;max-height:96dvh}
+}
+@media(max-width:639px){
+  .rycoop-reader-panel{
+    width:100%;
+    max-width:100%;
+    max-height:100dvh;
+    border-radius:0!important;
+    padding:16px!important;
+  }
+}
+
+
+/* RC28 readable Thai typography controls, scoped to content reading. */
+.rycoop-reader-font-controls{
+ display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+ padding:12px 56px 12px 14px;margin-bottom:18px;
+ background:#eaf2ff;border:1px solid #adc7ef;border-radius:12px;
+ color:#173557;font-size:16px;font-weight:650;line-height:1.55;
+}
+.rycoop-reader-font-controls button{
+ min-height:44px;min-width:44px;padding:8px 14px;border-radius:9px;
+ border:1px solid #86a9dd;background:#fff;color:#11345f;
+ font:inherit;font-size:16px;font-weight:700;cursor:pointer;
+}
+.rycoop-reader-font-controls button:hover{background:#d7e7ff}
+.rycoop-reader-font-controls button:focus-visible{outline:3px solid #1d4ed8;outline-offset:2px}
+.rycoop-reader-font-controls button:disabled{opacity:.45;cursor:not-allowed}
+.rycoop-reader-font-controls output{min-width:46px;text-align:center;font-variant-numeric:tabular-nums}
+.rycoop-reader-copy,.rycoop-reader-copy .rich-text-content{font-size:var(--reader-font-size,18px);line-height:1.85}
+.rycoop-reader-copy .rich-text-content :is(p,li,td,th,blockquote,span){font-size:inherit;line-height:inherit;overflow-wrap:anywhere}
+.rycoop-reader-copy .rich-text-content :is(img,video,iframe){max-width:100%;height:auto}
+.rycoop-reader-copy .rich-text-content table{display:block;max-width:100%;overflow-x:auto}
+@media(max-width:639px){.rycoop-reader-font-controls{padding:10px;gap:8px;font-size:15px}.rycoop-reader-font-controls button{padding:8px 10px}}

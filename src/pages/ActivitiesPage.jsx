@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CalendarDays, Images, MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import '../components/common/ContentReaderModal.css';
 
 export default function ActivitiesPage() {
   const dialogRef = useRef(null);
@@ -59,7 +60,7 @@ export default function ActivitiesPage() {
       </article>)}
     </div>
     {selected && <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={selected.album.title} style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(10,20,36,.96)', color: 'white', overflow: 'auto', padding: 20 }} onKeyDown={(e) => { if (e.key === 'Escape') setSelected(null); if (e.key === 'ArrowRight') setActive((i) => Math.min(i+1,photos.length-1)); if (e.key === 'ArrowLeft') setActive((i) => Math.max(0,i-1)); }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div className="rycoop-reader-panel" style={{ maxWidth:1600, margin:'0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
           <h2 style={{ color: 'white' }}>{selected.album.title}</h2>
           <button aria-label="ปิดอัลบั้ม" onClick={() => setSelected(null)} style={{ background: 'transparent', border: '1px solid white', color: 'white', borderRadius: 10, padding: 10 }}><X/></button>
