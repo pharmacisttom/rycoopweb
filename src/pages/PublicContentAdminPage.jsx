@@ -101,12 +101,6 @@ export default function PublicContentAdminPage() {
   }).catch(e=>{if(e.name!=='AbortError'){setError(e.message);setLoading(false);}});return()=>controller.abort();},[]);
   useEffect(() => {
     if (!sections.length || !requestedSection || requestedSection === section) return;
-    if (!sections.some(item => item.key === requestedSection)) {
-      // Never silently switch to an unrelated section when deep-link is invalid.
-      setSection('');
-      setError('หมวดข้อมูลที่ระบุใน URL ไม่สามารถเข้าถึงได้: ' + requestedSection);
-      return;
-    }
     if (dirty && section) {
       // Browser Back/Forward while editing must not leave URL and editable data
       // pointing to different sections. Restore the currently edited section.
@@ -116,6 +110,14 @@ export default function PublicContentAdminPage() {
         current.set('section', section);
         return current;
       }, {replace:true});
+      return;
+    }
+    if (!sections.some(item => item.key === requestedSection)) {
+      // Remove the previously loaded section's editor before showing access error.
+      setSection('');
+      setData(null);
+      setValue(null);
+      setError('หมวดข้อมูลที่ระบุใน URL ไม่สามารถเข้าถึงได้: ' + requestedSection);
       return;
     }
     setSection(requestedSection);
