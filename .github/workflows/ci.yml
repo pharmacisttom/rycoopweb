@@ -401,6 +401,7 @@ jobs:
         run: |
           node tests/AdminSidebarIconContractTest.mjs
           node tests/RC28NewsReaderResponsiveContractTest.mjs
+          node tests/RC29LoanDocumentPreparationContractTest.mjs
 
       - name: Verify RC21 Glass Admin design scope and accessibility
         run: node tests/AdminGlassColorRC21SourceContract.mjs
