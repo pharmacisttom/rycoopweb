@@ -8,6 +8,7 @@ assert.match(page,/section==='staff'&&Array\.isArray\(value\)/,'staff directory 
 assert.match(page,/section==='staff'&&row&&definition\?\.canEdit/,'staff photo editor must require edit rights');
 assert.match(page,/id="public-content-staff-photo"/);
 assert.match(page,/folder:targetSection==='boards'\?'board':'staff'/);
+assert.match(page,/mediaLibraryApi\.uploadPeople\(file/);
 assert.match(page,/applyPersonPhotoToDraft\(current/);
 assert.match(page,/sectionRef\.current!==targetSection/);
 assert.match(page,/ไม่มีสิทธิ์เข้าถึงหมวด/);
