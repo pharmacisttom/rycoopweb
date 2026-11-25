@@ -15,6 +15,10 @@ for(const route of ['/admin/manual','/admin/mega-menu','/admin/content','/admin/
  '/admin/security','/admin/access','/admin/backups','/admin/settings','/admin/audit-logs']) {
  assert.ok(icons.includes("'"+route+"'"),'missing icon mapping for '+route);
 }
+assert.match(shell,/label: 'จัดการสวัสดิการสมาชิก', to: '\/admin\/welfare', roles: \['super_admin'\]/,'welfare CRUD must be visible to super_admin only');
+assert.match(shell,/label: 'ดูข้อมูลสวัสดิการที่เผยแพร่', to: '\/welfare', roles: \['super_admin'\]/,'public welfare preview must be visible in admin sidebar');
+assert.match(icons,/'\/admin\/welfare': HeartHandshake/);
+assert.match(icons,/'\/welfare': HeartHandshake/);
 assert.ok(!icons.includes('localStorage')&&!icons.includes('fetch('),'icon mapping must remain presentation-only');
 for (const label of ['Plus', 'Eye', 'Save', 'Send', 'Trash2', 'Undo2']) {
   assert.ok(editor.includes(label), 'missing CRUD icon ' + label);

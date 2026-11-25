@@ -35,6 +35,8 @@ const exact = {
   '/admin/mega-menu': ListTree,
   '/admin/documents': FolderOpen,
   '/admin/media': Image,
+  '/admin/welfare': HeartHandshake,
+  '/welfare': HeartHandshake,
   '/admin/users': UserRoundCog,
   '/admin/roles': IdCard,
   '/admin/permissions': KeyRound,
