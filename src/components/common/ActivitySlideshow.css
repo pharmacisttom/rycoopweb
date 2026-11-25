@@ -46,3 +46,33 @@
   .activity-reader-help{font-size:12px}
   .activity-stage-open>img{max-height:70dvh}
 }
+
+
+/* RC28 readable high-contrast document palette; scoped to the reader only. */
+.activity-lightbox{
+  --reader-ink:#f8fafc;
+  --reader-navy:#10223c;
+  --reader-sky:#dbeafe;
+  --reader-blue:#1d4ed8;
+  --reader-border:#8fb3e5;
+  background:var(--reader-navy);
+  color:var(--reader-ink);
+  border:1px solid #567ba7;
+}
+.activity-reader-toolbar{background:#18365a;border:1px solid #496a94;border-radius:12px;padding:10px 12px}
+.activity-reader-title,.activity-reader-actions output{color:#fff;font-weight:700}
+.activity-gallery .activity-reader-actions button,.activity-gallery .activity-reader-original{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:44px;min-width:44px;padding:8px 12px;
+  color:#132e51;background:#eff6ff;border:1px solid #93b4e2;
+  border-radius:10px;font-size:15px;font-weight:650;line-height:1.3;
+  text-decoration:none;white-space:normal;
+}
+.activity-gallery .activity-reader-actions button:hover,.activity-gallery .activity-reader-original:hover{background:#bfdbfe;color:#102345}
+.activity-gallery .activity-reader-actions button:focus-visible,.activity-gallery .activity-reader-original:focus-visible,.activity-reader-viewport:focus-visible{outline:3px solid #facc15;outline-offset:2px}
+.activity-gallery .activity-reader-actions button:disabled{background:#d3ddeb;color:#536377;opacity:1}
+.activity-gallery .activity-reader-actions .activity-close{color:#fff;background:#a62733;border-color:#fca5a5}
+.activity-gallery .activity-reader-actions .activity-close:hover{background:#881d2b;color:#fff}
+.activity-reader-viewport{background:#f8fafc;border:2px solid #c3d4ea;scrollbar-color:#567dab #e5edf8}
+.activity-reader-caption,.activity-reader-help{color:#f1f5f9}
+@media(max-width:640px){.activity-reader-toolbar{padding:8px}.activity-reader-actions{gap:6px}.activity-gallery .activity-reader-actions button,.activity-gallery .activity-reader-original{font-size:14px}}
