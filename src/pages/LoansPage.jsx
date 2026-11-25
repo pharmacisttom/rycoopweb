@@ -1,5 +1,6 @@
 import React from 'react';
-import { Banknote, CheckCircle2, Download, FileCheck, Home, Zap } from 'lucide-react';
+import { Banknote, CheckCircle2, FileCheck, Home, Zap } from 'lucide-react';
+import LoanReadinessChecklist from '../components/calculators/LoanReadinessChecklist';
 import { Link } from 'react-router-dom';
 import { usePublicInformation } from '../context/PublicContentContext';
 
@@ -63,7 +64,7 @@ function LoanProductCard({ product }) {
       </div>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <Link to={`/calculator?loan=${product.id}`} className="btn btn-outline btn-sm" style={{ flex: '1 1 140px' }}>คำนวณค่างวด</Link>
-        <Link to="/eservice" className="btn btn-primary btn-sm" style={{ flex: '1 1 140px' }}>ยื่นคำขอกู้</Link>
+        <a href="#loan-document-checklist" className="btn btn-primary btn-sm" style={{ flex: '1 1 140px' }}><FileCheck size={16} aria-hidden="true"/> เช็กลิสต์เอกสาร</a>
       </div>
     </article>
   );
@@ -76,9 +77,9 @@ export default function LoansPage() {
     <div className="section">
       <div className="container">
         <div className="section-title-wrap">
-          <span className="section-badge">ผลิตภัณฑ์สินเชื่อ</span>
-          <h1 className="section-title">สินเชื่อและอัตราดอกเบี้ยเงินกู้</h1>
-          <p className="section-subtitle">เลือกประเภทสินเชื่อให้เหมาะกับวัตถุประสงค์และแผนการชำระเงินของคุณ</p>
+          <span className="section-badge">ข้อมูลเงินกู้และการเตรียมเอกสาร</span>
+          <h1 className="section-title">ข้อมูลเงินกู้และรายการเอกสารที่ควรเตรียม</h1>
+          <p className="section-subtitle">ศึกษาประเภทเงินกู้และตรวจสอบรายการเอกสารก่อนติดต่อสหกรณ์ พร้อมดาวน์โหลดแบบฟอร์มที่เผยแพร่จริงจากศูนย์เอกสาร</p>
           <div className="section-line" />
           <p className="section-subtitle">{INTEREST_RATES.loanSource?.note || 'โปรดตรวจสอบประกาศสินเชื่อและอัตราดอกเบี้ยที่ได้รับอนุมัติจากสหกรณ์'}{' '}{typeof INTEREST_RATES.loanSource?.url === 'string' && /^https?:\/\//i.test(INTEREST_RATES.loanSource.url) && <a href={INTEREST_RATES.loanSource.url}>ดูข้อมูลอ้างอิง</a>}</p>
         </div>
@@ -110,16 +111,8 @@ export default function LoansPage() {
           })}
         </div>
 
-        <div style={{ background: 'var(--gradient-hero)', color: '#ffffff', borderRadius: 'var(--radius-lg)', padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
-          <div>
-            <h2 style={{ fontSize: '1.3rem', color: '#fff', marginBottom: '0.4rem' }}>ต้องการตรวจเช็คความพร้อมและเอกสารก่อนยื่นกู้?</h2>
-            <p style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>ใช้เครื่องมือตรวจสอบคุณสมบัติ หรือดาวน์โหลดแบบฟอร์มเพื่อเตรียมยื่นเรื่อง</p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <Link to="/loan-checklist" className="btn btn-gold"><FileCheck size={18} aria-hidden="true" />ตรวจเช็คความพร้อมกู้</Link>
-            <Link to="/documents" className="btn btn-outline" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.1)' }}><Download size={18} aria-hidden="true" />ดาวน์โหลดแบบฟอร์ม</Link>
-          </div>
-        </div>
+        <LoanReadinessChecklist />
+
       </div>
     </div>
   );
