@@ -1,0 +1,26 @@
+/* Shared RC28 reading surfaces: only content/detail viewers, never confirmation,
+   login, MFA or irreversible-action dialogs. */
+.rycoop-reader-panel{
+  box-sizing:border-box;
+  width:75vw;
+  max-width:1600px;
+  max-height:95dvh;
+  margin-inline:auto;
+  overflow:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.rycoop-reader-panel :is(img,video,iframe){max-width:100%}
+.rycoop-reader-panel :is(p,li,figcaption){overflow-wrap:anywhere}
+@media(max-width:1023px){
+  .rycoop-reader-panel{width:94vw;max-height:96dvh}
+}
+@media(max-width:639px){
+  .rycoop-reader-panel{
+    width:100%;
+    max-width:100%;
+    max-height:100dvh;
+    border-radius:0!important;
+    padding:16px!important;
+  }
+}
