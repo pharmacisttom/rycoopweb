@@ -26,6 +26,8 @@ assert.match(page,/const selectedTerm=boardTermFilter==='ทั้งหมด'/
 assert.match(page,/if\(section==='boards'\)setBoardTermFilter\(selectedTerm\)/,'new board must remain visible after adding');
 assert.match(page,/if\(section==='boards'\)\{/,'board draft validation must run');
 assert.match(page,/setData\(current=>current\?\{\.\.\.current,version:latest\.version,history:latest\.history\}/,'refresh history without replacing unsaved editor');
-assert.doesNotMatch(page,/showSuccess\('บันทึกร่างสำเร็จ!'[^]*?setRefresh\(n=>n\+1\);/,'saving draft must not reset to last published roster');
+const boardSaveBlock=page.split('  async function save(e){')[1]?.split('  async function publish(revision){')[0]||'';
+assert.ok(boardSaveBlock,'save handler must exist');
+assert.doesNotMatch(boardSaveBlock,/setRefresh\(n=>n\+1\)/,'saving draft must not reset to last published roster');
 console.log('RC24_BOARD_ADD_DRAFT_PERSISTENCE_CONTRACT=PASS');
 console.log('RC23_STAFF_PHOTO_NAVIGATION_CONTRACT=PASS');
