@@ -72,6 +72,36 @@ try {
     crudAssert(crudCritical('/api/admin/access/users','users.create',$userData)->status===409,'duplicate username/email conflicts on MySQL');
     $r=crudCritical('/api/admin/access/users/'.$account['id'].'/update','users.update',[...$account,'role_id'=>$legacyRole,'department'=>'PR office','email'=>'changed_'.$run.'@example.invalid']);crudAssert($r->status===200&&$r->body['user']['department']==='PR office','update account and department');$account=$r->body['user'];
     $r=crudCritical('/api/admin/access/users/'.$account['id'].'/delete','users.delete',['version'=>$account['version']]);crudAssert($r->status===200,'disable account');
+    // RC26 welfare real MySQL CRUD contract: inactive draft, publish, stale update,
+    // and soft-delete must match the public read-only endpoint.
+    crudActor();
+    $welfarePayload=[
+        'category'=>'CI fixture','title'=>'Welfare CRUD '.$run,
+        'slug'=>'ci-welfare-'.$run,'short_description'=>'Synthetic welfare entry',
+        'full_description'=>'Isolated CI test only','benefit_amount'=>'1000',
+        'eligibility'=>'CI only','required_documents'=>'None',
+        'application_process'=>'CI flow','contact_info'=>'None',
+        'sort_order'=>1,'status'=>'active',
+    ];
+    $newWelfare=crudRequest('POST','/api/admin/welfare',$welfarePayload);
+    crudAssert($newWelfare->status===201&&isset($newWelfare->body['data']['id']),'welfare create uses real audited controller');
+    $wid=(int)$newWelfare->body['data']['id'];
+    $adminWelfare=crudRequest('GET','/api/admin/welfare');
+    crudAssert($adminWelfare->status===200,'welfare read through protected admin route');
+    $record=current(array_filter($adminWelfare->body['data'],static fn($row)=>(int)$row['id']===$wid));
+    crudAssert(is_array($record)&&$record['status']==='inactive','welfare new record always starts unpublished');
+    $publicWelfare=crudRequest('GET','/api/public/welfare');
+    crudAssert($publicWelfare->status===200&&!in_array($wid,array_map('intval',array_column($publicWelfare->body['data'],'id')),true),'welfare draft is excluded from public list');
+    $published=crudRequest('POST',"/api/admin/welfare/$wid/update",[...$record,'status'=>'active']);
+    crudAssert($published->status===200,'welfare explicit publication saves');
+    $publicWelfare=crudRequest('GET','/api/public/welfare');
+    crudAssert($publicWelfare->status===200&&in_array($wid,array_map('intval',array_column($publicWelfare->body['data'],'id')),true),'welfare public list shows active item');
+    crudAssert(crudRequest('POST',"/api/admin/welfare/$wid/update",[...$record,'title'=>'Stale'])->status===409,'welfare stale version rejected');
+    $adminWelfare=crudRequest('GET','/api/admin/welfare');
+    $currentWelfare=current(array_filter($adminWelfare->body['data'],static fn($row)=>(int)$row['id']===$wid));
+    crudAssert(crudRequest('POST',"/api/admin/welfare/$wid/delete",['version'=>$currentWelfare['version']])->status===200,'welfare soft delete succeeds');
+    $publicWelfare=crudRequest('GET','/api/public/welfare');
+    crudAssert(!in_array($wid,array_map('intval',array_column($publicWelfare->body['data'],'id')),true),'welfare disabled item no longer public');
     crudActor();$r=crudRequest('POST','/api/admin/faqs',['question'=>'CRUD FAQ '.$run,'answer'=>'<p>Safe answer</p>']);crudAssert($r->status===201,'create FAQ');$faq=$r->body['data'];
     $r=crudRequest('POST','/api/admin/faqs/'.$faq['id'].'/update',[...$faq,'answer'=>'<p>Updated answer</p>']);crudAssert($r->status===200,'update FAQ');$current=$r->body['data'];
     crudAssert(crudRequest('POST','/api/admin/faqs/'.$faq['id'].'/update',$faq)->status===409,'stale FAQ conflict');

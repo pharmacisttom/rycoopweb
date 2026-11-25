@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Link} from 'react-router-dom';
+import {useAuth} from '../context/AuthContext';
 import {HeartHandshake, FileText, RefreshCw, ChevronDown, Search, ShieldCheck, PhoneCall} from 'lucide-react';
 import './WelfarePage.css';
 
@@ -38,6 +39,8 @@ function WelfareCard({item}) {
 }
 
 export default function WelfarePage() {
+  const {user,sessionStatus}=useAuth();
+  const canManage=sessionStatus==='online' && (user?.role==='super_admin'||user?.role_slug==='super_admin');
   const [rows,setRows]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
   const [refresh,setRefresh]=useState(0),[category,setCategory]=useState('ทั้งหมด'),[search,setSearch]=useState('');
   useEffect(()=>{
@@ -67,6 +70,7 @@ export default function WelfarePage() {
       </div>
       <div className="welfare-service-bar">
         <div><ShieldCheck size={22}/><span>แสดงเฉพาะข้อมูลที่เผยแพร่จากระบบสหกรณ์</span></div>
+        {canManage && <Link to="/admin/welfare"><HeartHandshake size={18}/> จัดการสวัสดิการ (หลังบ้าน)</Link>}
         <Link to="/documents"><FileText size={18}/> ศูนย์เอกสารและแบบฟอร์ม</Link>
         <Link to="/contact"><PhoneCall size={18}/> ติดต่อสหกรณ์</Link>
       </div>
