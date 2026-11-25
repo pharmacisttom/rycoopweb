@@ -1,150 +1,114 @@
-import React, { useState } from 'react';
-import { CheckSquare, Square, CheckCircle2, AlertCircle, Sparkles, FileCheck, ArrowRight } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, ClipboardCheck, Download, FileText, Search, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { fetchDocuments } from '../../services/api';
+import './LoanDocumentChecklist.css';
+
+// Preparation guidance only. These are examples to confirm with cooperative staff,
+// not mandatory eligibility rules or an authorization to submit a loan request.
+const checklistGroups = [
+  {
+    title: 'เอกสารผู้ขอกู้ — ตรวจสอบก่อนเดินทาง',
+    items: [
+      ['identity', 'เอกสารยืนยันตัวตนที่สหกรณ์กำหนด', 'สอบถามว่าต้องใช้ตัวจริงหรือสำเนา และจำนวนชุด'],
+      ['income', 'หลักฐานรายได้หรือรายการหักเงินเดือน (ถ้ามีการขอ)', 'ตรวจสอบช่วงเวลาของเอกสารที่ต้องใช้กับเจ้าหน้าที่'],
+      ['account', 'ข้อมูลบัญชีธนาคารสำหรับรับเงิน (ถ้าประเภทเงินกู้กำหนด)', 'ตรวจสอบชื่อบัญชีและรายการที่สหกรณ์รองรับ'],
+    ],
+  },
+  {
+    title: 'เอกสารเฉพาะประเภท — ใช้เมื่อเจ้าหน้าที่ระบุ',
+    items: [
+      ['application', 'แบบฟอร์มคำขอหรือเอกสารประกอบประเภทเงินกู้', 'ดาวน์โหลดฉบับที่เผยแพร่จากศูนย์เอกสารด้านล่าง'],
+      ['guarantor', 'เอกสารผู้ค้ำประกันหรือหลักประกัน (ถ้ามี)', 'ขึ้นอยู่กับประเภทเงินกู้และระเบียบที่มีผล'],
+      ['purpose', 'หลักฐานวัตถุประสงค์ เช่น เอกสารที่ดิน ค่าใช้จ่าย หรือการศึกษา (ถ้ามี)', 'เตรียมเฉพาะกรณีที่สหกรณ์ร้องขอ'],
+    ],
+  },
+];
+
+const isLoanDocument = (doc) => /กู้|สินเชื่อ|ค้ำประกัน|หลักประกัน|loan/i.test(
+  [doc?.title,doc?.category].filter(Boolean).join(' ')
+);
 
 export default function LoanReadinessChecklist() {
-  const [checklist, setChecklist] = useState({
-    membership6Months: true,
-    salaryRemain30Percent: true,
-    noDefaultRecord: true,
-    guarantorReady: false,
-    payslipReady: true,
-    idCardReady: true,
-    bankBookReady: false
-  });
+  const [checked,setChecked] = useState({});
+  const [documents,setDocuments] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+  const [term,setTerm] = useState('');
+  const total=checklistGroups.reduce((n,g)=>n+g.items.length,0);
+  const complete=Object.values(checked).filter(Boolean).length;
 
-  const toggleItem = (key) => {
-    setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  useEffect(()=>{
+    let active=true;
+    fetchDocuments().then(result=>{
+      if(!active)return;
+      if(!result?.success||!Array.isArray(result.data))throw new Error(result?.message||'ไม่สามารถโหลดเอกสารได้');
+      setDocuments(result.data.filter(doc=>doc&&doc.id!=null&&typeof doc.title==='string'));
+      setError('');
+    }).catch(err=>{if(active)setError(err.message||'ไม่สามารถโหลดรายการเอกสารได้');})
+      .finally(()=>{if(active)setLoading(false);});
+    return ()=>{active=false};
+  },[]);
 
-  const totalItems = Object.keys(checklist).length;
-  const checkedItems = Object.values(checklist).filter(Boolean).length;
-  const percentage = Math.round((checkedItems / totalItems) * 100);
+  const loanDocs=useMemo(()=>documents.filter(isLoanDocument),[documents]);
+  const visibleDocs=useMemo(()=>{
+    const q=term.trim().toLocaleLowerCase('th');
+    return loanDocs.filter(doc=>!q||[doc.title,doc.category].some(v=>String(v||'').toLocaleLowerCase('th').includes(q)));
+  },[loanDocs,term]);
 
-  return (
-    <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
-      
-      {/* Header */}
-      <div style={{ marginBottom: '1.75rem' }}>
-        <h3 style={{ fontSize: '1.4rem', color: 'var(--primary-800)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <FileCheck className="text-primary" />
-          <span>ระบบตรวจสอบความพร้อมและคุณสมบัติการกู้เงิน (Loan Readiness Checklist)</span>
-        </h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          ตรวจสอบความพร้อมก่อนยื่นคำขอกู้เงินสามัญ / ฉุกเฉิน เพื่อให้การอนุมัติเป็นไปอย่างรวดเร็ว
-        </p>
+  return <div className="loan-preparation" id="loan-document-checklist">
+    <div className="loan-preparation-heading">
+      <ClipboardCheck size={30} aria-hidden="true"/>
+      <div>
+        <h2>Checklist เตรียมเอกสารเงินกู้</h2>
+        <p>ใช้สำหรับจัดเตรียมและตรวจสอบเอกสารก่อนติดต่อเจ้าหน้าที่สหกรณ์เท่านั้น ไม่ใช่การยื่นคำขอหรือการตรวจรับรองสิทธิ</p>
       </div>
-
-      {/* Progress Bar */}
-      <div style={{ marginBottom: '2rem', background: 'var(--bg-subtle)', padding: '1.25rem', borderRadius: 'var(--radius-lg)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>ระดับความพร้อมของคุณ:</span>
-          <span style={{ 
-            fontWeight: 800, 
-            fontSize: '1.2rem', 
-            color: percentage === 100 ? 'var(--accent-emerald-dark)' : percentage >= 70 ? 'var(--primary-600)' : 'var(--accent-gold-dark)' 
-          }}>
-            {percentage}% ({checkedItems}/{totalItems} รายการ)
-          </span>
-        </div>
-        <div style={{ width: '100%', height: '10px', background: 'var(--border-subtle)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-          <div style={{ 
-            width: `${percentage}%`, 
-            height: '100%', 
-            background: percentage === 100 ? 'var(--gradient-teal)' : percentage >= 70 ? 'var(--gradient-primary)' : 'var(--gradient-gold)', 
-            transition: 'width 0.4s ease' 
-          }} />
-        </div>
-        <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          {percentage === 100 ? (
-            <span style={{ color: 'var(--accent-emerald)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-              <CheckCircle2 size={16} /> ยอดเยี่ยม! คุณมีคุณสมบัติและเอกสารครบถ้วน พร้อมยื่นกู้ได้ทันที
-            </span>
-          ) : (
-            <span>กรุณาเตรียมรายการที่ยังไม่ได้ติ๊กเลือกให้ครบถ้วนก่อนยื่นคำขอ</span>
-          )}
-        </div>
-      </div>
-
-      {/* Checklist Items */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-        
-        {/* Category 1: Qualifications */}
-        <div>
-          <h4 style={{ fontSize: '1rem', color: 'var(--primary-700)', marginBottom: '0.75rem', borderBottom: '2px solid var(--primary-200)', paddingBottom: '0.3rem' }}>
-            1. คุณสมบัติของผู้กู้
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            <div onClick={() => toggleItem('membership6Months')} style={checkItemStyle(checklist.membership6Months)}>
-              {checklist.membership6Months ? <CheckSquare size={20} style={{ color: 'var(--primary-600)' }} /> : <Square size={20} style={{ color: 'var(--text-muted)' }} />}
-              <span style={{ fontSize: '0.9rem' }}>เป็นสมาชิกสหกรณ์ฯ มาแล้วไม่น้อยกว่า 6 เดือน</span>
-            </div>
-
-            <div onClick={() => toggleItem('salaryRemain30Percent')} style={checkItemStyle(checklist.salaryRemain30Percent)}>
-              {checklist.salaryRemain30Percent ? <CheckSquare size={20} style={{ color: 'var(--primary-600)' }} /> : <Square size={20} style={{ color: 'var(--text-muted)' }} />}
-              <span style={{ fontSize: '0.9rem' }}>มีเงินเดือนสุทธิคงเหลือหลังหักส่งไม่น้อยกว่า 30%</span>
-            </div>
-
-            <div onClick={() => toggleItem('noDefaultRecord')} style={checkItemStyle(checklist.noDefaultRecord)}>
-              {checklist.noDefaultRecord ? <CheckSquare size={20} style={{ color: 'var(--primary-600)' }} /> : <Square size={20} style={{ color: 'var(--text-muted)' }} />}
-              <span style={{ fontSize: '0.9rem' }}>ไม่มีประวัติการผิดนัดชำระหนี้กับสหกรณ์</span>
-            </div>
-
-            <div onClick={() => toggleItem('guarantorReady')} style={checkItemStyle(checklist.guarantorReady)}>
-              {checklist.guarantorReady ? <CheckSquare size={20} style={{ color: 'var(--primary-600)' }} /> : <Square size={20} style={{ color: 'var(--text-muted)' }} />}
-              <span style={{ fontSize: '0.9rem' }}>มีสมาชิกค้ำประกันตามเกณฑ์ หรือใช้หุ้นค้ำประกัน</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Category 2: Documents */}
-        <div>
-          <h4 style={{ fontSize: '1rem', color: 'var(--accent-teal-dark)', marginBottom: '0.75rem', borderBottom: '2px solid var(--accent-teal-light)', paddingBottom: '0.3rem' }}>
-            2. เอกสารหลักฐานประกอบ
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            <div onClick={() => toggleItem('payslipReady')} style={checkItemStyle(checklist.payslipReady)}>
-              {checklist.payslipReady ? <CheckSquare size={20} style={{ color: 'var(--accent-teal)' }} /> : <Square size={20} style={{ color: 'var(--text-muted)' }} />}
-              <span style={{ fontSize: '0.9rem' }}>สลิปเงินเดือนฉบับจริง หรือพิมพ์จากระบบย้อนหลัง 3 เดือน</span>
-            </div>
-
-            <div onClick={() => toggleItem('idCardReady')} style={checkItemStyle(checklist.idCardReady)}>
-              {checklist.idCardReady ? <CheckSquare size={20} style={{ color: 'var(--accent-teal)' }} /> : <Square size={20} style={{ color: 'var(--text-muted)' }} />}
-              <span style={{ fontSize: '0.9rem' }}>สำเนาบัตรประชาชน และสำเนาทะเบียนบ้าน (พร้อมรับรองสำเนา)</span>
-            </div>
-
-            <div onClick={() => toggleItem('bankBookReady')} style={checkItemStyle(checklist.bankBookReady)}>
-              {checklist.bankBookReady ? <CheckSquare size={20} style={{ color: 'var(--accent-teal)' }} /> : <Square size={20} style={{ color: 'var(--text-muted)' }} />}
-              <span style={{ fontSize: '0.9rem' }}>สำเนาหน้าสมุดบัญชีเงินฝากสำหรับโอนเงินกู้เข้า</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* CTA Box */}
-      <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
-        <Link to="/documents" className="btn btn-outline">
-          <span>ดาวน์โหลดแบบฟอร์มกู้เงิน</span>
-        </Link>
-        <Link to="/eservice" className="btn btn-primary">
-          <span>ยื่นคำขอกู้เงินออนไลน์</span>
-          <ArrowRight size={16} />
-        </Link>
-      </div>
-
     </div>
-  );
-}
 
-const checkItemStyle = (checked) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.65rem',
-  padding: '0.65rem 0.85rem',
-  background: checked ? 'var(--bg-subtle)' : 'var(--bg-surface)',
-  border: checked ? '1px solid var(--primary-300)' : '1px solid var(--border-subtle)',
-  borderRadius: 'var(--radius-md)',
-  cursor: 'pointer',
-  transition: 'all 0.15s ease'
-});
+    <div className="loan-preparation-summary" role="status">
+      <span><CheckCircle2 size={20} aria-hidden="true"/> ติ๊กเอกสารที่ได้เตรียมไว้แล้ว</span>
+      <strong>{complete} / {total} รายการ</strong>
+      <button type="button" onClick={()=>setChecked({})} disabled={complete===0}>ล้างเครื่องหมาย</button>
+    </div>
+    <div className="loan-preparation-groups">
+      {checklistGroups.map(group=><section className="loan-preparation-group" key={group.title}>
+        <h3>{group.title}</h3>
+        {group.items.map(([id,label,note])=><label key={id} className="loan-preparation-check">
+          <input type="checkbox" checked={Boolean(checked[id])}
+            onChange={event=>setChecked(current=>({...current,[id]:event.target.checked}))}/>
+          <span><strong>{label}</strong><small>{note}</small></span>
+        </label>)}
+      </section>)}
+    </div>
+
+    <p className="loan-preparation-caution"><ShieldCheck size={20} aria-hidden="true"/> รายการนี้เป็นแนวทางเตรียมตัวเบื้องต้น ข้อกำหนด จำนวนชุด ลายเซ็น และเอกสารเฉพาะประเภทอาจเปลี่ยนแปลงได้ โปรดยืนยันกับสหกรณ์ก่อนนำเอกสารไปยื่นต่อเจ้าหน้าที่</p>
+
+    <section className="loan-preparation-downloads" aria-labelledby="loan-preparation-doc-heading">
+      <div className="loan-preparation-download-header">
+        <div>
+          <h3 id="loan-preparation-doc-heading">ดาวน์โหลดแบบฟอร์มและเอกสารที่เผยแพร่</h3>
+          <p>แสดงเฉพาะรายการจากศูนย์เอกสารสหกรณ์ที่มีชื่อหรือหมวดหมู่เกี่ยวกับเงินกู้หรือหลักประกัน</p>
+        </div>
+        <Link className="btn btn-outline" to="/documents"><FileText size={18} aria-hidden="true"/> ดูเอกสารทั้งหมด</Link>
+      </div>
+      <label className="loan-preparation-search"><Search size={20} aria-hidden="true"/>
+        <span className="sr-only">ค้นหาเอกสารเงินกู้</span>
+        <input type="search" placeholder="ค้นหาชื่อแบบฟอร์ม เช่น กู้สามัญ กู้ฉุกเฉิน" value={term} onChange={event=>setTerm(event.target.value)}/>
+      </label>
+      {loading && <p role="status">กำลังโหลดเอกสารที่สหกรณ์เผยแพร่…</p>}
+      {error && <p role="alert">ไม่สามารถตรวจสอบรายการดาวน์โหลดได้: {error} กรุณาเปิดศูนย์เอกสารแทน</p>}
+      {!loading&&!error&&loanDocs.length===0&&<p role="status">ยังไม่พบเอกสารหมวดเงินกู้ที่เผยแพร่บนระบบ กรุณาตรวจสอบกับเจ้าหน้าที่หรือเปิดศูนย์เอกสาร</p>}
+      {!loading&&!error&&loanDocs.length>0&&visibleDocs.length===0&&<p role="status">ไม่พบเอกสารที่ตรงกับคำค้นหา</p>}
+      {!loading&&!error&&visibleDocs.length>0&&<div className="loan-preparation-document-list">
+        {visibleDocs.map(doc=><article className="loan-preparation-document" key={doc.id}>
+          <FileText size={23} aria-hidden="true"/>
+          <div><strong>{doc.title}</strong><small>{doc.category||'เอกสารสหกรณ์'}</small></div>
+          <a className="btn btn-primary" href={`/api/public/documents/${encodeURIComponent(doc.id)}/download`}
+            target="_blank" rel="noopener noreferrer" aria-label={`เปิดหรือดาวน์โหลดเอกสาร ${doc.title}`}>
+            <Download size={18} aria-hidden="true"/> เปิด/ดาวน์โหลด
+          </a>
+        </article>)}
+      </div>}
+    </section>
+  </div>;
+}
