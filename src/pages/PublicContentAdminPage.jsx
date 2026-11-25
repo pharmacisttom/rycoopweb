@@ -237,9 +237,13 @@ export default function PublicContentAdminPage() {
       showSuccess('บันทึกร่างสำเร็จ!', `ร่าง #${result.id} บันทึกแล้ว โปรดตรวจรายการร่างและประวัติการเผยแพร่ก่อนอนุมัติ`);
       // Refresh revision history without replacing the unsent editor with the last
       // published catalog. Otherwise newly added board members appear to vanish.
-      const latest=await memberAdminApi(`/api/admin/public-content/sections/${savingSection}`);
-      if(sectionRef.current===savingSection){
-        setData(current=>current?{...current,version:latest.version,history:latest.history}:current);
+      try{
+        const latest=await memberAdminApi(`/api/admin/public-content/sections/${savingSection}`);
+        if(sectionRef.current===savingSection){
+          setData(current=>current?{...current,version:latest.version,history:latest.history}:current);
+        }
+      }catch(refreshError){
+        setMessage(`บันทึกร่าง #${result.id} สำเร็จแล้ว แต่โหลดประวัติไม่สำเร็จ กรุณากดโหลดล่าสุดเมื่อต้องการตรวจสอบร่าง`);
       }
     }catch(e){
       setError(e.message);
