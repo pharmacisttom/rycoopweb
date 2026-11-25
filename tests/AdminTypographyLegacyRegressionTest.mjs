@@ -30,7 +30,7 @@ assert.match(welfare,/changePublication\(item\)/);
 assert.match(welfare,/confirmPublish/);
 assert.match(welfare,/setStatusFilter/);
 assert.match(welfare,/useMemo/);
-assert.match(welfare,/setEditing\(\{\.\.\.blank\}\)/);
+assert.match(welfare,/setEditing\(\{\.\.\.blank,slug:'welfare-'/,'new Thai welfare entries receive a safe auto-generated slug');
 assert.match(welfare,/\/api\/admin\/welfare/);
 assert.match(publicWelfare,/fetch\('\/api\/public\/welfare'/);
 assert.doesNotMatch(publicWelfare,/memberAdminApi\('/,'public page cannot mutate welfare records');
