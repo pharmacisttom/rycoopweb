@@ -68,6 +68,7 @@ try{
     fixtureLogin(3,'content_publisher');Content::publish($boardRestore);
     checkContent(Content::catalog()['boardMembers']===$boardsBefore,'RC24 board fixture restores original roster');
 
+    fixtureLogin(2,'content_editor');
     $restore=Content::saveDraft('profile',draftInput('profile',$before,['note'=>'Restore previous approved content']));fixtureLogin(3,'content_publisher');Content::publish($restore);checkContent(Content::catalog()['coopInfo']===$before,'restore through new reviewed revision succeeds');
     fixtureLogin(2,'content_editor');$products=Content::catalog()['loanProducts'];$products[0]['title']='Renamed fixture product';$id=Content::saveDraft('products',draftInput('products',$products));fixtureLogin(3,'content_publisher');Content::publish($id);
     fixtureLogin(2,'content_editor');$rates=Content::catalog()['interestRates']['loans'];$rates[0]['rate']='6.75%';$id=Content::saveDraft('loan_rates',draftInput('loan_rates',$rates));fixtureLogin(3,'content_publisher');Content::publish($id);
