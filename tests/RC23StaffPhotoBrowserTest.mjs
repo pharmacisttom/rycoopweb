@@ -85,6 +85,7 @@ try{
  assert.equal(readCalls.filter(x=>x==='/api/admin/public-content/sections').length,1,'section catalog must not refetch in a loop');
  assert.equal(readCalls.filter(x=>x==='/api/admin/public-content/sections/staff').length,1,'staff data must load once, no section feedback loop');
  await page.getByRole('button',{name:/เจ้าหน้าที่ตัวอย่างสอง/}).click();
+ assert.equal(await page.getByRole('button',{name:/เลือกไฟล์เปลี่ยนรูปเจ้าหน้าที่/}).count(),1,'staff upload must have a visible file-picker button');
  const file=page.locator('#public-content-staff-photo');
  await file.setInputFiles({name:'person.png',mimeType:'image/png',
   buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64')});
