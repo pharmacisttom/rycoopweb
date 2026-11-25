@@ -82,9 +82,10 @@ try{
  assert.deepEqual(await page.evaluate(()=>window.__portraitRequest),{
    name:'person.png',folder:'staff',alt:'เจ้าหน้าที่ตัวอย่างสอง'
  });
- assert.equal(await page.getByLabel('ลิงก์รูปภาพ').inputValue(),'/storage/uploads/staff/fixture-new.webp');
+ assert.equal(await page.getByLabel('ลิงก์รูปภาพ').count(),0,'portrait URL text input must be absent');
+ assert.equal(await page.locator('figure.public-content-board-photo-preview img').getAttribute('src'),'/storage/uploads/staff/fixture-new.webp');
  await page.getByRole('button',{name:/เจ้าหน้าที่ตัวอย่างหนึ่ง/}).click();
- assert.equal(await page.getByLabel('ลิงก์รูปภาพ').inputValue(),'/old-1.webp','first staff photo must not be overwritten');
+ assert.equal(await page.locator('figure.public-content-board-photo-preview img').getAttribute('src'),'/old-1.webp','first staff photo must not be overwritten');
  await page.getByRole('button',{name:/เจ้าหน้าที่ตัวอย่างสอง/}).click();
  await page.getByLabel('เหตุผลการแก้ไข').fill('ทดสอบแก้รูปเจ้าหน้าที่');
  await page.getByRole('button',{name:'บันทึกร่างเพื่อรอเผยแพร่'}).click();
