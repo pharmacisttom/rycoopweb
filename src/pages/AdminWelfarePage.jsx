@@ -15,6 +15,10 @@ export default function AdminWelfarePage(){
  async function save(e){e.preventDefault();if(busy||!editing)return;
   if(!editing.category?.trim()||!editing.title?.trim()||!editing.slug?.trim()){showError('ข้อมูลไม่ครบ','กรุณาระบุหมวดหมู่ ชื่อสวัสดิการ และรหัส URL');return;}
   if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(editing.slug)){showError('รหัส URL ไม่ถูกต้อง','ใช้ภาษาอังกฤษตัวเล็ก ตัวเลข และเครื่องหมายขีดกลางเท่านั้น');return;}
+  if(editing.id && editing.status==='active'){
+    const ok=await showConfirm('ยืนยันแก้ข้อมูลที่เผยแพร่แล้ว?',`การบันทึกรายการ “${editing.title}” จะเปลี่ยนรายละเอียดบนหน้าสาธารณะทันที โปรดตรวจสอบข้อมูลทั้งหมดก่อนยืนยัน`);
+    if(!ok)return;
+  }
   setBusy(true);setError('');try{
   await memberAdminApi('/api/admin/welfare'+(editing.id?'/'+editing.id+'/update':''),{data:editing});
   showSuccess('บันทึกสำเร็จ', `บันทึกข้อมูลสวัสดิการ "${editing.title}" เรียบร้อยแล้ว`);
@@ -103,6 +107,7 @@ export default function AdminWelfarePage(){
             <label className="admin-field">ลำดับ
               <input type="number" min="0" max="100000" value={editing.sort_order??0} onChange={e=>setEditing(v=>({...v,sort_order:Number(e.target.value)}))}/>
             </label>
+            <p className="welfare-admin-state-note">หมายเหตุ: การแก้ไขรายการที่เผยแพร่แล้วจะมีผลกับหน้าสาธารณะทันทีเมื่อยืนยันบันทึก กรุณาตรวจข้อมูลให้ถูกต้องก่อนเสมอ</p>
             <p className="welfare-admin-state-note">สถานะปัจจุบัน: {editing.status==='active'?'เผยแพร่แล้ว':'ร่าง/ไม่ใช้งาน'} — ใช้ปุ่ม “เผยแพร่” หรือ “หยุดเผยแพร่” จากตารางเพื่อยืนยันการเปลี่ยนสถานะ</p>
           </div>
           <div className="welfare-admin-form-actions">
