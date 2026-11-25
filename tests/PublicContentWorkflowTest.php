@@ -47,6 +47,26 @@ try{
     $invalid=Content::catalog()['interestRates']['deposits'];$invalid[0]['rate']='-1%';expectFailure(fn()=>Content::saveDraft('deposits',draftInput('deposits',$invalid)),422,'negative rate rejected');
     expectFailure(fn()=>Content::saveDraft('profile',draftInput('profile',$changed,['expires_on'=>date('Y-m-d',strtotime('-1 day'))])),422,'expiry before effective date rejected');
     $board=Content::catalog()['boardMembers'];array_shift($board);expectFailure(fn()=>Content::saveDraft('boards',draftInput('boards',$board)),422,'cannot remove person still referenced in a committee');
+
+    // RC24 regression: append a valid board member to the selected term, retain all
+    // published members until approval, then verify publish and reviewed rollback.
+    fixtureLogin(2,'content_editor');
+    $boardsBefore=Content::catalog()['boardMembers'];
+    $nextBoardId=max(array_map(static fn($member)=>(int)$member['id'],$boardsBefore))+1;
+    $boardsWithNew=[...$boardsBefore,[
+        'id'=>$nextBoardId,'name'=>'RC24 ทดสอบเพิ่มกรรมการ','position'=>'กรรมการ',
+        'term'=>'ชุดที่ 39','workplace'=>'','image'=>'','status'=>'active'
+    ]];
+    $newBoardDraft=Content::saveDraft('boards',draftInput('boards',$boardsWithNew,['note'=>'RC24 test add board']));
+    checkContent(Content::catalog()['boardMembers']===$boardsBefore,'new board draft does not change public roster');
+    fixtureLogin(3,'content_publisher');Content::publish($newBoardDraft);
+    checkContent(count(Content::catalog()['boardMembers'])===count($boardsBefore)+1,'approved new board member is persisted');
+    checkContent((int)end(Content::catalog()['boardMembers'])['id']===$nextBoardId,'approved board ID remains unique');
+    fixtureLogin(2,'content_editor');
+    $boardRestore=Content::saveDraft('boards',draftInput('boards',$boardsBefore,['note'=>'RC24 fixture restore']));
+    fixtureLogin(3,'content_publisher');Content::publish($boardRestore);
+    checkContent(Content::catalog()['boardMembers']===$boardsBefore,'RC24 board fixture restores original roster');
+
     $restore=Content::saveDraft('profile',draftInput('profile',$before,['note'=>'Restore previous approved content']));fixtureLogin(3,'content_publisher');Content::publish($restore);checkContent(Content::catalog()['coopInfo']===$before,'restore through new reviewed revision succeeds');
     fixtureLogin(2,'content_editor');$products=Content::catalog()['loanProducts'];$products[0]['title']='Renamed fixture product';$id=Content::saveDraft('products',draftInput('products',$products));fixtureLogin(3,'content_publisher');Content::publish($id);
     fixtureLogin(2,'content_editor');$rates=Content::catalog()['interestRates']['loans'];$rates[0]['rate']='6.75%';$id=Content::saveDraft('loan_rates',draftInput('loan_rates',$rates));fixtureLogin(3,'content_publisher');Content::publish($id);
