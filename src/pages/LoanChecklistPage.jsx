@@ -7,9 +7,9 @@ export default function LoanChecklistPage() {
       <div className="container">
         
         <div className="section-title-wrap">
-          <span className="section-badge">ตรวจสอบสิทธิ์</span>
-          <h1 className="section-title">เช็คความพร้อมก่อนยื่นกู้</h1>
-          <p className="section-subtitle">ตรวจสอบคุณสมบัติและเอกสารประกอบการขอกู้เงินเพื่อความสะดวกรวดเร็วในการอนุมัติ</p>
+          <span className="section-badge">เตรียมเอกสารเงินกู้</span>
+          <h1 className="section-title">รายการตรวจสอบและดาวน์โหลดเอกสารเงินกู้</h1>
+          <p className="section-subtitle">เช็กรายการเตรียมเอกสารเบื้องต้นและดาวน์โหลดแบบฟอร์มที่สหกรณ์เผยแพร่ โดยยืนยันรายละเอียดกับเจ้าหน้าที่ก่อนดำเนินการ</p>
           <div className="section-line" />
         </div>
 
