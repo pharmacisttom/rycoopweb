@@ -162,8 +162,8 @@ class PublicContentService
         }
         if (!array_is_list($value) || count($value)>200) throw new InvalidArgumentException('รายการข้อมูลไม่ถูกต้องหรือเกิน 200 รายการ');
         $keys=[];
-        foreach ($value as &$item) {
-            if (!is_array($item)) throw new InvalidArgumentException('รูปแบบรายการไม่ถูกต้อง');
+        foreach ($value as $rowIndex => &$item) {
+            if (!is_array($item)) throw new InvalidArgumentException('รายการที่ '.($rowIndex+1).' มีรูปแบบไม่ถูกต้อง');
             if (in_array($section,['advisors','auditors'],true)) {
                 if (count($item)!==2 || !array_is_list($item)) throw new InvalidArgumentException('รูปแบบชื่อและตำแหน่งไม่ถูกต้อง');
                 $item=[self::text($item[0],150,true),self::text($item[1],150,true)]; continue;
@@ -189,8 +189,10 @@ class PublicContentService
                 'loan_rates'=>['type','rate','maxTerm','condition','productId'],
                 'products'=>['id','title','subtitle','badge','badgeColor','maxAmount','interestRate','rateValue','maxLimit','period','maxTerm','guarantee','features'],
             };
-            if (array_diff(array_keys($item),$allowed)) throw new InvalidArgumentException('มีฟิลด์ที่ไม่ได้รับอนุญาต');
+            $unknownKeys=array_diff(array_keys($item),$allowed);
+            if ($unknownKeys) throw new InvalidArgumentException('รายการที่ '.($rowIndex+1).' มีฟิลด์ที่ไม่ได้รับอนุญาต: '.implode(', ',$unknownKeys));
             foreach ($item as $key=>$field) {
+                try {
                 if ($key==='image') $item[$key]=self::url($field,true);
                 elseif ($key==='features') { if (!is_array($field) || !array_is_list($field) || count($field)>20) throw new InvalidArgumentException('รายละเอียดไม่ถูกต้อง');foreach($field as $line)self::text($line,1000,true); }
                 elseif ($section==='products' && in_array($key,['maxLimit','maxTerm'],true)) $item[$key]=self::integer($field,$key==='maxTerm'?600:999999999);
@@ -203,7 +205,18 @@ class PublicContentService
                 }
                 elseif ($key==='highlight') $item[$key]=(bool)$field;
                 elseif (in_array($key,['rate','rateValue'],true)) { $number=rtrim((string)$field,'%');if (!preg_match('/^\d{1,3}(?:\.\d{1,3})?$/D',$number) || (float)$number>100) throw new InvalidArgumentException('ดอกเบี้ยต้องอยู่ระหว่าง 0–100% และทศนิยมไม่เกิน 3 ตำแหน่ง'); }
+                elseif ($field===null && (
+                    ($section==='boards' && in_array($key,['workplace','term'],true)) ||
+                    ($section==='staff' && $key==='department')
+                )) { /* Preserve optional null values from existing published records. */ }
                 else $item[$key]=self::text($field,1000);
+                } catch (InvalidArgumentException $e) {
+                    throw new InvalidArgumentException(
+                        'ข้อมูลหมวด '.$section.' รายการที่ '.($rowIndex+1).' ฟิลด์ '.$key.': '.$e->getMessage(),
+                        422,
+                        $e
+                    );
+                }
             }
             $required=match($section){'boards','staff'=>['id','name','position'],'deposits'=>['type','rate','minDeposit','payFreq'],'loan_rates'=>['type','rate','maxTerm','condition'],'products'=>['id','title','rateValue','maxLimit','maxTerm','guarantee','features']};
             foreach($required as $key)if(!array_key_exists($key,$item) || $item[$key]==='')throw new InvalidArgumentException('กรุณากรอกข้อมูลที่จำเป็นให้ครบ');
