@@ -7,6 +7,11 @@ const icon=readFileSync('src/components/admin/AdminSidebarItemIcon.jsx','utf8');
 assert.match(page,/section==='staff'&&Array\.isArray\(value\)/,'staff directory must render');
 assert.match(page,/section==='staff'&&row&&definition\?\.canEdit/,'staff photo editor must require edit rights');
 assert.match(page,/id="public-content-staff-photo"/);
+assert.match(page,/filter\(\(\[key\]\)=>!\(key==='image' && \['staff','boards'\]\.includes\(section\)\)\)/,'person image must not be an editable external URL');
+assert.match(page,/เพิ่มหรือเปลี่ยนรูปเจ้าหน้าที่ในระบบโดยตรง/);
+assert.match(page,/นำรูปออกจากร่าง/);
+assert.match(page,/showDeleteConfirm\('นำรูปเจ้าหน้าที่ออกจากร่าง/);
+
 assert.match(page,/folder:targetSection==='boards'\?'board':'staff'/);
 assert.match(page,/mediaLibraryApi\.uploadPeople\(file/);
 assert.match(page,/applyPersonPhotoToDraft\(current/);
