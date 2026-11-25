@@ -120,7 +120,7 @@ export default function NewsPage() {
         {/* News Detail Modal */}
         {selectedNews && (
           <dialog ref={detail} aria-label={selectedNews.title} onCancel={()=>setSelectedNews(null)} style={{
-            border: 0, width:'100vw', maxWidth:'100vw', height:'100dvh', maxHeight:'100dvh', margin:0,
+            border: 0, boxSizing:'border-box', width:'100vw', maxWidth:'100vw', height:'100dvh', maxHeight:'100dvh', margin:0,
             position: 'fixed',
             top: 0,
             left: 0,
@@ -132,9 +132,9 @@ export default function NewsPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem'
+            padding: 'clamp(8px, 2vw, 20px)'
           }}>
-            <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: '2rem', position: 'relative' }}>
+            <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '1160px', maxHeight: '95dvh', overflowY: 'auto', background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: 'clamp(16px, 3vw, 36px)', position: 'relative' }}>
 
               <button
                 aria-label="ปิดข่าว" onClick={() => setSelectedNews(null)}
@@ -148,12 +148,13 @@ export default function NewsPage() {
                 {selectedNews.title}
               </h2>
 
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                 <span>วันที่เผยแพร่: {selectedNews.date}</span>
                 <span>ยอดผู้เข้าชม: {selectedNews.views} ครั้ง</span>
               </div>
 
-              <div style={{ lineHeight: 1.8, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+              <div style={{ lineHeight: 1.8, color: 'var(--text-main)', fontSize: '1rem' }}>
+                {selectedNews.gallery_images?.length > 0 && <p style={{fontSize:'0.95rem',lineHeight:1.6,color:'var(--text-muted)'}}>แตะภาพหรือกด “เปิดภาพเต็มจอ / ซูมอ่าน” เพื่อขยายเอกสารและอ่านข้อความได้ชัดเจน</p>}
                 <ActivitySlideshow images={selectedNews.gallery_images} title={selectedNews.title} />
                 <RichTextContent value={selectedNews.content || selectedNews.excerpt} />
               </div>
