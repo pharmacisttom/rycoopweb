@@ -12,6 +12,8 @@ const mock={name:'rc23-staff-crud-fixture',enforce:'pre',load(id){
  `;
  if(path.endsWith('/src/services/memberAdminApi.js'))return `
   export async function memberAdminApi(path,{data}={}){
+    window.__rc23Calls=window.__rc23Calls||[];
+    window.__rc23Calls.push(path);
     if(path==='/api/admin/public-content/sections'){
       return {sections:window.location.search.includes('deny=1')?
         [{key:'profile',label:'ข้อมูลสหกรณ์',canEdit:true}]:
@@ -68,6 +70,10 @@ try{
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:'+port+'/__rc23_staff');
  await page.getByRole('heading',{name:/ทำเนียบเจ้าหน้าที่/}).waitFor();
+ await page.waitForTimeout(200);
+ const readCalls=await page.evaluate(()=>window.__rc23Calls.filter(x=>x.startsWith('/api/admin/public-content/sections')));
+ assert.equal(readCalls.filter(x=>x==='/api/admin/public-content/sections').length,1,'section catalog must not refetch in a loop');
+ assert.equal(readCalls.filter(x=>x==='/api/admin/public-content/sections/staff').length,1,'staff data must load once, no section feedback loop');
  await page.getByRole('button',{name:/เจ้าหน้าที่ตัวอย่างสอง/}).click();
  const file=page.locator('#public-content-staff-photo');
  await file.setInputFiles({name:'person.png',mimeType:'image/png',
@@ -93,6 +99,8 @@ try{
  denied.on('pageerror',e=>errors.push(e.message));
  await denied.goto('http://127.0.0.1:'+port+'/__rc23_staff?deny=1');
  await denied.getByText(/ไม่พบหมวดข้อมูลที่ร้องขอ/).waitFor();
+ const deniedStaffCalls=await denied.evaluate(()=>window.__rc23Calls.filter(x=>x==='/api/admin/public-content/sections/staff').length);
+ assert.equal(deniedStaffCalls,0,'denied section must never load staff API');
  assert.equal(await denied.locator('#public-content-staff-photo').count(),0);
  assert.deepEqual(errors,[]);
  await denied.close();
