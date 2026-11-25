@@ -136,7 +136,27 @@ export default function PublicContentAdminPage() {
     if(section==='profile')return {...current,[key]:newValue};
     return current.map((item,index)=>index!==selected?item:tupleSection(section)?[key==='name'?newValue:item[0],key==='position'?newValue:item[1]]:{...item,[key]:newValue});
   });setDirty(true);}
-  function add(){if(!Array.isArray(value) || section==='profile')return;let entry={};if(tupleSection(section))entry=['',''];else if(['boards','staff'].includes(section))entry={id:Math.max(0,...value.map(p=>Number(p.id)||0))+1,name:'',position:section==='boards'?'กรรมการ':'',image:'',...(section==='boards'?{term:BOARD_TERMS.find(term=>term===value[selected]?.term)||'ชุดที่ 39',status:'active'}:{})};else if(section==='groups')entry={title:'',members:[],term:(catalog.boardMembers||[]).some(person=>person?.term==='ชุดที่ 39') ? 'ชุดที่ 39' : (catalog.boardMembers?.[0]?.term || 'ชุดที่ 39')};else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};else entry={type:'',rate:'0%',maxTerm:'',condition:''};setValue([...value,entry]);setSelected(value.length);setDirty(true);}
+  function add(){
+    if(!Array.isArray(value) || section==='profile' || busy || mediaBusy)return;
+    let entry={};
+    if(tupleSection(section))entry=['',''];
+    else if(['boards','staff'].includes(section)){
+      const nextId=Math.max(0,...value.map(person=>Number(person?.id)||0))+1;
+      const selectedTerm=boardTermFilter==='ทั้งหมด'
+        ? (BOARD_TERMS.includes(value[selected]?.term)?value[selected].term:'ชุดที่ 39')
+        : boardTermFilter;
+      entry={id:nextId,name:'',position:section==='boards'?'กรรมการ':'',image:'',
+        ...(section==='boards'?{term:selectedTerm,status:'active',workplace:''}:{department:''})};
+      if(section==='boards')setBoardTermFilter(selectedTerm);
+    } else if(section==='groups')entry={title:'',members:[],term:(catalog.boardMembers||[]).some(person=>person?.term==='ชุดที่ 39') ? 'ชุดที่ 39' : (catalog.boardMembers?.[0]?.term || 'ชุดที่ 39')};
+    else if(section==='products')entry={id:'',title:'',rateValue:0,maxLimit:1,maxTerm:1,guarantee:'',features:[]};
+    else if(section==='deposits')entry={type:'',rate:'0%',minDeposit:'',payFreq:'',highlight:false};
+    else entry={type:'',rate:'0%',maxTerm:'',condition:''};
+    setValue(current=>[...current,entry]);
+    setSelected(value.length);
+    setDirty(true);
+    if(section==='boards')setMessage('เพิ่มกรรมการในร่างแล้ว กรุณากรอกชื่อและตำแหน่ง กดบันทึกร่าง แล้วอนุมัติเผยแพร่ก่อนข้อมูลจะแสดงบนเว็บไซต์');
+  }
   async function copyBoardToTerm(){
     if(section!=='boards'||!row)return;
     const target = await showPrompt('ระบุชุดกรรมการใหม่', 'เช่น ชุดที่ 39', 'ชุดที่ 39');
@@ -198,14 +218,29 @@ export default function PublicContentAdminPage() {
   }
   async function save(e){
     e.preventDefault();
-    if(busy||!definition?.canEdit)return;
+    if(busy||!definition?.canEdit||mediaBusy)return;
+    if(section==='boards'){
+      const invalid=(Array.isArray(value)?value:[]).find(person=>
+        !Number.isInteger(Number(person?.id)) || Number(person.id)<1 ||
+        !String(person?.name||'').trim() || !String(person?.position||'').trim());
+      if(invalid){
+        const warning='กรุณากรอกรหัส ชื่อ และตำแหน่งกรรมการให้ครบก่อนบันทึกร่าง';
+        setError(warning);showError('ข้อมูลกรรมการไม่ครบ',warning);return;
+      }
+    }
+    const savingSection=section;
     setBusy(true);setError('');setMessage('');
     try{
-      const result=await memberAdminApi(`/api/admin/public-content/sections/${section}/drafts`,{data:{value,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
+      const result=await memberAdminApi(`/api/admin/public-content/sections/${savingSection}/drafts`,{data:{value,version:data.version,note,source_url:source,effective_on:effective,expires_on:expires||null}});
       setDirty(false);
-      setMessage(`บันทึกร่าง #${result.id} แล้ว ยังไม่เปลี่ยนข้อมูลหน้าเว็บ`);
-      showSuccess('บันทึกร่างสำเร็จ!', `บันทึกร่าง #${result.id} แล้ว (ยังไม่เปลี่ยนข้อมูลหน้าเว็บจนกว่าจะอนุมัติเผยแพร่)`);
-      setRefresh(n=>n+1);
+      setMessage(`บันทึกร่าง #${result.id} สำเร็จ — ข้อมูลในแบบฟอร์มยังเป็นร่าง ไม่แสดงต่อสาธารณะจนกว่าจะอนุมัติเผยแพร่`);
+      showSuccess('บันทึกร่างสำเร็จ!', `ร่าง #${result.id} บันทึกแล้ว โปรดตรวจรายการร่างและประวัติการเผยแพร่ก่อนอนุมัติ`);
+      // Refresh revision history without replacing the unsent editor with the last
+      // published catalog. Otherwise newly added board members appear to vanish.
+      const latest=await memberAdminApi(`/api/admin/public-content/sections/${savingSection}`);
+      if(sectionRef.current===savingSection){
+        setData(current=>current?{...current,version:latest.version,history:latest.history}:current);
+      }
     }catch(e){
       setError(e.message);
       showError('ไม่สามารถบันทึกร่างได้', e.message);
