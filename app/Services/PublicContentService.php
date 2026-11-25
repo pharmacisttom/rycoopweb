@@ -183,7 +183,7 @@ class PublicContentService
                 continue;
             }
             $allowed=match($section){
-                'boards'=>['id','name','position','image','term','workplace','status'],
+                'boards'=>['id','name','position','image','term','workplace','status','is_chairperson'],
                 'staff'=>['id','name','position','image','department'],
                 'deposits'=>['type','rate','minDeposit','payFreq','highlight'],
                 'loan_rates'=>['type','rate','maxTerm','condition','productId'],
@@ -196,6 +196,11 @@ class PublicContentService
                 elseif ($section==='products' && in_array($key,['maxLimit','maxTerm'],true)) $item[$key]=self::integer($field,$key==='maxTerm'?600:999999999);
                 elseif ($key==='id' && $section!=='products') $item[$key]=self::integer($field,999999);
                 elseif ($key==='status' && $section==='boards') { if (!in_array($field,['active','former'],true)) throw new InvalidArgumentException('สถานะกรรมการไม่ถูกต้อง'); }
+                elseif ($key==='is_chairperson' && $section==='boards') {
+                    if (!is_bool($field) && !in_array($field,[0,1,'0','1'],true)) throw new InvalidArgumentException('ค่าสถานะประธานกรรมการไม่ถูกต้อง');
+                    // Preserve the legacy field when editing existing board records.
+                    // New entries need not include it; the current role is held in position.
+                }
                 elseif ($key==='highlight') $item[$key]=(bool)$field;
                 elseif (in_array($key,['rate','rateValue'],true)) { $number=rtrim((string)$field,'%');if (!preg_match('/^\d{1,3}(?:\.\d{1,3})?$/D',$number) || (float)$number>100) throw new InvalidArgumentException('ดอกเบี้ยต้องอยู่ระหว่าง 0–100% และทศนิยมไม่เกิน 3 ตำแหน่ง'); }
                 else $item[$key]=self::text($field,1000);
