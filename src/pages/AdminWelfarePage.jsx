@@ -65,7 +65,7 @@ export default function AdminWelfarePage(){
         <label className="welfare-admin-search">ค้นหาสวัสดิการ <input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="ค้นหาชื่อ หมวดหมู่ หรือรหัส URL"/></label>
         <label className="welfare-admin-filter">สถานะ <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">ทั้งหมด</option><option value="active">เผยแพร่แล้ว</option><option value="inactive">ร่าง / ไม่ใช้งาน</option></select></label>
         <button type="button" className="acc-btn" disabled={busy||loading} onClick={()=>setRevision(n=>n+1)}>โหลดล่าสุด</button>
-        <button type="button" className="acc-btn primary" disabled={busy} onClick={()=>setEditing({...blank})}>
+        <button type="button" className="acc-btn primary" disabled={busy} onClick={()=>setEditing({...blank,slug:'welfare-'+Date.now().toString(36)})}>
           เพิ่มรายการสวัสดิการ
         </button>
       </div>
