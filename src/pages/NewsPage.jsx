@@ -6,6 +6,7 @@ import SafeImage from '../components/common/SafeImage';
 import RichTextContent from '../components/common/RichTextContent';
 
 import ActivitySlideshow from '../components/common/ActivitySlideshow';
+import '../components/common/ContentReaderModal.css';
 
 export default function NewsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -134,7 +135,7 @@ export default function NewsPage() {
             justifyContent: 'center',
             padding: 'clamp(8px, 2vw, 20px)'
           }}>
-            <div className="glass-card animate-fade-in" style={{ width: 'clamp(320px, 75vw, 1600px)', maxWidth: '100%', maxHeight: '95dvh', overflowY: 'auto', background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: 'clamp(16px, 3vw, 36px)', position: 'relative' }}>
+            <div className="glass-card animate-fade-in rycoop-reader-panel" style={{  background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', padding: 'clamp(16px, 3vw, 36px)', position: 'relative' }}>
 
               <button
                 aria-label="ปิดข่าว" onClick={() => setSelectedNews(null)}
