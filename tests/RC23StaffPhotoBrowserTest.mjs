@@ -60,7 +60,7 @@ const mock={name:'rc23-staff-crud-fixture',enforce:'pre',load(id){
 const server=await createServer({configFile:false,plugins:[mock,react()],
  resolve:{alias:{'react-router-dom':'react-router'}},
  server:{host:'127.0.0.1',port,strictPort:true},
- optimizeDeps:{noDiscovery:true,include:['cookie','set-cookie-parser']}});
+ optimizeDeps:{noDiscovery:true,include:['react','react-dom','react-dom/client','react-router','cookie','set-cookie-parser']}});
 let browser;
 try{
  await server.listen();
