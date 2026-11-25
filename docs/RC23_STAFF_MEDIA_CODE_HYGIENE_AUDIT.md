@@ -10,6 +10,15 @@
 | Medium | deep-link navigation | Back/forward could leave query string and dirty editor out of sync | Restore edited section while dirty; clear old editor for denied section |
 | Medium | test maintenance | Board contract was hardcoded to legacy `uploadBoardPhoto` name | Updated contract for shared uploader while retaining board UI assertions |
 
+## Direct first-party portrait upload UX (user acceptance)
+- Staff and board editors display a first-party JPEG/PNG/WebP upload control directly in the selected person card.
+- The external editable image URL field is removed from people editing forms.
+- Upload is retained as a Media Library record under an internal `staff` / `board` folder, converted to WebP by the existing image-processing backend.
+- A person preview appears immediately after upload, but changes to public pages still require draft save and authorized publication.
+- There is an explicit Remove from Draft control; removing a portrait from a draft is not an uncontrolled file deletion.
+- There is no dependency on pasting links from external sites or navigating away to upload from another module.
+- Image selection still requires choosing a local image (or device camera, where the browser supports it); the server cannot create a portrait without a source image.
+
 ## Remaining tech debt (not modified in RC23)
 1. `PublicContentAdminPage.jsx` remains a large multi-module component. Extracting tab-specific editors (staff, boards, products, rates, history) would reduce state coupling. Do this in a separate reviewed refactor, **not** while fixing production data integrity.
 2. Legacy CMS page uses many inline callbacks and a shared `selected` index. A row ID is safer long term. This RC uses both ID and index to block wrong attachments.
