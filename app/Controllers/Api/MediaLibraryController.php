@@ -155,10 +155,25 @@ final class MediaLibraryController extends Controller
         exit;
     }
 
+    /** People editors may upload a portrait only to staff/board folders. */
+    public function uploadPeople(): void
+    {
+        $this->uploadPortraitOnly = true;
+        $this->upload();
+    }
+
+    private bool $uploadPortraitOnly = false;
+
     public function upload(): void
     {
         AdminCrudService::respond($this->response, function (): array {
-            self::authorize('create');
+            if ($this->uploadPortraitOnly) {
+                if (!Auth::check() || !Auth::hasPermission('people', 'update')) {
+                    throw new SecurityGateException('Not authorized to upload staff portraits', 403, 'FORBIDDEN');
+                }
+            } else {
+                self::authorize('create');
+            }
             $file = $this->request->file('file');
             if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
                 || !is_uploaded_file((string)($file['tmp_name'] ?? ''))) {
@@ -183,6 +198,9 @@ final class MediaLibraryController extends Controller
                 throw new \RuntimeException('GD WebP support required');
             }
             $folder = (string)$this->request->input('folder', 'general');
+            if ($this->uploadPortraitOnly && !in_array($folder, ['staff','board'], true)) {
+                throw new SecurityGateException('Portraits may be stored only in staff or board folders', 403, 'FORBIDDEN');
+            }
             if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,49}$/D', $folder)) {
                 throw new \InvalidArgumentException('Invalid folder');
             }

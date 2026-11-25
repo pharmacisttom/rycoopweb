@@ -17,6 +17,14 @@ export const mediaLibraryApi = {
     data.append('caption', caption);
     return memberAdminApi('/api/admin/media', { data });
   },
+  uploadPeople: (file, { folder = 'staff', altText = '' } = {}) => {
+    if (!['staff','board'].includes(folder)) throw new Error('ไม่อนุญาตโฟลเดอร์รูปบุคลากรนี้');
+    const data = new FormData();
+    data.append('file',file);
+    data.append('folder',folder);
+    data.append('alt_text',altText);
+    return memberAdminApi('/api/admin/media/people',{data});
+  },
   update: (id, { altText = '', caption = '', version }) =>
     memberAdminApi(`/api/admin/media/${encodeURIComponent(id)}/update`, {
       data: { alt_text: altText, caption, version }

@@ -192,6 +192,8 @@ $router->group(['prefix'=>'api/admin','middleware'=>[AuthMiddleware::class]],fun
     $r->get('/media/{id}', 'Api\\MediaLibraryController@show', [new PermissionMiddleware('news','view')]);
     $r->get('/media/{id}/image', 'Api\\MediaLibraryController@image', [new PermissionMiddleware('news','view')]);
     $r->post('/media', 'Api\\MediaLibraryController@upload', [new PermissionMiddleware('news','create'), CsrfMiddleware::class]);
+    // People editors can upload only board/staff portraits; no general Media Library write grant.
+    $r->post('/media/people', 'Api\\MediaLibraryController@uploadPeople', [new PermissionMiddleware('people','update'), CsrfMiddleware::class]);
     $r->post('/media/{id}/update', 'Api\\MediaLibraryController@update', [new PermissionMiddleware('news','update'), CsrfMiddleware::class]);
     $r->post('/media/{id}/delete', 'Api\\MediaLibraryController@destroy', [new PermissionMiddleware('news','delete'), CsrfMiddleware::class]);
 

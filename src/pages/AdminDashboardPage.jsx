@@ -2034,6 +2034,7 @@ export default function AdminDashboardPage() {
     { permission: 'documents.view', path: '/admin/documents', label: 'ศูนย์เอกสารดาวน์โหลด' },
     { permission: 'coop_info.view', path: '/admin/public-content?section=profile', label: 'ข้อมูลสหกรณ์' },
     { permission: 'people.view', path: '/admin/public-content?section=boards', label: 'คณะกรรมการชุดที่ 38 / 39' },
+    { permission: 'people.view', path: '/admin/public-content?section=staff', label: 'เจ้าหน้าที่และรูปบุคลากร' },
     { permission: 'rates.view', path: '/admin/public-content?section=deposits', label: 'อัตราดอกเบี้ย' },
     { permission: 'products.view', path: '/admin/public-content?section=products', label: 'ผลิตภัณฑ์สหกรณ์' },
     { permission: 'news.view', path: '/admin/media', label: 'คลังรูปภาพ (Media Library)' },

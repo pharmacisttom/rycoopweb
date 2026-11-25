@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const page=readFileSync('src/pages/PublicContentAdminPage.jsx','utf8');
+const sidebar=readFileSync('src/components/admin/AdminControlCenterShell.jsx','utf8');
+const dashboard=readFileSync('src/pages/AdminDashboardPage.jsx','utf8');
+const icon=readFileSync('src/components/admin/AdminSidebarItemIcon.jsx','utf8');
+assert.match(page,/section==='staff'&&Array\.isArray\(value\)/,'staff directory must render');
+assert.match(page,/section==='staff'&&row&&definition\?\.canEdit/,'staff photo editor must require edit rights');
+assert.match(page,/id="public-content-staff-photo"/);
+assert.match(page,/filter\(\(\[key\]\)=>!\(key==='image' && \['staff','boards'\]\.includes\(section\)\)\)/,'person image must not be an editable external URL');
+assert.match(page,/เลือกไฟล์(?:เปลี่ยนรูป|อัปโหลดรูป)เจ้าหน้าที่/,'staff must expose a visible native file upload action');
+assert.match(page,/นำรูปออกจากร่าง/);
+assert.match(page,/showDeleteConfirm\('นำรูปเจ้าหน้าที่ออกจากร่าง/);
+
+assert.match(page,/folder:targetSection==='boards'\?'board':'staff'/);
+assert.match(page,/mediaLibraryApi\.uploadPeople\(file/);
+assert.match(page,/applyPersonPhotoToDraft\(current/);
+assert.match(page,/sectionRef\.current!==targetSection/);
+assert.match(page,/ไม่มีสิทธิ์เข้าถึงหมวด/);
+assert.doesNotMatch(page,/uploadBoardPhoto\(/);
+assert.match(sidebar,/to: '\/admin\/public-content\?section=staff'/);
+assert.match(dashboard,/path: '\/admin\/public-content\?section=staff'/);
+assert.match(icon,/'\/admin\/public-content\?section=staff'/);
+assert.match(page,/setSearchParams\(params=>/,'explicit section navigation remains synchronized');
+console.log('RC23_STAFF_PHOTO_NAVIGATION_CONTRACT=PASS');
